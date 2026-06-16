@@ -15,11 +15,10 @@ The spec docs at the repo root are canonical. Read before deciding anything:
 - `pickup_schema.sql` — the actual DB schema (RPCs + RLS)
 
 ## For session continuity, read `project/`
-- `project/STATUS.md` — current stage + what's done / next (**update this as you work**)
-- `project/SESSION_LOG.md` — chronological log of each session
+- `project/SESSION_LOG.md` — chronological log of each session (the resume point)
 - `project/DECISIONS.md` — decision log (what was chosen and why)
 - `project/IDEAS.md` — parked ideas / backlog not yet in the spec
-> Keep these current. A new session should be able to pick up from `STATUS.md` alone.
+> Keep these current. A new session should pick up from the latest `SESSION_LOG.md` entry.
 
 ## Hard rules (never break)
 1. **Glossary — use these exact terms, always:** Business, Dispatcher, Driver, Guest,
@@ -53,5 +52,4 @@ The spec docs at the repo root are canonical. Read before deciding anything:
 ## Working agreement
 - Develop on the branch you were assigned for the session. Commit with clear messages.
 - Do not open a PR unless explicitly asked.
-- When you finish a chunk of work, update `project/STATUS.md` and append to
-  `project/SESSION_LOG.md`.
+- When you finish a chunk of work, append to `project/SESSION_LOG.md`.
