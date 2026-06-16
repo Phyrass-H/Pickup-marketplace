@@ -14,11 +14,19 @@
   the query, not by RLS. Keep that filter in one place to avoid drift.
 
 ## Parked (not yet scoped)
-- Seed/fixtures script for local testing (Driver + Vehicle + sample pooled missions).
+- ~~Seed/fixtures script~~ — DONE as dev-only `GET /api/seed` (see D9).
 - Scheduled jobs the spine assumes (PDP climb, Lock-in/T-180, expiry, return-to-pool) —
   not in the first slice; plan where they run (Supabase cron / edge functions / Vercel cron).
 - TypeScript type generation via Supabase CLI once credentials/CLI are wired (see D3).
+- **Realtime Pool/My Rides** — currently `force-dynamic` (fresh on each load), no live
+  subscription. Add Supabase Realtime so the Pool updates as missions are taken / PDP climbs.
+- **PWA polish** — `manifest.webmanifest` has no icons yet; add icons + offline shell + install.
+- **PDP climb origin** — fare climb is measured from `mission.created_at`; if a dedicated
+  `pooled_at` is added later, switch `lib/pdp.ts` to that.
+- **Design layer** — bones only so far (neutral CSS vars in `globals.css`); apply a real theme
+  + logo when the founder picks a direction (premium/trustworthy).
 
 ## Questions to raise with the user when relevant
-- Beta zones: Doc 00 says Cannes, Nice + one more — confirm the third town for seed data.
+- Beta zones: Doc 00 says Cannes, Nice + one more — confirm the third town. Currently a
+  placeholder `Antibes` in `lib/zones.ts` (used by onboarding + seed); swap once confirmed.
 - Preferred GPS deep-link behaviour (waze/google/apple) — confirm per-platform URLs later.

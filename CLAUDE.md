@@ -39,6 +39,10 @@ The spec docs at the repo root are canonical. Read before deciding anything:
 ## Environment
 - Secrets live in `.env.local` (git-ignored — never commit). Template: `.env.example`.
 - Supabase project ref: `luitjivedqiumefhfzkw`.
+- **Auth redirect allowlist (dashboard, not code):** magic-link sign-in only works
+  if each origin's `/auth/callback` is in Supabase → Authentication → URL
+  Configuration → Redirect URLs (+ Site URL). See `.env.example` for the list.
+- **Local dev:** `npm run dev`; seed test missions with `GET /api/seed` (dev-only).
 
 ## Key data facts (from the spine)
 - **Pool** is a query, not a table:
