@@ -25,6 +25,15 @@
   `pooled_at` is added later, switch `lib/pdp.ts` to that.
 - **Design layer** — bones only so far (neutral CSS vars in `globals.css`); apply a real theme
   + logo when the founder picks a direction (premium/trustworthy).
+- **Maps / geocoding (Dispatcher)** — `/dispatch/new` uses free-text addresses (lat/lng null) and
+  a manual base-fare estimate. Wire Google Maps/Mapbox for autocomplete + distance → real
+  recommended fare, and validate waypoints. (Doc 03.)
+- **Pickup-time timezone** — `datetime-local` is parsed in the server's local zone; make
+  Europe/Paris explicit before prod (Vercel runs UTC). Also guard against past pickup times.
+- **Dispatcher realtime status feed** — the 4 Driver status buttons → live updates on `/dispatch`
+  (Supabase Realtime). Currently the list is `force-dynamic` (fresh per load).
+- **Dispatcher mission detail + limited edit** — KEEP per Doc 02 (free edits while pooled; material
+  edits after acceptance need re-consent). Not built yet; list view only.
 
 ## Questions to raise with the user when relevant
 - Beta zones: Doc 00 says Cannes, Nice + one more — confirm the third town. Currently a

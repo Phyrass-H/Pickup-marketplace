@@ -49,6 +49,14 @@ export async function createDriverProfile(formData: FormData) {
 
   const admin = createAdminClient();
 
+  // Don't let a direct POST flip an existing dispatcher into a driver.
+  const { data: existingProfile } = await admin
+    .from("profile")
+    .select("role")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+  if (existingProfile && existingProfile.role !== "driver") redirect("/");
+
   // role profile (idempotent)
   const { error: profileErr } = await admin
     .from("profile")

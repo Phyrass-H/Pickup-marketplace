@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getDriverContext } from "@/lib/driver";
+import { getAppContext, routeFor } from "@/lib/app-context";
 import { createDriverProfile } from "./actions";
 import { BETA_ZONES } from "@/lib/zones";
 
@@ -8,10 +8,12 @@ export default async function OnboardingPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const { user, driver, vehicle } = await getDriverContext();
-  if (!user) redirect("/login");
-  if (driver && vehicle) redirect("/pool");
+  const ctx = await getAppContext();
+  if (!ctx.user) redirect("/login");
+  if (ctx.profile && ctx.profile.role !== "driver") redirect(routeFor(ctx));
+  if (ctx.driver && ctx.vehicle) redirect("/pool");
 
+  const user = ctx.user;
   const { error } = await searchParams;
 
   return (

@@ -1,18 +1,19 @@
 // Layout + auth guard for the signed-in Driver area (Pool, mission detail,
-// My Rides). No user → /login. User but no Driver/Vehicle yet → /onboarding.
+// My Rides). Non-drivers are routed to where they belong.
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { getDriverContext } from "@/lib/driver";
+import { getAppContext, routeFor } from "@/lib/app-context";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user, driver, vehicle } = await getDriverContext();
+  const ctx = await getAppContext();
 
-  if (!user) redirect("/login");
-  if (!driver || !vehicle) redirect("/onboarding");
+  if (!ctx.user) redirect("/login");
+  if (ctx.profile?.role !== "driver") redirect(routeFor(ctx));
+  if (!ctx.driver || !ctx.vehicle) redirect("/onboarding");
 
   return (
     <>

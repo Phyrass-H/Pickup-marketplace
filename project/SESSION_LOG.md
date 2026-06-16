@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-06-16 — Session 3 — Dispatcher (Business) slice — the loop closes
+**Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
+
+**What shipped** — the other half of the marketplace, so the core V1 loop is now real
+end-to-end (no more seed-only missions):
+- **Role-aware app** (`lib/app-context.ts` + `routeFor`): one app serves Driver + Business,
+  keyed off `profile.role`. New `/welcome` lets a first-time user pick Driver or Business.
+- **Business onboarding** (`/onboarding-business`): creates `business` + `dispatcher` seat +
+  `profile(role=dispatcher)`.
+- **Dispatch area** (`/dispatch`): missions list for the Business, with the **assigned Driver's
+  contact revealed** once accepted (service-role-gated to their own missions — mirror of the
+  Driver side).
+- **Create mission** (`/dispatch/new`): KEEP fields (category→pool routing, zone, addresses,
+  intermediate stops, pickup time, pax/luggage, flight, comment, **ceiling**), posts straight
+  to the Pool. Live **soft warning** when ceiling < estimated base fare (nudge, not block).
+  PDP curve auto-derived; SPEED WIN toggle. Inserted via the **user session** so RLS authorizes
+  it (no service role). Maps/geocoding deferred — addresses are free text, lat/lng null.
+
+**Verified — the whole loop, under real RLS (not service-role bypass):** a Node script signed in
+as a real Business and a real Driver and proved: Business inserts a mission as itself → Driver
+sees it in the Pool → `accept_mission` succeeds (status=accepted, driver set) → **second accept
+correctly rejected (atomic first-wins)** → both sides read the assigned mission. Plus `tsc` clean,
+`next build` clean (11 routes), all guards redirect correctly.
+
+**Decisions:** D11–D12 (see `DECISIONS.md`).
+
+**Deferred / flagged:** Maps geocoding + real distance-based base fare; `datetime-local` is parsed
+in the server's local zone (make Europe/Paris explicit before prod); Dispatcher realtime status
+feed + mission detail/edit; mission can be posted with a past pickup time (no guard yet).
+
+**Next session:** full browser walkthrough of both sides together (needs the Supabase redirect-URL
+setting), then realtime status feed (Driver 4 status buttons → Dispatcher) or the design layer.
+
+---
+
 ## 2026-06-16 — Session 2 — Driver PWA vertical slice (the bones)
 **Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS), pushes to GitHub.
 

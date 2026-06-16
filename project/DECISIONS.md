@@ -55,6 +55,21 @@ in `supabase-js` 2.108 → the typed client silently collapsed every row to `nev
 0.12.0 (peer-deps `supabase-js@^2.108`) fixed it. Also: each table in `database.types.ts` needs a
 `Relationships: []` field (+ schema `CompositeTypes`) to satisfy supabase-js's `GenericSchema`.
 
+### D11 — One app, role-aware via `profile.role` (2026-06-16)
+Rather than two separate builds, a single Next app serves both surfaces. `lib/app-context.ts`
+loads the user's profile + role-specific entities; `routeFor()` centralizes "where does this user
+belong." Driver pages live under route group `(app)` (`/pool`, `/rides`, `/missions/[id]`);
+Business pages under `(dispatch)` (`/dispatch`, `/dispatch/new`). `/welcome` picks the role on
+first sign-in. Each area's layout guards its role. Revisit if the surfaces diverge enough to split.
+
+### D12 — Dispatcher posts missions straight to the Pool via the user session (2026-06-16)
+`/dispatch/new` inserts `status='pooled'` directly (no draft step in V1) using the **user-session**
+client so RLS `p_mission_business_insert` authorizes it — service role NOT used for this write.
+Business sets the **ceiling**; PDP curve params are auto-derived (`pdp_start` ≈ 50% of ceiling,
+or = ceiling for SPEED WIN; `pdp_step` ≈ 5%; `pdp_interval` = 10 min) — tunable later. Maps
+geocoding deferred (Doc 03): addresses are free text, `lat/lng` null, base fare is an optional
+Dispatcher estimate that drives the soft-warning only. [[d6]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
