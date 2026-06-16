@@ -42,8 +42,8 @@ NULL gotcha on `speed_win`, and upgraded `@supabase/ssr` 0.5→0.12 (see D10).
 **Next session:** manual browser run-through (login→onboarding→pool→accept→rides); then either
 add realtime to the Pool, PWA icons + offline, or start the Dispatcher mission-creation side.
 
-**Note:** an untracked `docs/` folder holds duplicate copies of the root spec files — left
-untracked, not committed; safe to delete.
+**Repo layout:** spec docs moved root → `docs/` as their single home (founder's preference;
+files were byte-identical, nothing lost). `CLAUDE.md` references updated to `docs/…`.
 
 ---
 

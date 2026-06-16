@@ -1,6 +1,6 @@
 // =====================================================================
 // PickUp — database.types.ts
-// HAND-WRITTEN from pickup_schema.sql (Decision D3). The schema is ALREADY
+// HAND-WRITTEN from docs/pickup_schema.sql (Decision D3). The schema is ALREADY
 // APPLIED to the live Supabase DB — never recreate or migrate it. This file
 // only mirrors it so our TypeScript is type-safe. If the Supabase CLI gets
 // wired up later, regenerate with `supabase gen types` to confirm parity.
