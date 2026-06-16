@@ -9,6 +9,9 @@ import {
   formatMoney,
   missionStatusLabel,
 } from "@/lib/format";
+import { isExecutable } from "@/lib/mission-flow";
+import { StatusSteps } from "@/components/status-steps";
+import { LiveRefresh } from "@/components/live-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +63,9 @@ export default async function DispatchHome() {
         </Link>
       </div>
 
+      {/* Near-realtime: pull Driver status updates every few seconds. */}
+      <LiveRefresh />
+
       {error && (
         <div className="notice error">
           Couldn’t load your missions: {error.message}
@@ -102,6 +108,10 @@ export default async function DispatchHome() {
                 <span>{m.dropoff_address ?? "—"}</span>
               </div>
             </div>
+
+            {(isExecutable(m.status) || m.status === "completed") && (
+              <StatusSteps status={m.status} />
+            )}
 
             {contact ? (
               <div style={{ marginTop: 12 }}>

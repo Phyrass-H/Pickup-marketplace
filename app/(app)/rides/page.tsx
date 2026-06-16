@@ -10,6 +10,9 @@ import {
   missionStatusLabel,
 } from "@/lib/format";
 import type { MissionStatus } from "@/lib/database.types";
+import { isExecutable } from "@/lib/mission-flow";
+import { StatusSteps } from "@/components/status-steps";
+import { StatusControl } from "./status-control";
 
 export const dynamic = "force-dynamic";
 
@@ -144,6 +147,20 @@ export default async function RidesPage() {
                 )}
               </div>
             </div>
+
+            {/* Trip execution: progress + the next status button */}
+            {(isExecutable(m.status) || m.status === "completed") && (
+              <StatusSteps status={m.status} />
+            )}
+            {m.status === "accepted" && (
+              <p className="muted small" style={{ marginTop: 12 }}>
+                Awaiting readiness confirmation (Lock-in at T-180). Trip controls
+                appear once confirmed.
+              </p>
+            )}
+            {isExecutable(m.status) && (
+              <StatusControl missionId={m.id} status={m.status} />
+            )}
           </div>
         );
       })}

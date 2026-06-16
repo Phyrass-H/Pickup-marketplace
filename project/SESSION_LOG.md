@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-06-16 — Session 4 — Realtime status feed (trip execution)
+**Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
+
+**What shipped** — the last functional piece of the core loop: the Driver runs the trip and the
+Business watches it live.
+- **Driver status buttons** (My Rides): for a confirmed mission, a single "next step" button
+  advances en_route → arrived → on_board → completed (`lib/mission-flow.ts`, `StatusControl`).
+  Each tap records a **status_event** AND moves `mission.status`. A 4-step progress bar
+  (`StatusSteps`) shows where the trip is.
+- **Status write path** (`app/(app)/rides/actions.ts`): a Driver can't UPDATE `mission` via RLS
+  (no driver update policy), so after verifying ownership + valid transition under RLS, the
+  status_event insert + mission update go through the **service role**.
+- **Business live view**: `/dispatch` shows each active mission's progress bar + status badge and
+  **auto-refreshes every 4s** (`LiveRefresh`) so Driver updates appear within seconds.
+
+**Verified in a real browser (preview):** as the demo Driver, tapped "Start — I'm en route" → DB
+shows `mission.status=en_route` + a `status_event`; switched to the demo Business and `/dispatch`
+showed that mission **En route** with the progress bar advanced and the Driver's contact. `tsc` +
+`next build` clean (12 routes).
+
+**Decisions:** D13 (see `DECISIONS.md`).
+
+**Deferred/flagged:** near-realtime is **polling** (4s), not websockets — true Supabase Realtime
+needs `status_event` (and/or `mission`) added to the `supabase_realtime` publication (a one-time
+DB enable; not done, to respect "don't touch the schema"). `completed` currently just sets the
+status — the payment capture + ledger + booking-voucher on completion are a later milestone.
+
+**Next session:** the **design layer** (one pass over both apps; needs a colour/logo direction
+from the founder), or payments (Stripe Connect) / booking voucher.
+
+---
+
 ## 2026-06-16 — Session 3 — Dispatcher (Business) slice — the loop closes
 **Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
 

@@ -30,8 +30,11 @@
   recommended fare, and validate waypoints. (Doc 03.)
 - **Pickup-time timezone** — `datetime-local` is parsed in the server's local zone; make
   Europe/Paris explicit before prod (Vercel runs UTC). Also guard against past pickup times.
-- **Dispatcher realtime status feed** — the 4 Driver status buttons → live updates on `/dispatch`
-  (Supabase Realtime). Currently the list is `force-dynamic` (fresh per load).
+- ~~Dispatcher realtime status feed~~ — DONE (Session 4) as near-realtime **polling** (`LiveRefresh`,
+  4s). Upgrade to true Supabase Realtime websockets later: add `status_event` to the
+  `supabase_realtime` publication and swap `LiveRefresh` for a channel subscription.
+- **Completion side effects** — when a Driver marks `completed`, we only set the status. Still to
+  build (later milestone): Stripe capture + `ledger_transaction` + `booking_voucher` generation.
 - **Dispatcher mission detail + limited edit** — KEEP per Doc 02 (free edits while pooled; material
   edits after acceptance need re-consent). Not built yet; list view only.
 

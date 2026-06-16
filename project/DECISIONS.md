@@ -70,6 +70,15 @@ or = ceiling for SPEED WIN; `pdp_step` ≈ 5%; `pdp_interval` = 10 min) — tuna
 geocoding deferred (Doc 03): addresses are free text, `lat/lng` null, base fare is an optional
 Dispatcher estimate that drives the soft-warning only. [[d6]]
 
+### D13 — Status feed: status_event + service-role mission update; polling for now (2026-06-16)
+The Driver's 4 status taps each write a `status_event` (the thing the Business watches) and advance
+`mission.status`. Because there's no driver UPDATE policy on `mission`, the writes go through the
+service role in a server action — gated by first verifying, under RLS, that the mission is the
+Driver's and the requested step is the valid next one (`lib/mission-flow.ts`). The Business side
+gets updates via **polling** (`LiveRefresh`, 4s) rather than websockets, so we don't have to modify
+the DB (the `supabase_realtime` publication). Upgrade to true Realtime later by adding `status_event`
+to that publication and swapping `LiveRefresh` for a subscription. [[d6]] [[d12]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
