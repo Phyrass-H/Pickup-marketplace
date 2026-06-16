@@ -36,6 +36,6 @@
   edits after acceptance need re-consent). Not built yet; list view only.
 
 ## Questions to raise with the user when relevant
-- Beta zones: Doc 00 says Cannes, Nice + one more — confirm the third town. Currently a
-  placeholder `Antibes` in `lib/zones.ts` (used by onboarding + seed); swap once confirmed.
+- ~~Beta zones / third town~~ — RESOLVED: founder confirmed the beta covers the **whole French
+  Riviera, Saint-Tropez → Monaco/Menton**. `lib/zones.ts` now lists the Riviera communes.
 - Preferred GPS deep-link behaviour (waze/google/apple) — confirm per-platform URLs later.

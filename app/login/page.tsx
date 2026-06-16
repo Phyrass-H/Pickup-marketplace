@@ -13,5 +13,7 @@ export default async function LoginPage({
   if (ctx.user) redirect(routeFor(ctx));
 
   const { error } = await searchParams;
-  return <LoginForm initialError={error ?? null} />;
+  const devEnabled =
+    process.env.NODE_ENV !== "production" && !process.env.VERCEL;
+  return <LoginForm initialError={error ?? null} devEnabled={devEnabled} />;
 }

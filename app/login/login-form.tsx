@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm({ initialError }: { initialError: string | null }) {
+export function LoginForm({
+  initialError,
+  devEnabled = false,
+}: {
+  initialError: string | null;
+  devEnabled?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     "idle",
@@ -75,6 +81,13 @@ export function LoginForm({ initialError }: { initialError: string | null }) {
             <p className="muted small" style={{ marginTop: 12 }}>
               No password needed. We email you a secure one-time link.
             </p>
+            {devEnabled && (
+              <p className="small" style={{ marginTop: 8 }}>
+                <a href="/dev-login" style={{ color: "var(--accent)" }}>
+                  Local testing? Use one-click dev sign-in →
+                </a>
+              </p>
+            )}
           </form>
         )}
       </div>

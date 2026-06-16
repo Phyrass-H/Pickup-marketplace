@@ -35,8 +35,17 @@ correctly rejected (atomic first-wins)** → both sides read the assigned missio
 in the server's local zone (make Europe/Paris explicit before prod); Dispatcher realtime status
 feed + mission detail/edit; mission can be posted with a past pickup time (no guard yet).
 
-**Next session:** full browser walkthrough of both sides together (needs the Supabase redirect-URL
-setting), then realtime status feed (Driver 4 status buttons → Dispatcher) or the design layer.
+**Next session:** full browser walkthrough of both sides together, then realtime status feed
+(Driver 4 status buttons → Dispatcher) or the design layer.
+
+**Addendum (same session):**
+- **Zones = whole French Riviera** (Saint-Tropez → Monaco/Menton). Founder confirmed it's the
+  whole region, not 3 towns. `lib/zones.ts` now lists the Riviera communes (west→east).
+- **One-click dev sign-in** (`/dev-login` + `GET /api/dev-login?as=driver|business`): lets a
+  non-technical founder test locally with NO email and NO Supabase dashboard config — ensures a
+  confirmed user via the service role and signs in server-side (sets the session cookie).
+  Dev-only (blocked on hosted envs). Verified: sets `sb-…-auth-token` and routes to /welcome.
+  The Supabase redirect-URL allowlist is still needed for real magic-link sign-in in PRODUCTION.
 
 ---
 
