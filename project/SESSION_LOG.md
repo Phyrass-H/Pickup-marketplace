@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-06-17 — Session 8 — Driver service area (base + radius) + avatar crop
+**Branch:** `driver-service-area` (off `main`) · **Env:** local (macOS).
+
+**Why:** founder feedback — a fixed town checklist doesn't model real VTC work. A Cannes Driver
+will take Milan→Nice (ends near home) but not Paris→Normandie. Need a base + radius, not a town list.
+
+**What shipped**
+- **Service-area matching (replaces zones):** Driver sets a **base** (Mapbox autocomplete) + a
+  **service radius**; the Pool now keeps a mission when its **pickup OR drop-off** is within the
+  radius of the base (`lib/geo.ts` haversine; `app/(app)/pool/page.tsx`). New
+  `components/address-autocomplete.tsx` (Mapbox Geocoding v6, `NEXT_PUBLIC_MAPBOX_TOKEN`). Driver
+  settings + onboarding capture base + radius; Business booking form geocodes pickup/drop-off into
+  `mission.pickup_lat/lng` + `dropoff_lat/lng`; `zone` is now a display label from the pickup town.
+- **Avatar/logo:** `components/avatar-editor.tsx` (react-easy-crop crop + zoom + remove, immediate)
+  on both Driver photo and Business logo; `lib/avatar-actions.ts` (gated to the caller's own row).
+- **DB:** additive migration `docs/migrations/2026-06-17_driver_service_area.sql` (founder-approved,
+  ran in SQL Editor) adds `driver.base_label/base_lat/base_lng/service_radius_km`. Deleted the
+  orphaned `lib/zones.ts`.
+
+**Handoffs done by founder:** Mapbox public token (added to `.env.local`; **still needs adding to
+Vercel env before deploy**) + ran the additive migration.
+
+**Verified** — `tsc` + `next build` clean. Browser (real Supabase, both roles): Mapbox autocomplete
+live (suggestions→pick→coords), base/radius save+persist, Pool radius UI; matching math proven
+(Milan→Nice in / Paris→Rouen out). Caught + fixed an **infinite-render loop** in the autocomplete
+(array-literal prop in effect deps). Ran a **13-finding adversarial review workflow** (24 agents)
+and fixed: seed missions now carry coords (else invisible in the new Pool), server-side avatar
+content-type validation, pickup-coords + lat/lng-range guards, autocomplete request-abort, avatar
+object-URL leak + modal Escape/scroll-lock/aria, radius-option preservation, canonical docs
+(Doc 00 + Phase0 spine) updated. Deferred only the cosmetic zone-label refinement (#5).
+
+**Decisions:** D17 (see `DECISIONS.md`).
+
+**Next session:** apply the Mapbox token in Vercel + verify live; optionally improve the derived
+zone label (town from Mapbox context); then Payments (Stripe Connect) or the admin verification
+workspace (BACKLOG F2).
+
+---
+
 ## 2026-06-17 — Session 7 — Accounts & records pillar
 **Branch:** `accounts-records` (off `main`) · **Env:** local (macOS).
 

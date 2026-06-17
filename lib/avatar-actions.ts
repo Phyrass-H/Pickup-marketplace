@@ -13,6 +13,8 @@ import {
 
 export type AvatarResult = { ok: true } | { ok: false; message: string };
 
+const IMAGE_MIME = ["image/png", "image/jpeg", "image/webp"];
+
 interface Owner {
   kind: "driver" | "business";
   id: string;
@@ -63,6 +65,11 @@ export async function uploadAvatar(formData: FormData): Promise<AvatarResult> {
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return { ok: false, message: "Image is too large (max 10 MB)." };
+  }
+  // Server actions are public endpoints — validate the type here, not just in
+  // the client editor or the bucket allowlist (which may pre-exist).
+  if (!IMAGE_MIME.includes(file.type)) {
+    return { ok: false, message: "Please upload a PNG, JPG or WebP image." };
   }
 
   const owner = await resolveOwner();

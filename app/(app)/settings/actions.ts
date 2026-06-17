@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isValidLatLng } from "@/lib/geo";
 import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
@@ -48,7 +49,7 @@ export async function updateDriverSettings(formData: FormData) {
   const radius = Number.isFinite(radiusRaw) ? Math.min(500, Math.max(5, radiusRaw)) : 50;
 
   if (!first || !last) redirect("/settings?error=missing");
-  if (!baseLabel || !Number.isFinite(baseLat) || !Number.isFinite(baseLng)) {
+  if (!baseLabel || !isValidLatLng(baseLat, baseLng)) {
     redirect("/settings?error=nobase");
   }
 

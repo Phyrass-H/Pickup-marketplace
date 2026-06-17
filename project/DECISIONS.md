@@ -110,6 +110,19 @@ the existing `stripe_account_id`/`stripe_customer_id` columns with an inert "com
 a PCI/compliance problem; Stripe Connect/Customer onboarding is the intended path, built later in the
 Payments pillar. [[d6]] [[d7]]
 
+### D17 — Driver service area = base location + radius (Mapbox), replaces operational zones (2026-06-17)
+Founder feedback: a fixed town checklist doesn't model real VTC behaviour (a Cannes Driver will do
+Milan→Nice but not Paris→Normandie). Switched the Pool from `zone ∈ operational_zones` to a
+**geofence**: each Driver sets a **base** (geocoded via **Mapbox** autocomplete, public
+`NEXT_PUBLIC_MAPBOX_TOKEN`) + a **service_radius_km**; a mission qualifies when its **pickup OR
+drop-off** is within the radius (`lib/geo.ts` haversine; filter in `app/(app)/pool/page.tsx`). The
+Business booking form geocodes pickup/drop-off into the existing `mission.pickup_lat/lng` +
+`dropoff_lat/lng`; `zone` becomes a display-only label derived from the pickup town. **Schema:** an
+*additive* migration (founder-approved) added `driver.base_label/base_lat/base_lng/service_radius_km`
+(`docs/migrations/2026-06-17_driver_service_area.sql`) — additive only, no re-run of the base schema
+(respects hard-rule #4). `operational_zones` is kept as a now-unused column; `lib/zones.ts` (BETA_ZONES)
+was deleted. Matching runs in-app for beta scale (add a bounding-box/PostGIS prefilter later). [[d12]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

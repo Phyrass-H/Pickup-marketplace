@@ -36,6 +36,12 @@ export default async function DriverSettingsPage({
       ? { label: driver.base_label ?? "", lat: driver.base_lat, lng: driver.base_lng }
       : null;
 
+  // Keep a previously-saved radius selectable even if it isn't a preset.
+  const storedRadius = driver.service_radius_km ?? 50;
+  const radii = RADII.includes(storedRadius)
+    ? RADII
+    : [...RADII, storedRadius].sort((a, b) => a - b);
+
   return (
     <>
       <h1>Settings</h1>
@@ -89,8 +95,8 @@ export default async function DriverSettingsPage({
         </div>
         <label className="field">
           <span>Service radius — how far from your base you’ll drive</span>
-          <select name="service_radius_km" defaultValue={String(driver.service_radius_km ?? 50)}>
-            {RADII.map((r) => (
+          <select name="service_radius_km" defaultValue={String(storedRadius)}>
+            {radii.map((r) => (
               <option key={r} value={r}>
                 Up to {r} km
               </option>

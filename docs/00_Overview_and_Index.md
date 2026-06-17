@@ -25,7 +25,7 @@ PickUp is the legal **intermediary** (a *centrale de réservation VTC*), not the
 - **Dispatcher** — the user/seat at a Business who posts and manages missions via PickUp Dispatch. One Business can have several Dispatcher seats (future multi-dispatch).
 - **Driver** — the professional VTC who accepts and performs the mission.
 - **Guest / passenger** — the Business's end client who actually rides.
-- **Pool** — the list of available missions, filtered by category and zone, that Drivers browse and accept from.
+- **Pool** — the list of available missions, filtered by category and within the Driver's service radius of their base location, that Drivers browse and accept from. (A mission qualifies when its pickup *or* drop-off is in range — so a long transfer ending near the Driver still shows. Replaced the old town-list "zones" model 2026-06-17; see DECISIONS D17.)
 - **PDP** — Progressive Dynamic Pricing: the fare starts underquoted and climbs over time toward the Business's ceiling until a Driver accepts.
 - **Ceiling** — the maximum fare a Business is willing to pay; set by the Business per mission.
 - **SPEED WIN** — urgent-priority flag for last-minute missions; fare starts at/near the ceiling for instant acceptance.

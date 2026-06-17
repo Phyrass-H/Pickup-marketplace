@@ -4,6 +4,18 @@
 
 const toRad = (deg: number) => (deg * Math.PI) / 180;
 
+/** Valid WGS84 coordinate? Guards against garbage before we persist/match. */
+export function isValidLatLng(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
+}
+
 /** Great-circle distance between two lat/lng points, in kilometres. */
 export function haversineKm(
   lat1: number,

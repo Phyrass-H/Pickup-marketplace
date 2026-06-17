@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isValidLatLng } from "@/lib/geo";
 import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = [
@@ -48,7 +49,7 @@ export async function createDriverProfile(formData: FormData) {
   if (!first || !last || !category) {
     redirect("/onboarding?error=missing");
   }
-  if (!baseLabel || !Number.isFinite(baseLat) || !Number.isFinite(baseLng)) {
+  if (!baseLabel || !isValidLatLng(baseLat, baseLng)) {
     redirect("/onboarding?error=nobase");
   }
 

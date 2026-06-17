@@ -15,7 +15,7 @@
 `id · business_id→Business · auth_user_id→Auth · name · email · phone · created_at`
 
 **Driver** — the professional VTC who accepts and performs missions.
-`id · auth_user_id→Auth · first_name · last_name · phone · email · profile_photo_url? · languages[] · operational_zones[] · preferred_gps (waze|google|apple) · stripe_account_id? (Connect) · verified (bool — set MANUAL in beta) · created_at`
+`id · auth_user_id→Auth · first_name · last_name · phone · email · profile_photo_url? · languages[] · operational_zones[] (legacy — superseded by base+radius, 2026-06-17) · base_label? · base_lat? · base_lng? · service_radius_km (default 50) · preferred_gps (waze|google|apple) · stripe_account_id? (Connect) · verified (bool — set MANUAL in beta) · created_at`
 
 **Vehicle** — one per Driver in V1.
 `id · driver_id→Driver · category (vehicle_category) · make · model · colour · plate · seats · created_at`
@@ -108,7 +108,9 @@ completed ──▶ Payment captured + LedgerTransaction + BookingVoucher
 ## Computed, not stored
 
 - **Current PDP fare** = `f(base_fare, ceiling, time_to_mission, pdp_start, pdp_step, pdp_interval)` — deterministic, recomputed on read. SPEED WIN starts at/near ceiling. Never persisted as the "price."
-- **Pool** is a *query/view*, not a table: `missions WHERE status='pooled' AND category ∈ driver.categories AND zone ∈ driver.operational_zones`.
+- **Pool** is a *query/view*, not a table. Matching is by distance from the Driver's base (replaced the zone-list model 2026-06-17; see DECISIONS D17):
+  `missions WHERE status='pooled' AND category = driver.vehicle.category AND (haversine(base, pickup) ≤ service_radius_km OR haversine(base, dropoff) ≤ service_radius_km)`.
+  Mission `pickup_lat/lng` + `dropoff_lat/lng` are geocoded (Mapbox) at posting time; the filter currently runs in the app (beta scale).
 
 ---
 

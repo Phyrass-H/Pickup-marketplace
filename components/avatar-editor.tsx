@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Cropper, { type Area } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
@@ -46,6 +46,26 @@ export function AvatarEditor({
 
   const onCropComplete = useCallback((_: Area, px: Area) => setArea(px), []);
 
+  // While the crop modal is open: revoke the object URL on close/unmount (no
+  // leak), close on Escape, and lock background scroll.
+  useEffect(() => {
+    if (!src) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (fileRef.current) fileRef.current.value = "";
+        setSrc(null);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      URL.revokeObjectURL(src);
+    };
+  }, [src]);
+
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -60,7 +80,6 @@ export function AvatarEditor({
   }
 
   function close() {
-    if (src) URL.revokeObjectURL(src);
     setSrc(null);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -150,9 +169,9 @@ export function AvatarEditor({
       </div>
 
       {src && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="crop-title">
           <div className="modal-card">
-            <h2 style={{ marginBottom: 12 }}>Crop &amp; zoom</h2>
+            <h2 id="crop-title" style={{ marginBottom: 12 }}>Crop &amp; zoom</h2>
             <div className="crop-area">
               <Cropper
                 image={src}
@@ -178,7 +197,7 @@ export function AvatarEditor({
               />
             </label>
             <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-              <button type="button" className="btn secondary" onClick={close} disabled={pending}>
+              <button type="button" className="btn secondary" onClick={close} disabled={pending} autoFocus>
                 Cancel
               </button>
               <button type="button" className="btn" onClick={save} disabled={pending}>

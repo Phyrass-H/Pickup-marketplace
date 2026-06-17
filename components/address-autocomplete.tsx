@@ -53,13 +53,14 @@ export function AddressAutocomplete({
       setSuggestions([]);
       return;
     }
+    const controller = new AbortController();
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       try {
         const url =
           `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}` +
           `&autocomplete=true&limit=5&proximity=${px},${py}&access_token=${TOKEN}`;
-        const res = await fetch(url);
+        const res = await fetch(url, { signal: controller.signal });
         const data = (await res.json()) as { features?: MapboxFeature[] };
         const places: Place[] = (data.features ?? [])
           .map((f) => {
@@ -72,12 +73,13 @@ export function AddressAutocomplete({
           .filter((p): p is Place => !!p && !!p.label && Number.isFinite(p.lat));
         setSuggestions(places);
         setOpen(true);
-      } catch {
-        setSuggestions([]);
+      } catch (e) {
+        if ((e as Error)?.name !== "AbortError") setSuggestions([]);
       }
     }, 250);
     return () => {
       if (debounce.current) clearTimeout(debounce.current);
+      controller.abort();
     };
   }, [query, picked, px, py]);
 

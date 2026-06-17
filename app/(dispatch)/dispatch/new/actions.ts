@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
+import { isValidLatLng } from "@/lib/geo";
 import type { VehicleCategory } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
@@ -40,6 +41,11 @@ export async function createMission(formData: FormData) {
   const pickupLng = num(formData.get("pickup_lng"));
   const dropoffLat = num(formData.get("dropoff_lat"));
   const dropoffLng = num(formData.get("dropoff_lng"));
+  // The pickup must be geocoded (picked from the suggestions) so the Pool can
+  // match it by distance; dropoff coords are kept only if valid.
+  const pickupValid = pickupLat != null && pickupLng != null && isValidLatLng(pickupLat, pickupLng);
+  const dropoffValid =
+    dropoffLat != null && dropoffLng != null && isValidLatLng(dropoffLat, dropoffLng);
   // Zone is now just a display label, derived from the pickup's town.
   const zone = pickupAddress ? pickupAddress.split(",")[0]!.trim() || null : null;
   const pickupLocal = String(formData.get("pickup_at") ?? "").trim();
@@ -61,7 +67,14 @@ export async function createMission(formData: FormData) {
     .filter(Boolean)
     .map((address) => ({ address }));
 
-  if (!category || !pickupAddress || !pickupLocal || ceiling == null || ceiling <= 0) {
+  if (
+    !category ||
+    !pickupAddress ||
+    !pickupValid ||
+    !pickupLocal ||
+    ceiling == null ||
+    ceiling <= 0
+  ) {
     redirect("/dispatch/new?error=missing");
   }
 
@@ -87,8 +100,8 @@ export async function createMission(formData: FormData) {
     pickup_lat: pickupLat,
     pickup_lng: pickupLng,
     dropoff_address: dropoffAddress || null,
-    dropoff_lat: dropoffLat,
-    dropoff_lng: dropoffLng,
+    dropoff_lat: dropoffValid ? dropoffLat : null,
+    dropoff_lng: dropoffValid ? dropoffLng : null,
     waypoints: waypoints.length > 0 ? waypoints : null,
     pickup_at: pickupAt.toISOString(),
     passenger_name: passengerName || null,
