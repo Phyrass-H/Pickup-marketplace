@@ -5,6 +5,33 @@
 
 ---
 
+## 2026-06-16 — Session 6 — Live deploy + full backlog & next-session plan
+**Branch:** `main` (consolidated). **Live:** https://pickup-marketplace.vercel.app
+
+**What happened**
+- **Merged everything to `main`** (founder authorized) and **deployed to Vercel**. Verified live:
+  `/login` 200, dev sign-in blocked without key (403) and works with key (307 + session).
+- Added **key-gated dev sign-in** so the founder can test the live site solo with no email /
+  Supabase config: `/dev-login?key=<DEV_LOGIN_KEY>` (set in Vercel env). Local stays open.
+- Founder is testing live and happy. Going forward: build on a branch, merge to `main` to deploy.
+- **Planned the rest of the product**: wrote `project/BACKLOG.md` (full feature list tagged
+  KEEP/MANUAL/V2 against Doc 02) and `project/NEXT_SESSION.md` (ready-to-paste prompt).
+
+**Key facts for next time**
+- Deploy = push to `main` → Vercel auto-redeploys (~1 min). Vercel env has the 3 Supabase keys
+  + `DEV_LOGIN_KEY=v1a-DbkJHN9Dw3aqWKDGSfZ9`.
+- Most remaining KEEP work needs **no schema change** — `document`, `payment`,
+  `ledger_transaction`, `payout`, `booking_voucher`, `status_event` tables already exist.
+- Before real beta: switch on email magic-link (one Supabase redirect-URL setting) and turn
+  off dev-login.
+
+**Decisions:** D15 (see `DECISIONS.md`).
+
+**Next session:** recommended pillar = **Accounts & records** (profiles/settings, vehicle details,
+document uploads → Storage, bank details, mission history). See `project/NEXT_SESSION.md`.
+
+---
+
 ## 2026-06-16 — Session 5 — Dispatch redesign: booking-style schedule + calendar
 **Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
 

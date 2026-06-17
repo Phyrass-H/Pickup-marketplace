@@ -88,6 +88,14 @@ so "red = not confirmed near pickup" works before the Lock-in scheduled job exis
 deliberate no-schema-change choice (promote to a dedicated column later). Big cards remain the
 Driver-side pattern only. [[d12]] [[d13]]
 
+### D15 — Deploy from `main` on Vercel; key-gated dev sign-in for solo testing (2026-06-16)
+Consolidated all work onto `main` (the feature branch was a session artifact) and deployed to
+Vercel — `main` is now the permanent deploy branch (push → auto-redeploy). For solo live testing
+without email/Supabase config, `/dev-login` + `/api/dev-login` require `?key=` matching the
+`DEV_LOGIN_KEY` env var on hosted envs (local stays open; unset key = blocked). This is a
+TEMPORARY scaffold — real drivers/businesses get email magic-link, and dev-login is turned off,
+before real beta. Going forward: build on a branch, merge to `main` to deploy when verified.
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
