@@ -79,6 +79,15 @@ gets updates via **polling** (`LiveRefresh`, 4s) rather than websockets, so we d
 the DB (the `supabase_realtime` publication). Upgrade to true Realtime later by adding `status_event`
 to that publication and swapping `LiveRefresh` for a subscription. [[d6]] [[d12]]
 
+### D14 — Business side is a booking-style schedule + calendar, not cards (2026-06-16)
+The Dispatch home is a **dense, day-grouped schedule** of rows (Today pinned) with an at-a-glance
+**status colour** per line, expand-on-click detail (native `<details>`), and a month **calendar**
+view. Status colour is **derived** from `mission.status` + time-to-pickup (`lib/dispatch-status.ts`),
+so "red = not confirmed near pickup" works before the Lock-in scheduled job exists. The per-booking
+**reference** (hotel room / event name) is stored in the existing `comment` column for now — a
+deliberate no-schema-change choice (promote to a dedicated column later). Big cards remain the
+Driver-side pattern only. [[d12]] [[d13]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

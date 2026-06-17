@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export function DispatchHeader({ businessName }: { businessName: string }) {
-  const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -19,28 +18,16 @@ export function DispatchHeader({ businessName }: { businessName: string }) {
     });
   }
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
-
   return (
     <header className="app-header">
-      <div className="container">
+      <div className="container wide">
         <Link href="/dispatch" className="brand">
           PickUp Dispatch
         </Link>
         <nav>
-          <Link
-            href="/dispatch"
-            className={pathname === "/dispatch" ? "active" : ""}
-          >
-            Missions
-          </Link>
-          <Link
-            href="/dispatch/new"
-            className={isActive("/dispatch/new") ? "active" : ""}
-          >
-            New
-          </Link>
+          <span className="small" style={{ opacity: 0.85 }}>
+            {businessName}
+          </span>
           <button
             onClick={signOut}
             disabled={pending}

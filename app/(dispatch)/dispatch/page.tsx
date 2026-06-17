@@ -2,25 +2,54 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
-import { currentFare } from "@/lib/pdp";
-import {
-  categoryLabel,
-  formatDateTime,
-  formatMoney,
-  missionStatusLabel,
-} from "@/lib/format";
-import { isExecutable } from "@/lib/mission-flow";
-import { StatusSteps } from "@/components/status-steps";
+import { formatDate } from "@/lib/format";
+import { parisDayKey } from "@/lib/dispatch-status";
+import { DispatchTabs } from "@/components/dispatch-tabs";
 import { LiveRefresh } from "@/components/live-refresh";
+import { TripRow, type DriverContact } from "@/components/trip-row";
+import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 
-interface DriverContact {
-  name: string;
-  phone: string | null;
+function ColumnHead() {
+  return (
+    <div className="col-head">
+      <span>Time</span>
+      <span>Route</span>
+      <span>Client / ref</span>
+      <span>Driver</span>
+      <span>Status</span>
+    </div>
+  );
 }
 
-export default async function DispatchHome() {
+function DayGroup({
+  dayKey,
+  missions,
+  contacts,
+  today,
+}: {
+  dayKey: string;
+  missions: MissionRow[];
+  contacts: Map<string, DriverContact>;
+  today?: boolean;
+}) {
+  return (
+    <section>
+      <div className={`day-head${today ? " today" : ""}`}>
+        <h2>{today ? "Today · " : ""}{formatDate(`${dayKey}T12:00:00`)}</h2>
+        <span className="count">
+          {missions.length} trip{missions.length === 1 ? "" : "s"}
+        </span>
+      </div>
+      {missions.map((m) => (
+        <TripRow key={m.id} mission={m} driver={contacts.get(m.id) ?? null} />
+      ))}
+    </section>
+  );
+}
+
+export default async function DispatchSchedule() {
   const ctx = await getAppContext();
   if (!ctx.business) return null;
 
@@ -29,12 +58,10 @@ export default async function DispatchHome() {
     .from("mission")
     .select("*")
     .eq("business_id", ctx.business.id)
-    .order("created_at", { ascending: false });
+    .order("pickup_at", { ascending: true });
 
-  // Reveal the assigned Driver's contact once a mission is accepted. A
-  // Dispatcher can't read driver rows via RLS, so use the service role — gated
-  // to missions belonging to THIS business (fetched under RLS just above).
-  const driverContacts = new Map<string, DriverContact>();
+  // Reveal assigned Driver contacts (service role, gated to this business).
+  const contacts = new Map<string, DriverContact>();
   const assigned = (missions ?? []).filter((m) => m.driver_id);
   if (assigned.length > 0) {
     const admin = createAdminClient();
@@ -46,33 +73,34 @@ export default async function DispatchHome() {
     const byId = new Map((drivers ?? []).map((d) => [d.id, d]));
     for (const m of assigned) {
       const d = byId.get(m.driver_id!);
-      if (d)
-        driverContacts.set(m.id, {
-          name: `${d.first_name} ${d.last_name}`,
-          phone: d.phone,
-        });
+      if (d) contacts.set(m.id, { name: `${d.first_name} ${d.last_name}`, phone: d.phone });
     }
   }
 
-  return (
-    <>
-      <div className="card-row" style={{ marginBottom: 12 }}>
-        <h1 style={{ margin: 0 }}>Missions</h1>
-        <Link href="/dispatch/new" className="badge status" style={{ padding: "8px 14px" }}>
-          + New mission
-        </Link>
-      </div>
+  // Group by Paris day; split into today / future / past.
+  const todayKey = parisDayKey(new Date());
+  const groups = new Map<string, MissionRow[]>();
+  for (const m of missions ?? []) {
+    const k = parisDayKey(m.pickup_at);
+    (groups.get(k) ?? groups.set(k, []).get(k)!).push(m);
+  }
+  const keys = [...groups.keys()];
+  const futureKeys = keys.filter((k) => k > todayKey).sort();
+  const pastKeys = keys.filter((k) => k < todayKey).sort().reverse();
+  const todayMissions = groups.get(todayKey) ?? [];
 
-      {/* Near-realtime: pull Driver status updates every few seconds. */}
+  const isEmpty = !error && (!missions || missions.length === 0);
+
+  return (
+    <main className="container wide">
+      <DispatchTabs />
       <LiveRefresh />
 
       {error && (
-        <div className="notice error">
-          Couldn’t load your missions: {error.message}
-        </div>
+        <div className="notice error">Couldn’t load your schedule: {error.message}</div>
       )}
 
-      {!error && (!missions || missions.length === 0) && (
+      {isEmpty && (
         <div className="empty">
           No missions yet.
           <br />
@@ -82,67 +110,36 @@ export default async function DispatchHome() {
         </div>
       )}
 
-      {missions?.map((m) => {
-        const contact = driverContacts.get(m.id);
-        return (
-          <div className="card" key={m.id}>
-            <div className="card-row">
-              <span className="fare">{formatMoney(currentFare(m))}</span>
-              <span style={{ display: "flex", gap: 6 }}>
-                {m.speed_win && <span className="badge speed">SPEED WIN</span>}
-                <span className="badge status">{missionStatusLabel(m.status)}</span>
-              </span>
-            </div>
-            <div className="muted small" style={{ marginTop: 4 }}>
-              {formatDateTime(m.pickup_at)} · {categoryLabel(m.category)}
-              {m.zone ? ` · ${m.zone}` : ""}
-            </div>
+      {!isEmpty && (
+        <>
+          <ColumnHead />
 
-            <div className="route">
-              <div className="leg">
-                <span className="dot" />
-                <span>{m.pickup_address}</span>
-              </div>
-              <div className="leg">
-                <span className="dot end" />
-                <span>{m.dropoff_address ?? "—"}</span>
-              </div>
-            </div>
+          {/* Today is always shown and pinned on top. */}
+          <DayGroup dayKey={todayKey} missions={todayMissions} contacts={contacts} today />
+          {todayMissions.length === 0 && (
+            <p className="muted small" style={{ margin: "0 0 8px 2px" }}>
+              No trips today.
+            </p>
+          )}
 
-            {(isExecutable(m.status) || m.status === "completed") && (
-              <StatusSteps status={m.status} />
-            )}
+          {futureKeys.map((k) => (
+            <DayGroup key={k} dayKey={k} missions={groups.get(k)!} contacts={contacts} />
+          ))}
 
-            {contact ? (
-              <div style={{ marginTop: 12 }}>
-                <div className="contact-row">
-                  <span className="muted small">Driver</span>
-                  <span>{contact.name}</span>
-                </div>
-                <div className="contact-row">
-                  <span className="muted small">Phone</span>
-                  {contact.phone ? (
-                    <a
-                      href={`tel:${contact.phone}`}
-                      style={{ color: "var(--accent)", fontWeight: 600 }}
-                    >
-                      {contact.phone}
-                    </a>
-                  ) : (
-                    <span>—</span>
-                  )}
-                </div>
+          {pastKeys.length > 0 && (
+            <details style={{ marginTop: 20 }}>
+              <summary className="muted small" style={{ cursor: "pointer" }}>
+                Earlier trips ({pastKeys.reduce((n, k) => n + groups.get(k)!.length, 0)})
+              </summary>
+              <div style={{ marginTop: 8 }}>
+                {pastKeys.map((k) => (
+                  <DayGroup key={k} dayKey={k} missions={groups.get(k)!} contacts={contacts} />
+                ))}
               </div>
-            ) : (
-              m.status === "pooled" && (
-                <p className="muted small" style={{ marginTop: 10 }}>
-                  In the Pool — waiting for a Driver to accept.
-                </p>
-              )
-            )}
-          </div>
-        );
-      })}
-    </>
+            </details>
+          )}
+        </>
+      )}
+    </main>
   );
 }

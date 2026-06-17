@@ -115,10 +115,11 @@ export function MissionForm({ error }: { error?: string }) {
       </label>
 
       <label className="field">
-        <span>Comment (optional)</span>
+        <span>Reference / notes (optional — shown on the schedule line)</span>
         <textarea
           name="comment"
           rows={2}
+          placeholder="e.g. Room 312 · or an event name like “Cannes Gala” · or instructions"
           style={{
             width: "100%",
             padding: 12,

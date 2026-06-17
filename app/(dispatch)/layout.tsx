@@ -1,4 +1,5 @@
-// Layout + guard for the signed-in Business (Dispatch) area.
+// Layout + guard for the signed-in Business (Dispatch) area. Each page sets its
+// own <main> width (the schedule/calendar are wide; the form is narrow).
 import { redirect } from "next/navigation";
 import { DispatchHeader } from "@/components/dispatch-header";
 import { getAppContext, routeFor } from "@/lib/app-context";
@@ -17,7 +18,7 @@ export default async function DispatchLayout({
   return (
     <>
       <DispatchHeader businessName={ctx.business.name} />
-      <main className="container">{children}</main>
+      {children}
     </>
   );
 }

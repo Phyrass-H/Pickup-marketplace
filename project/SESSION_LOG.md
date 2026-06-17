@@ -5,6 +5,43 @@
 
 ---
 
+## 2026-06-16 — Session 5 — Dispatch redesign: booking-style schedule + calendar
+**Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
+
+**Why:** founder wants the Business side to feel like hotel booking / fleet-dispatch software —
+dense lines (not big cards), status visible at a glance for 10–55 trips/day, plus a calendar.
+
+**What shipped** (replaces the card list on `/dispatch`):
+- **Schedule** (`/dispatch`): dense rows grouped by day, **Today pinned** on top, past under an
+  "Earlier" fold. Columns: Time · Route · Client/ref · Driver · Status. Each row has a
+  **colour-coded left edge + status pill** (`lib/dispatch-status.ts` `missionTone`): green =
+  in progress, blue = confirmed/accepted, amber `!` = unfilled & pickup soon, **red `!` = accepted
+  but not confirmed near pickup ("call the driver")**, grey = pooled. Click a row → **expands in
+  place** (native `<details>`) with full route, live progress, fare, guest, pax/luggage, flight,
+  and the Driver's tap-to-call number. Auto-refreshes (LiveRefresh).
+- **Calendar** (`/dispatch/calendar`): month grid (Mon-start, prev/next), trips placed on their
+  day with colour dots + time + place, today highlighted.
+- **Flexible reference field**: the booking form's notes field is now "Room / event / reference",
+  shown as a chip on each line — works for hotel room **or** event name. Stored in the existing
+  `comment` column (no schema change).
+- Tabs (`DispatchTabs`) for Schedule / Calendar / New; header simplified to brand + business + sign-out.
+
+**Verified in a real browser:** schedule with Today/▾Earlier grouping, coloured pills incl.
+`!Unfilled`, reference chip, row-expand detail with driver phone; calendar month with placed,
+colour-coded trips and Prev/Next. `tsc` + `next build` clean.
+
+**Decisions:** D14 (see `DECISIONS.md`).
+
+**Deferred/flagged:** reference lives in `comment` for now (promote to a dedicated column later);
+fully user-configurable columns not built (single reference covers the 90% case); calendar entries
+are display-only (no click-through to a filtered day yet); design/skin still to come (founder will
+hand a design).
+
+**Next session:** apply the founder's design when provided, or click-through from calendar day →
+schedule, or payments / booking voucher.
+
+---
+
 ## 2026-06-16 — Session 4 — Realtime status feed (trip execution)
 **Branch:** `claude/compassionate-tesla-rdbmqb` · **Env:** local (macOS).
 
