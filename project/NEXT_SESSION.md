@@ -1,7 +1,8 @@
 # Prompt for the next PickUp session
 
-> Copy-paste the block below to start the next session. It orients a fresh Claude
-> and sets the scope. Edit the "This session" line if you want a different pillar.
+> Copy-paste the block below (from "We're continuing PickUp" to the end) into a fresh
+> Claude Code session. It orients a new Claude and sets the scope. Pick ONE item under
+> "THIS SESSION" (delete the others, or write your own).
 
 ---
 
@@ -15,35 +16,42 @@ START BY READING (in order):
 - `project/DECISIONS.md` and `project/IDEAS.md`.
 - Skim `docs/` (00–05, Phase0 spine, `pickup_schema.sql`) — the source of truth.
 
-CURRENT STATE:
-- The full core loop is built and LIVE on Vercel, deployed from the `main` branch
-  (https://pickup-marketplace.vercel.app). Driver app (Pool→Accept→run trip) and
-  Business app (post mission→Schedule+Calendar→live status) both work end-to-end,
-  verified against the real Supabase DB.
-- Auth for now: key-gated dev sign-in at `/dev-login?key=…` (solo testing only).
-  Real email magic-link is wired but needs the Supabase redirect-URL setting before
-  real users.
-- `.env.local` is git-ignored — make sure it exists with the Supabase URL + anon +
-  service-role keys (see `.env.example`). `DEV_LOGIN_KEY` is only needed on Vercel.
+CURRENT STATE (live on https://pickup-marketplace.vercel.app, deployed from `main`):
+- **Core loop** works end-to-end (Driver: Pool→Accept→run trip; Business: post mission→
+  Schedule+Calendar→live status), verified against the real Supabase DB.
+- **Accounts & records** (Session 7): Driver & Business settings/edit-profile, vehicle
+  details, document uploads → Supabase Storage (`documents` private + `avatars` public
+  buckets) + `document` rows (status 'pending', 👤 verify), bank/payouts STUB (no raw
+  capture), mission history both sides.
+- **Driver service area** (Session 8): the Pool now matches by a Driver **base location +
+  service radius** (geofence), NOT a town list — a mission qualifies when its pickup OR
+  drop-off is within the radius. Addresses use **Mapbox autocomplete** (Search Box API,
+  includes hotels/airports); the Business booking form geocodes pickup/drop-off; avatar/
+  logo have crop+zoom+remove. See DECISIONS D16–D17.
+- **Auth for now:** key-gated dev sign-in `/dev-login?key=…` (solo testing). Real email
+  magic-link is wired but needs the Supabase redirect-URL setting before real users.
+- **Env:** `.env.local` (git-ignored) needs the 3 Supabase keys + `NEXT_PUBLIC_MAPBOX_TOKEN`
+  (see `.env.example`). Mapbox token is also set in Vercel. ⚠️ Open follow-up: URL-restrict
+  the Mapbox token once a final custom domain exists (tracked in BACKLOG H).
 
-HARD RULES (from CLAUDE.md): glossary exactly (Business, Dispatcher, Driver, Guest,
-Pool, PDP, Ceiling, SPEED WIN — never "client"/"principal"); PickUp is an AGENT, never
-principal; PickUp ≠ PickUp Go; the Supabase schema is ALREADY APPLIED — never migrate
-it, generate types from it; build only KEEP items, nothing marked CUT/🅥.
+HARD RULES (from CLAUDE.md): glossary exactly (Business, Dispatcher, Driver, Guest, Pool,
+PDP, Ceiling, SPEED WIN — never "client"/"principal"); PickUp is an AGENT, never principal;
+PickUp ≠ PickUp Go; the Supabase schema is ALREADY APPLIED — never re-run it (additive
+ALTERs only, founder-approved, recorded in `docs/migrations/`); build only KEEP items.
 
 WORKFLOW THIS SESSION:
-- Work on a new branch off `main`; keep `tsc` + `next build` green; verify in the
-  browser preview. When a feature is verified, merge to `main` to deploy (the founder
-  authorizes main merges). Append to `project/SESSION_LOG.md` and push when done.
+- Work on a new branch off `main`; keep `tsc` + `next build` green; verify in the browser
+  preview against the real Supabase DB. When a feature is verified, merge to `main` to
+  deploy (the founder authorizes each main merge). Append to `project/SESSION_LOG.md`.
 
-THIS SESSION — build the "Accounts & records" pillar (all KEEP, existing tables, no
-schema change; documents go to Supabase Storage → the `document` table):
-1. Driver & Business **edit-profile / settings** pages.
-2. Driver **vehicle details** (make/model/colour/plate/seats) + Business **logo**.
-3. **Document uploads** both sides (licence, insurance, RC Pro, REVTC, vehicle &
-   company registration) → Storage + `document` rows; status stays 'pending' (👤 verify).
-4. **Bank/card details** capture (prep for Stripe Connect; can stub the Stripe piece).
-5. **Mission history** (month → list → detail) for both sides.
-
-(If I'd rather do Payments, Notifications, Real-email-auth, or Analytics instead,
-I'll say so — see `project/BACKLOG.md` for the full menu.)
+THIS SESSION — pick ONE (see `project/BACKLOG.md` for the full menu):
+1. **Payments — Stripe Connect** (recommended next): turn the bank/payouts stubs real —
+   card payment per mission + commission split, write the `ledger_transaction` at
+   completion, generate the `booking_voucher` (7 legal fields, Doc 01). Highest-value pillar.
+2. **Account verification workspace** (BACKLOG F2): an in-app `/admin` (role=admin) queue to
+   review new Drivers & Businesses + their uploaded documents and approve/reject — sets
+   `document.status` + `driver.verified`. Needed before inviting real users.
+3. **Real email sign-in**: switch on Supabase magic-link (one redirect-URL setting), turn
+   off dev-login — required before real drivers/hotels.
+4. **Internal observability stack** (BACKLOG F2): PostHog analytics + Sentry + admin metrics.
+5. **Design/skin pass** over both apps (needs a design direction from the founder).
