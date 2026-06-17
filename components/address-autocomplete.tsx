@@ -10,17 +10,27 @@ export interface Place {
   lng: number;
 }
 
-interface MapboxFeature {
-  properties?: { full_address?: string; name?: string; place_formatted?: string };
-  geometry?: { coordinates?: [number, number] };
+interface Suggestion {
+  mapbox_id: string;
+  name: string;
+  address: string;
 }
 
-// Mapbox-backed address field. The visible input is just for typing; the three
-// HIDDEN inputs (label/lat/lng) are what the form submits — and they only carry
-// a value once the user PICKS a suggestion, so we never submit an un-geocoded
-// address. Editing after a pick clears the coords (they'd be stale). Used for
-// the Driver base and the mission pickup/dropoff. Riviera proximity bias by
-// default, but typing "Milan"/"Paris" still returns them.
+function newSession(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return `s-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  }
+}
+
+// Mapbox-backed address field. Uses the **Search Box API** (suggest → retrieve),
+// NOT the Geocoding API — Search Box includes points of interest (hotels,
+// airports, venues), which a VTC booking form is full of; plain geocoding only
+// knows addresses/places and returns junk for POI queries. The visible input is
+// for typing; the three HIDDEN inputs (label/lat/lng) are what the form submits,
+// and only carry a value once the user PICKS a suggestion (a retrieve call fills
+// the coords). Riviera proximity bias by default; "Milano"/"Paris" still work.
 export function AddressAutocomplete({
   labelName,
   latName,
@@ -36,15 +46,15 @@ export function AddressAutocomplete({
   placeholder?: string;
   proximity?: [number, number];
 }) {
-  // Primitive proximity coords so the effect deps are stable (the array literal
-  // default is a new reference each render — putting it in deps loops forever).
   const [px, py] = proximity;
   const [query, setQuery] = useState(defaultValue?.label ?? "");
   const [picked, setPicked] = useState<Place | null>(defaultValue ?? null);
-  const [suggestions, setSuggestions] = useState<Place[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const session = useRef<string>(newSession());
 
   useEffect(() => {
     if (!TOKEN) return;
@@ -58,20 +68,26 @@ export function AddressAutocomplete({
     debounce.current = setTimeout(async () => {
       try {
         const url =
-          `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}` +
-          `&autocomplete=true&limit=5&proximity=${px},${py}&access_token=${TOKEN}`;
+          `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(query)}` +
+          `&language=fr&limit=6&proximity=${px},${py}` +
+          `&session_token=${session.current}&access_token=${TOKEN}`;
         const res = await fetch(url, { signal: controller.signal });
-        const data = (await res.json()) as { features?: MapboxFeature[] };
-        const places: Place[] = (data.features ?? [])
-          .map((f) => {
-            const c = f.geometry?.coordinates;
-            const label =
-              f.properties?.full_address ||
-              [f.properties?.name, f.properties?.place_formatted].filter(Boolean).join(", ");
-            return c ? { label, lng: c[0], lat: c[1] } : null;
-          })
-          .filter((p): p is Place => !!p && !!p.label && Number.isFinite(p.lat));
-        setSuggestions(places);
+        const data = (await res.json()) as {
+          suggestions?: {
+            mapbox_id?: string;
+            name?: string;
+            full_address?: string;
+            place_formatted?: string;
+          }[];
+        };
+        const list: Suggestion[] = (data.suggestions ?? [])
+          .map((s) => ({
+            mapbox_id: s.mapbox_id ?? "",
+            name: s.name ?? "",
+            address: s.full_address || s.place_formatted || "",
+          }))
+          .filter((s) => s.mapbox_id && s.name);
+        setSuggestions(list);
         setOpen(true);
       } catch (e) {
         if ((e as Error)?.name !== "AbortError") setSuggestions([]);
@@ -91,11 +107,36 @@ export function AddressAutocomplete({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  function pick(p: Place) {
-    setPicked(p);
-    setQuery(p.label);
-    setSuggestions([]);
+  // Resolve a chosen suggestion to coordinates (Search Box retrieve step).
+  async function pick(s: Suggestion) {
+    if (!TOKEN) return;
     setOpen(false);
+    setBusy(true);
+    try {
+      const url =
+        `https://api.mapbox.com/search/searchbox/v1/retrieve/${s.mapbox_id}` +
+        `?session_token=${session.current}&access_token=${TOKEN}`;
+      const res = await fetch(url);
+      const data = (await res.json()) as {
+        features?: {
+          geometry?: { coordinates?: [number, number] };
+          properties?: { full_address?: string; name?: string };
+        }[];
+      };
+      const f = data.features?.[0];
+      const c = f?.geometry?.coordinates;
+      if (c && Number.isFinite(c[1])) {
+        const label = f?.properties?.full_address || f?.properties?.name || s.address || s.name;
+        setPicked({ label, lng: c[0], lat: c[1] });
+        setQuery(label);
+      }
+      session.current = newSession(); // fresh session for the next search
+    } catch {
+      // leave unpicked; the form guards on coords
+    } finally {
+      setBusy(false);
+      setSuggestions([]);
+    }
   }
 
   function onChange(v: string) {
@@ -119,17 +160,27 @@ export function AddressAutocomplete({
 
       {open && suggestions.length > 0 && (
         <ul className="ac-list">
-          {suggestions.map((p, i) => (
-            <li key={i}>
-              <button type="button" className="ac-item" onClick={() => pick(p)}>
-                {p.label}
+          {suggestions.map((s) => (
+            <li key={s.mapbox_id}>
+              <button type="button" className="ac-item" onClick={() => pick(s)}>
+                <span style={{ fontWeight: 500 }}>{s.name}</span>
+                {s.address && (
+                  <span className="muted" style={{ display: "block", fontSize: 12 }}>
+                    {s.address}
+                  </span>
+                )}
               </button>
             </li>
           ))}
         </ul>
       )}
 
-      {query.trim().length >= 3 && !picked && (
+      {busy && (
+        <p className="small muted" style={{ margin: "4px 0 0" }}>
+          Locating…
+        </p>
+      )}
+      {query.trim().length >= 3 && !picked && !busy && (
         <p className="small muted" style={{ margin: "4px 0 0" }}>
           Pick an address from the list so we can place it on the map.
         </p>

@@ -42,6 +42,15 @@ object-URL leak + modal Escape/scroll-lock/aria, radius-option preservation, can
 zone label (town from Mapbox context); then Payments (Stripe Connect) or the admin verification
 workspace (BACKLOG F2).
 
+**Addendum (same day):** deployed S8 to `main`; verified the Mapbox token is compiled into the live
+build (autocomplete works live). Token URL-restriction deferred until a final domain exists (tracked
+in BACKLOG H). **Bugfix (branch `fix-poi-autocomplete`):** the booking autocomplete used the
+**Geocoding API**, which has no points of interest → French hotel/airport names returned foreign
+junk ("Hôtel Negresco" → California; "Aéroport Nice" → Brazil). Switched to the **Mapbox Search Box
+API** (suggest → retrieve, session-token based) — returns POIs. Verified live in-browser
+("Aéroport Nice" → correct airport, coords 43.6597/7.2058) and cross-border (Milano) intact; `tsc` +
+build clean. Component contract unchanged (same hidden lat/lng fields), so no page edits needed.
+
 ---
 
 ## 2026-06-17 — Session 7 — Accounts & records pillar

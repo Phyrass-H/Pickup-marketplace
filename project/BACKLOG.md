@@ -117,6 +117,11 @@
 
 ## H. Platform / production readiness
 - 🔨 **Custom domain** (e.g. app.pickup…) on Vercel.
+  - ↳ **When the final domain lands:** create a URL-restricted Mapbox token (Mapbox's
+    Default public token can't be restricted; no wildcards) scoped to the domain +
+    `localhost:3000`, then swap `NEXT_PUBLIC_MAPBOX_TOKEN` in Vercel + `.env.local` and
+    redeploy. Until then the unrestricted default token is in use (fine for closed beta).
+    See SESSION_LOG S8 / DECISIONS D17.
 - 🔨 **PWA polish**: icons, install prompt, offline shell.
 - 🔨 **Design/skin** pass over both apps (founder will provide a design).
 - 🅥 Security audit / pen test (plan post-V1).
