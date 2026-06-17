@@ -94,6 +94,16 @@
   (RLS already grants admin read on every table). Search a Driver/Business/mission; view its
   **audit timeline** (built on the existing `status_event`), statuses, payments, documents,
   contacts. Highest-value piece — wanted before real users go live.
+- 🔨 **Account verification workspace** (onboarding approval — **founder priority, 2026-06-17**):
+  a dedicated **enrollment queue** in `/admin` listing every new **Driver** and **Business**
+  awaiting validation. Per applicant: their profile/company details + **all uploaded documents**
+  (Driver: licence, VTC card, REVTC, insurance, RC Pro, carte grise · Business: Kbis) shown inline
+  via signed-URL preview, with **approve / reject** controls that set each `document.status`
+  (pending → verified/rejected) and flip **`driver.verified`** true once the file is complete. This
+  is the dedicated interface PickUp staff use to **manually validate every new user in beta** (👤).
+  Pairs with the 👤 verify + video-interview items in section A. Needs an admin **write** path
+  (service role) — browser RLS is read-only for admins today. The upload side already exists
+  (Session 7: documents land in the `documents` bucket as `pending`); this is the review/confirm side.
 - 📊 Doubles as **investor metrics** (fill rate, time-to-accept, GMV, commission) — see the
   ⚙️ "PickUp internal / investor metrics" line in F.
 - ⚠️ **GDPR dependency**: analytics + session replay capture PII → require PII masking,
