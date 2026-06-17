@@ -6,7 +6,9 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/dispatch", label: "Schedule" },
   { href: "/dispatch/calendar", label: "Calendar" },
+  { href: "/dispatch/history", label: "History" },
   { href: "/dispatch/new", label: "+ New mission" },
+  { href: "/dispatch/settings", label: "Settings" },
 ];
 
 export function DispatchTabs() {

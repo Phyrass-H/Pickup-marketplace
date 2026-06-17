@@ -17,9 +17,12 @@ const HOURS_3 = 3 * 3_600_000;
 export function missionTone(
   m: Pick<MissionRow, "status" | "pickup_at">,
   now: Date = new Date(),
+  opts: { archived?: boolean } = {},
 ): MissionTone {
   const pickup = new Date(m.pickup_at).getTime();
-  const within3h = pickup <= now.getTime() + HOURS_3;
+  // In the history archive every pickup is in the past, so the "pickup is soon —
+  // call them" urgency is never meaningful: show the calm variants instead.
+  const within3h = !opts.archived && pickup <= now.getTime() + HOURS_3;
 
   switch (m.status) {
     case "en_route":

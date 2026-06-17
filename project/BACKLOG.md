@@ -76,6 +76,30 @@
 - 🔨/⚙️ **Admin role + dashboard** (`admin` role exists in schema): verify drivers,
   oversee missions, run payouts.
 
+## F2. Internal tooling & observability stack  ⚙️/🔨 (PickUp back-office — future pillar)
+> Founder request (2026-06-17): the PickUp-internal layer for **dev / marketing /
+> dispute-support** — so when a user calls about a bug we can see what happened, and
+> marketing can follow usage. It's NOT one dashboard: it's a stack of distinct tools per
+> audience. Consolidates the analytics/observability pieces above into one named pillar.
+> Each piece is mostly copy-paste SDK + free tiers; the admin dashboard is the real build.
+- ⚙️ **Product analytics** (marketing): clickstream + named events (`mission_posted`,
+  `mission_accepted`, `signup_completed`) → funnels + retention. PostHog (recommended;
+  bundles session replay + funnels + flags) or Mixpanel/Amplitude/GA4.
+- ⚙️ **Error monitoring** (devs): Sentry SDK (browser + server) → stack trace, user, URL,
+  breadcrumbs; on top of the free Vercel + Supabase logs. Search by user/time when a bug is
+  reported. (~½ day to wire.)
+- ⚙️ **Session replay** (support + dev): privacy-masked reconstruction of a real session to
+  see what the user actually did. PostHog built-in, or Microsoft Clarity (free) / LogRocket.
+- 🔨 **Admin dashboard / back-office** (dispute-support): in-app `/admin` gated to `role=admin`
+  (RLS already grants admin read on every table). Search a Driver/Business/mission; view its
+  **audit timeline** (built on the existing `status_event`), statuses, payments, documents,
+  contacts. Highest-value piece — wanted before real users go live.
+- 📊 Doubles as **investor metrics** (fill rate, time-to-accept, GMV, commission) — see the
+  ⚙️ "PickUp internal / investor metrics" line in F.
+- ⚠️ **GDPR dependency**: analytics + session replay capture PII → require PII masking,
+  cookie consent, and listing Sentry/PostHog as processors in the privacy policy. Do together
+  with **G › GDPR**. Don't enable for real users before that.
+
 ## G. Trust, legal, compliance
 - 🔨 **GDPR**: privacy policy, consent capture, data-deletion path.
 - 🔨 PII/financial **encryption** (use providers' built-in).

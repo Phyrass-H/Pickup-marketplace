@@ -28,11 +28,13 @@ function parseWaypoints(raw: unknown): Waypoint[] {
 export function TripRow({
   mission,
   driver,
+  archived = false,
 }: {
   mission: MissionRow;
   driver?: DriverContact | null;
+  archived?: boolean;
 }) {
-  const t = missionTone(mission);
+  const t = missionTone(mission, undefined, { archived });
   const reference = mission.comment?.trim() || null;
   const waypoints = parseWaypoints(mission.waypoints);
 

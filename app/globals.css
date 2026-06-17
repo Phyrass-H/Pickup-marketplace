@@ -516,3 +516,85 @@ select {
   color: var(--text-muted);
   padding: 2px 4px;
 }
+
+/* ---------- Accounts & records: settings / documents ---------- */
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex: none;
+}
+.avatar-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2f7;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+.biz-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--surface);
+}
+
+/* Two-up field grid (vehicle details) */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+@media (max-width: 460px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Document rows */
+.doc-row {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+.doc-row:first-of-type {
+  border-top: none;
+  padding-top: 4px;
+}
+.doc-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.doc-label {
+  font-weight: 600;
+  font-size: 15px;
+}
+.doc-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.doc-row-actions input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+.btn.doc-upload {
+  width: auto;
+  padding: 8px 14px;
+  font-size: 14px;
+}

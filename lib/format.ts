@@ -28,6 +28,17 @@ const dateOnly = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Europe/Paris",
 });
 
+const monthLong = new Intl.DateTimeFormat("fr-FR", {
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Paris",
+});
+
+// "2026-06" → "juin 2026". Input is a Paris year-month key (YYYY-MM).
+export function formatMonth(monthKey: string): string {
+  return monthLong.format(new Date(`${monthKey}-01T12:00:00`));
+}
+
 export function formatMoney(n: number | null | undefined): string {
   if (n == null) return "—";
   return money.format(Number(n));

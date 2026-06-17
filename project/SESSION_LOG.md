@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-06-17 — Session 7 — Accounts & records pillar
+**Branch:** `accounts-records` (off `main`) · **Env:** local (macOS).
+
+**What shipped** — the records layer both sides need before real onboarding/payments. All
+**KEEP**, existing tables, **no schema change**. Files (proofs/images) go to **Supabase Storage**,
+buckets created on demand via the service-role Storage API (operational setup, not a DB migration).
+- **Storage foundation** (`lib/supabase/storage.ts`): `ensureBucket` (idempotent), `uploadFile`,
+  `signedDocUrl` (private), `publicMediaUrl` (public). Two buckets: **`documents`** (private —
+  signed URLs) and **`avatars`** (public — logo/photo). `lib/account.ts` = doc-type lists + labels.
+- **Driver `/settings`**: edit name, phone, languages, GPS, zones, **profile photo**, + **vehicle**
+  (make/model/colour/plate/seats/category). **Business `/dispatch/settings`**: name, field, **logo**,
+  Dispatcher contact. Writes via service role gated to the caller's own row (D6/D7 pattern).
+- **Documents** both sides (`components/document-section.tsx` + `lib/document-actions.ts`): one
+  upload row per type → private bucket + `document` row, status stays `pending` (👤 verify). Status
+  pill + signed "View" link. Driver: licence/VTC/REVTC/insurance/RC Pro/carte grise. Business: Kbis.
+- **Bank/payouts = honest stub**: Driver "Payouts" + Business "Billing" cards show connected-state
+  from `stripe_account_id`/`stripe_customer_id`; inert "coming soon" CTA. **No raw IBAN/card capture**
+  (no columns; PCI) — Stripe Connect is a later pillar.
+- **Mission history**: Driver `/rides/history` (month-grouped past completed/cancelled rides) +
+  Business `/dispatch/history` (month-grouped past trips, reuses `TripRow`). Nav: Settings in the
+  Driver header; History + Settings tabs in Dispatch; logo shown in the Dispatch header.
+- Also (founder request): added an **"Internal tooling & observability stack"** pillar to
+  `BACKLOG.md` (F2) — product analytics / Sentry / session replay / admin back-office + GDPR.
+
+**Verified** — `tsc` + `next build` clean (19 routes). Browser-tested via preview against the
+**real Supabase DB** (dev-login both roles): Driver settings render + edit-save persists; the
+private-docs path proven end-to-end (bucket auto-provisioned, upload, `document` row `pending`,
+signed URL HTTP 200) and renders "Pending review" + working View link; Business settings + Kbis
+row + disabled Billing CTA; **logo** path proven (public bucket, header shows it); both history
+views show real past missions grouped by "juin 2026". Fixed a polish bug: archived history rows no
+longer show the live "pickup soon — call them" alarm (`missionTone(..., {archived})`). 1×1 test
+artifacts cleaned up afterward; the two buckets remain (ready infra).
+
+**Decisions:** D16 (see `DECISIONS.md`).
+
+**Deferred/flagged:** file-pick can't be driven in the headless preview, so the upload UI itself
+wasn't clicked through a real file — the storage mechanism was proven server-side instead (mirrors
+the action exactly). History "fare" shows the PDP value (no stored final fare until the ledger is
+written). Real email auth + Stripe wiring remain separate pillars.
+
+**Next session:** Payments (Stripe Connect — turns the bank stubs real + writes the ledger/voucher),
+or real email auth (flip dev-login off), or the observability/admin pillar (BACKLOG F2).
+
+---
+
 ## 2026-06-16 — Session 6 — Live deploy + full backlog & next-session plan
 **Branch:** `main` (consolidated). **Live:** https://pickup-marketplace.vercel.app
 

@@ -79,7 +79,12 @@ export default async function RidesPage() {
 
   return (
     <>
-      <h1>My Rides</h1>
+      <div className="card-row" style={{ alignItems: "center" }}>
+        <h1 style={{ margin: 0 }}>My Rides</h1>
+        <Link href="/rides/history" className="small muted" style={{ textDecoration: "underline" }}>
+          History →
+        </Link>
+      </div>
 
       {error && (
         <div className="notice error">

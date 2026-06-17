@@ -96,6 +96,20 @@ without email/Supabase config, `/dev-login` + `/api/dev-login` require `?key=` m
 TEMPORARY scaffold — real drivers/businesses get email magic-link, and dev-login is turned off,
 before real beta. Going forward: build on a branch, merge to `main` to deploy when verified.
 
+### D16 — Storage buckets (private docs + public avatars) and a bank STUB, not raw capture (2026-06-17)
+Accounts & records writes files to **Supabase Storage**, with buckets created on demand via the
+service-role Storage API (`lib/supabase/storage.ts`). This is operational setup, **not** a DB schema
+migration, so it respects hard-rule #4. Two buckets: **`documents`** is private — `document.file_url`
+stores the storage PATH and reads mint short-lived **signed URLs** (sensitive proofs); **`avatars`**
+is public — `business.logo_url` / `driver.profile_photo_url` store the public URL with a `?v=`
+cache-buster (display assets). Document inserts + profile/business/dispatcher/vehicle updates go
+through the **service role gated to the caller's own row** (no INSERT/UPDATE RLS for several of
+these tables — extends D6/D7). Bank/card collection is a **deliberate stub**: status is derived from
+the existing `stripe_account_id`/`stripe_customer_id` columns with an inert "coming soon" CTA. We do
+**not** add or capture raw IBAN/card fields — there are no columns and storing raw bank/card data is
+a PCI/compliance problem; Stripe Connect/Customer onboarding is the intended path, built later in the
+Payments pillar. [[d6]] [[d7]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

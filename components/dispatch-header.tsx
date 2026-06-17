@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function DispatchHeader({ businessName }: { businessName: string }) {
+export function DispatchHeader({
+  businessName,
+  logoUrl,
+}: {
+  businessName: string;
+  logoUrl?: string | null;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -25,6 +31,10 @@ export function DispatchHeader({ businessName }: { businessName: string }) {
           PickUp Dispatch
         </Link>
         <nav>
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="biz-logo" src={logoUrl} alt={`${businessName} logo`} />
+          )}
           <span className="small" style={{ opacity: 0.85 }}>
             {businessName}
           </span>

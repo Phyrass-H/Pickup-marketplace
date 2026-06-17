@@ -35,6 +35,9 @@ export function AppHeader() {
           <Link href="/rides" className={isActive("/rides") ? "active" : ""}>
             My Rides
           </Link>
+          <Link href="/settings" className={isActive("/settings") ? "active" : ""}>
+            Settings
+          </Link>
           <button
             onClick={signOut}
             disabled={pending}

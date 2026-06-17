@@ -17,7 +17,7 @@ export default async function DispatchLayout({
 
   return (
     <>
-      <DispatchHeader businessName={ctx.business.name} />
+      <DispatchHeader businessName={ctx.business.name} logoUrl={ctx.business.logo_url} />
       {children}
     </>
   );
