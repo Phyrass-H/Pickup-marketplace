@@ -3,18 +3,19 @@ import Link from "next/link";
 import { getAppContext } from "@/lib/app-context";
 import { getLatestDocuments } from "@/lib/documents";
 import { DRIVER_DOC_TYPES } from "@/lib/account";
-import { BETA_ZONES } from "@/lib/zones";
 import { DocumentSection } from "@/components/document-section";
+import { AvatarEditor } from "@/components/avatar-editor";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { updateDriverSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const NOTICE: Record<string, { tone: string; text: string }> = {
-  missing: { tone: "error", text: "Please fill in your name and pick at least one zone." },
-  db: { tone: "error", text: "Something went wrong saving your changes. Please try again." },
-  upload: { tone: "error", text: "Your photo couldn’t be uploaded. Please try another file." },
-  filesize: { tone: "error", text: "That photo is too large (max 10 MB)." },
-  filetype: { tone: "error", text: "Please use a PNG, JPG or WebP image." },
+const RADII = [25, 50, 75, 100, 150, 200, 300];
+
+const NOTICE: Record<string, string> = {
+  missing: "Please fill in your first and last name.",
+  nobase: "Please pick your base address from the suggestions so the Pool can match by distance.",
+  db: "Something went wrong saving your changes. Please try again.",
 };
 
 export default async function DriverSettingsPage({
@@ -30,31 +31,24 @@ export default async function DriverSettingsPage({
   const { ok, error } = await searchParams;
   const docs = await getLatestDocuments("driver", driver.id, DRIVER_DOC_TYPES);
 
+  const base =
+    driver.base_lat != null && driver.base_lng != null
+      ? { label: driver.base_label ?? "", lat: driver.base_lat, lng: driver.base_lng }
+      : null;
+
   return (
     <>
       <h1>Settings</h1>
 
       {ok && <div className="notice success">Your changes were saved.</div>}
-      {error && NOTICE[error] && (
-        <div className={`notice ${NOTICE[error].tone}`}>{NOTICE[error].text}</div>
-      )}
+      {error && NOTICE[error] && <div className="notice error">{NOTICE[error]}</div>}
+
+      <div className="card">
+        <h2>Profile</h2>
+        <AvatarEditor kind="driver" currentUrl={driver.profile_photo_url} fallback={driver.first_name} />
+      </div>
 
       <form action={updateDriverSettings} className="card">
-        <h2>Profile</h2>
-
-        <div className="avatar-row">
-          {driver.profile_photo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="avatar" src={driver.profile_photo_url} alt="Your profile photo" />
-          ) : (
-            <span className="avatar avatar-empty">{driver.first_name?.[0] ?? "?"}</span>
-          )}
-          <label className="field" style={{ flex: 1, marginBottom: 0 }}>
-            <span>Profile photo</span>
-            <input type="file" name="photo" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </div>
-
         <label className="field">
           <span>First name</span>
           <input type="text" name="first_name" defaultValue={driver.first_name} required />
@@ -80,24 +74,33 @@ export default async function DriverSettingsPage({
           </select>
         </label>
 
+        <h2 style={{ marginTop: 20 }}>Where you work</h2>
         <div className="field">
           <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-            Operational zones
+            Your base
           </span>
-          <div className="checks">
-            {BETA_ZONES.map((zone) => (
-              <label className="check" key={zone}>
-                <input
-                  type="checkbox"
-                  name="zones"
-                  value={zone}
-                  defaultChecked={driver.operational_zones.includes(zone)}
-                />
-                {zone}
-              </label>
-            ))}
-          </div>
+          <AddressAutocomplete
+            labelName="base_label"
+            latName="base_lat"
+            lngName="base_lng"
+            defaultValue={base}
+            placeholder="Start typing a town or address…"
+          />
         </div>
+        <label className="field">
+          <span>Service radius — how far from your base you’ll drive</span>
+          <select name="service_radius_km" defaultValue={String(driver.service_radius_km ?? 50)}>
+            {RADII.map((r) => (
+              <option key={r} value={r}>
+                Up to {r} km
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted small" style={{ marginTop: -6 }}>
+          A mission appears in your Pool when its pickup <strong>or</strong> drop-off is within this
+          distance of your base — so a long transfer that ends near you still shows up.
+        </p>
 
         <h2 style={{ marginTop: 20 }}>Vehicle</h2>
         <label className="field">

@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BETA_ZONES } from "@/lib/zones";
 import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = [
@@ -17,6 +16,8 @@ const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
 // Creates the Driver's profile + driver + vehicle rows for the logged-in user.
 // Uses the service-role client because profile/driver have no INSERT RLS policy
 // (writes are server-side in beta) — gated strictly to the current user's id.
+// The Driver picks a BASE location + service radius — that's what the Pool
+// matches against (replacing the old town list).
 export async function createDriverProfile(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -38,13 +39,17 @@ export async function createDriverProfile(formData: FormData) {
     ? (categoryRaw as VehicleCategory)
     : null;
 
-  const zones = formData
-    .getAll("zones")
-    .map(String)
-    .filter((z) => (BETA_ZONES as readonly string[]).includes(z));
+  const baseLabel = String(formData.get("base_label") ?? "").trim();
+  const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
+  const baseLng = Number.parseFloat(String(formData.get("base_lng") ?? ""));
+  const radiusRaw = Number.parseInt(String(formData.get("service_radius_km") ?? ""), 10);
+  const radius = Number.isFinite(radiusRaw) ? Math.min(500, Math.max(5, radiusRaw)) : 50;
 
-  if (!first || !last || !category || zones.length === 0) {
+  if (!first || !last || !category) {
     redirect("/onboarding?error=missing");
+  }
+  if (!baseLabel || !Number.isFinite(baseLat) || !Number.isFinite(baseLng)) {
+    redirect("/onboarding?error=nobase");
   }
 
   const admin = createAdminClient();
@@ -73,19 +78,22 @@ export async function createDriverProfile(formData: FormData) {
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
+  const driverFields = {
+    first_name: first,
+    last_name: last,
+    phone: phone || null,
+    preferred_gps: gps,
+    base_label: baseLabel,
+    base_lat: baseLat,
+    base_lng: baseLng,
+    service_radius_km: radius,
+  };
+
   let driverId = existing?.id;
   if (!driverId) {
     const { data: created, error } = await admin
       .from("driver")
-      .insert({
-        auth_user_id: user.id,
-        first_name: first,
-        last_name: last,
-        phone: phone || null,
-        email: user.email ?? null,
-        operational_zones: zones,
-        preferred_gps: gps,
-      })
+      .insert({ auth_user_id: user.id, email: user.email ?? null, ...driverFields })
       .select("id")
       .single();
     if (error || !created) redirect("/onboarding?error=db");
@@ -93,13 +101,7 @@ export async function createDriverProfile(formData: FormData) {
   } else {
     const { error: updateErr } = await admin
       .from("driver")
-      .update({
-        first_name: first,
-        last_name: last,
-        phone: phone || null,
-        operational_zones: zones,
-        preferred_gps: gps,
-      })
+      .update(driverFields)
       .eq("id", driverId);
     if (updateErr) redirect("/onboarding?error=db");
   }

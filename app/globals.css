@@ -598,3 +598,72 @@ select {
   padding: 8px 14px;
   font-size: 14px;
 }
+
+/* Square variant for a Business logo (round stays for driver photos) */
+.avatar-square {
+  border-radius: 10px;
+}
+
+/* ---------- Address autocomplete (Mapbox) ---------- */
+.ac {
+  position: relative;
+}
+.ac-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.ac-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.ac-item:hover {
+  background: #f2f5f9;
+}
+
+/* ---------- Crop modal (avatar / logo) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(16, 24, 40, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  width: 100%;
+  max-width: 420px;
+}
+.crop-area {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: #11161f;
+  border-radius: 10px;
+  overflow: hidden;
+}

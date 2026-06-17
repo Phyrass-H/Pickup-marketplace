@@ -121,6 +121,10 @@ export interface Database {
           profile_photo_url: string | null;
           languages: string[];
           operational_zones: string[];
+          base_label: string | null;
+          base_lat: number | null;
+          base_lng: number | null;
+          service_radius_km: number;
           preferred_gps: PreferredGps | null;
           stripe_account_id: string | null;
           verified: boolean;
@@ -136,6 +140,10 @@ export interface Database {
           profile_photo_url?: string | null;
           languages?: string[];
           operational_zones?: string[];
+          base_label?: string | null;
+          base_lat?: number | null;
+          base_lng?: number | null;
+          service_radius_km?: number;
           preferred_gps?: PreferredGps | null;
           stripe_account_id?: string | null;
           verified?: boolean;

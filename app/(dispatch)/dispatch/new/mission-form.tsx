@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BETA_ZONES } from "@/lib/zones";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { createMission } from "./actions";
 
 // Client form so we can show the live "too-low ceiling" SOFT WARNING (Doc 02):
@@ -47,30 +47,29 @@ export function MissionForm({ error }: { error?: string }) {
         </select>
       </label>
 
-      <label className="field">
-        <span>Zone</span>
-        <select name="zone" defaultValue={BETA_ZONES[0]}>
-          {BETA_ZONES.map((z) => (
-            <option key={z} value={z}>
-              {z}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="field">
+        <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
+          Pickup address
+        </span>
+        <AddressAutocomplete
+          labelName="pickup_address"
+          latName="pickup_lat"
+          lngName="pickup_lng"
+          placeholder="Hôtel, address, airport…"
+        />
+      </div>
 
-      <label className="field">
-        <span>Pickup address</span>
-        <input type="text" name="pickup_address" required placeholder="Hôtel …" />
-      </label>
-
-      <label className="field">
-        <span>Dropoff address</span>
-        <input
-          type="text"
-          name="dropoff_address"
+      <div className="field">
+        <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
+          Dropoff address
+        </span>
+        <AddressAutocomplete
+          labelName="dropoff_address"
+          latName="dropoff_lat"
+          lngName="dropoff_lng"
           placeholder="Aéroport Nice Côte d'Azur…"
         />
-      </label>
+      </div>
 
       <label className="field">
         <span>Intermediate stops (optional, one address per line)</span>

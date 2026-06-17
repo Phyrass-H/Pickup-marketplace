@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
-import { BETA_ZONES } from "@/lib/zones";
 import type { VehicleCategory } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
@@ -22,8 +21,9 @@ function num(v: FormDataEntryValue | null): number | null {
 // USER session so RLS p_mission_business_insert (business_id =
 // current_business_id()) authorizes it — no service role needed.
 //
-// Maps/geocoding is deferred (Doc 03): addresses are free text, lat/lng null.
-// The Business sets the ceiling (Doc 01/02); PDP curve params are auto-derived.
+// Addresses are geocoded client-side via Mapbox (the form submits pickup/dropoff
+// lat/lng); `zone` is derived from the pickup town for display. The Business sets
+// the ceiling (Doc 01/02); PDP curve params are auto-derived.
 export async function createMission(formData: FormData) {
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
@@ -34,13 +34,14 @@ export async function createMission(formData: FormData) {
     ? (categoryRaw as VehicleCategory)
     : null;
 
-  const zoneRaw = String(formData.get("zone") ?? "");
-  const zone = (BETA_ZONES as readonly string[]).includes(zoneRaw)
-    ? zoneRaw
-    : null;
-
   const pickupAddress = String(formData.get("pickup_address") ?? "").trim();
   const dropoffAddress = String(formData.get("dropoff_address") ?? "").trim();
+  const pickupLat = num(formData.get("pickup_lat"));
+  const pickupLng = num(formData.get("pickup_lng"));
+  const dropoffLat = num(formData.get("dropoff_lat"));
+  const dropoffLng = num(formData.get("dropoff_lng"));
+  // Zone is now just a display label, derived from the pickup's town.
+  const zone = pickupAddress ? pickupAddress.split(",")[0]!.trim() || null : null;
   const pickupLocal = String(formData.get("pickup_at") ?? "").trim();
   const ceiling = num(formData.get("ceiling"));
   const baseFare = num(formData.get("base_fare"));
@@ -83,7 +84,11 @@ export async function createMission(formData: FormData) {
     category: category!,
     zone,
     pickup_address: pickupAddress,
+    pickup_lat: pickupLat,
+    pickup_lng: pickupLng,
     dropoff_address: dropoffAddress || null,
+    dropoff_lat: dropoffLat,
+    dropoff_lng: dropoffLng,
     waypoints: waypoints.length > 0 ? waypoints : null,
     pickup_at: pickupAt.toISOString(),
     passenger_name: passengerName || null,

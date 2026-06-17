@@ -5,6 +5,7 @@ import { getLatestDocuments } from "@/lib/documents";
 import { BUSINESS_DOC_TYPES } from "@/lib/account";
 import { DispatchTabs } from "@/components/dispatch-tabs";
 import { DocumentSection } from "@/components/document-section";
+import { AvatarEditor } from "@/components/avatar-editor";
 import { updateBusinessSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -39,21 +40,13 @@ export default async function BusinessSettingsPage({
       {ok && <div className="notice success">Your changes were saved.</div>}
       {error && NOTICE[error] && <div className="notice error">{NOTICE[error]}</div>}
 
+      <div className="card">
+        <h2>Logo</h2>
+        <AvatarEditor kind="business" currentUrl={business.logo_url} fallback={business.name} />
+      </div>
+
       <form action={updateBusinessSettings} className="card">
         <h2>Business</h2>
-
-        <div className="avatar-row">
-          {business.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="avatar" src={business.logo_url} alt="Business logo" />
-          ) : (
-            <span className="avatar avatar-empty">{business.name?.[0] ?? "?"}</span>
-          )}
-          <label className="field" style={{ flex: 1, marginBottom: 0 }}>
-            <span>Logo</span>
-            <input type="file" name="logo" accept="image/png,image/jpeg,image/webp" />
-          </label>
-        </div>
 
         <label className="field">
           <span>Business name</span>

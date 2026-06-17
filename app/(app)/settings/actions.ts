@@ -3,24 +3,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BETA_ZONES } from "@/lib/zones";
-import {
-  ensureBucket,
-  uploadFile,
-  publicMediaUrl,
-  fileExt,
-  MEDIA_BUCKET,
-  MAX_UPLOAD_BYTES,
-} from "@/lib/supabase/storage";
 import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
 const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
-const IMAGE_MIME = ["image/png", "image/jpeg", "image/webp"];
 
-// Update the Driver's profile + their one vehicle in a single save. Writes go
-// through the service role gated to the current user's driver row (matches the
-// onboarding pattern). Profile photo (optional) → public avatars bucket.
+// Update the Driver's profile (incl. base location + service radius) and their
+// one vehicle. Service-role, gated to the current user's driver row. The base +
+// radius are what the Pool matches against now (replacing the town list); the
+// profile photo is handled separately by the avatar editor.
 export async function updateDriverSettings(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -45,37 +36,20 @@ export async function updateDriverSettings(formData: FormData) {
     ? (gpsRaw as PreferredGps)
     : null;
 
-  const zones = formData
-    .getAll("zones")
-    .map(String)
-    .filter((z) => (BETA_ZONES as readonly string[]).includes(z));
-
   const languages = String(formData.get("languages") ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
 
-  if (!first || !last || zones.length === 0) {
-    redirect("/settings?error=missing");
-  }
+  const baseLabel = String(formData.get("base_label") ?? "").trim();
+  const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
+  const baseLng = Number.parseFloat(String(formData.get("base_lng") ?? ""));
+  const radiusRaw = Number.parseInt(String(formData.get("service_radius_km") ?? ""), 10);
+  const radius = Number.isFinite(radiusRaw) ? Math.min(500, Math.max(5, radiusRaw)) : 50;
 
-  // Optional profile photo. Validate before the upload try (redirect can't run
-  // inside try — it works by throwing).
-  let photoUrl: string | undefined;
-  const photo = formData.get("photo");
-  if (photo instanceof File && photo.size > 0) {
-    if (photo.size > MAX_UPLOAD_BYTES) redirect("/settings?error=filesize");
-    if (!IMAGE_MIME.includes(photo.type)) redirect("/settings?error=filetype");
-    let failed = false;
-    try {
-      await ensureBucket(MEDIA_BUCKET, true);
-      const path = `driver/${driver.id}.${fileExt(photo)}`;
-      await uploadFile(MEDIA_BUCKET, path, photo);
-      photoUrl = publicMediaUrl(path, Date.now());
-    } catch {
-      failed = true;
-    }
-    if (failed) redirect("/settings?error=upload");
+  if (!first || !last) redirect("/settings?error=missing");
+  if (!baseLabel || !Number.isFinite(baseLat) || !Number.isFinite(baseLng)) {
+    redirect("/settings?error=nobase");
   }
 
   const { error: driverErr } = await admin
@@ -85,9 +59,11 @@ export async function updateDriverSettings(formData: FormData) {
       last_name: last,
       phone: phone || null,
       preferred_gps: gps,
-      operational_zones: zones,
       languages,
-      ...(photoUrl ? { profile_photo_url: photoUrl } : {}),
+      base_label: baseLabel,
+      base_lat: baseLat,
+      base_lng: baseLng,
+      service_radius_km: radius,
     })
     .eq("id", driver.id);
   if (driverErr) redirect("/settings?error=db");

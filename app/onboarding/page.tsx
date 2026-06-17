@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { getAppContext, routeFor } from "@/lib/app-context";
 import { createDriverProfile } from "./actions";
-import { BETA_ZONES } from "@/lib/zones";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
+
+const RADII = [25, 50, 75, 100, 150, 200, 300];
 
 export default async function OnboardingPage({
   searchParams,
@@ -26,8 +28,12 @@ export default async function OnboardingPage({
 
       {error === "missing" && (
         <div className="notice error">
-          Please fill in your name, pick a vehicle category, and select at least
-          one zone.
+          Please fill in your name and pick a vehicle category.
+        </div>
+      )}
+      {error === "nobase" && (
+        <div className="notice error">
+          Please pick your base address from the suggestions so we can match missions by distance.
         </div>
       )}
       {error === "db" && (
@@ -74,17 +80,30 @@ export default async function OnboardingPage({
 
         <div className="field">
           <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-            Operational zones
+            Your base
           </span>
-          <div className="checks">
-            {BETA_ZONES.map((zone) => (
-              <label className="check" key={zone}>
-                <input type="checkbox" name="zones" value={zone} />
-                {zone}
-              </label>
-            ))}
-          </div>
+          <AddressAutocomplete
+            labelName="base_label"
+            latName="base_lat"
+            lngName="base_lng"
+            placeholder="Start typing a town or address…"
+          />
         </div>
+
+        <label className="field">
+          <span>Service radius — how far from your base you’ll drive</span>
+          <select name="service_radius_km" defaultValue="50">
+            {RADII.map((r) => (
+              <option key={r} value={r}>
+                Up to {r} km
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted small" style={{ marginTop: -6 }}>
+          A mission shows in your Pool when its pickup <strong>or</strong> drop-off is within this
+          distance of your base.
+        </p>
 
         <button className="btn" type="submit">
           Save and see the Pool
