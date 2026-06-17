@@ -17,14 +17,22 @@ const DEMO = {
 } as const;
 
 export async function GET(request: Request) {
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    return NextResponse.json(
-      { error: "Dev sign-in is disabled outside local development." },
-      { status: 403 },
-    );
+  const { searchParams, origin } = new URL(request.url);
+
+  // Local dev: open. Hosted (Vercel/prod): require a secret key that matches the
+  // DEV_LOGIN_KEY env var, so the live URL isn't a free login for anyone but you
+  // can still test without email / Supabase redirect-URL config.
+  const hosted = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+  if (hosted) {
+    const key = process.env.DEV_LOGIN_KEY;
+    if (!key || searchParams.get("key") !== key) {
+      return NextResponse.json(
+        { error: "Dev sign-in requires a valid key on this environment." },
+        { status: 403 },
+      );
+    }
   }
 
-  const { searchParams, origin } = new URL(request.url);
   const as = searchParams.get("as");
   const email =
     searchParams.get("email")?.trim() ||
