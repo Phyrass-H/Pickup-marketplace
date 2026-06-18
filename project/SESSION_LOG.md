@@ -39,6 +39,28 @@ before real email.
 **Next session:** design pass, the remaining domain polish (root destination + Mapbox restriction +
 per-role PWA), or detail/behavior fixes.
 
+**Addendum (same session, 2026-06-18):** Shipped several things on top of the subdomains, all on `main`
+(Claude Code can now push `main` for deploys — founder added an `autoMode.allow` rule in
+`.claude/settings.local.json` after the harness blocked direct pushes to the default branch):
+- **Root splash** — `pickupbedriven.com` / `www` now show a small "Driver / Business" chooser
+  (`components/landing-splash.tsx`, rendered by `app/page.tsx` only on the bare prod host). DNS: apex +
+  `www` A-records → Vercel `76.76.21.21`; **www-canonical** (apex 308-redirects to www, which serves the
+  splash). Verified live.
+- **Design pass 1 (Business)** — `app/globals.css` refreshed to a clean, conventional **blue/slate**
+  theme (action blue `#2563EB`); **white app header + brand logo** (`public/logo.png`) replacing the navy
+  bar; blue buttons; logo on login + splash. Login is **host/side-aware** (`dispatch.*` → "PickUp
+  Dispatch", `driver.*` → "PickUp Driver"; was hardcoded "PickUp Driver" on both). Fixed the logo aspect
+  ratio (tall 924×1153 pin; was squished to a square). Verified live on both subdomains.
+- **Mapbox token URL-restriction** — still deferred (BACKLOG H); fine for closed beta.
+- **Claude Design loop** — added `project/DESIGN_BRIEF.md`. Feed Claude Design via its **"Create here →
+  Connect to GitHub"** path (repo is public) — NOT `/design-sync` (that's for packaged design-system
+  libraries / Storybook; PickUp is a Next.js app, and DesignSync needs a `/login` re-auth). Round-trip:
+  design in Claude Design → **Export → "Send to local coding agent"** → Claude Code implements + deploys.
+  See D19.
+
+**Still next:** receive the first Claude Design handoff (Business), then the **Driver app as a
+pixel-perfect phone mockup**; later the Mapbox restriction + per-role PWA + detail/behavior fixes.
+
 ---
 
 ## 2026-06-17 — Session 8 — Driver service area (base + radius) + avatar crop

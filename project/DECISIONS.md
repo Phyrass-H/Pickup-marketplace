@@ -138,6 +138,21 @@ guards, not a second deployment. Caveat for later: with host-only cookies, real 
 sign in on the right subdomain (or we add a shared-cookie/login bridge) — tracked against the real-email
 pillar (BACKLOG A). [[d11]] [[d15]]
 
+### D19 — Design direction (clean blue/slate) + Claude Design via GitHub-connect, not /design-sync (2026-06-18)
+Founder direction: **clean, conventional, trustworthy "SaaS" blue** — functional, not a design vitrine,
+don't reinvent. Implemented as a CSS-variable theme in `app/globals.css` (action blue `#2563EB`, slate
+neutrals, white header) + the brand logo (`public/logo.png`, a purple→blue pin). To bring in
+**Claude Design** (claude.ai/design) for its design POV: link the **public GitHub repo** via Claude
+Design's **"Create here → Connect to GitHub"** (it reads our real React components + `globals.css` +
+`project/DESIGN_BRIEF.md`). We do **not** use the `/design-sync` skill: it targets packaged design-system
+*libraries* (Storybook, or a component package with a build), but PickUp is a Next.js *app* (no Storybook,
+no library exports), and the `DesignSync` tool also needs a `claude.ai` `/login` (this session's
+`CLAUDE_CODE_OAUTH_TOKEN` can't be granted design scopes). Handoff back is native: in Claude Design,
+**Export → "Send to local coding agent"** drops a structured bundle (component spec + design tokens +
+layout) into the Claude Code session to implement against the repo. `project/DESIGN_BRIEF.md` is the
+shared context doc. Business app is designed first; the Driver app is delivered as a pixel-perfect phone
+mockup. [[d11]] [[d17]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
