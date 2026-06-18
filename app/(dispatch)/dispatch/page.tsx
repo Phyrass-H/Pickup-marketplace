@@ -4,7 +4,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
-import { DispatchTabs } from "@/components/dispatch-tabs";
 import { LiveRefresh } from "@/components/live-refresh";
 import { TripRow, type DriverContact } from "@/components/trip-row";
 import type { MissionRow } from "@/lib/database.types";
@@ -13,10 +12,11 @@ export const dynamic = "force-dynamic";
 
 function ColumnHead() {
   return (
-    <div className="col-head">
+    <div className="dx-colhead">
       <span>Time</span>
       <span>Route</span>
-      <span>Client / ref</span>
+      <span>Flight</span>
+      <span>Guest / ref</span>
       <span>Driver</span>
       <span>Status</span>
     </div>
@@ -36,9 +36,9 @@ function DayGroup({
 }) {
   return (
     <section>
-      <div className={`day-head${today ? " today" : ""}`}>
+      <div className={`dx-day${today ? " dx-day--today" : ""}`}>
         <h2>{today ? "Today · " : ""}{formatDate(`${dayKey}T12:00:00`)}</h2>
-        <span className="count">
+        <span className="dx-count">
           {missions.length} trip{missions.length === 1 ? "" : "s"}
         </span>
       </div>
@@ -92,8 +92,7 @@ export default async function DispatchSchedule() {
   const isEmpty = !error && (!missions || missions.length === 0);
 
   return (
-    <main className="container wide">
-      <DispatchTabs />
+    <>
       <LiveRefresh />
 
       {error && (
@@ -127,8 +126,8 @@ export default async function DispatchSchedule() {
           ))}
 
           {pastKeys.length > 0 && (
-            <details style={{ marginTop: 20 }}>
-              <summary className="muted small" style={{ cursor: "pointer" }}>
+            <details style={{ marginTop: 8 }}>
+              <summary className="dx-fold" style={{ cursor: "pointer", listStyle: "none" }}>
                 Earlier trips ({pastKeys.reduce((n, k) => n + groups.get(k)!.length, 0)})
               </summary>
               <div style={{ marginTop: 8 }}>
@@ -140,6 +139,6 @@ export default async function DispatchSchedule() {
           )}
         </>
       )}
-    </main>
+    </>
   );
 }

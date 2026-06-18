@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { formatMonth } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
-import { DispatchTabs } from "@/components/dispatch-tabs";
 import { TripRow, type DriverContact } from "@/components/trip-row";
 import type { MissionRow } from "@/lib/database.types";
 
@@ -11,10 +10,11 @@ export const dynamic = "force-dynamic";
 
 function ColumnHead() {
   return (
-    <div className="col-head">
+    <div className="dx-colhead">
       <span>Time</span>
       <span>Route</span>
-      <span>Client / ref</span>
+      <span>Flight</span>
+      <span>Guest / ref</span>
       <span>Driver</span>
       <span>Status</span>
     </div>
@@ -61,11 +61,7 @@ export default async function DispatchHistory() {
   const isEmpty = !error && (!missions || missions.length === 0);
 
   return (
-    <main className="container wide">
-      <DispatchTabs />
-
-      <h1>Mission history</h1>
-
+    <>
       {error && (
         <div className="notice error">Couldn’t load your history: {error.message}</div>
       )}
@@ -74,9 +70,9 @@ export default async function DispatchHistory() {
 
       {[...groups.entries()].map(([monthKey, list]) => (
         <section key={monthKey}>
-          <div className="day-head">
+          <div className="dx-day">
             <h2 style={{ textTransform: "capitalize" }}>{formatMonth(monthKey)}</h2>
-            <span className="count">
+            <span className="dx-count">
               {list.length} trip{list.length === 1 ? "" : "s"}
             </span>
           </div>
@@ -86,6 +82,6 @@ export default async function DispatchHistory() {
           ))}
         </section>
       ))}
-    </main>
+    </>
   );
 }

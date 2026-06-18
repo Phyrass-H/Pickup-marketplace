@@ -4,7 +4,7 @@
 // domain, to the Dispatch subdomain (dispatch.*) specifically.
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { DispatchHeader } from "@/components/dispatch-header";
+import { DispatchShell } from "@/components/dispatch-shell";
 import { getAppContext, routeFor } from "@/lib/app-context";
 import { urlForRole, isProdDomain, roleSubOf, homePathForSub, PROD_BASE } from "@/lib/hosts";
 
@@ -28,9 +28,8 @@ export default async function DispatchLayout({
   if (!ctx.dispatcher || !ctx.business) redirect("/onboarding-business");
 
   return (
-    <>
-      <DispatchHeader businessName={ctx.business.name} logoUrl={ctx.business.logo_url} />
+    <DispatchShell businessName={ctx.business.name} logoUrl={ctx.business.logo_url}>
       {children}
-    </>
+    </DispatchShell>
   );
 }

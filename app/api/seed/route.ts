@@ -30,18 +30,21 @@ export async function GET() {
   // 1) Business + Dispatcher (idempotent on the dispatcher's seed email).
   const { data: existingDispatcher } = await admin
     .from("dispatcher")
-    .select("id, business_id")
+    .select("id, business_id, auth_user_id")
     .eq("email", SEED_EMAIL)
     .maybeSingle();
 
   let businessId: string;
   let dispatcherId: string;
+  let dispatcherAuthId: string;
 
   if (existingDispatcher) {
     dispatcherId = existingDispatcher.id;
     businessId = existingDispatcher.business_id;
+    dispatcherAuthId = existingDispatcher.auth_user_id;
   } else {
     const authUserId = await ensureAuthUser(admin, SEED_EMAIL);
+    dispatcherAuthId = authUserId;
 
     const { data: business, error: bizErr } = await admin
       .from("business")
@@ -67,6 +70,12 @@ export async function GET() {
       return NextResponse.json({ error: dispErr?.message }, { status: 500 });
     dispatcherId = dispatcher.id;
   }
+
+  // 1b) Ensure a profile row (role=dispatcher) so signing in as the seed
+  // dispatcher routes straight to /dispatch with these missions. Dev-only.
+  await admin
+    .from("profile")
+    .upsert({ auth_user_id: dispatcherAuthId, role: "dispatcher" }, { onConflict: "auth_user_id" });
 
   // 2) Clear previous seed missions for this business (keep it idempotent).
   await admin.from("mission").delete().eq("business_id", businessId);

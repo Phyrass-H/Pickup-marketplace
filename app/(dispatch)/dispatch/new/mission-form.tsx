@@ -6,7 +6,13 @@ import { createMission } from "./actions";
 
 // Client form so we can show the live "too-low ceiling" SOFT WARNING (Doc 02):
 // a nudge, never a block. Submits to the createMission server action.
-export function MissionForm({ error }: { error?: string }) {
+export function MissionForm({
+  error,
+  prefillDate,
+}: {
+  error?: string;
+  prefillDate?: string;
+}) {
   const [ceiling, setCeiling] = useState("");
   const [baseFare, setBaseFare] = useState("");
   const [speedWin, setSpeedWin] = useState(false);
@@ -20,8 +26,28 @@ export function MissionForm({ error }: { error?: string }) {
     Number.isFinite(baseNum) &&
     ceilingNum < baseNum;
 
+  // Prefill the pickup date when opened from the calendar (default 09:00).
+  const prefillValue =
+    prefillDate && /^\d{4}-\d{2}-\d{2}$/.test(prefillDate)
+      ? `${prefillDate}T09:00`
+      : undefined;
+  const prettyDate = prefillValue
+    ? new Intl.DateTimeFormat("fr-FR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Europe/Paris",
+      }).format(new Date(`${prefillDate}T12:00:00`))
+    : null;
+
   return (
     <form action={createMission} className="card">
+      {prettyDate && (
+        <div className="notice info">
+          Pre-filled for <strong>{prettyDate}</strong> from the calendar. Adjust
+          the time below.
+        </div>
+      )}
       {error === "missing" && (
         <div className="notice error">
           Please fill in the vehicle category, pickup address, pickup time, and a
@@ -89,7 +115,12 @@ export function MissionForm({ error }: { error?: string }) {
 
       <label className="field">
         <span>Pickup date &amp; time</span>
-        <input type="datetime-local" name="pickup_at" required />
+        <input
+          type="datetime-local"
+          name="pickup_at"
+          required
+          defaultValue={prefillValue}
+        />
       </label>
 
       <div style={{ display: "flex", gap: 12 }}>

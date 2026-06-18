@@ -23,8 +23,10 @@ function parseWaypoints(raw: unknown): Waypoint[] {
   );
 }
 
-// One dense schedule line. Click to expand full detail. The colored left edge +
-// status pill are the at-a-glance signal a hotel scans (red = needs a call).
+// One dense schedule line. Click to expand full detail. The coloured left edge +
+// status pill are the at-a-glance signal a hotel scans (red = needs a call). When
+// a Driver hasn't confirmed near pickup (danger tone) the whole row gets a gentle
+// red wash — the T-180 alert.
 export function TripRow({
   mission,
   driver,
@@ -37,27 +39,40 @@ export function TripRow({
   const t = missionTone(mission, undefined, { archived });
   const reference = mission.comment?.trim() || null;
   const waypoints = parseWaypoints(mission.waypoints);
+  const alert = t.tone === "danger";
+  const flightEta = mission.flight_eta ? formatTime(mission.flight_eta) : null;
 
   return (
     <details
-      className="trip"
-      style={{ "--row-accent": TONE_COLOR[t.tone] } as React.CSSProperties}
+      className={`dx-trip${alert ? " dx-trip--alert" : ""}`}
+      style={{ "--edge": TONE_COLOR[t.tone] } as React.CSSProperties}
     >
       <summary>
-        <span className="trip-time">{formatTime(mission.pickup_at)}</span>
+        <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
 
-        <span className="trip-route">
+        <span className="dx-trip__route">
           <span>{mission.pickup_address}</span>
-          <span className="arrow">→</span>
+          <span className="dx-arrow">→</span>
           <span>{mission.dropoff_address ?? "—"}</span>
         </span>
 
-        <span className="trip-meta">
+        <span className="dx-trip__flight">
+          {mission.flight_number ? (
+            <span className="dx-flight">
+              {mission.flight_number}
+              {flightEta ? ` · ${flightEta}` : ""}
+            </span>
+          ) : (
+            <span className="dx-flight-empty">—</span>
+          )}
+        </span>
+
+        <span className="dx-trip__meta">
           {mission.passenger_name ?? "—"}
           {reference && <span className="ref">{reference}</span>}
         </span>
 
-        <span className="trip-driver">
+        <span className="dx-trip__driver">
           {driver ? driver.name : <span className="muted">—</span>}
         </span>
 
@@ -71,7 +86,7 @@ export function TripRow({
         </span>
       </summary>
 
-      <div className="trip-detail">
+      <div className="dx-trip__detail">
         {t.hint && <div className="notice warn" style={{ marginTop: 12 }}>{t.hint}</div>}
 
         <div className="route" style={{ marginTop: 12 }}>
@@ -117,7 +132,10 @@ export function TripRow({
           {mission.flight_number && (
             <>
               <dt>Flight</dt>
-              <dd>{mission.flight_number}</dd>
+              <dd>
+                {mission.flight_number}
+                {flightEta ? ` · ETA ${flightEta}` : ""}
+              </dd>
             </>
           )}
           <dt>Driver</dt>
@@ -128,7 +146,7 @@ export function TripRow({
                 {driver.phone && (
                   <>
                     {" · "}
-                    <a href={`tel:${driver.phone}`} style={{ color: "var(--accent)", fontWeight: 600 }}>
+                    <a href={`tel:${driver.phone}`} className="dx-tel">
                       {driver.phone}
                     </a>
                   </>

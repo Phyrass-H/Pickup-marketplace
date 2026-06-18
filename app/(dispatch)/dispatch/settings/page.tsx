@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getAppContext } from "@/lib/app-context";
 import { getLatestDocuments } from "@/lib/documents";
 import { BUSINESS_DOC_TYPES } from "@/lib/account";
-import { DispatchTabs } from "@/components/dispatch-tabs";
 import { DocumentSection } from "@/components/document-section";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { updateBusinessSettings } from "./actions";
@@ -32,11 +31,7 @@ export default async function BusinessSettingsPage({
   const docs = await getLatestDocuments("business", business.id, BUSINESS_DOC_TYPES);
 
   return (
-    <main className="container">
-      <DispatchTabs />
-
-      <h1>Settings</h1>
-
+    <div className="dx-narrow">
       {ok && <div className="notice success">Your changes were saved.</div>}
       {error && NOTICE[error] && <div className="notice error">{NOTICE[error]}</div>}
 
@@ -100,6 +95,6 @@ export default async function BusinessSettingsPage({
           View mission history →
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

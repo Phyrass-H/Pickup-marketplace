@@ -1,15 +1,12 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
-import { formatTime } from "@/lib/format";
-import { missionTone, parisDayKey, TONE_COLOR } from "@/lib/dispatch-status";
-import { DispatchTabs } from "@/components/dispatch-tabs";
-import { LiveRefresh } from "@/components/live-refresh";
-import type { MissionRow } from "@/lib/database.types";
+import { categoryLabel, formatTime } from "@/lib/format";
+import { currentFare } from "@/lib/pdp";
+import { missionTone, parisDayKey } from "@/lib/dispatch-status";
+import { DispatchCalendar, type CalEntry, type CalendarData } from "@/components/dispatch-calendar";
 
 export const dynamic = "force-dynamic";
-
-const DOW = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
 
 function shiftMonth(ym: string, delta: number): string {
   const [y, m] = ym.split("-").map(Number);
@@ -17,17 +14,19 @@ function shiftMonth(ym: string, delta: number): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-export default async function DispatchCalendar({
+export default async function DispatchCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; week?: string }>;
 }) {
   const ctx = await getAppContext();
   if (!ctx.business) return null;
 
-  const { month } = await searchParams;
+  const { month, week } = await searchParams;
+  const landWeek = week === "last" ? "last" : week === "first" ? "first" : null;
   const todayKey = parisDayKey(new Date());
-  const ym = month && /^\d{4}-\d{2}$/.test(month) ? month : todayKey.slice(0, 7);
+  const currentYm = todayKey.slice(0, 7);
+  const ym = month && /^\d{4}-\d{2}$/.test(month) ? month : currentYm;
   const [year, mon] = ym.split("-").map(Number);
 
   const monthStart = new Date(Date.UTC(year, mon - 1, 1));
@@ -44,22 +43,54 @@ export default async function DispatchCalendar({
     .lt("pickup_at", qEnd)
     .order("pickup_at", { ascending: true });
 
-  // Bucket missions into this month's days.
-  const byDay = new Map<number, MissionRow[]>();
+  // Reveal assigned Driver names (service role, gated to this business).
+  const driverName = new Map<string, string>();
+  const assigned = (missions ?? []).filter((m) => m.driver_id);
+  if (assigned.length > 0) {
+    const admin = createAdminClient();
+    const driverIds = [...new Set(assigned.map((m) => m.driver_id!))];
+    const { data: drivers } = await admin
+      .from("driver")
+      .select("id, first_name, last_name")
+      .in("id", driverIds);
+    for (const d of drivers ?? []) {
+      driverName.set(d.id, `${d.first_name} ${d.last_name}`);
+    }
+  }
+
+  const entries: CalEntry[] = [];
   for (const m of missions ?? []) {
     const key = parisDayKey(m.pickup_at);
     if (!key.startsWith(`${ym}-`)) continue;
-    const day = Number(key.slice(8, 10));
-    (byDay.get(day) ?? byDay.set(day, []).get(day)!).push(m);
+    const t = missionTone(m);
+    entries.push({
+      id: m.id,
+      day: Number(key.slice(8, 10)),
+      time: formatTime(m.pickup_at),
+      guest: m.passenger_name ?? "—",
+      driver: (m.driver_id && driverName.get(m.driver_id)) || null,
+      cat: categoryLabel(m.category),
+      tone: t.tone,
+      label: t.label,
+      fare: currentFare(m),
+      ceiling: Number(m.ceiling ?? 0),
+      from: m.pickup_address,
+      to: m.dropoff_address ?? "—",
+    });
   }
 
   const daysInMonth = new Date(Date.UTC(year, mon, 0)).getUTCDate();
   const firstDow = (monthStart.getUTCDay() + 6) % 7; // 0 = Monday
-  const cells: (number | null)[] = [
-    ...Array(firstDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
+
+  const isCurrentMonth = ym === currentYm;
+  const todayDate = isCurrentMonth ? Number(todayKey.slice(8, 10)) : null;
+
+  // Week index (Monday-first grid row) of "today" in the current month — used to
+  // land week-view on today's week when the user hits "Today".
+  const curMonthStart = new Date(`${currentYm}-01T12:00:00Z`);
+  const curFirstDow = (curMonthStart.getUTCDay() + 6) % 7;
+  const curToday = Number(todayKey.slice(8, 10));
+  const todayWeekIdx = Math.floor((curFirstDow + curToday - 1) / 7);
 
   const title = new Intl.DateTimeFormat("fr-FR", {
     month: "long",
@@ -67,58 +98,20 @@ export default async function DispatchCalendar({
     timeZone: "UTC",
   }).format(monthStart);
 
-  return (
-    <main className="container wide">
-      <DispatchTabs />
-      <LiveRefresh intervalMs={8000} />
+  const data: CalendarData = {
+    ym,
+    title,
+    daysInMonth,
+    firstDow,
+    todayDate,
+    isCurrentMonth,
+    prevYm: shiftMonth(ym, -1),
+    nextYm: shiftMonth(ym, 1),
+    currentYm,
+    todayWeekIdx,
+    landWeek,
+    entries,
+  };
 
-      <div className="cal-head">
-        <Link className="btn secondary" style={{ width: "auto" }} href={`/dispatch/calendar?month=${shiftMonth(ym, -1)}`}>
-          ← Prev
-        </Link>
-        <h1 style={{ margin: 0, textTransform: "capitalize" }}>{title}</h1>
-        <Link className="btn secondary" style={{ width: "auto" }} href={`/dispatch/calendar?month=${shiftMonth(ym, 1)}`}>
-          Next →
-        </Link>
-      </div>
-
-      <div className="cal-grid">
-        {DOW.map((d) => (
-          <div className="cal-dow" key={d}>
-            {d}
-          </div>
-        ))}
-
-        {cells.map((day, i) => {
-          if (day === null) return <div className="cal-cell muted-cell" key={`b${i}`} />;
-          const key = `${ym}-${String(day).padStart(2, "0")}`;
-          const dayMissions = byDay.get(day) ?? [];
-          const shown = dayMissions.slice(0, 3);
-          const extra = dayMissions.length - shown.length;
-          return (
-            <div className={`cal-cell${key === todayKey ? " today-cell" : ""}`} key={key}>
-              <div className="cal-date">{day}</div>
-              {shown.map((m) => {
-                const t = missionTone(m);
-                return (
-                  <div className="cal-entry" key={m.id} title={`${m.pickup_address} → ${m.dropoff_address ?? ""}`}>
-                    <span className="dot" style={{ background: TONE_COLOR[t.tone] }} />
-                    <span>
-                      {formatTime(m.pickup_at)} {m.pickup_address}
-                    </span>
-                  </div>
-                );
-              })}
-              {extra > 0 && <div className="cal-more">+{extra} more</div>}
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="muted small" style={{ marginTop: 12 }}>
-        Tip: the <Link href="/dispatch" style={{ textDecoration: "underline" }}>Schedule</Link> view
-        lists every trip by day with full detail and live status.
-      </p>
-    </main>
-  );
+  return <DispatchCalendar data={data} />;
 }

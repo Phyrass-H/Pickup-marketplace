@@ -28,3 +28,6 @@ Thumbs.db
 
 # ----- Vercel -----
 .vercel
+
+# ----- Claude Design handoff bundle (reference only — kept local, not committed) -----
+.design-handoff/
