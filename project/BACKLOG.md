@@ -132,6 +132,22 @@
   app next** — deliver as a pixel-perfect phone mockup (`.design-handoff/…/ui_kits/driver/`), then apply.
 - 🅥 Security audit / pen test (plan post-V1).
 
+## H2. Engineering hardening (quality — before real production) ⚙️
+> Flagged 2026-06-19. The foundations are clean (modern stack, lib/ domain separation, RLS-first
+> security, strong docs), but this is still an MVP/beta codebase. These are the standard MVP→production
+> steps a takeover dev team would expect. Founder intent: do them all eventually; not blocking beta.
+- ⚙️ **Automated tests** (none today — biggest gap). Priority targets: PDP pricing (`lib/pdp.ts`),
+  `missionTone` (`lib/dispatch-status.ts`), `accept_mission` atomic/first-wins + Lock-in, RLS policies,
+  geo radius matching. Money paths first. (Vitest/Jest unit + a Playwright e2e for the core loop.)
+- ⚙️ **CI on PRs** — GitHub Actions running `tsc` + lint + tests (+ build) on every PR. None today.
+- ⚙️ **Generated DB types** — replace hand-written `lib/database.types.ts` with `supabase gen types`
+  once the CLI is wired (D3); removes drift risk.
+- 🔨 **Real email auth** — flip on magic-link, remove the dev-login scaffold (see A · needs the Supabase
+  redirect-URL settings for `driver.*`/`dispatch.*`).
+- ⚙️ **Error monitoring + product analytics** — Sentry + PostHog (also in F2).
+- ⚙️ **Realtime** — swap `LiveRefresh` polling for Supabase Realtime websockets (also in I).
+- 🅥 Security audit / pen test (also in H) — plan post-V1.
+
 ## I. Small follow-ups noted in code
 - Promote the per-booking **reference** (room/event) to a dedicated DB column.
 - **Calendar day → schedule** click-through (filter schedule to a day).

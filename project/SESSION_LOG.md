@@ -45,6 +45,20 @@ old `.tabs` gone).
 **Next session:** the **Driver app** as a pixel-perfect phone mockup (the `ui_kits/driver/` kit in the
 bundle), then apply it. Plus pending: Mapbox token URL-restriction (BACKLOG H), per-role PWA.
 
+**Addendum (2026-06-19):** Confirmed the design loop — **Claude Design → Export zip → drop in session →
+implement → deploy** — as the standing workflow (connector blocked, zip is reliable; see D19/D20). Clarified
+how new design elements map to backend: visual/layout → just build; new UI over existing data/actions →
+wire it (e.g. the calendar's "New mission" reuses `createMission`, filters run client-side); anything
+needing new backend/schema/external service → flag a **"needs a backend decision"** list and confirm first
+(never fake it). What this pass actually wired beyond visuals: calendar **New-mission date prefill**
+(`?date=` → existing insert), calendar **data layer** (server builds entries incl. driver-name reveal +
+month meta for the client component), **cross-month week nav** (`?week=` param), flight column reads existing
+`flight_number`/`flight_eta` (display only), and `/api/seed` creating the dispatcher `profile`. Founder asked
+for a candid codebase health check — verdict: clean foundations + unusually strong docs (a takeover team
+orients fast), but it's an MVP: the gaps are **tests, CI, generated types, real auth, monitoring** — now
+captured in **BACKLOG H2 (Engineering hardening)**; founder intent is to do them all before production.
+Refreshed `NEXT_SESSION.md` to this state. No code changes in the addendum.
+
 ---
 
 ## 2026-06-18 — Session 9 — Custom domain + subdomain role routing
