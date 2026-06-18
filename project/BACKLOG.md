@@ -127,7 +127,9 @@
   - ↳ **Supabase redirect URLs** — add `driver.*` + `dispatch.*` `/auth/callback` before real email.
 - 🔨 **PWA polish**: icons, install prompt, offline shell — **per-role manifest** so each subdomain
   installs as its own app (PickUp Driver / PickUp Dispatch).
-- 🔨 **Design/skin** pass over both apps (founder will provide a design).
+- 🔨 **Design/skin** pass (Claude Design handoff). ✅ **Dispatch shipped** (Session 10 / D20:
+  token system + Geist + Lucide + sidebar shell + flight/T-180 schedule + full calendar). ↳ **Driver
+  app next** — deliver as a pixel-perfect phone mockup (`.design-handoff/…/ui_kits/driver/`), then apply.
 - 🅥 Security audit / pen test (plan post-V1).
 
 ## I. Small follow-ups noted in code

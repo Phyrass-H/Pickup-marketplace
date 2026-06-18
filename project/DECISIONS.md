@@ -153,6 +153,22 @@ layout) into the Claude Code session to implement against the repo. `project/DES
 shared context doc. Business app is designed first; the Driver app is delivered as a pixel-perfect phone
 mockup. [[d11]] [[d17]]
 
+### D20 — Dispatch redesign implemented from a Claude Design zip; Geist + Lucide adopted; `dx-` namespacing (2026-06-18)
+Claude Design produced a handoff **zip** (`PickUp Design System-handoff.zip`). The `DesignSync`
+connector stayed blocked (no design scopes on the session token; `/login` unavailable — see D19), so we
+unzipped + implemented directly. Bundle lives at **`.design-handoff/`** (gitignored — reference for the
+Driver phase, not committed). Founder-confirmed scope choices: **(1)** adopt **Geist + Geist Mono** (via
+the `geist` pkg + `next/font`, self-hosted → no Google CDN, GDPR-safe) and **Lucide** (`lucide-react`);
+**(2)** the Schedule **flight column shows flight number + ETA only — NO live flight status** (the
+flight-tracking API isn't built; BACKLOG B); **(3)** build the **full calendar upgrade** (month+week,
+peek drawer, KPI/search/vehicle filters). Implementation maps the design onto the repo's existing class
+vocabulary where it already existed (reskinned `globals.css` tokens + shared classes) and introduces a
+**`dx-`-prefixed** class set for the new Dispatch chrome (sidebar shell, schedule grid, calendar) so it
+never collides with the Driver styles and maps 1:1 to the handoff for future syncs. Dispatch is done
+first; the **Driver app is next, delivered as a phone mockup** then applied. Also: the dev-only
+`/api/seed` now upserts the seed dispatcher's `profile` row (role=dispatcher) so a seeded Business is a
+usable signed-in account — operational dev tooling, **not** a schema change (respects hard-rule #4). [[d19]] [[d17]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

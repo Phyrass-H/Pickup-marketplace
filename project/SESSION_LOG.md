@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-06-18 — Session 10 — Dispatch redesign (Claude Design handoff, pass 2)
+**Branch:** `main` (committed + deployed) · **Env:** local (macOS) → Vercel.
+
+**Why:** the founder designed in **Claude Design** and exported a handoff bundle
+(`PickUp Design System-handoff.zip`). The Claude Design connector (`DesignSync`) is blocked in
+this session (CLAUDE_CODE_OAUTH_TOKEN can't get design scopes; `/login` unavailable — confirms
+D19), so the **zip → unzip → implement** path was used. Bundle kept locally at `.design-handoff/`
+(gitignored, reference for the Driver phase). Scope confirmed up front: **adopt Geist + Lucide**,
+**flight column = number + ETA (no live status)**, **full calendar upgrade**.
+
+**What shipped (Dispatch / Business only):**
+- **Foundation** — full design-token set in `app/globals.css` (slate + action-blue, the five
+  status tones, spacing/radii/shadows/focus-ring); **Geist + Geist Mono** via `next/font` (`geist`
+  pkg, self-hosted, GDPR-safe); **lucide-react**. Buttons/inputs/cards gained focus rings + press states.
+- **Sidebar shell** (`components/dispatch-shell.tsx`) — collapsible sidebar (66px icon rail, persisted
+  to `localStorage`) + sticky topbar title, replacing the top tabs. Deleted `dispatch-header.tsx` +
+  `dispatch-tabs.tsx`.
+- **Schedule** (`trip-row.tsx` + `page.tsx`/`history`) — 6-col grid with a **Flight** column (number +
+  ETA), tone left-edge + status pills, **T-180 red row-wash** for unconfirmed-near-pickup.
+- **Calendar** (`components/dispatch-calendar.tsx` + server `calendar/page.tsx`) — month **+ week**
+  views, **KPI filter chips**, guest search, status/vehicle filters, **day peek drawer**, cross-month
+  week navigation (`?week=first|last`), and **＋/empty-day → New mission prefilled with that date**.
+- **Glossary fix:** schedule/history header is **"Guest / ref"** (never "client").
+- **Dev-only:** `/api/seed` now also creates the dispatcher `profile` row (no schema change) so
+  `dev-login` lands in a populated Dispatch — made verification possible + eases future local testing.
+
+**Verified** — `tsc` + `next build` clean (13 routes). Browser-tested against the real Supabase DB
+(seeded Business): shell + collapse, schedule + flight chips + day groups, calendar month/week/peek,
+KPI counts (6/0/1), new-mission date prefill, settings; **Driver app unaffected** (shares `globals.css`).
+Ran a **16-finding adversarial review workflow** (20 agents); **11 confirmed, all fixed + re-verified**
+(week cross-month nav, drawer Escape/focus/scroll-lock, calendar keyboard a11y, dialog/filter accessible
+names, "Confirmed" KPI count, "Today" history push, footer month, **glossary "Guest/ref"**, flight ETA).
+**Live on `dispatch.pickupbedriven.com`** (curl: new tokens + `.dx-sidebar` + Geist @font-face present,
+old `.tabs` gone).
+
+**Decisions:** D20 (see `DECISIONS.md`).
+
+**Next session:** the **Driver app** as a pixel-perfect phone mockup (the `ui_kits/driver/` kit in the
+bundle), then apply it. Plus pending: Mapbox token URL-restriction (BACKLOG H), per-role PWA.
+
+---
+
 ## 2026-06-18 — Session 9 — Custom domain + subdomain role routing
 **Branch:** `subdomain-routing` (off `main`, merged + deployed) · **Env:** local (macOS) → Vercel.
 
