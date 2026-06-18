@@ -26,6 +26,8 @@ export function AppHeader() {
     <header className="app-header">
       <div className="container">
         <Link href="/pool" className="brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/logo.png" alt="" aria-hidden="true" />
           PickUp
         </Link>
         <nav>

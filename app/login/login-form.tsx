@@ -2,19 +2,30 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { RoleSub } from "@/lib/hosts";
+
+const COPY: Record<"driver" | "dispatch" | "generic", { title: string; subtitle: string }> = {
+  driver: { title: "PickUp Driver", subtitle: "Sign in to see available missions." },
+  dispatch: { title: "PickUp Dispatch", subtitle: "Sign in to manage your bookings." },
+  generic: { title: "PickUp", subtitle: "Sign in to continue." },
+};
 
 export function LoginForm({
   initialError,
   devEnabled = false,
+  side = null,
 }: {
   initialError: string | null;
   devEnabled?: boolean;
+  side?: RoleSub | null;
 }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
     "idle",
   );
   const [message, setMessage] = useState("");
+
+  const copy = COPY[side ?? "generic"];
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,9 +51,13 @@ export function LoginForm({
   return (
     <div className="center-screen">
       <div className="auth-card">
-        <h1>PickUp Driver</h1>
-        <p className="muted" style={{ marginTop: -8 }}>
-          Sign in to see available missions.
+        <div className="auth-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="auth-logo" src="/logo.png" alt="" aria-hidden="true" />
+          <h1>{copy.title}</h1>
+        </div>
+        <p className="muted" style={{ textAlign: "center", marginTop: 0 }}>
+          {copy.subtitle}
         </p>
 
         {status === "sent" ? (

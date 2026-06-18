@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PickUp Driver",
-  description: "PickUp — accept and run VTC missions.",
+  title: "PickUp",
+  description: "PickUp — the booking platform linking VTC Drivers with Businesses.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "PickUp", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b1f3a",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

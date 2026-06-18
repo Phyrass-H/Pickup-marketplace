@@ -28,6 +28,8 @@ export function DispatchHeader({
     <header className="app-header">
       <div className="container wide">
         <Link href="/dispatch" className="brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/logo.png" alt="" aria-hidden="true" />
           PickUp Dispatch
         </Link>
         <nav>

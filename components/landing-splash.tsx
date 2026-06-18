@@ -12,7 +12,11 @@ export function LandingSplash() {
   return (
     <div className="center-screen">
       <div className="auth-card">
-        <h1 style={{ textAlign: "center", marginBottom: 4 }}>PickUp</h1>
+        <div className="auth-brand">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="auth-logo" src="/logo.png" alt="" aria-hidden="true" />
+          <h1>PickUp</h1>
+        </div>
         <p className="muted small" style={{ textAlign: "center", marginTop: 0 }}>
           The booking platform linking professional VTC Drivers with Businesses.
         </p>
