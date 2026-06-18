@@ -116,13 +116,17 @@
 - 👤 DGITM declaration · PickUp RC Pro insurance · verify each driver is registered VTC.
 
 ## H. Platform / production readiness
-- 🔨 **Custom domain** (e.g. app.pickup…) on Vercel.
-  - ↳ **When the final domain lands:** create a URL-restricted Mapbox token (Mapbox's
-    Default public token can't be restricted; no wildcards) scoped to the domain +
-    `localhost:3000`, then swap `NEXT_PUBLIC_MAPBOX_TOKEN` in Vercel + `.env.local` and
-    redeploy. Until then the unrestricted default token is in use (fine for closed beta).
-    See SESSION_LOG S8 / DECISIONS D17.
-- 🔨 **PWA polish**: icons, install prompt, offline shell.
+- ✅ **Custom domain**: `pickupbedriven.com` (OVH) live on Vercel with role subdomains
+  **`driver.*`** (Driver app) + **`dispatch.*`** (Dispatch). See SESSION_LOG S9 / DECISIONS D18.
+  - ↳ **Now unblocked — URL-restrict the Mapbox token:** the Default public token can't be
+    restricted (no wildcards), so create a new token scoped to `driver.pickupbedriven.com` +
+    `dispatch.pickupbedriven.com` + `localhost:3000`, then swap `NEXT_PUBLIC_MAPBOX_TOKEN` in
+    Vercel + `.env.local` and redeploy. Until then the unrestricted token is in use (fine for beta).
+  - ↳ **Bare root** `pickupbedriven.com` still points to OVH parking — decide its destination
+    (redirect to a side, a "Driver / Business" splash, or a marketing landing).
+  - ↳ **Supabase redirect URLs** — add `driver.*` + `dispatch.*` `/auth/callback` before real email.
+- 🔨 **PWA polish**: icons, install prompt, offline shell — **per-role manifest** so each subdomain
+  installs as its own app (PickUp Driver / PickUp Dispatch).
 - 🔨 **Design/skin** pass over both apps (founder will provide a design).
 - 🅥 Security audit / pen test (plan post-V1).
 

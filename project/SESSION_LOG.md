@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-06-18 — Session 9 — Custom domain + subdomain role routing
+**Branch:** `subdomain-routing` (off `main`, merged + deployed) · **Env:** local (macOS) → Vercel.
+
+**Why:** founder hit "role switching" — one browser shares a single Supabase session cookie on
+`pickup-marketplace.vercel.app`, so signing in as the other demo role (Driver ↔ Business) overwrote
+it and open tabs flipped roles on refresh. Root cause = one host = one cookie slot (NOT the long URL).
+
+**What shipped**
+- **Domain:** founder bought **`pickupbedriven.com`** (OVH) and pointed two CNAMEs at Vercel —
+  **`driver.pickupbedriven.com`** + **`dispatch.pickupbedriven.com`** (both green, SSL auto-issued).
+  Vercel shows "DNS Change Recommended" (cosmetic — CNAMEs resolve to Vercel; works).
+- **Subdomain role routing** (`lib/hosts.ts`): on the prod domain the Driver app lives on `driver.*`
+  and the Business/Dispatch app on `dispatch.*`. `app/page.tsx` + the `(app)` and `(dispatch)`
+  layouts route a user to their role's subdomain (wrong role → their area; right role/wrong subdomain
+  → their host). Dev-login buttons now target each role's OWN subdomain so the host-only session
+  cookie lands on the correct host. **No-op off the prod domain** — localhost + `*.vercel.app` keep
+  single-origin path-based routing.
+
+**Verified** — `tsc` + `next build` clean; local prod build probed with spoofed Host headers (unauth
+stays on each host's /login; localhost unchanged); 9/9 host→role unit cases. **Live on the real domain
+(curl):** Driver → `driver.*/pool` (200); Business → `dispatch.*/dispatch` (200); **the driver's
+cookie does NOT carry to `dispatch.*`** (→ /login) — the two sessions are isolated, switching is gone.
+
+**Decisions:** D18 (see `DECISIONS.md`).
+
+**Deferred/flagged:** real magic-link across subdomains (host-only cookies mean a user must sign in on
+the right subdomain — fine for per-subdomain dev-login; revisit for real email, BACKLOG A); the bare
+root `pickupbedriven.com` still points to OVH parking (decide destination); Mapbox token
+URL-restriction now unblocked (BACKLOG H); per-role PWA manifest/icons; Supabase redirect URLs to add
+before real email.
+
+**Next session:** design pass, the remaining domain polish (root destination + Mapbox restriction +
+per-role PWA), or detail/behavior fixes.
+
+---
+
 ## 2026-06-17 — Session 8 — Driver service area (base + radius) + avatar crop
 **Branch:** `driver-service-area` (off `main`) · **Env:** local (macOS).
 

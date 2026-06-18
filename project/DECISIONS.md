@@ -123,6 +123,21 @@ Business booking form geocodes pickup/drop-off into the existing `mission.pickup
 (respects hard-rule #4). `operational_zones` is kept as a now-unused column; `lib/zones.ts` (BETA_ZONES)
 was deleted. Matching runs in-app for beta scale (add a bounding-box/PostGIS prefilter later). [[d12]]
 
+### D18 — Production splits the two sides onto role subdomains (2026-06-18)
+The founder's "role switching" was a single shared Supabase session cookie: both demo roles signed in
+on one host (`pickup-marketplace.vercel.app`), so each sign-in overwrote the other and open tabs flipped
+on refresh. Fix: on the production domain **`pickupbedriven.com`**, the Driver app is served on
+**`driver.*`** and the Business/Dispatch app on **`dispatch.*`**. Because `@supabase/ssr` sets
+**host-only** cookies (no Domain attribute), each subdomain holds its own independent session — you can
+be a Driver on one and a Business on the other at once, no switching. `lib/hosts.ts` maps role ↔
+subdomain; `app/page.tsx` + the `(app)`/`(dispatch)` layouts cross-redirect to the correct subdomain;
+dev-login targets each role's own subdomain. It's a **no-op off the prod domain**: localhost and
+`*.vercel.app` keep single-origin path-based routing, so local dev/previews are unchanged. Stays ONE
+Next app / one Vercel project (D11) — subdomains are extra domains pointed at it, enforced in the layout
+guards, not a second deployment. Caveat for later: with host-only cookies, real magic-link users must
+sign in on the right subdomain (or we add a shared-cookie/login bridge) — tracked against the real-email
+pillar (BACKLOG A). [[d11]] [[d15]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
