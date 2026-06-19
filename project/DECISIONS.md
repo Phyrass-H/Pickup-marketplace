@@ -196,9 +196,11 @@ and quick date chips; and an O10a **SPEED WIN auto-suggest** in the preview when
 
 ### D23 — Vehicle taxonomy = service tier × body + car catalog; real road ETA (2026-06-19)
 Founder call (O5): model vehicles as **service tier (Eco/Business/Luxury) × body (Sedan/Van)**, each combo
-resolving to a real **car catalog** (`lib/vehicle-catalog.ts`, one file to maintain). The Dispatcher picks
-a tier + body (**Any/Sedan/Van** — Any reaches both bodies) and, only when the Guest insists, a **specific
-car**; Drivers set their tier + body. **Schema:** founder-approved additive migration
+resolving to a maintained **car catalog/classifier** (`lib/vehicle-catalog.ts`, founder's data); tiers
+display as **Eco · Business · First**. The Dispatcher picks a tier + body (**Any/Sedan/Van** — Any reaches
+both bodies) and, only when the Guest insists, a **specific car**. A Driver's tier is **auto-derived from
+make+model** via a two-step fallback (`categorize()`: a checked-brands list + premium-model exceptions,
+else Eco/Standard) — Drivers don't self-classify; body stays the Driver's pick. **Schema:** founder-approved additive migration
 (`docs/migrations/2026-06-19_vehicle_taxonomy_and_eta.sql`, applied 2026-06-19): new `body_type` enum;
 `vehicle.body_type`; `mission.required_body_type` (null = any) / `required_make` / `required_model`. The
 existing `vehicle_category` enum becomes the **tier** (eco/business/luxury); the legacy `van` value was

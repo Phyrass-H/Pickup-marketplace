@@ -19,9 +19,12 @@
 - Founder applied the additive migration (`docs/migrations/2026-06-19_vehicle_taxonomy_and_eta.sql`):
   `body_type` enum, `vehicle.body_type`, `mission.required_body_type/required_make/required_model/
   distance_km/duration_min`; legacy `van` category → business+van.
-- **Tier × body** model + **car catalog** (`lib/vehicle-catalog.ts`). Dispatcher picker
-  (`components/service-class-fields.tsx`): tier + Any/Sedan/Van + car-range hint + optional specific car.
-  Driver fields (`components/driver-vehicle-fields.tsx`) in onboarding + settings.
+- **Tier × body** model + a **car catalog/classifier** (`lib/vehicle-catalog.ts`, founder's data): a
+  two-step fallback `categorize(make,model)` (checked-brands + premium-model exceptions, else Eco)
+  **auto-classifies** a Driver's tier — they don't self-select. Tiers display **Eco · Business · First**.
+  Dispatcher picker (`components/service-class-fields.tsx`): tier + Any/Sedan/Van + hint + optional specific
+  car; Driver fields (`components/driver-vehicle-fields.tsx`) show the auto-detected tier + body. Alias-aware
+  matching (verified: Classe S→First, X5 40d→Business, Classe A→Eco, A3→Eco, Renault→Eco).
 - **ETA** via Mapbox Directions (`lib/directions.ts`), cached; shown as "27 km · 40 min" on Pool card /
   Dispatch row / detail (straight-line `~` fallback). **Traffic-aware** — `driving-traffic` + `depart_at`=
   pickup time, so the ETA varies by day/hour (verified 37 min Mon 9am vs 31 min Sun 2pm, same 27 km route;

@@ -2,22 +2,22 @@
 
 import { useState } from "react";
 import {
-  SERVICE_TIERS,
   BODY_TYPES,
-  TIER_LABEL,
   BODY_LABEL,
-  carRangeHint,
-  type ServiceTier,
+  TIER_LABEL,
+  categorize,
+  suggestedBody,
   type BodyType,
 } from "@/lib/vehicle-catalog";
 
-// The Driver's own vehicle: service TIER + BODY (drive Pool matching) + the car
-// details (make/model/colour/plate/seats). Shared by onboarding + settings.
+// The Driver's own vehicle. The service TIER is DERIVED from make+model (the
+// two-step fallback) and shown read-only — Drivers don't self-classify. BODY
+// (Sedan/Van) is captured separately (pre-filled from the recognised model when
+// known). Make/colour/plate matter for the legally-required VTC verification.
 export function DriverVehicleFields({
   defaults,
 }: {
   defaults?: {
-    category?: string | null;
     body_type?: string | null;
     make?: string | null;
     model?: string | null;
@@ -26,27 +26,51 @@ export function DriverVehicleFields({
     seats?: number | null;
   };
 }) {
-  const initTier: ServiceTier = (SERVICE_TIERS as string[]).includes(defaults?.category ?? "")
-    ? (defaults!.category as ServiceTier)
-    : "business";
-  const initBody: BodyType = defaults?.body_type === "van" ? "van" : "sedan";
+  const [make, setMake] = useState(defaults?.make ?? "");
+  const [model, setModel] = useState(defaults?.model ?? "");
+  const [body, setBody] = useState<BodyType>(defaults?.body_type === "van" ? "van" : "sedan");
+  // Whether the Driver has manually set the body (so we stop auto-suggesting).
+  const [bodyTouched, setBodyTouched] = useState(!!defaults?.body_type);
 
-  const [tier, setTier] = useState<ServiceTier>(initTier);
-  const [body, setBody] = useState<BodyType>(initBody);
-  const hint = carRangeHint(tier, body);
+  const tier = categorize(make, model);
+  // Pre-fill body from a recognised model until the Driver overrides it.
+  const sugg = suggestedBody(make, model);
+  const effectiveBody: BodyType = bodyTouched ? body : sugg ?? body;
 
   return (
     <>
-      <label className="field">
-        <span>Service tier (sets which Pool missions you see)</span>
-        <select name="category" value={tier} onChange={(e) => setTier(e.target.value as ServiceTier)}>
-          {SERVICE_TIERS.map((t) => (
-            <option key={t} value={t}>
-              {TIER_LABEL[t]}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="grid-2">
+        <label className="field">
+          <span>Make</span>
+          <input
+            type="text"
+            name="make"
+            value={make}
+            onChange={(e) => setMake(e.target.value)}
+            placeholder="Mercedes-Benz"
+          />
+        </label>
+        <label className="field">
+          <span>Model</span>
+          <input
+            type="text"
+            name="model"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="Classe E"
+          />
+        </label>
+      </div>
+
+      <div className="field">
+        <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
+          Service tier
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="badge">{TIER_LABEL[tier]}</span>
+          <span className="muted small">set automatically from your car</span>
+        </div>
+      </div>
 
       <div className="field">
         <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
@@ -57,31 +81,20 @@ export function DriverVehicleFields({
             <button
               type="button"
               key={b}
-              className={`seg-btn${body === b ? " is-on" : ""}`}
-              aria-pressed={body === b}
-              onClick={() => setBody(b)}
+              className={`seg-btn${effectiveBody === b ? " is-on" : ""}`}
+              aria-pressed={effectiveBody === b}
+              onClick={() => {
+                setBody(b);
+                setBodyTouched(true);
+              }}
             >
               {BODY_LABEL[b]}
             </button>
           ))}
         </div>
-        <input type="hidden" name="body_type" value={body} />
-        {hint && (
-          <p className="muted small" style={{ marginTop: 6 }}>
-            Common {TIER_LABEL[tier].toLowerCase()} {BODY_LABEL[body].toLowerCase()}s: {hint}
-          </p>
-        )}
       </div>
 
       <div className="grid-2">
-        <label className="field">
-          <span>Make</span>
-          <input type="text" name="make" defaultValue={defaults?.make ?? ""} placeholder="Mercedes-Benz" />
-        </label>
-        <label className="field">
-          <span>Model</span>
-          <input type="text" name="model" defaultValue={defaults?.model ?? ""} placeholder="Classe E" />
-        </label>
         <label className="field">
           <span>Colour</span>
           <input type="text" name="colour" defaultValue={defaults?.colour ?? ""} placeholder="Noir" />
@@ -101,6 +114,10 @@ export function DriverVehicleFields({
           />
         </label>
       </div>
+
+      {/* Derived tier + (possibly auto-suggested) body submit via hidden inputs. */}
+      <input type="hidden" name="category" value={tier} />
+      <input type="hidden" name="body_type" value={effectiveBody} />
     </>
   );
 }

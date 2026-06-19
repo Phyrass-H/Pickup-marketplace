@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidLatLng } from "@/lib/geo";
-import type { VehicleCategory, BodyType, PreferredGps } from "@/lib/database.types";
+import { categorize } from "@/lib/vehicle-catalog";
+import type { BodyType, PreferredGps } from "@/lib/database.types";
 
-const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "luxury"];
 const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
 
 // Creates the Driver's profile + driver + vehicle rows for the logged-in user.
@@ -30,11 +30,6 @@ export async function createDriverProfile(formData: FormData) {
     ? (gpsRaw as PreferredGps)
     : null;
 
-  const categoryRaw = String(formData.get("category") ?? "");
-  const category = CATEGORIES.includes(categoryRaw as VehicleCategory)
-    ? (categoryRaw as VehicleCategory)
-    : null;
-
   // Vehicle identification (optional at signup, editable later in Settings).
   // Plate matters for the legally-required VTC verification, not just display.
   const bodyRaw = String(formData.get("body_type") ?? "");
@@ -46,6 +41,8 @@ export async function createDriverProfile(formData: FormData) {
   const seatsRaw = String(formData.get("seats") ?? "").trim();
   const seatsNum = seatsRaw ? Number.parseInt(seatsRaw, 10) : NaN;
   const seats = Number.isFinite(seatsNum) ? seatsNum : null;
+  // Tier is DERIVED from make+model (two-step fallback), never self-selected.
+  const category = categorize(make ?? "", model ?? "");
 
   const baseLabel = String(formData.get("base_label") ?? "").trim();
   const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
@@ -53,7 +50,7 @@ export async function createDriverProfile(formData: FormData) {
   const radiusRaw = Number.parseInt(String(formData.get("service_radius_km") ?? ""), 10);
   const radius = Number.isFinite(radiusRaw) ? Math.min(500, Math.max(5, radiusRaw)) : 50;
 
-  if (!first || !last || !category) {
+  if (!first || !last) {
     redirect("/onboarding?error=missing");
   }
   if (!baseLabel || !isValidLatLng(baseLat, baseLng)) {
@@ -123,7 +120,7 @@ export async function createDriverProfile(formData: FormData) {
     .eq("driver_id", driverId!)
     .maybeSingle();
 
-  const vehicleFields = { category: category!, body_type: bodyType, make, model, colour, plate, seats };
+  const vehicleFields = { category, body_type: bodyType, make, model, colour, plate, seats };
   if (!vehicle) {
     const { error: vErr } = await admin
       .from("vehicle")

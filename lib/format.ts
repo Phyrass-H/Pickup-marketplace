@@ -105,8 +105,8 @@ export function formatDate(iso: string | null | undefined): string {
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {
   eco: "Eco",
   business: "Business",
-  van: "Van",
-  luxury: "Luxury",
+  van: "Van", // legacy enum value (pre-O5)
+  luxury: "First",
 };
 
 export function categoryLabel(c: VehicleCategory): string {

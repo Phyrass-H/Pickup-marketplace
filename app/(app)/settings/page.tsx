@@ -113,7 +113,6 @@ export default async function DriverSettingsPage({
         <h2 style={{ marginTop: 20 }}>Vehicle</h2>
         <DriverVehicleFields
           defaults={{
-            category: vehicle?.category,
             body_type: vehicle?.body_type,
             make: vehicle?.make,
             model: vehicle?.model,

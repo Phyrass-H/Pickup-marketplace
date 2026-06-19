@@ -4,9 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidLatLng } from "@/lib/geo";
-import type { VehicleCategory, BodyType, PreferredGps } from "@/lib/database.types";
+import { categorize } from "@/lib/vehicle-catalog";
+import type { BodyType, PreferredGps } from "@/lib/database.types";
 
-const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "luxury"];
 const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
 
 // Update the Driver's profile (incl. base location + service radius) and their
@@ -70,10 +70,6 @@ export async function updateDriverSettings(formData: FormData) {
   if (driverErr) redirect("/settings?error=db");
 
   // Vehicle (the one row per Driver).
-  const categoryRaw = String(formData.get("category") ?? "");
-  const category = CATEGORIES.includes(categoryRaw as VehicleCategory)
-    ? (categoryRaw as VehicleCategory)
-    : null;
   const bodyRaw = String(formData.get("body_type") ?? "");
   const bodyType: BodyType = bodyRaw === "van" ? "van" : "sedan";
   const make = String(formData.get("make") ?? "").trim();
@@ -84,7 +80,10 @@ export async function updateDriverSettings(formData: FormData) {
   const seatsNum = seatsRaw ? Number.parseInt(seatsRaw, 10) : NaN;
   const seats = Number.isFinite(seatsNum) ? seatsNum : null;
 
+  // Tier is DERIVED from make+model (two-step fallback), never self-selected.
+  const category = categorize(make, model);
   const vehicleFields = {
+    category,
     body_type: bodyType,
     make: make || null,
     model: model || null,
@@ -104,13 +103,13 @@ export async function updateDriverSettings(formData: FormData) {
   if (vehicle) {
     const { error } = await admin
       .from("vehicle")
-      .update({ ...vehicleFields, ...(category ? { category } : {}) })
+      .update(vehicleFields)
       .eq("id", vehicle.id);
     if (error) redirect("/settings?error=db");
-  } else if (category) {
+  } else {
     const { error } = await admin
       .from("vehicle")
-      .insert({ driver_id: driver.id, category, ...vehicleFields });
+      .insert({ driver_id: driver.id, ...vehicleFields });
     if (error) redirect("/settings?error=db");
   }
 
