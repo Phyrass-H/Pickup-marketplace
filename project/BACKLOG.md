@@ -177,21 +177,21 @@ full ML dynamic pricing · Amadeus GDS.
 - ✅ **O10** SPEED WIN starts at **70%** and climbs fast (D21). + **O10a** auto-suggest in preview when ≤5h.
 - ✅ **O11** final **preview card** before posting. **O15** **save-as-draft** + resume + discard (`/dispatch/drafts`). (D22)
 - ✅ **O13** Settings now link **Terms / Privacy / Support / Share feedback**; **O17** draft **Terms +
-  Privacy pages, FR + EN** (`/legal/*`) — ⚠️ placeholder copy, **must be drafted with the lawyer**.
+  Privacy pages, FR + EN** (`/legal/*`) — placeholder copy is fine for the MVP (founder owns the legal track).
 
 **❓/🔨 Next — needs a schema change (additive ALTER, founder-approved, → `docs/migrations/`)**
-- 🔨 **O2** show the **Guest phone** to the Driver, gated by a Dispatcher toggle → new
-  `mission.passenger_phone` + a reveal flag. (Dispatcher↔Driver reveal already works.) ⚠️ GDPR basis needed.
+- 🔨 **O2** show the **Guest phone** to the Driver (founder: fine to share across parties for the MVP) →
+  new `mission.passenger_phone`; the Dispatcher toggle is optional. (Dispatcher↔Driver reveal already works.)
 - 🔨 **O5** vehicle **taxonomy**: service tier (eco/business/luxury) × body (sedan/van) → a maintained
   **car catalog** table + an optional "require a specific model" field on the mission. Adds Van sub-tiers.
   Biggest product-model change here — deserves its own design pass.
 - 🔨 **O7** driver **cancellation** flow: `cancel_mission` RPC (re-pool), auto-flip to SPEED WIN on re-pool,
   big red Dispatch card (red-wash already exists), driver reliability/"mark" field, cancellation **fee** data.
-  ⚠️ **legal**: fee collection (agent-vs-principal) + driver "marking" (requalification risk) — lawyer first.
+  (Fee/penalty *amounts* are a founder decision — MANUAL in beta per spec.)
 
 **🅥 Future (post-MVP — track, don't build)**
 - 🅥 **O8** Guest/passenger app (phone-based, cross-business, post-trip Q&A, download invite). Net-new third
-  surface. ⚠️ **legal**: a direct PickUp↔Guest relationship cuts across the B2B-via-hotels structure; GDPR.
+  surface — meaningful build (auth, Guest entity, feedback tables). Post-MVP.
 - 🅥 **O12** at-disposal / *mise à disposition* (hourly) — confirmed **V2** (the `hourly` enum hook exists).
 - 🅥 **O14** Business **multi-access**: per-staff logins + action attribution (structurally easy —
   `mission.dispatcher_id` exists) + **owner-only revenue** (needs a role/permission field + tighter RLS).
