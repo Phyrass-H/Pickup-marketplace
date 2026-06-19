@@ -35,6 +35,15 @@ a saved draft") → toggle SPEED WIN (preview 84€ = 70%) → Post = in-place u
 mission on schedule (climbed 84→90€). Pool cards show `~km` + `+1 stop`; accepted a mission → Dispatch row
 shows **Car: Mercedes Classe E · Noir · AB-123-CD**. No console errors.
 
+**Reviewed** — ran a 12-agent adversarial review workflow over the diff; **4 confirmed, all fixed:**
+(1) **HIGH** — posting a *saved* draft to the Pool left the PDP climb origin (`created_at`) in the past,
+so a stale draft would post already near/at the ceiling → now the resume UPDATE resets `created_at` to
+now when going live (not on re-save). (2) `parisLocalToUtc` accepted out-of-range parts (month 13, day 99…)
+and silently rolled them over → added an overflow/round-trip guard returning null (unit-tested, DST-correct).
+(3) the resume UPDATE reported success even on 0 rows matched (stale tab / double-submit) → now `.select("id")`
++ a "draft already posted/discarded" message. (4) dev `/api/seed` SPEED WIN mission still used the old
+flat-at-ceiling PDP → updated to the D21 70% curve. `tsc` + `next build` green after fixes.
+
 **Next:** ⚠️ before prod, real legal copy for `/legal/*`; a real `support@` mailbox. Then the schema-change
 items (O2 guest phone, O5 vehicle taxonomy, O7 cancellation — last one is lawyer-gated). Branch is **not
 deployed** — merge/push `main` when the founder okays.

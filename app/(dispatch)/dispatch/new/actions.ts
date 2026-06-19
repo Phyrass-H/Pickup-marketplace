@@ -137,14 +137,22 @@ export async function createMission(formData: FormData) {
 
   const supabase = await createClient();
   if (missionId) {
-    // Resume: only an existing DRAFT belonging to this Business may be updated.
-    const { error } = await supabase
+    // Resume an existing DRAFT of this Business. When POSTING it live, reset the
+    // climb origin: the PDP fare is measured from created_at (pdp.ts), so without
+    // this a draft saved hours/days ago would be posted already near/at the
+    // ceiling. A plain re-save-as-draft keeps the original created_at.
+    const updateRow = asDraft ? row : { ...row, created_at: new Date().toISOString() };
+    const { data: updated, error } = await supabase
       .from("mission")
-      .update(row)
+      .update(updateRow)
       .eq("id", missionId)
       .eq("business_id", ctx.business.id)
-      .eq("status", "draft");
+      .eq("status", "draft")
+      .select("id");
     if (error) redirect(backTo("db"));
+    // 0 rows matched → the draft was already posted or discarded elsewhere
+    // (stale tab / double-submit). Don't report a phantom success.
+    if (!updated || updated.length === 0) redirect(backTo("gone"));
   } else {
     const { error } = await supabase.from("mission").insert(row);
     if (error) redirect(backTo("db"));

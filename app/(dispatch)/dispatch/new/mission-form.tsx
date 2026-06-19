@@ -200,6 +200,12 @@ export function MissionForm({
           That pickup time is in the past. Pick a future time, or save it as a draft.
         </div>
       )}
+      {error === "gone" && (
+        <div className="notice error">
+          That draft was already posted or discarded — check your schedule, it may
+          be live already.
+        </div>
+      )}
       {error === "db" && (
         <div className="notice error">
           Something went wrong. Please try again.

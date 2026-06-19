@@ -45,6 +45,20 @@ export function parisLocalToUtc(local: string): Date | null {
   // First guess: treat the wall time as if it were UTC, then subtract the zone
   // offset at that instant; refine once for the instant we landed on.
   const guessUtc = Date.UTC(y, mo - 1, d, h, mi);
+  // Reject out-of-range parts (the regex only checks digit count): Date.UTC
+  // silently rolls over (month 13, day 99, hour 99…), which would let a forged
+  // POST store a wrong-but-valid instant. If normalisation changed any field,
+  // the input was invalid → return null so callers hit the error path.
+  const g = new Date(guessUtc);
+  if (
+    g.getUTCFullYear() !== y ||
+    g.getUTCMonth() !== mo - 1 ||
+    g.getUTCDate() !== d ||
+    g.getUTCHours() !== h ||
+    g.getUTCMinutes() !== mi
+  ) {
+    return null;
+  }
   const off1 = tzOffsetMinutes(PARIS, new Date(guessUtc));
   const off2 = tzOffsetMinutes(PARIS, new Date(guessUtc - off1 * 60_000));
   const date = new Date(guessUtc - off2 * 60_000);

@@ -197,9 +197,10 @@ export async function GET() {
       comment: "Passager VIP — eau à bord.",
       base_fare: 180,
       ceiling: 200,
-      pdp_start: 200,
-      pdp_step: 0,
-      pdp_interval: 0,
+      // SPEED WIN curve per D21: start at 70% of ceiling, climb +5%/5 min.
+      pdp_start: 140,
+      pdp_step: 10,
+      pdp_interval: 5,
       speed_win: true,
     },
     {
