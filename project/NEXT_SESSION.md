@@ -11,63 +11,79 @@ GitHub (`main`) and the app auto-deploys to Vercel. **Claude Code is allowed to 
 
 START BY READING (in order):
 - `CLAUDE.md` (root) — hard rules + glossary.
-- `project/SESSION_LOG.md` — newest entry (**Session 10**, the Dispatch redesign) is the resume point.
+- `project/SESSION_LOG.md` — newest entry (**Session 12**) is the resume point.
 - `project/DESIGN_BRIEF.md` — brand, palette, glossary, every screen, constraints (shared with Claude Design).
-- `project/BACKLOG.md`, `project/DECISIONS.md` (newest: **D20**), `project/IDEAS.md`.
-- Skim `docs/` (00–05, Phase0 spine, `pickup_schema.sql`) — the source of truth.
+- `project/BACKLOG.md` (newest planning section **K** = the founder brain-dump triage), `project/DECISIONS.md`
+  (newest **D23**), `project/IDEAS.md`.
+- Skim `docs/` — `00`–`05`, `PickUp_Phase0_Data_Spine.md` (current as of 2026-06-19), `pickup_schema.sql`,
+  and **`docs/migrations/`** (two applied additive migrations: `2026-06-17_driver_service_area.sql`,
+  `2026-06-19_vehicle_taxonomy_and_eta.sql`). These are the source of truth.
 
 CURRENT STATE (live, deployed from `main`):
 - **Custom domain + role subdomains:** `driver.pickupbedriven.com` = Driver app · `dispatch.pickupbedriven.com`
-  = Business/Dispatch. Each subdomain has its own session cookie (no role-switching). Mapping in
-  `lib/hosts.ts` — a no-op on localhost + `*.vercel.app`. Bare domain shows a Driver/Business splash.
-- **Dispatch (Business) redesign SHIPPED** (Session 10 / D20) — the Claude Design handoff, implemented:
-  full **design-token system** in `app/globals.css` (slate + action-blue, the five status tones,
-  spacing/radii/shadows/focus-ring); **Geist + Geist Mono** via `next/font` (`geist` pkg, self-hosted);
-  **lucide-react** icons. **Collapsible sidebar shell** (`components/dispatch-shell.tsx`) replacing the
-  top tabs. **Schedule** with a **Flight** column (number + ETA, display only) + **T-180 red row-wash**
-  (`components/trip-row.tsx`). **Full Calendar** (`components/dispatch-calendar.tsx` + server
-  `calendar/page.tsx`): month **+ week** views, **KPI filter chips**, guest search, status/vehicle
-  filters, **day peek drawer**, cross-month week nav (`?week=first|last`), and **＋ / empty-day → New
-  mission prefilled with that date**. Glossary header is **"Guest / ref"**. 11 adversarial-review
-  findings fixed (a11y, week nav, KPI count, etc.). Verified in-browser + live.
-- **Driver app:** inherits the new palette + Geist font, but its **layout is NOT yet redesigned** — that
-  is the next design pass (deliver as a phone mockup first, then apply).
-- **Core loop** works end-to-end both sides vs the real Supabase DB (Pool→Accept→run trip; post
-  mission→Schedule/Calendar→live status; accounts/records; Mapbox autocomplete; service-area Pool).
-- **Auth (testing):** key-gated dev-login. On the live subdomains:
+  = Business/Dispatch. Each subdomain has its own session cookie. Mapping in `lib/hosts.ts` (no-op on
+  localhost + `*.vercel.app`).
+- **Core loop** works end-to-end both sides vs the real Supabase DB (Pool→Accept→run trip; post mission→
+  Schedule/Calendar→live status; accounts/records; Mapbox autocomplete; base+radius Pool).
+- **Dispatch redesign** shipped (Session 10 / D20): design-token system, Geist + Lucide, collapsible
+  sidebar shell, Schedule (flight col + T-180 wash), full Calendar.
+- **Session 11 (triage → quick wins + post-flow, D21/D22):** SPEED WIN starts at **70%** of ceiling (not
+  100%); new-mission **preview-before-post** + **save-as-draft/resume/discard** (`/dispatch/drafts`);
+  pickup time is **Europe/Paris**-correct; trip **distance** + **stops** on cards; Driver **car (make/
+  colour/plate)** captured at onboarding + shown on Dispatch rows; **Terms/Privacy/Support** settings pages
+  (`/legal/*`, FR+EN placeholder).
+- **Session 12 (D23): real date+time pickers + route block (+stop button); O5 vehicle taxonomy; traffic-aware
+  ETA.**
+  - **Vehicle taxonomy:** `vehicle_category` is now the **service TIER** (Eco / Business / First — `luxury`
+    relabelled); **body_type** (sedan/van) is a separate axis. A Driver's tier is **auto-classified** from
+    make+model by a two-step fallback in **`lib/vehicle-catalog.ts`** (`categorize()`: checked-brands +
+    premium-model exceptions, else Eco). Dispatcher picks tier + body (Any/Sedan/Van) + optional **specific
+    car**; Pool matches tier + body + specific car (`carMatches`, alias-aware). Maintain by editing the two
+    arrays in `lib/vehicle-catalog.ts` (anything unlisted → Eco).
+  - **ETA:** `mission.distance_km` / `duration_min` computed once at posting via Mapbox **`driving-traffic`
+    + `depart_at`=pickup time** (traffic-aware — Mon 8am ≠ Sun 2pm), cached; shown as "27 km · 40 min".
+  - **Migration applied 2026-06-19** (additive): `body_type` enum, `vehicle.body_type`,
+    `mission.required_body_type/required_make/required_model/distance_km/duration_min`; legacy `van` →
+    business+van.
+- **Auth (testing):** key-gated dev-login on the live subdomains:
   - Business → `https://dispatch.pickupbedriven.com/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
   - Driver  → `https://driver.pickupbedriven.com/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
   Local (`npm run dev`): dev-login is open, no key. `GET /api/seed` (dev-only) creates a Business +
-  Dispatcher (now **incl. a `profile` row** so it's a usable login) + 6 missions. Real magic-link wired but off.
-- **Env:** `.env.local` (git-ignored) needs the 3 Supabase keys + `NEXT_PUBLIC_MAPBOX_TOKEN`; same set in Vercel.
+  Dispatcher + missions. Real magic-link wired but off.
+- **Env:** `.env.local` (git-ignored) needs the 3 Supabase keys + `NEXT_PUBLIC_MAPBOX_TOKEN`; same in Vercel.
 
-THE DESIGN WORKFLOW (established + working — see D19/D20):
-- Founder designs in **Claude Design** → **Export → zip** → drops the zip into the Claude Code session →
-  Claude implements it against the repo + deploys. The live `DesignSync` connector is **blocked** (the
-  session token can't get design scopes; `/login` unavailable) — **the zip path is the reliable one.**
-- Each handoff the founder states the **scope** (which screens changed) and flags any element that needs
-  **live backend vs. placeholder**. Claude implements everything wirable over existing data/actions, then
-  hands back a short **"needs a backend decision"** list BEFORE building any new backend/schema/external
-  service (it never fakes data or assumes intent from a mockup). Honor `DESIGN_BRIEF.md`.
-- The last handoff bundle is kept locally at **`.design-handoff/`** (gitignored). The **Driver UI kit** is
-  at `.design-handoff/pickup-design-system/project/ui_kits/driver/`.
+LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer will write the
+real Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the
+glossary + agent/intermediary framing in code/copy (that's a product rule, not a legal gate). Sharing the
+Guest phone across parties is fine for the MVP.
 
-THIS SESSION — pick what the founder asks:
-- **Driver app redesign (headline next item):** deliver as a **pixel-perfect smartphone mockup** (render
-  in-chat in a latest-phone frame for approval), then apply it. UI kit is in the bundle above.
-- OR receive another **Claude Design zip** (e.g. a second Dispatch pass) and implement it.
-- OR **Engineering hardening** — the founder wants these done before real production (see BACKLOG
-  "Engineering hardening"): **automated tests** (esp. money/PDP/`accept_mission`/RLS), **CI on PRs**
-  (typecheck + lint + test), **generated DB types** (`supabase gen types`, replacing the hand-written
-  ones), **real email auth** (remove dev-login), **error monitoring + analytics** (Sentry/PostHog).
-  Biggest single quality win = a test suite around the money/pricing/accept logic + a CI check.
-- Pending platform polish: **Mapbox token URL-restriction** (BACKLOG H), **per-role PWA** manifest/icons.
+THE DESIGN WORKFLOW (established — D19/D20): founder designs in **Claude Design** → **Export → zip** → drops
+the zip into the session → Claude implements it against the repo + deploys. The live `DesignSync` connector
+is blocked; the zip path is the reliable one. Each handoff the founder states the scope. Honor `DESIGN_BRIEF.md`.
+Last bundle kept locally at `.design-handoff/` (gitignored); Driver UI kit at
+`.design-handoff/pickup-design-system/project/ui_kits/driver/`.
+
+THIS SESSION — pick what the founder asks (open items):
+- **Driver app redesign (headline next):** the founder delivers a pixel-perfect phone mockup (Claude Design
+  zip); implement it. The Driver app currently inherits the palette/font but its layout is NOT yet redesigned.
+- **O7 — Driver cancellation flow:** `cancel_mission` RPC (re-pool), auto-flip to SPEED WIN on re-pool, big
+  red Dispatch card (red-wash exists), Driver reliability/"mark" field, cancellation fee data. (Fee/penalty
+  *amounts* are a founder decision — MANUAL in beta per spec. Schema-change → additive migration, founder-
+  approved, recorded in `docs/migrations/`.)
+- **O2 — Guest phone to the Driver:** add `mission.passenger_phone` (additive) + show on the assigned ride.
+  Founder: fine to share for the MVP.
+- **Car classifier upkeep:** extend `CHECKED_BRANDS` / `MODEL_EXCEPTIONS` in `lib/vehicle-catalog.ts` as new
+  models appear (low-touch; unlisted → Eco).
+- **Engineering hardening (BACKLOG H2):** automated tests (money/PDP/`accept_mission`/RLS first), CI on PRs,
+  generated DB types (`supabase gen types`), real email auth (remove dev-login), error monitoring + analytics.
+- Smaller follow-ups: accurate ETA for multi-stop trips (geocode stops, pass as `via`); bind the Driver's car
+  to the catalog for fully-robust specific-car matching; Mapbox token URL-restriction (BACKLOG H); per-role PWA.
 
 HARD RULES (from CLAUDE.md): glossary exactly (Business, Dispatcher, Driver, Guest, Pool, PDP, Ceiling,
 SPEED WIN — never "client"/"principal"); PickUp is an AGENT, never principal; PickUp ≠ PickUp Go; the
 Supabase schema is ALREADY APPLIED — never re-run it (additive ALTERs only, founder-approved, recorded in
 `docs/migrations/`); build only KEEP items.
 
-WORKFLOW THIS SESSION: work on a branch off `main` for code changes; keep `tsc` + `next build` green;
-verify in the browser preview against the real Supabase DB. Push `main` to deploy (Claude Code may push).
-Append to `project/SESSION_LOG.md` when a chunk is done.
+WORKFLOW THIS SESSION: work on a branch off `main` for code changes; keep `tsc` + `next build` green; verify
+in the browser preview against the real Supabase DB. Push `main` to deploy (Claude Code may push). Append to
+`project/SESSION_LOG.md` when a chunk is done.

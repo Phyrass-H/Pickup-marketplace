@@ -1,7 +1,7 @@
 # Phase 0 — PickUp · Data Spine
 
 > Scope: the single structural reference for the build — entities, fields, enums, relationships, and the mission state machine. Everything in the Driver PWA and Dispatch dashboard maps back to this.
-> **Last updated:** this session — folded in cancellation model, group hook, mission_type hook, flight_eta, and the Lock-in rule.
+> **Last updated:** 2026-06-19 — vehicle taxonomy (tier × body), cached trip ETA, base+radius Pool, SPEED-WIN-at-70%, save-as-draft. Reflects the applied additive migrations in `docs/migrations/` — see DECISIONS D17/D21/D22/D23.
 > Terminology per Doc 00: Business · Dispatcher · Driver · Guest · Pool · PDP · Ceiling · SPEED WIN. Never "client" / "principal".
 
 ---
@@ -17,14 +17,14 @@
 **Driver** — the professional VTC who accepts and performs missions.
 `id · auth_user_id→Auth · first_name · last_name · phone · email · profile_photo_url? · languages[] · operational_zones[] (legacy — superseded by base+radius, 2026-06-17) · base_label? · base_lat? · base_lng? · service_radius_km (default 50) · preferred_gps (waze|google|apple) · stripe_account_id? (Connect) · verified (bool — set MANUAL in beta) · created_at`
 
-**Vehicle** — one per Driver in V1.
-`id · driver_id→Driver · category (vehicle_category) · make · model · colour · plate · seats · created_at`
+**Vehicle** — one per Driver in V1. (`category` = the service **tier**; `body_type` is a separate axis. Tier is auto-derived from make+model — see Vehicle taxonomy below.)
+`id · driver_id→Driver · category (vehicle_category — the TIER) · body_type (sedan|van, default sedan; added 2026-06-19) · make · model · colour · plate · seats · created_at`
 
 **Document** — uploaded proofs for a Driver or a Business; verified MANUAL in beta.
 `id · owner_type (driver|business) · owner_id · type (document_type) · file_url · status (document_status) · expires_at? · uploaded_at`
 
 **Mission** — the core record.
-`id · business_id→Business · dispatcher_id→Dispatcher · driver_id→Driver? (null until accept) · status (mission_status) · mission_type (transfer|hourly, default transfer) · group_id? (nullable — hook for V2 grouped missions) · category (vehicle_category) · zone · pickup_address · pickup_lat · pickup_lng · dropoff_address · dropoff_lat · dropoff_lng · waypoints[]? · pickup_at (timestamp — booked/original) · flight_number? · flight_eta? (timestamp — updated landing, display-only) · passenger_name · pax_count · luggage_count · comment? · base_fare · ceiling · pdp_start · pdp_step · pdp_interval · speed_win (bool) · cancelled_by? (cancellation_party) · cancelled_at? · created_at · accepted_at? · confirmed_at?`
+`id · business_id→Business · dispatcher_id→Dispatcher · driver_id→Driver? (null until accept) · status (mission_status) · mission_type (transfer|hourly, default transfer) · group_id? (nullable — hook for V2 grouped missions) · category (vehicle_category) · zone · pickup_address · pickup_lat · pickup_lng · dropoff_address · dropoff_lat · dropoff_lng · waypoints[]? · pickup_at (timestamp — booked/original) · flight_number? · flight_eta? (timestamp — updated landing, display-only) · passenger_name · pax_count · luggage_count · comment? · base_fare · ceiling · pdp_start · pdp_step · pdp_interval · speed_win (bool) · required_body_type? (body_type — null = any) · required_make? · required_model? · distance_km? · duration_min? (cached road distance + ETA, 2026-06-19) · cancelled_by? (cancellation_party) · cancelled_at? · created_at · accepted_at? · confirmed_at?`
 
 **StatusEvent** — one row per status-button tap; streamed to the Dispatcher.
 `id · mission_id→Mission · status (en_route|arrived|on_board|completed) · created_at`
@@ -49,7 +49,8 @@
 ## Enums
 
 - **role** — driver · dispatcher · admin
-- **vehicle_category** — eco · business · van · luxury
+- **vehicle_category** (the service **tier**) — eco (Eco/Standard) · business · luxury (displayed "First"). *`van` is a legacy value, migrated to business + body=van on 2026-06-19; tier is now auto-derived from make+model via `lib/vehicle-catalog.ts`.*
+- **body_type** — sedan · van   *(added 2026-06-19; a separate axis from tier)*
 - **mission_type** — transfer · hourly        *(hourly = at-disposal / mise à disposition; V2 feature, enum present now as a hook)*
 - **mission_status** — draft · pooled · accepted · confirmed · en_route · arrived · on_board · completed · cancelled · expired
 - **cancellation_party** — driver · business · system
@@ -107,10 +108,12 @@ completed ──▶ Payment captured + LedgerTransaction + BookingVoucher
 
 ## Computed, not stored
 
-- **Current PDP fare** = `f(base_fare, ceiling, time_to_mission, pdp_start, pdp_step, pdp_interval)` — deterministic, recomputed on read. SPEED WIN starts at/near ceiling. Never persisted as the "price."
-- **Pool** is a *query/view*, not a table. Matching is by distance from the Driver's base (replaced the zone-list model 2026-06-17; see DECISIONS D17):
-  `missions WHERE status='pooled' AND category = driver.vehicle.category AND (haversine(base, pickup) ≤ service_radius_km OR haversine(base, dropoff) ≤ service_radius_km)`.
-  Mission `pickup_lat/lng` + `dropoff_lat/lng` are geocoded (Mapbox) at posting time; the filter currently runs in the app (beta scale).
+- **Current PDP fare** = `f(base_fare, ceiling, time_to_mission, pdp_start, pdp_step, pdp_interval)` — deterministic, recomputed on read. **SPEED WIN starts at 70% of the ceiling and climbs fast** (D21, reversing the old at-ceiling rule). Never persisted as the "price."
+- **Vehicle tier** is computed from make+model by a two-step fallback (`lib/vehicle-catalog.ts`: a checked-brands list + premium-model exceptions, else Eco/Standard) and stored on `vehicle.category` — the Driver doesn't self-select it. Body (sedan/van) is captured separately.
+- **Trip distance + ETA** (`mission.distance_km` / `duration_min`) are computed once at posting via Mapbox **`driving-traffic` + `depart_at`=pickup time** (traffic-aware: the ETA reflects the day/hour) and cached. Cards fall back to a straight-line `~`estimate when absent.
+- **Pool** is a *query/view*, not a table. Matching is by distance from the Driver's base (replaced the zone-list model 2026-06-17, D17) + tier/body/specific-car (D23):
+  `missions WHERE status='pooled' AND category = driver.vehicle.category AND (haversine(base,pickup) ≤ radius OR haversine(base,dropoff) ≤ radius) AND (required_body_type IS NULL OR = vehicle.body_type) AND (required_make IS NULL OR driver's car matches required make+model)`.
+  Mission `pickup_lat/lng` + `dropoff_lat/lng` are geocoded (Mapbox) at posting time; the body/specific-car checks run in the app (beta scale).
 
 ---
 
