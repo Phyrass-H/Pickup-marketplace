@@ -52,27 +52,31 @@ export function formatDistance(km: number | null | undefined): string {
   return `~${Math.round(km)} km`;
 }
 
-// Cached ROAD distance (no "~" — it's a real routed distance).
-export function formatKm(km: number | null | undefined): string {
+// Cached ROAD distance (no "~" — it's a real routed distance). Postgres
+// `numeric` comes back from PostgREST as a STRING, so coerce before maths.
+export function formatKm(km: number | string | null | undefined): string {
   if (km == null) return "—";
-  if (km < 10) return `${km.toFixed(1).replace(".", ",")} km`;
-  return `${Math.round(km)} km`;
+  const n = Number(km);
+  if (!Number.isFinite(n)) return "—";
+  return n < 10 ? `${n.toFixed(1).replace(".", ",")} km` : `${Math.round(n)} km`;
 }
 
 // Travel time: "25 min" or "1 h 05".
-export function formatDuration(min: number | null | undefined): string {
+export function formatDuration(min: number | string | null | undefined): string {
   if (min == null) return "—";
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
+  const n = Number(min);
+  if (!Number.isFinite(n)) return "—";
+  if (n < 60) return `${n} min`;
+  const h = Math.floor(n / 60);
+  const m = n % 60;
   return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
 }
 
 // Card/detail trip line: prefer cached road distance + ETA; fall back to the
 // straight-line estimate when routing wasn't available (older missions).
 export function formatTripMeta(
-  distanceKm: number | null | undefined,
-  durationMin: number | null | undefined,
+  distanceKm: number | string | null | undefined,
+  durationMin: number | string | null | undefined,
   straightKm: number | null | undefined,
 ): string {
   if (distanceKm != null) {

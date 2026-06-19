@@ -12,10 +12,13 @@ import {
   type BodyType,
 } from "@/lib/vehicle-catalog";
 
+type BodyChoice = "" | BodyType; // "" = any body (reaches sedan AND van drivers)
+
 // Dispatcher's service-class picker (O5): pick a TIER (Eco/Business/Luxury) + a
-// BODY (Sedan/Van) — that routes the mission to the matching Pool — and, only if
-// the Guest insists, a SPECIFIC car from the catalog. Emits the form fields
-// category / required_body_type / required_make / required_model.
+// BODY (Any/Sedan/Van) — that routes the mission to the matching Pool — and, only
+// if the Guest insists, a SPECIFIC car from the catalog. "Any" body keeps the
+// mission visible to both sedan and van Drivers in the tier. Emits the form
+// fields category / required_body_type / required_make / required_model.
 export function ServiceClassFields({
   defaults,
 }: {
@@ -24,10 +27,11 @@ export function ServiceClassFields({
   const initTier: ServiceTier = (SERVICE_TIERS as string[]).includes(defaults?.category ?? "")
     ? (defaults!.category as ServiceTier)
     : "business";
-  const initBody: BodyType = defaults?.body === "van" ? "van" : "sedan";
+  const initBody: BodyChoice =
+    defaults?.body === "van" ? "van" : defaults?.body === "sedan" ? "sedan" : "";
 
   const [tier, setTier] = useState<ServiceTier>(initTier);
-  const [body, setBody] = useState<BodyType>(initBody);
+  const [body, setBody] = useState<BodyChoice>(initBody);
   const [specific, setSpecific] = useState(
     defaults?.make && defaults?.model ? `${defaults.make}|${defaults.model}` : "",
   );
@@ -37,14 +41,21 @@ export function ServiceClassFields({
     setTier(t);
     setSpecific("");
   }
-  function changeBody(b: BodyType) {
+  function changeBody(b: BodyChoice) {
     setBody(b);
     setSpecific("");
   }
 
-  const cars = carsFor(tier, body);
-  const hint = carRangeHint(tier, body);
+  const cars = body ? carsFor(tier, body) : [];
+  const hint = body ? carRangeHint(tier, body) : "";
   const [reqMake, reqModel] = specific ? specific.split("|") : ["", ""];
+  // Keep a resumed specific car selectable even if it's not in the current slice.
+  const specificMissing = !!specific && !cars.some((c) => `${c.make}|${c.model}` === specific);
+
+  const bodyChoices: { value: BodyChoice; label: string }[] = [
+    { value: "", label: "Any" },
+    ...BODY_TYPES.map((b) => ({ value: b, label: BODY_LABEL[b] })),
+  ];
 
   return (
     <div className="field">
@@ -61,15 +72,15 @@ export function ServiceClassFields({
       </select>
 
       <div className="seg" style={{ marginTop: 8 }} role="group" aria-label="Body type">
-        {BODY_TYPES.map((b) => (
+        {bodyChoices.map((c) => (
           <button
             type="button"
-            key={b}
-            className={`seg-btn${body === b ? " is-on" : ""}`}
-            aria-pressed={body === b}
-            onClick={() => changeBody(b)}
+            key={c.value || "any"}
+            className={`seg-btn${body === c.value ? " is-on" : ""}`}
+            aria-pressed={body === c.value}
+            onClick={() => changeBody(c.value)}
           >
-            {BODY_LABEL[b]}
+            {c.label}
           </button>
         ))}
       </div>
@@ -81,29 +92,38 @@ export function ServiceClassFields({
         </p>
       )}
 
-      <select
-        value={specific}
-        onChange={(e) => setSpecific(e.target.value)}
-        aria-label="Specific car"
-        style={{ marginTop: 8 }}
-      >
-        <option value="">
-          Any {TIER_LABEL[tier]} {BODY_LABEL[body].toLowerCase()} (recommended)
-        </option>
-        {cars.map((c) => (
-          <option key={`${c.make}|${c.model}`} value={`${c.make}|${c.model}`}>
-            {c.make} {c.model}
-          </option>
-        ))}
-      </select>
+      {body && (
+        <>
+          <select
+            value={specific}
+            onChange={(e) => setSpecific(e.target.value)}
+            aria-label="Specific car"
+            style={{ marginTop: 8 }}
+          >
+            <option value="">
+              Any {TIER_LABEL[tier]} {BODY_LABEL[body].toLowerCase()} (recommended)
+            </option>
+            {specificMissing && (
+              <option value={specific}>
+                {reqMake} {reqModel}
+              </option>
+            )}
+            {cars.map((c) => (
+              <option key={`${c.make}|${c.model}`} value={`${c.make}|${c.model}`}>
+                {c.make} {c.model}
+              </option>
+            ))}
+          </select>
+          {specific && (
+            <p className="muted small" style={{ marginTop: 6 }}>
+              Only Drivers with this exact car will see the mission — expect fewer matches.
+            </p>
+          )}
+        </>
+      )}
+
       <input type="hidden" name="required_make" value={reqMake} />
       <input type="hidden" name="required_model" value={reqModel} />
-
-      {specific && (
-        <p className="muted small" style={{ marginTop: 6 }}>
-          Only Drivers with this exact car will see the mission — expect fewer matches.
-        </p>
-      )}
     </div>
   );
 }

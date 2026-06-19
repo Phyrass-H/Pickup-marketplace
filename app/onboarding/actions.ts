@@ -6,12 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidLatLng } from "@/lib/geo";
 import type { VehicleCategory, BodyType, PreferredGps } from "@/lib/database.types";
 
-const CATEGORIES: readonly VehicleCategory[] = [
-  "eco",
-  "business",
-  "van",
-  "luxury",
-];
+const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "luxury"];
 const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
 
 // Creates the Driver's profile + driver + vehicle rows for the logged-in user.

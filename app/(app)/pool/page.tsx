@@ -4,6 +4,7 @@ import { getDriverContext } from "@/lib/driver";
 import { MissionCard } from "@/components/mission-card";
 import { serviceClassLabel } from "@/lib/format";
 import { withinRadius } from "@/lib/geo";
+import { carMatches } from "@/lib/vehicle-catalog";
 
 // The Pool changes constantly (PDP climbs, others accept) → never cache.
 export const dynamic = "force-dynamic";
@@ -44,8 +45,6 @@ export default async function PoolPage() {
     .order("pickup_at", { ascending: true });
 
   const radius = driver.service_radius_km ?? 50;
-  const driverMake = (vehicle.make ?? "").trim().toLowerCase();
-  const driverModel = (vehicle.model ?? "").trim().toLowerCase();
   const missions = (all ?? []).filter((m) => {
     const inRange =
       withinRadius(driver.base_lat!, driver.base_lng!, radius, m.pickup_lat, m.pickup_lng) ||
@@ -53,10 +52,12 @@ export default async function PoolPage() {
     if (!inRange) return false;
     // Body: a mission that demands a body type must match the Driver's vehicle.
     if (m.required_body_type && m.required_body_type !== vehicle.body_type) return false;
-    // Specific car: when required, only the exact make + model qualifies.
+    // Specific car: when required, the Driver's car must satisfy it (tolerant
+    // make matching, since the Driver types theirs free-text).
     if (m.required_make && m.required_model) {
-      if (driverMake !== m.required_make.trim().toLowerCase()) return false;
-      if (driverModel !== m.required_model.trim().toLowerCase()) return false;
+      if (!carMatches(vehicle.make ?? "", vehicle.model ?? "", m.required_make, m.required_model)) {
+        return false;
+      }
     }
     return true;
   });

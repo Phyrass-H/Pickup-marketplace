@@ -74,3 +74,40 @@ export function carRangeHint(tier: ServiceTier, body: BodyType, max = 3): string
   const shown = names.slice(0, max).join(", ");
   return names.length > max ? `${shown}…` : shown;
 }
+
+// Strip diacritics + punctuation/spaces, lowercase: "Mercedes-Benz" → "mercedesbenz",
+// "Škoda" → "skoda", "Classe V" → "classev".
+function normCar(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/gi, "")
+    .toLowerCase();
+}
+
+const MAKE_ALIASES: Record<string, string> = {
+  vw: "volkswagen",
+  mercedes: "mercedesbenz",
+  merc: "mercedesbenz",
+};
+
+function normMake(s: string): string {
+  const n = normCar(s);
+  return MAKE_ALIASES[n] ?? n;
+}
+
+// Does a Driver's (free-text) car satisfy a Dispatcher's specific-car request?
+// The Dispatcher value comes from the catalog (canonical, e.g. "Mercedes-Benz");
+// the Driver types theirs (e.g. "Mercedes"). Match on model, tolerant on make
+// (alias + substring) so "Mercedes Classe V" ≈ "Mercedes-Benz Classe V".
+export function carMatches(
+  driverMake: string,
+  driverModel: string,
+  reqMake: string,
+  reqModel: string,
+): boolean {
+  if (normCar(driverModel) !== normCar(reqModel)) return false;
+  const dm = normMake(driverMake);
+  const rm = normMake(reqMake);
+  return dm === rm || dm.includes(rm) || rm.includes(dm);
+}

@@ -9,7 +9,8 @@ import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
 import type { VehicleCategory, BodyType, MissionStatus } from "@/lib/database.types";
 
-const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
+// Tiers offered post-O5 ('van' is a legacy enum value, no longer a tier).
+const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "luxury"];
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -108,18 +109,18 @@ export async function createMission(formData: FormData) {
   if (!asDraft && pickupAt!.getTime() < Date.now() - 60_000) redirect(backTo("past"));
 
   // Cache road distance + ETA (best-effort; null if routing fails or no dropoff).
-  let distanceKm: number | null = null;
-  let durationMin: number | null = null;
-  if (pickupValid && dropoffValid) {
-    const metrics = await routeMetrics(
-      { lat: pickupLat!, lng: pickupLng! },
-      { lat: dropoffLat!, lng: dropoffLng! },
-    );
-    if (metrics) {
-      distanceKm = metrics.distanceKm;
-      durationMin = metrics.durationMin;
-    }
-  }
+  // Only WRITE it when a fresh value was obtained, so a transient routing
+  // failure on a re-save/post never wipes a previously-cached ETA.
+  const metrics =
+    pickupValid && dropoffValid
+      ? await routeMetrics(
+          { lat: pickupLat!, lng: pickupLng! },
+          { lat: dropoffLat!, lng: dropoffLng! },
+        )
+      : null;
+  const eta = metrics
+    ? { distance_km: metrics.distanceKm, duration_min: metrics.durationMin }
+    : {};
 
   // PDP curve (D21): a standard mission starts at 50% of the ceiling and climbs
   // +5% every 10 min; SPEED WIN starts hotter (70%) and climbs every 5 min. It
@@ -158,8 +159,6 @@ export async function createMission(formData: FormData) {
     required_body_type: requiredBody,
     required_make: requiredMake,
     required_model: requiredModel,
-    distance_km: distanceKm,
-    duration_min: durationMin,
   };
 
   const supabase = await createClient();
@@ -168,7 +167,9 @@ export async function createMission(formData: FormData) {
     // climb origin: the PDP fare is measured from created_at (pdp.ts), so without
     // this a draft saved hours/days ago would be posted already near/at the
     // ceiling. A plain re-save-as-draft keeps the original created_at.
-    const updateRow = asDraft ? row : { ...row, created_at: new Date().toISOString() };
+    const updateRow = asDraft
+      ? { ...row, ...eta }
+      : { ...row, ...eta, created_at: new Date().toISOString() };
     const { data: updated, error } = await supabase
       .from("mission")
       .update(updateRow)
@@ -181,7 +182,7 @@ export async function createMission(formData: FormData) {
     // (stale tab / double-submit). Don't report a phantom success.
     if (!updated || updated.length === 0) redirect(backTo("gone"));
   } else {
-    const { error } = await supabase.from("mission").insert(row);
+    const { error } = await supabase.from("mission").insert({ ...row, ...eta });
     if (error) redirect(backTo("db"));
   }
 
