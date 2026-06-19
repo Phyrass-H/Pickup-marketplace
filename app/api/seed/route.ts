@@ -162,7 +162,8 @@ export async function GET() {
     },
     {
       ...base,
-      category: "van",
+      category: "business",
+      required_body_type: "van",
       zone: "Nice",
       pickup_address: "Port de Nice, Quai Lunel, Nice",
       pickup_lat: 43.6952,

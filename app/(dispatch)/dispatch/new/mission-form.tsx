@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops } from "@/components/route-stops";
+import { ServiceClassFields } from "@/components/service-class-fields";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
   parisLocalToUtc,
@@ -12,11 +13,11 @@ import {
 } from "@/lib/time";
 import { tripDistanceKm } from "@/lib/geo";
 import {
-  categoryLabel,
   formatDistance,
   formatMoney,
+  serviceClassLabel,
 } from "@/lib/format";
-import type { MissionRow, VehicleCategory } from "@/lib/database.types";
+import type { MissionRow, VehicleCategory, BodyType } from "@/lib/database.types";
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -24,6 +25,8 @@ function round2(n: number): number {
 
 interface PreviewData {
   category: string;
+  body: string;
+  requiredCar: string | null;
   pickup: string;
   dropoff: string;
   stops: string[];
@@ -116,8 +119,12 @@ export function MissionForm({
 
     const dropLat = Number(fd.get("dropoff_lat"));
     const dropLng = Number(fd.get("dropoff_lng"));
+    const rMake = String(fd.get("required_make") ?? "").trim();
+    const rModel = String(fd.get("required_model") ?? "").trim();
     setPreview({
       category,
+      body: String(fd.get("required_body_type") ?? ""),
+      requiredCar: rMake && rModel ? `${rMake} ${rModel}` : null,
       pickup,
       dropoff: String(fd.get("dropoff_address") ?? "").trim(),
       stops: String(fd.get("waypoints") ?? "")
@@ -200,18 +207,14 @@ export function MissionForm({
 
       {/* ---------- EDITABLE FIELDS (stay mounted in preview so they submit) ---------- */}
       <div style={{ display: mode === "preview" ? "none" : "block" }}>
-        <label className="field">
-          <span>Vehicle category (routes to the matching Pool)</span>
-          <select name="category" required defaultValue={draft?.category ?? ""}>
-            <option value="" disabled>
-              Choose a category…
-            </option>
-            <option value="eco">Eco</option>
-            <option value="business">Business</option>
-            <option value="van">Van</option>
-            <option value="luxury">Luxury</option>
-          </select>
-        </label>
+        <ServiceClassFields
+          defaults={{
+            category: draft?.category,
+            body: draft?.required_body_type,
+            make: draft?.required_make,
+            model: draft?.required_model,
+          }}
+        />
 
         <RouteStops
           pickupDefault={pickupDefault}
@@ -346,7 +349,9 @@ export function MissionForm({
               </span>
               <span style={{ display: "flex", gap: 6 }}>
                 {speedWin && <span className="badge speed">SPEED WIN</span>}
-                <span className="badge">{categoryLabel(preview.category as VehicleCategory)}</span>
+                <span className="badge">
+                  {serviceClassLabel(preview.category as VehicleCategory, preview.body as BodyType)}
+                </span>
               </span>
             </div>
             <div className="muted small" style={{ marginTop: 4 }}>
@@ -376,6 +381,12 @@ export function MissionForm({
             </div>
 
             <dl className="kv" style={{ marginTop: 12 }}>
+              {preview.requiredCar && (
+                <>
+                  <dt>Specific car</dt>
+                  <dd>{preview.requiredCar}</dd>
+                </>
+              )}
               <dt>Guest</dt>
               <dd>{preview.guest || "—"}</dd>
               <dt>Pax / luggage</dt>

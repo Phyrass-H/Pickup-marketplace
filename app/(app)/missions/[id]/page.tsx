@@ -6,10 +6,10 @@ import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
-  categoryLabel,
   formatDateTime,
-  formatDistance,
   formatMoney,
+  formatTripMeta,
+  serviceClassLabel,
 } from "@/lib/format";
 import { AcceptButton } from "./accept-button";
 
@@ -42,6 +42,7 @@ export default async function MissionDetailPage({
     mission.dropoff_lat,
     mission.dropoff_lng,
   );
+  const tripMeta = formatTripMeta(mission.distance_km, mission.duration_min, distanceKm);
 
   return (
     <>
@@ -57,7 +58,9 @@ export default async function MissionDetailPage({
         </span>
         <span style={{ display: "flex", gap: 6 }}>
           {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
-          <span className="badge">{categoryLabel(mission.category)}</span>
+          <span className="badge">
+            {serviceClassLabel(mission.category, mission.required_body_type)}
+          </span>
         </span>
       </div>
       <p className="muted" style={{ marginTop: 4 }}>
@@ -68,9 +71,7 @@ export default async function MissionDetailPage({
       <div className="card">
         <div className="card-row" style={{ alignItems: "baseline" }}>
           <h2 style={{ margin: 0 }}>Route</h2>
-          {distanceKm != null && (
-            <span className="muted small">{formatDistance(distanceKm)}</span>
-          )}
+          {tripMeta && <span className="muted small">{tripMeta}</span>}
         </div>
         <div className="route">
           <div className="leg">

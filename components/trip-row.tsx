@@ -3,11 +3,11 @@ import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
-  categoryLabel,
   formatDateTime,
-  formatDistance,
   formatMoney,
   formatTime,
+  formatTripMeta,
+  serviceClassLabel,
 } from "@/lib/format";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
@@ -52,6 +52,7 @@ export function TripRow({
     mission.dropoff_lat,
     mission.dropoff_lng,
   );
+  const tripMeta = formatTripMeta(mission.distance_km, mission.duration_min, distanceKm);
   const car = driver?.vehicle ?? null;
   const carDesc = car
     ? [[car.make, car.model].filter(Boolean).join(" "), car.colour]
@@ -133,11 +134,22 @@ export function TripRow({
           <dt>Fare (now)</dt>
           <dd>{formatMoney(currentFare(mission))} · ceiling {formatMoney(mission.ceiling)}</dd>
           <dt>Vehicle</dt>
-          <dd>{categoryLabel(mission.category)}{mission.zone ? ` · ${mission.zone}` : ""}</dd>
-          {distanceKm != null && (
+          <dd>
+            {serviceClassLabel(mission.category, mission.required_body_type)}
+            {mission.zone ? ` · ${mission.zone}` : ""}
+          </dd>
+          {mission.required_make && mission.required_model && (
             <>
-              <dt>Distance</dt>
-              <dd>{formatDistance(distanceKm)}</dd>
+              <dt>Specific car</dt>
+              <dd>
+                {mission.required_make} {mission.required_model}
+              </dd>
+            </>
+          )}
+          {tripMeta && (
+            <>
+              <dt>Trip</dt>
+              <dd>{tripMeta}</dd>
             </>
           )}
           <dt>Guest</dt>

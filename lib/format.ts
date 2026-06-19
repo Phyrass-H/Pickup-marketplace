@@ -1,5 +1,5 @@
 // Display helpers. Beta is French Riviera → French locale, Europe/Paris, EUR.
-import type { MissionStatus, VehicleCategory } from "@/lib/database.types";
+import type { BodyType, MissionStatus, VehicleCategory } from "@/lib/database.types";
 
 const money = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -52,6 +52,37 @@ export function formatDistance(km: number | null | undefined): string {
   return `~${Math.round(km)} km`;
 }
 
+// Cached ROAD distance (no "~" — it's a real routed distance).
+export function formatKm(km: number | null | undefined): string {
+  if (km == null) return "—";
+  if (km < 10) return `${km.toFixed(1).replace(".", ",")} km`;
+  return `${Math.round(km)} km`;
+}
+
+// Travel time: "25 min" or "1 h 05".
+export function formatDuration(min: number | null | undefined): string {
+  if (min == null) return "—";
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")}`;
+}
+
+// Card/detail trip line: prefer cached road distance + ETA; fall back to the
+// straight-line estimate when routing wasn't available (older missions).
+export function formatTripMeta(
+  distanceKm: number | null | undefined,
+  durationMin: number | null | undefined,
+  straightKm: number | null | undefined,
+): string {
+  if (distanceKm != null) {
+    return durationMin != null
+      ? `${formatKm(distanceKm)} · ${formatDuration(durationMin)}`
+      : formatKm(distanceKm);
+  }
+  return straightKm != null ? formatDistance(straightKm) : "";
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   return dateTime.format(new Date(iso));
@@ -76,6 +107,14 @@ const CATEGORY_LABELS: Record<VehicleCategory, string> = {
 
 export function categoryLabel(c: VehicleCategory): string {
   return CATEGORY_LABELS[c];
+}
+
+const BODY_LABELS: Record<BodyType, string> = { sedan: "Sedan", van: "Van" };
+
+// Service class = tier + body, e.g. "Business · Van". Body optional (older/any).
+export function serviceClassLabel(c: VehicleCategory, body?: BodyType | null): string {
+  const tier = CATEGORY_LABELS[c] ?? c;
+  return body ? `${tier} · ${BODY_LABELS[body]}` : tier;
 }
 
 const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {

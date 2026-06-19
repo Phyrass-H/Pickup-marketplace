@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidLatLng } from "@/lib/geo";
-import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
+import type { VehicleCategory, BodyType, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = [
   "eco",
@@ -42,10 +42,15 @@ export async function createDriverProfile(formData: FormData) {
 
   // Vehicle identification (optional at signup, editable later in Settings).
   // Plate matters for the legally-required VTC verification, not just display.
+  const bodyRaw = String(formData.get("body_type") ?? "");
+  const bodyType: BodyType = bodyRaw === "van" ? "van" : "sedan";
   const make = String(formData.get("make") ?? "").trim() || null;
   const model = String(formData.get("model") ?? "").trim() || null;
   const colour = String(formData.get("colour") ?? "").trim() || null;
   const plate = String(formData.get("plate") ?? "").trim() || null;
+  const seatsRaw = String(formData.get("seats") ?? "").trim();
+  const seatsNum = seatsRaw ? Number.parseInt(seatsRaw, 10) : NaN;
+  const seats = Number.isFinite(seatsNum) ? seatsNum : null;
 
   const baseLabel = String(formData.get("base_label") ?? "").trim();
   const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
@@ -123,7 +128,7 @@ export async function createDriverProfile(formData: FormData) {
     .eq("driver_id", driverId!)
     .maybeSingle();
 
-  const vehicleFields = { category: category!, make, model, colour, plate };
+  const vehicleFields = { category: category!, body_type: bodyType, make, model, colour, plate, seats };
   if (!vehicle) {
     const { error: vErr } = await admin
       .from("vehicle")

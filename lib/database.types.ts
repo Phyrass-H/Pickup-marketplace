@@ -23,7 +23,10 @@ export type Json =
 
 // ---------- ENUMS ----------
 export type UserRole = "driver" | "dispatcher" | "admin";
+// vehicle_category is the SERVICE TIER. 'van' is legacy (migrated to
+// business+body=van on 2026-06-19); tiers offered now: eco/business/luxury.
 export type VehicleCategory = "eco" | "business" | "van" | "luxury";
+export type BodyType = "sedan" | "van";
 export type MissionType = "transfer" | "hourly";
 export type MissionStatus =
   | "draft"
@@ -157,6 +160,7 @@ export interface Database {
           id: string;
           driver_id: string;
           category: VehicleCategory;
+          body_type: BodyType;
           make: string | null;
           model: string | null;
           colour: string | null;
@@ -168,6 +172,7 @@ export interface Database {
           id?: string;
           driver_id: string;
           category: VehicleCategory;
+          body_type?: BodyType;
           make?: string | null;
           model?: string | null;
           colour?: string | null;
@@ -233,6 +238,11 @@ export interface Database {
           pdp_step: number | null;
           pdp_interval: number | null;
           speed_win: boolean;
+          required_body_type: BodyType | null;
+          required_make: string | null;
+          required_model: string | null;
+          distance_km: number | null;
+          duration_min: number | null;
           cancelled_by: CancellationParty | null;
           cancelled_at: string | null;
           created_at: string;
@@ -269,6 +279,11 @@ export interface Database {
           pdp_step?: number | null;
           pdp_interval?: number | null;
           speed_win?: boolean;
+          required_body_type?: BodyType | null;
+          required_make?: string | null;
+          required_model?: string | null;
+          distance_km?: number | null;
+          duration_min?: number | null;
           cancelled_by?: CancellationParty | null;
           cancelled_at?: string | null;
           created_at?: string;
@@ -396,6 +411,7 @@ export interface Database {
     Enums: {
       user_role: UserRole;
       vehicle_category: VehicleCategory;
+      body_type: BodyType;
       mission_type: MissionType;
       mission_status: MissionStatus;
       cancellation_party: CancellationParty;

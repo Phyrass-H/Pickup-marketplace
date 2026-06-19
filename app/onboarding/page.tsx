@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAppContext, routeFor } from "@/lib/app-context";
 import { createDriverProfile } from "./actions";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { DriverVehicleFields } from "@/components/driver-vehicle-fields";
 
 const RADII = [25, 50, 75, 100, 150, 200, 300];
 
@@ -56,40 +57,10 @@ export default async function OnboardingPage({
           <input type="tel" name="phone" placeholder="+33 6 12 34 56 78" />
         </label>
 
-        <label className="field">
-          <span>Vehicle category</span>
-          <select name="category" required defaultValue="">
-            <option value="" disabled>
-              Choose a category…
-            </option>
-            <option value="eco">Eco</option>
-            <option value="business">Business</option>
-            <option value="van">Van</option>
-            <option value="luxury">Luxury</option>
-          </select>
-        </label>
-
-        <div className="grid-2">
-          <label className="field">
-            <span>Make</span>
-            <input type="text" name="make" placeholder="Mercedes" />
-          </label>
-          <label className="field">
-            <span>Model</span>
-            <input type="text" name="model" placeholder="Classe E" />
-          </label>
-          <label className="field">
-            <span>Colour</span>
-            <input type="text" name="colour" placeholder="Noir" />
-          </label>
-          <label className="field">
-            <span>Plate</span>
-            <input type="text" name="plate" placeholder="AB-123-CD" />
-          </label>
-        </div>
+        <DriverVehicleFields />
         <p className="muted small" style={{ marginTop: -6 }}>
-          Shown to the Business so the Guest knows which car to look for. You can
-          edit these later in Settings.
+          Make, colour and plate are shown to the Business so the Guest knows
+          which car to look for. You can edit these later in Settings.
         </p>
 
         <label className="field">

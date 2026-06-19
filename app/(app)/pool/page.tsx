@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
 import { MissionCard } from "@/components/mission-card";
-import { categoryLabel } from "@/lib/format";
+import { serviceClassLabel } from "@/lib/format";
 import { withinRadius } from "@/lib/geo";
 
 // The Pool changes constantly (PDP climbs, others accept) → never cache.
@@ -44,17 +44,28 @@ export default async function PoolPage() {
     .order("pickup_at", { ascending: true });
 
   const radius = driver.service_radius_km ?? 50;
-  const missions = (all ?? []).filter(
-    (m) =>
+  const driverMake = (vehicle.make ?? "").trim().toLowerCase();
+  const driverModel = (vehicle.model ?? "").trim().toLowerCase();
+  const missions = (all ?? []).filter((m) => {
+    const inRange =
       withinRadius(driver.base_lat!, driver.base_lng!, radius, m.pickup_lat, m.pickup_lng) ||
-      withinRadius(driver.base_lat!, driver.base_lng!, radius, m.dropoff_lat, m.dropoff_lng),
-  );
+      withinRadius(driver.base_lat!, driver.base_lng!, radius, m.dropoff_lat, m.dropoff_lng);
+    if (!inRange) return false;
+    // Body: a mission that demands a body type must match the Driver's vehicle.
+    if (m.required_body_type && m.required_body_type !== vehicle.body_type) return false;
+    // Specific car: when required, only the exact make + model qualifies.
+    if (m.required_make && m.required_model) {
+      if (driverMake !== m.required_make.trim().toLowerCase()) return false;
+      if (driverModel !== m.required_model.trim().toLowerCase()) return false;
+    }
+    return true;
+  });
 
   return (
     <>
       <h1>Pool</h1>
       <p className="muted" style={{ marginTop: -8 }}>
-        {categoryLabel(vehicle.category)} · within {radius} km of{" "}
+        {serviceClassLabel(vehicle.category, vehicle.body_type)} · within {radius} km of{" "}
         {driver.base_label ?? "your base"}
       </p>
 
@@ -66,7 +77,7 @@ export default async function PoolPage() {
         <div className="empty">
           No missions available right now.
           <br />
-          New {categoryLabel(vehicle.category)} missions within {radius} km of your
+          New {serviceClassLabel(vehicle.category, vehicle.body_type)} missions within {radius} km of your
           base will appear here.
         </div>
       )}

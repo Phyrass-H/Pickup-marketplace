@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
-import { categoryLabel, formatTime } from "@/lib/format";
+import { serviceClassLabel, formatTime } from "@/lib/format";
 import { currentFare } from "@/lib/pdp";
 import { missionTone, parisDayKey } from "@/lib/dispatch-status";
 import { DispatchCalendar, type CalEntry, type CalendarData } from "@/components/dispatch-calendar";
@@ -70,7 +70,7 @@ export default async function DispatchCalendarPage({
       time: formatTime(m.pickup_at),
       guest: m.passenger_name ?? "—",
       driver: (m.driver_id && driverName.get(m.driver_id)) || null,
-      cat: categoryLabel(m.category),
+      cat: serviceClassLabel(m.category, m.required_body_type),
       tone: t.tone,
       label: t.label,
       fare: currentFare(m),

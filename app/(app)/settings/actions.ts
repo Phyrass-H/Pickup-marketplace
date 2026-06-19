@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isValidLatLng } from "@/lib/geo";
-import type { VehicleCategory, PreferredGps } from "@/lib/database.types";
+import type { VehicleCategory, BodyType, PreferredGps } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
 const GPS_OPTIONS: readonly PreferredGps[] = ["waze", "google", "apple"];
@@ -74,6 +74,8 @@ export async function updateDriverSettings(formData: FormData) {
   const category = CATEGORIES.includes(categoryRaw as VehicleCategory)
     ? (categoryRaw as VehicleCategory)
     : null;
+  const bodyRaw = String(formData.get("body_type") ?? "");
+  const bodyType: BodyType = bodyRaw === "van" ? "van" : "sedan";
   const make = String(formData.get("make") ?? "").trim();
   const model = String(formData.get("model") ?? "").trim();
   const colour = String(formData.get("colour") ?? "").trim();
@@ -83,6 +85,7 @@ export async function updateDriverSettings(formData: FormData) {
   const seats = Number.isFinite(seatsNum) ? seatsNum : null;
 
   const vehicleFields = {
+    body_type: bodyType,
     make: make || null,
     model: model || null,
     colour: colour || null,

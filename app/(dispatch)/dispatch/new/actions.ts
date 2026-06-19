@@ -6,7 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { parisLocalToUtc } from "@/lib/time";
-import type { VehicleCategory, MissionStatus } from "@/lib/database.types";
+import { routeMetrics } from "@/lib/directions";
+import type { VehicleCategory, BodyType, MissionStatus } from "@/lib/database.types";
 
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "van", "luxury"];
 
@@ -71,6 +72,13 @@ export async function createMission(formData: FormData) {
   const paxCount = num(formData.get("pax_count"));
   const luggageCount = num(formData.get("luggage_count"));
 
+  // Service class: category is the TIER; body + an optional specific car narrow
+  // which Drivers match (O5).
+  const bodyRaw = String(formData.get("required_body_type") ?? "");
+  const requiredBody: BodyType | null = bodyRaw === "sedan" || bodyRaw === "van" ? bodyRaw : null;
+  const requiredMake = String(formData.get("required_make") ?? "").trim() || null;
+  const requiredModel = String(formData.get("required_model") ?? "").trim() || null;
+
   // Intermediate stops: one address per line (KEEP). Stored as jsonb waypoints.
   const waypoints: { address: string }[] = String(formData.get("waypoints") ?? "")
     .split("\n")
@@ -98,6 +106,20 @@ export async function createMission(formData: FormData) {
   // A live mission can't be posted in the past (a draft may legitimately sit
   // there until resumed). 60s of slack for clock skew.
   if (!asDraft && pickupAt!.getTime() < Date.now() - 60_000) redirect(backTo("past"));
+
+  // Cache road distance + ETA (best-effort; null if routing fails or no dropoff).
+  let distanceKm: number | null = null;
+  let durationMin: number | null = null;
+  if (pickupValid && dropoffValid) {
+    const metrics = await routeMetrics(
+      { lat: pickupLat!, lng: pickupLng! },
+      { lat: dropoffLat!, lng: dropoffLng! },
+    );
+    if (metrics) {
+      distanceKm = metrics.distanceKm;
+      durationMin = metrics.durationMin;
+    }
+  }
 
   // PDP curve (D21): a standard mission starts at 50% of the ceiling and climbs
   // +5% every 10 min; SPEED WIN starts hotter (70%) and climbs every 5 min. It
@@ -133,6 +155,11 @@ export async function createMission(formData: FormData) {
     pdp_step: pdpStep,
     pdp_interval: pdpInterval,
     speed_win: speedWin,
+    required_body_type: requiredBody,
+    required_make: requiredMake,
+    required_model: requiredModel,
+    distance_km: distanceKm,
+    duration_min: durationMin,
   };
 
   const supabase = await createClient();

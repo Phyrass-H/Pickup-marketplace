@@ -6,6 +6,7 @@ import { DRIVER_DOC_TYPES } from "@/lib/account";
 import { DocumentSection } from "@/components/document-section";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { DriverVehicleFields } from "@/components/driver-vehicle-fields";
 import { HelpLegalCard } from "@/components/help-legal-card";
 import { updateDriverSettings } from "./actions";
 
@@ -110,37 +111,17 @@ export default async function DriverSettingsPage({
         </p>
 
         <h2 style={{ marginTop: 20 }}>Vehicle</h2>
-        <label className="field">
-          <span>Category (sets which Pool missions you see)</span>
-          <select name="category" defaultValue={vehicle?.category ?? "eco"}>
-            <option value="eco">Eco</option>
-            <option value="business">Business</option>
-            <option value="van">Van</option>
-            <option value="luxury">Luxury</option>
-          </select>
-        </label>
-        <div className="grid-2">
-          <label className="field">
-            <span>Make</span>
-            <input type="text" name="make" defaultValue={vehicle?.make ?? ""} placeholder="Mercedes" />
-          </label>
-          <label className="field">
-            <span>Model</span>
-            <input type="text" name="model" defaultValue={vehicle?.model ?? ""} placeholder="Classe E" />
-          </label>
-          <label className="field">
-            <span>Colour</span>
-            <input type="text" name="colour" defaultValue={vehicle?.colour ?? ""} placeholder="Noir" />
-          </label>
-          <label className="field">
-            <span>Plate</span>
-            <input type="text" name="plate" defaultValue={vehicle?.plate ?? ""} placeholder="AB-123-CD" />
-          </label>
-          <label className="field">
-            <span>Seats</span>
-            <input type="text" inputMode="numeric" name="seats" defaultValue={vehicle?.seats ?? ""} placeholder="4" />
-          </label>
-        </div>
+        <DriverVehicleFields
+          defaults={{
+            category: vehicle?.category,
+            body_type: vehicle?.body_type,
+            make: vehicle?.make,
+            model: vehicle?.model,
+            colour: vehicle?.colour,
+            plate: vehicle?.plate,
+            seats: vehicle?.seats,
+          }}
+        />
 
         <button className="btn" type="submit">
           Save changes

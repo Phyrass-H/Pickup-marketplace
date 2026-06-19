@@ -4,21 +4,23 @@ import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
-  categoryLabel,
   formatDateTime,
-  formatDistance,
   formatMoney,
+  formatTripMeta,
+  serviceClassLabel,
 } from "@/lib/format";
 
-// Presentational Pool card: live PDP fare, date/time, distance, and the route.
+// Presentational Pool card: live PDP fare, date/time, ETA (road distance +
+// travel time when cached, else straight-line), and the route.
 export function MissionCard({ mission }: { mission: MissionRow }) {
   const fare = currentFare(mission);
-  const distanceKm = tripDistanceKm(
+  const straightKm = tripDistanceKm(
     mission.pickup_lat,
     mission.pickup_lng,
     mission.dropoff_lat,
     mission.dropoff_lng,
   );
+  const meta = formatTripMeta(mission.distance_km, mission.duration_min, straightKm);
   const stops = parseWaypoints(mission.waypoints).length;
 
   return (
@@ -27,13 +29,15 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
         <span className="fare">{formatMoney(fare)}</span>
         <span style={{ display: "flex", gap: 6 }}>
           {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
-          <span className="badge">{categoryLabel(mission.category)}</span>
+          <span className="badge">
+            {serviceClassLabel(mission.category, mission.required_body_type)}
+          </span>
         </span>
       </div>
 
       <div className="muted small" style={{ marginTop: 4 }}>
         {formatDateTime(mission.pickup_at)}
-        {distanceKm != null ? ` · ${formatDistance(distanceKm)}` : ""}
+        {meta ? ` · ${meta}` : ""}
         {mission.zone ? ` · ${mission.zone}` : ""}
       </div>
 
