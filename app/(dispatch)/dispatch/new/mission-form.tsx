@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { createMission } from "./actions";
+import { DateTimePicker } from "@/components/date-time-picker";
+import { RouteStops } from "@/components/route-stops";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
   parisLocalToUtc,
@@ -86,22 +87,7 @@ export function MissionForm({
     draft && draft.dropoff_lat != null && draft.dropoff_lng != null
       ? { label: draft.dropoff_address ?? "", lat: draft.dropoff_lat, lng: draft.dropoff_lng }
       : null;
-  const stopsDefault = parseWaypoints(draft?.waypoints)
-    .map((w) => w.address)
-    .join("\n");
-
-  // Quick date chips → set the picker to a Paris wall-clock value.
-  function setQuick(kind: "in1h" | "tmr8" | "tmr18") {
-    if (kind === "in1h") {
-      setPickupAt(utcToParisLocalInput(new Date(Date.now() + 60 * 60 * 1000).toISOString()));
-      return;
-    }
-    const parisToday = utcToParisLocalInput(new Date().toISOString()).slice(0, 10);
-    const base = new Date(`${parisToday}T12:00:00Z`);
-    base.setUTCDate(base.getUTCDate() + 1);
-    const dateStr = base.toISOString().slice(0, 10);
-    setPickupAt(`${dateStr}T${kind === "tmr8" ? "08" : "18"}:00`);
-  }
+  const stopsDefault = parseWaypoints(draft?.waypoints).map((w) => w.address);
 
   function review() {
     const form = formRef.current;
@@ -227,75 +213,15 @@ export function MissionForm({
           </select>
         </label>
 
-        <div className="field">
-          <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-            Pickup address
-          </span>
-          <AddressAutocomplete
-            labelName="pickup_address"
-            latName="pickup_lat"
-            lngName="pickup_lng"
-            defaultValue={pickupDefault}
-            placeholder="Hôtel, address, airport…"
-          />
-        </div>
+        <RouteStops
+          pickupDefault={pickupDefault}
+          dropoffDefault={dropoffDefault}
+          stopsDefault={stopsDefault}
+        />
 
         <div className="field">
-          <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-            Dropoff address
-          </span>
-          <AddressAutocomplete
-            labelName="dropoff_address"
-            latName="dropoff_lat"
-            lngName="dropoff_lng"
-            defaultValue={dropoffDefault}
-            placeholder="Aéroport Nice Côte d'Azur…"
-          />
-        </div>
-
-        <label className="field">
-          <span>Intermediate stops (optional, one address per line)</span>
-          <textarea
-            name="waypoints"
-            rows={2}
-            defaultValue={stopsDefault}
-            style={{
-              width: "100%",
-              padding: 12,
-              fontSize: 16,
-              border: "1px solid var(--border)",
-              borderRadius: 10,
-              fontFamily: "inherit",
-            }}
-          />
-        </label>
-
-        <label className="field">
           <span>Pickup date &amp; time</span>
-          <input
-            type="datetime-local"
-            name="pickup_at"
-            required
-            value={pickupAt}
-            onChange={(e) => setPickupAt(e.target.value)}
-          />
-        </label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: -6, marginBottom: 6 }}>
-          {([
-            ["in1h", "In 1 hour"],
-            ["tmr8", "Tomorrow 08:00"],
-            ["tmr18", "Tomorrow 18:00"],
-          ] as const).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              className="btn secondary"
-              style={{ padding: "6px 12px", fontSize: 13 }}
-              onClick={() => setQuick(k)}
-            >
-              {label}
-            </button>
-          ))}
+          <DateTimePicker value={pickupAt} onChange={setPickupAt} />
         </div>
         {pickupAt && (
           <p className="muted small" style={{ marginTop: -2 }}>
