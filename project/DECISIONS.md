@@ -205,8 +205,11 @@ existing `vehicle_category` enum becomes the **tier** (eco/business/luxury); the
 backfilled to **business + body=van** and dropped from the UI/allowlists. **Pool** now matches tier (SQL)
 + body + specific car (in-app; specific-car uses a tolerant normalized match since Drivers type make/model
 free-text — `carMatches()`). **ETA:** same migration adds `mission.distance_km` / `duration_min`, computed
-once via **Mapbox Directions** (`lib/directions.ts`) at creation and cached; cards show "27 km · 40 min"
-(straight-line `~` fallback for older/failed). Replaces the old flat 4-category enum (supersedes the
+once at creation via **Mapbox Directions** (`lib/directions.ts`) and cached. **Traffic-aware:** the
+`driving-traffic` profile + `depart_at`=pickup time → the ETA reflects predicted traffic for that day &
+hour (verified: a 27 km route returns 37 min Mon 9am vs 31 min Sun 2pm) — Mapbox's own historical+live
+traffic, no Google. Cards show "27 km · 40 min" (straight-line `~` fallback for older/failed); the write
+is conditional so a transient routing failure never wipes a cached ETA. Replaces the old flat 4-category enum (supersedes the
 single-category model from the spine). Known follow-ups: bind the Driver's car to the catalog (a picker)
 for fully-robust specific-car matching; geocode intermediate stops so ETA covers detours (today it's the
 direct pickup→dropoff route). [[d17]]

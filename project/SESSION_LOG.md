@@ -22,8 +22,10 @@
 - **Tier × body** model + **car catalog** (`lib/vehicle-catalog.ts`). Dispatcher picker
   (`components/service-class-fields.tsx`): tier + Any/Sedan/Van + car-range hint + optional specific car.
   Driver fields (`components/driver-vehicle-fields.tsx`) in onboarding + settings.
-- **ETA** via Mapbox Directions (`lib/directions.ts`), cached on the mission; shown as "27 km · 40 min"
-  on Pool card / Dispatch row / detail (straight-line `~` fallback). Pool matches tier + body + specific car.
+- **ETA** via Mapbox Directions (`lib/directions.ts`), cached; shown as "27 km · 40 min" on Pool card /
+  Dispatch row / detail (straight-line `~` fallback). **Traffic-aware** — `driving-traffic` + `depart_at`=
+  pickup time, so the ETA varies by day/hour (verified 37 min Mon 9am vs 31 min Sun 2pm, same 27 km route;
+  founder confirmed Mapbox-only, no Google). Pool matches tier + body + specific car.
 - **Adversarial review** (16 agents) found 7 issues; **6 fixed**: numeric-as-string render crash on
   sub-10km trips (formatKm coerce), body picker tri-state (Any → null, no longer hides van drivers),
   tolerant specific-car match (Mercedes≈Mercedes-Benz via `carMatches`), drop legacy `van` from write

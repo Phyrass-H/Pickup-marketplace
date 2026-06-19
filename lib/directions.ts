@@ -1,7 +1,10 @@
-// Mapbox Directions — road distance + travel time for a trip. Called once at
-// mission creation (server-side) and cached on mission.distance_km/duration_min
-// so cards can show an accurate ETA without per-render API calls. Best-effort:
-// returns null on any failure so posting a mission never blocks on routing.
+// Mapbox Directions — road distance + travel time for a trip, TRAFFIC-AWARE.
+// Uses the `driving-traffic` profile with `depart_at` set to the scheduled
+// pickup time, so the ETA reflects predicted traffic for that day & hour
+// (Mon 8am ≠ Sun 2pm) from Mapbox's own historical + live traffic — no Google
+// needed. Computed once at mission creation and cached on mission.distance_km /
+// duration_min. Best-effort: returns null on any failure so posting a mission
+// never blocks on routing (the UI falls back to straight-line distance).
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -12,18 +15,20 @@ export interface RouteMetrics {
 
 type LngLat = { lat: number; lng: number };
 
-// `via` are intermediate stops (in order). All points must be valid coords.
+// `departAt`: ISO-8601 instant of the scheduled pickup (must be now-or-future).
+// When omitted/past, driving-traffic uses current conditions instead.
 export async function routeMetrics(
   from: LngLat,
   to: LngLat,
-  via: LngLat[] = [],
+  departAt?: string | null,
 ): Promise<RouteMetrics | null> {
   if (!TOKEN) return null;
   try {
-    const points = [from, ...via, to].map((p) => `${p.lng},${p.lat}`).join(";");
+    const points = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+    const params = new URLSearchParams({ overview: "false", access_token: TOKEN });
+    if (departAt) params.set("depart_at", departAt);
     const url =
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${points}` +
-      `?overview=false&access_token=${TOKEN}`;
+      `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${points}?${params.toString()}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
     if (!res.ok) return null;
     const data = (await res.json()) as {

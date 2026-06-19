@@ -109,13 +109,18 @@ export async function createMission(formData: FormData) {
   if (!asDraft && pickupAt!.getTime() < Date.now() - 60_000) redirect(backTo("past"));
 
   // Cache road distance + ETA (best-effort; null if routing fails or no dropoff).
-  // Only WRITE it when a fresh value was obtained, so a transient routing
-  // failure on a re-save/post never wipes a previously-cached ETA.
+  // Traffic-aware: pass the scheduled pickup time as depart_at (future only) so
+  // the ETA reflects predicted traffic for that day & hour. Only WRITE it when a
+  // fresh value was obtained, so a transient routing failure on a re-save/post
+  // never wipes a previously-cached ETA.
+  const departAt =
+    pickupAt!.getTime() > Date.now() ? pickupAt!.toISOString().replace(/\.\d{3}Z$/, "Z") : null;
   const metrics =
     pickupValid && dropoffValid
       ? await routeMetrics(
           { lat: pickupLat!, lng: pickupLng! },
           { lat: dropoffLat!, lng: dropoffLng! },
+          departAt,
         )
       : null;
   const eta = metrics
