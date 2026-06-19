@@ -5,6 +5,7 @@ import { getLatestDocuments } from "@/lib/documents";
 import { BUSINESS_DOC_TYPES } from "@/lib/account";
 import { DocumentSection } from "@/components/document-section";
 import { AvatarEditor } from "@/components/avatar-editor";
+import { HelpLegalCard } from "@/components/help-legal-card";
 import { updateBusinessSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -89,6 +90,8 @@ export default async function BusinessSettingsPage({
           never stores your card number.
         </p>
       </div>
+
+      <HelpLegalCard />
 
       <p className="small" style={{ marginTop: 8 }}>
         <Link href="/dispatch/history" className="muted" style={{ textDecoration: "underline" }}>

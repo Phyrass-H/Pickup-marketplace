@@ -169,6 +169,31 @@ first; the **Driver app is next, delivered as a phone mockup** then applied. Als
 `/api/seed` now upserts the seed dispatcher's `profile` row (role=dispatcher) so a seeded Business is a
 usable signed-in account — operational dev tooling, **not** a schema change (respects hard-rule #4). [[d19]] [[d17]]
 
+### D21 — SPEED WIN starts at 70% of the ceiling and climbs fast (reverses D12) (2026-06-19)
+Founder call (Session 11 triage): SPEED WIN should **not** start flat at 100% of the ceiling. New curve:
+SPEED WIN now starts at **70%** of the ceiling and climbs **+5% every 5 min** toward it; a standard
+mission still starts at 50% and climbs +5% every 10 min. This leaves the Driver some upside at the start
+while still pulling a fast pickup. Implementation: removed the `speed_win → return ceiling` short-circuit
+in `lib/pdp.ts` (the fare now always uses the normal climb from `pdp_start`); `dispatch/new/actions.ts`
+sets `pdp_start = ceiling*0.7` and `pdp_interval = 5` for SPEED WIN. **No schema change** — `pdp_start`
+already exists. Legally safe: the **Business still sets the ceiling** and PickUp only *recommends* the
+start point (Doc 01 — keeps PickUp out of "the pricing algorithm controlling the fare"). The spec glossary
+wording ("starts at/near the ceiling") is now superseded; updated here, not yet in Doc 00. [[d12]]
+
+### D22 — New-mission flow: preview-before-post + save-as-draft (reverses D12 "straight to pool") (2026-06-19)
+Founder call (Session 11): the Dispatcher should **review a final card before posting**, and be able to
+**save a draft and resume later**. This reverses D12's "inserts status=pooled directly, no draft step".
+New flow (`dispatch/new/mission-form.tsx`, a client form): fill → **Review** snapshots the fields into a
+final **preview card** (O11) → **Post to the Pool** or **Save as draft** (O15). Drafts use the existing
+`mission_status='draft'` enum value (no schema change). Resume loads the draft into the form
+(`?draft=<id>`) and **updates in place** (UPDATE, not a new INSERT) via the user session
+(`p_mission_business_update`); discard uses the **service role** (no DELETE RLS policy on `mission`),
+scoped to the Business's own draft rows. Drafts are **excluded** from the Schedule/Calendar/History
+(`.neq('status','draft')`) and live on a dedicated **`/dispatch/drafts`** page (new sidebar entry). Also
+folded in: O9 — the pickup time is now interpreted as **Europe/Paris** wall time and converted to a real
+UTC instant (`lib/time.ts`), fixing the old server-local-zone bug, plus a past-time guard for live posts
+and quick date chips; and an O10a **SPEED WIN auto-suggest** in the preview when pickup is ≤5h away. [[d12]] [[d17]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

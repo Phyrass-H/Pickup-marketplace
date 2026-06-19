@@ -9,6 +9,7 @@ import {
   Plus,
   List,
   CalendarDays,
+  FileText,
   History as HistoryIcon,
   Settings as SettingsIcon,
 } from "lucide-react";
@@ -17,12 +18,14 @@ import { createClient } from "@/lib/supabase/client";
 const NAV = [
   { href: "/dispatch", label: "Schedule", icon: List },
   { href: "/dispatch/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/dispatch/drafts", label: "Drafts", icon: FileText },
   { href: "/dispatch/history", label: "History", icon: HistoryIcon },
 ] as const;
 
 const TITLES: Record<string, string> = {
   "/dispatch": "Schedule",
   "/dispatch/calendar": "Calendar",
+  "/dispatch/drafts": "Drafts",
   "/dispatch/history": "History",
   "/dispatch/new": "New mission",
   "/dispatch/settings": "Settings",

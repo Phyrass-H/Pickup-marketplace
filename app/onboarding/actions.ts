@@ -40,6 +40,13 @@ export async function createDriverProfile(formData: FormData) {
     ? (categoryRaw as VehicleCategory)
     : null;
 
+  // Vehicle identification (optional at signup, editable later in Settings).
+  // Plate matters for the legally-required VTC verification, not just display.
+  const make = String(formData.get("make") ?? "").trim() || null;
+  const model = String(formData.get("model") ?? "").trim() || null;
+  const colour = String(formData.get("colour") ?? "").trim() || null;
+  const plate = String(formData.get("plate") ?? "").trim() || null;
+
   const baseLabel = String(formData.get("base_label") ?? "").trim();
   const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
   const baseLng = Number.parseFloat(String(formData.get("base_lng") ?? ""));
@@ -116,15 +123,16 @@ export async function createDriverProfile(formData: FormData) {
     .eq("driver_id", driverId!)
     .maybeSingle();
 
+  const vehicleFields = { category: category!, make, model, colour, plate };
   if (!vehicle) {
     const { error: vErr } = await admin
       .from("vehicle")
-      .insert({ driver_id: driverId!, category: category! });
+      .insert({ driver_id: driverId!, ...vehicleFields });
     if (vErr) redirect("/onboarding?error=db");
   } else {
     const { error: vErr } = await admin
       .from("vehicle")
-      .update({ category: category! })
+      .update(vehicleFields)
       .eq("id", vehicle.id);
     if (vErr) redirect("/onboarding?error=db");
   }

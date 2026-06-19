@@ -42,8 +42,11 @@
   👤 penalty/compensation amounts.
 - ⚙️ **Scheduled jobs** (Supabase cron / Vercel cron): Lock-in auto-confirm +
   T-180 reminder, expiry of unfilled missions, return-to-pool on no-confirm.
-- 🔨 **Maps/geocoding** (Google/Mapbox): address autocomplete, distance →
-  recommended base fare, intermediate stops, ETA. (Addresses are free text now.)
+- 🔨 **Maps/geocoding** (Google/Mapbox): autocomplete + lat/lng + stops are ✅ (D17);
+  trip **distance is now shown** on cards/details but it's **straight-line** (haversine).
+  Still to do: **road distance + travel time (ETA)** via a **Mapbox Directions** call at
+  mission creation → store `distance_km` / `duration_min` (additive migration). Also feeds a
+  better recommended base fare and replaces the crude ±90-min `accept_mission` slot buffer.
 - 🔨 Intelligent **flight tracking** API (paid) → auto-shift pickup on delay.
 - 🔨 Native **welcome banner** (branded greeting) for the Driver app.
 
@@ -159,3 +162,45 @@
 Ratings/badges · in-app chat · live-map GPS · grouped missions · multi-dispatch
 seats · substitute driver · multiple vehicles · favourite-driver priority ·
 full ML dynamic pricing · Amadeus GDS.
+
+## K. Session 11 — founder brain-dump triage (2026-06-19)
+> 18 observations sorted. ✅ items shipped this session (branch `session-11-quickwins-postflow`).
+> Glossary note: the borrowed settings mock had a "Clients" entry — **forbidden term**, dropped.
+
+**✅ Shipped this session**
+- ✅ **O1** trip distance on Driver Pool card, Dispatch row, both detail views + new-mission preview
+  (straight-line; road/ETA = the Maps item in B).
+- ✅ **O3** intermediate stops now shown on the Driver Pool **card** ("+N stops") — were detail-only.
+- ✅ **O6** Driver car (make/colour/plate) captured at **onboarding**; shown on the **Dispatch** trip
+  row when a Driver is assigned. (⚠️ plate = part of the legally-required VTC verification, not cosmetic.)
+- ✅ **O9** pickup time is **Europe/Paris** explicit (UTC bug fixed) + quick chips + live echo + past guard.
+- ✅ **O10** SPEED WIN starts at **70%** and climbs fast (D21). + **O10a** auto-suggest in preview when ≤5h.
+- ✅ **O11** final **preview card** before posting. **O15** **save-as-draft** + resume + discard (`/dispatch/drafts`). (D22)
+- ✅ **O13** Settings now link **Terms / Privacy / Support / Share feedback**; **O17** draft **Terms +
+  Privacy pages, FR + EN** (`/legal/*`) — ⚠️ placeholder copy, **must be drafted with the lawyer**.
+
+**❓/🔨 Next — needs a schema change (additive ALTER, founder-approved, → `docs/migrations/`)**
+- 🔨 **O2** show the **Guest phone** to the Driver, gated by a Dispatcher toggle → new
+  `mission.passenger_phone` + a reveal flag. (Dispatcher↔Driver reveal already works.) ⚠️ GDPR basis needed.
+- 🔨 **O5** vehicle **taxonomy**: service tier (eco/business/luxury) × body (sedan/van) → a maintained
+  **car catalog** table + an optional "require a specific model" field on the mission. Adds Van sub-tiers.
+  Biggest product-model change here — deserves its own design pass.
+- 🔨 **O7** driver **cancellation** flow: `cancel_mission` RPC (re-pool), auto-flip to SPEED WIN on re-pool,
+  big red Dispatch card (red-wash already exists), driver reliability/"mark" field, cancellation **fee** data.
+  ⚠️ **legal**: fee collection (agent-vs-principal) + driver "marking" (requalification risk) — lawyer first.
+
+**🅥 Future (post-MVP — track, don't build)**
+- 🅥 **O8** Guest/passenger app (phone-based, cross-business, post-trip Q&A, download invite). Net-new third
+  surface. ⚠️ **legal**: a direct PickUp↔Guest relationship cuts across the B2B-via-hotels structure; GDPR.
+- 🅥 **O12** at-disposal / *mise à disposition* (hourly) — confirmed **V2** (the `hourly` enum hook exists).
+- 🅥 **O14** Business **multi-access**: per-staff logins + action attribution (structurally easy —
+  `mission.dispatcher_id` exists) + **owner-only revenue** (needs a role/permission field + tighter RLS).
+  Aligns with the already-deferred multi-dispatch (J).
+- 🅥 **O17 (full)** real app **i18n** (FR/EN) framework — none today; the legal pages are bilingual by hand.
+
+**Already covered before this session**
+- **O4** area/radius zones — shipped in D17 (the St-Tropez→Lac example already works: pickup **or** drop-off
+  in radius). The "stays smooth" answer: in-app filter now; add a DB bounding-box / PostGIS prefilter as the
+  Pool grows (noted in D17).
+- **O16/O18** settings page + mission-page redesign — the Driver design pass (BACKLOG H) is where the visual
+  rework lands; this session improved structure (preview/draft/help-legal) but not the full skin.

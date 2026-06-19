@@ -28,8 +28,8 @@
 - **Maps / geocoding (Dispatcher)** — `/dispatch/new` uses free-text addresses (lat/lng null) and
   a manual base-fare estimate. Wire Google Maps/Mapbox for autocomplete + distance → real
   recommended fare, and validate waypoints. (Doc 03.)
-- **Pickup-time timezone** — `datetime-local` is parsed in the server's local zone; make
-  Europe/Paris explicit before prod (Vercel runs UTC). Also guard against past pickup times.
+- ~~**Pickup-time timezone**~~ — DONE (Session 11): `lib/time.ts` interprets `datetime-local` as
+  Europe/Paris and converts to a UTC instant; live posts are guarded against past pickup times.
 - ~~Dispatcher realtime status feed~~ — DONE (Session 4) as near-realtime **polling** (`LiveRefresh`,
   4s). Upgrade to true Supabase Realtime websockets later: add `status_event` to the
   `supabase_realtime` publication and swap `LiveRefresh` for a channel subscription.

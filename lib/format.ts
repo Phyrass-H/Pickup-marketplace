@@ -44,6 +44,14 @@ export function formatMoney(n: number | null | undefined): string {
   return money.format(Number(n));
 }
 
+// Straight-line distance, flagged approximate with "~" (it's not road distance).
+// Under 10 km we keep one decimal; above, round to the nearest km.
+export function formatDistance(km: number | null | undefined): string {
+  if (km == null) return "—";
+  if (km < 10) return `~${km.toFixed(1).replace(".", ",")} km`;
+  return `~${Math.round(km)} km`;
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   return dateTime.format(new Date(iso));

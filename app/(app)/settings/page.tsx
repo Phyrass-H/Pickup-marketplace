@@ -6,6 +6,7 @@ import { DRIVER_DOC_TYPES } from "@/lib/account";
 import { DocumentSection } from "@/components/document-section";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { HelpLegalCard } from "@/components/help-legal-card";
 import { updateDriverSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -163,6 +164,8 @@ export default async function DriverSettingsPage({
           never stores your card or IBAN.
         </p>
       </div>
+
+      <HelpLegalCard />
 
       <p className="small" style={{ marginTop: 8 }}>
         <Link href="/rides/history" className="muted" style={{ textDecoration: "underline" }}>

@@ -58,22 +58,29 @@ export default async function DispatchSchedule() {
     .from("mission")
     .select("*")
     .eq("business_id", ctx.business.id)
+    .neq("status", "draft") // drafts live on their own page, not the schedule
     .order("pickup_at", { ascending: true });
 
-  // Reveal assigned Driver contacts (service role, gated to this business).
+  // Reveal assigned Driver contacts + car (service role, gated to this business).
   const contacts = new Map<string, DriverContact>();
   const assigned = (missions ?? []).filter((m) => m.driver_id);
   if (assigned.length > 0) {
     const admin = createAdminClient();
     const driverIds = [...new Set(assigned.map((m) => m.driver_id!))];
-    const { data: drivers } = await admin
-      .from("driver")
-      .select("id, first_name, last_name, phone")
-      .in("id", driverIds);
+    const [{ data: drivers }, { data: vehicles }] = await Promise.all([
+      admin.from("driver").select("id, first_name, last_name, phone").in("id", driverIds),
+      admin.from("vehicle").select("driver_id, make, model, colour, plate").in("driver_id", driverIds),
+    ]);
     const byId = new Map((drivers ?? []).map((d) => [d.id, d]));
+    const vehByDriver = new Map((vehicles ?? []).map((v) => [v.driver_id, v]));
     for (const m of assigned) {
       const d = byId.get(m.driver_id!);
-      if (d) contacts.set(m.id, { name: `${d.first_name} ${d.last_name}`, phone: d.phone });
+      if (d)
+        contacts.set(m.id, {
+          name: `${d.first_name} ${d.last_name}`,
+          phone: d.phone,
+          vehicle: vehByDriver.get(d.id) ?? null,
+        });
     }
   }
 

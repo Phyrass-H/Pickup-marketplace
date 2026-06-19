@@ -69,6 +69,29 @@ export default async function OnboardingPage({
           </select>
         </label>
 
+        <div className="grid-2">
+          <label className="field">
+            <span>Make</span>
+            <input type="text" name="make" placeholder="Mercedes" />
+          </label>
+          <label className="field">
+            <span>Model</span>
+            <input type="text" name="model" placeholder="Classe E" />
+          </label>
+          <label className="field">
+            <span>Colour</span>
+            <input type="text" name="colour" placeholder="Noir" />
+          </label>
+          <label className="field">
+            <span>Plate</span>
+            <input type="text" name="plate" placeholder="AB-123-CD" />
+          </label>
+        </div>
+        <p className="muted small" style={{ marginTop: -6 }}>
+          Shown to the Business so the Guest knows which car to look for. You can
+          edit these later in Settings.
+        </p>
+
         <label className="field">
           <span>Preferred GPS</span>
           <select name="preferred_gps" defaultValue="google">

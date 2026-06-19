@@ -2,7 +2,11 @@
 // The "current fare" is COMPUTED ON READ (Doc spine: "Computed, not stored").
 // The fare starts underquoted (pdp_start) and climbs in fixed steps (pdp_step)
 // every pdp_interval minutes toward the Business's ceiling, until a Driver
-// accepts. SPEED WIN starts at/near the ceiling for instant acceptance.
+// accepts. SPEED WIN is just a hotter curve: it starts HIGHER (70% of the
+// ceiling, vs 50% for a standard mission) and climbs FASTER, so it gets picked
+// up quickly while still leaving the Driver some upside (D21, reversing D12 —
+// it no longer starts flat at 100%). The start %/step/interval are set by the
+// writer (dispatch/new/actions.ts); this file just reads them.
 //
 // This is the SINGLE place fare is computed — Driver + (future) Dispatch must
 // agree (IDEAS.md). Never persist the result as "the price".
@@ -27,9 +31,6 @@ export interface PdpInputs {
  */
 export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   const ceiling = Number(m.ceiling);
-
-  // SPEED WIN: urgent missions start at/near the ceiling.
-  if (m.speed_win) return round2(ceiling);
 
   // Fall back sensibly if PDP params are not set on the mission.
   const start = m.pdp_start != null ? Number(m.pdp_start) : ceiling * 0.5;

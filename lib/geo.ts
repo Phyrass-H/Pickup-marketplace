@@ -43,3 +43,24 @@ export function withinRadius(
   if (lat == null || lng == null) return false;
   return haversineKm(baseLat, baseLng, lat, lng) <= radiusKm;
 }
+
+/**
+ * Straight-line ("as the crow flies") trip distance in km between pickup and
+ * dropoff, or null if either endpoint isn't geocoded. NOTE: this is great-circle
+ * distance, not road distance — real road distance + travel time will come from
+ * a Mapbox Directions call (see BACKLOG: store distance_km / duration_min).
+ */
+export function tripDistanceKm(
+  pickupLat: number | null | undefined,
+  pickupLng: number | null | undefined,
+  dropoffLat: number | null | undefined,
+  dropoffLng: number | null | undefined,
+): number | null {
+  if (pickupLat == null || pickupLng == null || dropoffLat == null || dropoffLng == null) {
+    return null;
+  }
+  if (!isValidLatLng(pickupLat, pickupLng) || !isValidLatLng(dropoffLat, dropoffLng)) {
+    return null;
+  }
+  return haversineKm(pickupLat, pickupLng, dropoffLat, dropoffLng);
+}

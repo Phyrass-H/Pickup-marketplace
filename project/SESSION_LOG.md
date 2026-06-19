@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-06-19 — Session 11 — Founder brain-dump triage → quick wins + post-flow
+**Branch:** `session-11-quickwins-postflow` (off `main`, not yet merged/deployed) · **Env:** local → Vercel.
+
+**Why:** the founder dumped 18 unorganised observations. We triaged them (grounded by a 5-reader
+workflow over docs/schema/code/legal/project) into NOW / decision / schema-change / future / legal,
+then the founder chose to **(a) ship the quick wins, (b) lock the post-flow, (c) record the triage**.
+Full triage lives in **BACKLOG § K**; the two decisions are **D21** (SPEED WIN) + **D22** (post-flow).
+
+**What shipped (this branch):**
+- **O10 / D21** — SPEED WIN now starts at **70%** of the ceiling and climbs +5% every 5 min (was flat
+  100%). `lib/pdp.ts` short-circuit removed; `dispatch/new/actions.ts` sets the curve. No schema change.
+- **O11 + O15 / D22** — new-mission **preview card** before posting + **save-as-draft / resume / discard**
+  (`/dispatch/drafts`, new sidebar entry). Resume = in-place UPDATE (user session); discard = service role
+  (no DELETE RLS). Drafts excluded from Schedule/Calendar/History.
+- **O9** — pickup time is **Europe/Paris** explicit → real UTC instant (`lib/time.ts`), past-time guard,
+  quick chips (In 1h / Tomorrow 08:00 / 18:00) + live Paris echo. Fixes the old server-local-zone bug.
+- **O1** — trip **distance** (straight-line) on Driver Pool card, Dispatch row + detail, mission detail,
+  and the preview. **O3** — stops ("+N stops") now on the Driver Pool **card** (`lib/waypoints.ts` DRY).
+- **O6** — Driver car **make/colour/plate** captured at onboarding + shown on the **Dispatch** trip row
+  for the assigned Driver (vehicle joined on schedule/history).
+- **O13 + O17** — Settings (both apps) link **Terms / Privacy / Support / Share feedback**; bilingual
+  **FR+EN** `/legal/terms` + `/legal/privacy` (⚠️ placeholder copy — must be lawyer-drafted).
+
+**Verified** — `tsc` + `next build` clean (now 25 routes incl. `/dispatch/drafts`, `/legal/*`).
+Browser-tested against the real Supabase DB (seeded): Mapbox-geocoded new mission → Review preview
+(60€ = 50% start, ~19 km, stop shown) → Save draft → Drafts page → resume (all fields prefilled, "Editing
+a saved draft") → toggle SPEED WIN (preview 84€ = 70%) → Post = in-place update, draft list empties,
+mission on schedule (climbed 84→90€). Pool cards show `~km` + `+1 stop`; accepted a mission → Dispatch row
+shows **Car: Mercedes Classe E · Noir · AB-123-CD**. No console errors.
+
+**Next:** ⚠️ before prod, real legal copy for `/legal/*`; a real `support@` mailbox. Then the schema-change
+items (O2 guest phone, O5 vehicle taxonomy, O7 cancellation — last one is lawyer-gated). Branch is **not
+deployed** — merge/push `main` when the founder okays.
+
+---
+
 ## 2026-06-18 — Session 10 — Dispatch redesign (Claude Design handoff, pass 2)
 **Branch:** `main` (committed + deployed) · **Env:** local (macOS) → Vercel.
 

@@ -3,23 +3,17 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
 import { currentFare } from "@/lib/pdp";
+import { tripDistanceKm } from "@/lib/geo";
+import { parseWaypoints } from "@/lib/waypoints";
 import {
   categoryLabel,
   formatDateTime,
+  formatDistance,
   formatMoney,
 } from "@/lib/format";
-import type { Waypoint } from "@/lib/database.types";
 import { AcceptButton } from "./accept-button";
 
 export const dynamic = "force-dynamic";
-
-function parseWaypoints(raw: unknown): Waypoint[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (w): w is Waypoint =>
-      typeof w === "object" && w !== null && typeof (w as Waypoint).address === "string",
-  );
-}
 
 export default async function MissionDetailPage({
   params,
@@ -42,6 +36,12 @@ export default async function MissionDetailPage({
   const isPooled = mission.status === "pooled";
   const fare = currentFare(mission);
   const waypoints = parseWaypoints(mission.waypoints);
+  const distanceKm = tripDistanceKm(
+    mission.pickup_lat,
+    mission.pickup_lng,
+    mission.dropoff_lat,
+    mission.dropoff_lng,
+  );
 
   return (
     <>
@@ -66,7 +66,12 @@ export default async function MissionDetailPage({
       </p>
 
       <div className="card">
-        <h2>Route</h2>
+        <div className="card-row" style={{ alignItems: "baseline" }}>
+          <h2 style={{ margin: 0 }}>Route</h2>
+          {distanceKm != null && (
+            <span className="muted small">{formatDistance(distanceKm)}</span>
+          )}
+        </div>
         <div className="route">
           <div className="leg">
             <span className="dot" />

@@ -39,6 +39,7 @@ export default async function DispatchCalendarPage({
     .from("mission")
     .select("*")
     .eq("business_id", ctx.business.id)
+    .neq("status", "draft")
     .gte("pickup_at", qStart)
     .lt("pickup_at", qEnd)
     .order("pickup_at", { ascending: true });

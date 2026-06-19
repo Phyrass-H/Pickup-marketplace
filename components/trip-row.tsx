@@ -1,8 +1,11 @@
-import type { MissionRow, Waypoint } from "@/lib/database.types";
+import type { MissionRow } from "@/lib/database.types";
 import { currentFare } from "@/lib/pdp";
+import { tripDistanceKm } from "@/lib/geo";
+import { parseWaypoints } from "@/lib/waypoints";
 import {
   categoryLabel,
   formatDateTime,
+  formatDistance,
   formatMoney,
   formatTime,
 } from "@/lib/format";
@@ -10,17 +13,19 @@ import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
 import { StatusSteps } from "@/components/status-steps";
 
+// A Driver's car, shown to the Dispatch so it can tell the Guest what to look
+// for at pickup (brand, colour, plate). Captured at Driver onboarding/settings.
+export interface VehicleBrief {
+  make: string | null;
+  model: string | null;
+  colour: string | null;
+  plate: string | null;
+}
+
 export interface DriverContact {
   name: string;
   phone: string | null;
-}
-
-function parseWaypoints(raw: unknown): Waypoint[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (w): w is Waypoint =>
-      typeof w === "object" && w !== null && typeof (w as Waypoint).address === "string",
-  );
+  vehicle?: VehicleBrief | null;
 }
 
 // One dense schedule line. Click to expand full detail. The coloured left edge +
@@ -41,6 +46,18 @@ export function TripRow({
   const waypoints = parseWaypoints(mission.waypoints);
   const alert = t.tone === "danger";
   const flightEta = mission.flight_eta ? formatTime(mission.flight_eta) : null;
+  const distanceKm = tripDistanceKm(
+    mission.pickup_lat,
+    mission.pickup_lng,
+    mission.dropoff_lat,
+    mission.dropoff_lng,
+  );
+  const car = driver?.vehicle ?? null;
+  const carDesc = car
+    ? [[car.make, car.model].filter(Boolean).join(" "), car.colour]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
 
   return (
     <details
@@ -117,6 +134,12 @@ export function TripRow({
           <dd>{formatMoney(currentFare(mission))} · ceiling {formatMoney(mission.ceiling)}</dd>
           <dt>Vehicle</dt>
           <dd>{categoryLabel(mission.category)}{mission.zone ? ` · ${mission.zone}` : ""}</dd>
+          {distanceKm != null && (
+            <>
+              <dt>Distance</dt>
+              <dd>{formatDistance(distanceKm)}</dd>
+            </>
+          )}
           <dt>Guest</dt>
           <dd>{mission.passenger_name ?? "—"}</dd>
           {reference && (
@@ -156,6 +179,15 @@ export function TripRow({
               "Not assigned yet"
             )}
           </dd>
+          {car && (carDesc || car.plate) && (
+            <>
+              <dt>Car</dt>
+              <dd>
+                {carDesc || "—"}
+                {car.plate && <span className="mono"> · {car.plate}</span>}
+              </dd>
+            </>
+          )}
         </dl>
       </div>
     </details>
