@@ -42,11 +42,11 @@
   👤 penalty/compensation amounts.
 - ⚙️ **Scheduled jobs** (Supabase cron / Vercel cron): Lock-in auto-confirm +
   T-180 reminder, expiry of unfilled missions, return-to-pool on no-confirm.
-- 🔨 **Maps/geocoding** (Google/Mapbox): autocomplete + lat/lng + stops are ✅ (D17);
-  trip **distance is now shown** on cards/details but it's **straight-line** (haversine).
-  Still to do: **road distance + travel time (ETA)** via a **Mapbox Directions** call at
-  mission creation → store `distance_km` / `duration_min` (additive migration). Also feeds a
-  better recommended base fare and replaces the crude ±90-min `accept_mission` slot buffer.
+- 🔨 **Maps/geocoding** (Google/Mapbox): autocomplete + lat/lng + stops ✅ (D17); **road distance +
+  travel time (ETA)** ✅ (Session 12 / D23 — Mapbox Directions at creation → `distance_km`/`duration_min`,
+  shown as "27 km · 40 min"). Still to do: **geocode intermediate stops** so the ETA covers detours
+  (today it's the direct pickup→dropoff route); feed ETA into a better recommended base fare; and use
+  `duration_min` to replace the crude ±90-min `accept_mission` slot-conflict buffer.
 - 🔨 Intelligent **flight tracking** API (paid) → auto-shift pickup on delay.
 - 🔨 Native **welcome banner** (branded greeting) for the Driver app.
 
@@ -182,9 +182,11 @@ full ML dynamic pricing · Amadeus GDS.
 **❓/🔨 Next — needs a schema change (additive ALTER, founder-approved, → `docs/migrations/`)**
 - 🔨 **O2** show the **Guest phone** to the Driver (founder: fine to share across parties for the MVP) →
   new `mission.passenger_phone`; the Dispatcher toggle is optional. (Dispatcher↔Driver reveal already works.)
-- 🔨 **O5** vehicle **taxonomy**: service tier (eco/business/luxury) × body (sedan/van) → a maintained
-  **car catalog** table + an optional "require a specific model" field on the mission. Adds Van sub-tiers.
-  Biggest product-model change here — deserves its own design pass.
+- ✅ **O5** vehicle **taxonomy** — SHIPPED (Session 12 / D23): tier (eco/business/luxury) × body
+  (sedan/van) + maintained **car catalog** (`lib/vehicle-catalog.ts`); Dispatcher picks tier + Any/Sedan/Van
+  + optional specific car; Pool matches tier + body + specific car. Additive migration applied.
+  ↳ follow-ups: bind the **Driver's car to the catalog** (a picker) for fully-robust specific-car matching
+  (today Drivers type make/model free-text, matched tolerantly); a DB/admin UI to edit the catalog later.
 - 🔨 **O7** driver **cancellation** flow: `cancel_mission` RPC (re-pool), auto-flip to SPEED WIN on re-pool,
   big red Dispatch card (red-wash already exists), driver reliability/"mark" field, cancellation **fee** data.
   (Fee/penalty *amounts* are a founder decision — MANUAL in beta per spec.)

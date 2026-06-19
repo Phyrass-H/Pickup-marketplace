@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-06-19 — Session 12 — Mission-form pickers, then O5 vehicle taxonomy + real ETA
+**Branches:** `session-11b-pickers-stops` (date/time + stops — merged + deployed) ·
+`session-12-vehicle-taxonomy-eta` (O5 + ETA — to deploy). **Env:** local → Vercel. **Decisions:** D23.
+
+**Form polish (deployed earlier this session):**
+- Removed the nonsensical time chips; new **separate date picker** (calendar popover, past days disabled)
+  + **time picker** (15-min quick list + exact entry) — `components/date-time-picker.tsx`.
+- Replaced the comment-like stops textarea with a **route block**: From → stops → Where to, **+** to add /
+  **×** to remove (`components/route-stops.tsx`), per the founder's screenshot. Verified + live.
+
+**O5 vehicle taxonomy + real ETA (D23):**
+- Founder applied the additive migration (`docs/migrations/2026-06-19_vehicle_taxonomy_and_eta.sql`):
+  `body_type` enum, `vehicle.body_type`, `mission.required_body_type/required_make/required_model/
+  distance_km/duration_min`; legacy `van` category → business+van.
+- **Tier × body** model + **car catalog** (`lib/vehicle-catalog.ts`). Dispatcher picker
+  (`components/service-class-fields.tsx`): tier + Any/Sedan/Van + car-range hint + optional specific car.
+  Driver fields (`components/driver-vehicle-fields.tsx`) in onboarding + settings.
+- **ETA** via Mapbox Directions (`lib/directions.ts`), cached on the mission; shown as "27 km · 40 min"
+  on Pool card / Dispatch row / detail (straight-line `~` fallback). Pool matches tier + body + specific car.
+- **Adversarial review** (16 agents) found 7 issues; **6 fixed**: numeric-as-string render crash on
+  sub-10km trips (formatKm coerce), body picker tri-state (Any → null, no longer hides van drivers),
+  tolerant specific-car match (Mercedes≈Mercedes-Benz via `carMatches`), drop legacy `van` from write
+  allowlists, conditional ETA write (no wipe on transient routing failure), synthetic specific-car option.
+  Deferred (LOW): ETA ignores un-geocoded stops; bind Driver car to catalog for fully-robust specific match.
+
+**Verified** — `tsc` + `next build` green throughout. Browser (real DB): pickers, add/remove stop,
+service-class picker reactivity, ETA "27 km · 40 min" on a created mission, Business·Van excluded from a
+Business·Sedan driver's Pool, Any-body default. Unit-tested `carMatches` + `formatKm` string-coercion.
+**Next:** deploy `session-12`; founder owns the Driver-app redesign.
+
+---
+
 ## 2026-06-19 — Session 11 — Founder brain-dump triage → quick wins + post-flow
 **Branch:** `session-11-quickwins-postflow` (off `main`, not yet merged/deployed) · **Env:** local → Vercel.
 

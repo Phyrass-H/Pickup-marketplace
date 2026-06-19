@@ -194,6 +194,23 @@ folded in: O9 — the pickup time is now interpreted as **Europe/Paris** wall ti
 UTC instant (`lib/time.ts`), fixing the old server-local-zone bug, plus a past-time guard for live posts
 and quick date chips; and an O10a **SPEED WIN auto-suggest** in the preview when pickup is ≤5h away. [[d12]] [[d17]]
 
+### D23 — Vehicle taxonomy = service tier × body + car catalog; real road ETA (2026-06-19)
+Founder call (O5): model vehicles as **service tier (Eco/Business/Luxury) × body (Sedan/Van)**, each combo
+resolving to a real **car catalog** (`lib/vehicle-catalog.ts`, one file to maintain). The Dispatcher picks
+a tier + body (**Any/Sedan/Van** — Any reaches both bodies) and, only when the Guest insists, a **specific
+car**; Drivers set their tier + body. **Schema:** founder-approved additive migration
+(`docs/migrations/2026-06-19_vehicle_taxonomy_and_eta.sql`, applied 2026-06-19): new `body_type` enum;
+`vehicle.body_type`; `mission.required_body_type` (null = any) / `required_make` / `required_model`. The
+existing `vehicle_category` enum becomes the **tier** (eco/business/luxury); the legacy `van` value was
+backfilled to **business + body=van** and dropped from the UI/allowlists. **Pool** now matches tier (SQL)
++ body + specific car (in-app; specific-car uses a tolerant normalized match since Drivers type make/model
+free-text — `carMatches()`). **ETA:** same migration adds `mission.distance_km` / `duration_min`, computed
+once via **Mapbox Directions** (`lib/directions.ts`) at creation and cached; cards show "27 km · 40 min"
+(straight-line `~` fallback for older/failed). Replaces the old flat 4-category enum (supersedes the
+single-category model from the spine). Known follow-ups: bind the Driver's car to the catalog (a picker)
+for fully-robust specific-car matching; geocode intermediate stops so ETA covers detours (today it's the
+direct pickup→dropoff route). [[d17]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
