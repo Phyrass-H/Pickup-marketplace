@@ -17,18 +17,29 @@ type LngLat = { lat: number; lng: number };
 
 // `departAt`: ISO-8601 instant of the scheduled pickup (must be now-or-future).
 // When omitted/past, driving-traffic uses current conditions instead.
+// `via`: ordered intermediate stops (pickup → via[0] → … → dropoff). Both Mapbox
+// driving profiles accept up to 25 coordinates, and `driving-traffic` is the only
+// one that honours `depart_at`, so we keep it for every realistic route (a mission
+// caps at 5 stops = 7 points). Only an over-25-point route would fall back to the
+// plain `driving` profile (no live traffic) rather than fail.
 export async function routeMetrics(
   from: LngLat,
   to: LngLat,
   departAt?: string | null,
+  via?: LngLat[],
 ): Promise<RouteMetrics | null> {
   if (!TOKEN) return null;
   try {
-    const points = `${from.lng},${from.lat};${to.lng},${to.lat}`;
+    const stops = (via ?? []).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng));
+    const all: LngLat[] = [from, ...stops, to];
+    const points = all.map((p) => `${p.lng},${p.lat}`).join(";");
+    // Both profiles allow 25 coordinates; only beyond that fall back to driving.
+    const traffic = all.length <= 25;
+    const profile = traffic ? "driving-traffic" : "driving";
     const params = new URLSearchParams({ overview: "false", access_token: TOKEN });
-    if (departAt) params.set("depart_at", departAt);
+    if (traffic && departAt) params.set("depart_at", departAt);
     const url =
-      `https://api.mapbox.com/directions/v5/mapbox/driving-traffic/${points}?${params.toString()}`;
+      `https://api.mapbox.com/directions/v5/mapbox/${profile}/${points}?${params.toString()}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(4500) });
     if (!res.ok) return null;
     const data = (await res.json()) as {

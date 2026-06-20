@@ -7,6 +7,7 @@ import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
+import { parseWaypointsField } from "@/lib/waypoints";
 import type { VehicleCategory, BodyType, MissionStatus } from "@/lib/database.types";
 
 // Tiers offered post-O5 ('van' is a legacy enum value, no longer a tier).
@@ -80,12 +81,12 @@ export async function createMission(formData: FormData) {
   const requiredMake = String(formData.get("required_make") ?? "").trim() || null;
   const requiredModel = String(formData.get("required_model") ?? "").trim() || null;
 
-  // Intermediate stops: one address per line (KEEP). Stored as jsonb waypoints.
-  const waypoints: { address: string }[] = String(formData.get("waypoints") ?? "")
-    .split("\n")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((address) => ({ address }));
+  // Intermediate stops (KEEP). Stored as jsonb waypoints, each with its coords.
+  const waypoints = parseWaypointsField(formData.get("waypoints"));
+  // Picked stops (with coords) extend the cached ETA through the detour.
+  const via = waypoints
+    .filter((w) => w.lat != null && w.lng != null && isValidLatLng(w.lat, w.lng))
+    .map((w) => ({ lat: w.lat as number, lng: w.lng as number }));
 
   // category / pickup / pickup_at / ceiling are NOT NULL on the mission table,
   // so even a draft must carry these core fields.
@@ -121,6 +122,7 @@ export async function createMission(formData: FormData) {
           { lat: pickupLat!, lng: pickupLng! },
           { lat: dropoffLat!, lng: dropoffLng! },
           departAt,
+          via,
         )
       : null;
   const eta = metrics

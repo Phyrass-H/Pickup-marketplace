@@ -5,7 +5,7 @@ import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops } from "@/components/route-stops";
 import { ServiceClassFields } from "@/components/service-class-fields";
-import { parseWaypoints } from "@/lib/waypoints";
+import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
 import {
   parisLocalToUtc,
   prettyParisLocal,
@@ -13,14 +13,21 @@ import {
 } from "@/lib/time";
 import { tripDistanceKm } from "@/lib/geo";
 import {
-  formatDistance,
   formatMoney,
+  formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
 import type { MissionRow, VehicleCategory, BodyType } from "@/lib/database.types";
 
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+function toNum(v: FormDataEntryValue | null): number | null {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 interface PreviewData {
@@ -38,6 +45,8 @@ interface PreviewData {
   reference: string;
   ceiling: number;
   distanceKm: number | null;
+  roadKm: number | null;
+  roadMin: number | null;
 }
 
 // Client form. Step 1 = fill in; "Review" snapshots the fields into a final card
@@ -90,7 +99,11 @@ export function MissionForm({
     draft && draft.dropoff_lat != null && draft.dropoff_lng != null
       ? { label: draft.dropoff_address ?? "", lat: draft.dropoff_lat, lng: draft.dropoff_lng }
       : null;
-  const stopsDefault = parseWaypoints(draft?.waypoints).map((w) => w.address);
+  const stopsDefault = parseWaypoints(draft?.waypoints).map((w) => ({
+    label: w.address,
+    lat: w.lat ?? null,
+    lng: w.lng ?? null,
+  }));
 
   function review() {
     const form = formRef.current;
@@ -127,10 +140,7 @@ export function MissionForm({
       requiredCar: rMake && rModel ? `${rMake} ${rModel}` : null,
       pickup,
       dropoff: String(fd.get("dropoff_address") ?? "").trim(),
-      stops: String(fd.get("waypoints") ?? "")
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      stops: parseWaypointsField(fd.get("waypoints")).map((w) => w.address),
       pickupAtLocal: at,
       pax: String(fd.get("pax_count") ?? ""),
       luggage: String(fd.get("luggage_count") ?? ""),
@@ -144,6 +154,8 @@ export function MissionForm({
         Number.isFinite(dropLat) ? dropLat : null,
         Number.isFinite(dropLng) ? dropLng : null,
       ),
+      roadKm: toNum(fd.get("route_distance_km")),
+      roadMin: toNum(fd.get("route_duration_min")),
     });
     setClientError(null);
     setMode("preview");
@@ -220,6 +232,7 @@ export function MissionForm({
           pickupDefault={pickupDefault}
           dropoffDefault={dropoffDefault}
           stopsDefault={stopsDefault}
+          pickupAtLocal={pickupAt}
         />
 
         <div className="field">
@@ -360,7 +373,10 @@ export function MissionForm({
 
             <div className="muted small" style={{ marginTop: 8 }}>
               {prettyParisLocal(preview.pickupAtLocal)}
-              {preview.distanceKm != null ? ` · ${formatDistance(preview.distanceKm)}` : ""}
+              {(() => {
+                const meta = formatTripMeta(preview.roadKm, preview.roadMin, preview.distanceKm);
+                return meta ? ` · ${meta}` : "";
+              })()}
             </div>
 
             <div className="route">

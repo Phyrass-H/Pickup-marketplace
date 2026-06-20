@@ -1,34 +1,131 @@
 "use client";
 
-import { useState } from "react";
-import { CircleDot, MapPin, Plus, X, GripVertical } from "lucide-react";
-import { AddressAutocomplete, type Place } from "@/components/address-autocomplete";
+import { useEffect, useRef, useState } from "react";
+import { CircleDot, MapPin, Plus, X, Square, Route } from "lucide-react";
+import { AddressAutocomplete, type Place, type DefaultPlace } from "@/components/address-autocomplete";
+import { parisLocalToUtc } from "@/lib/time";
+import { formatKm, formatDuration } from "@/lib/format";
 
-// Route input block: From (pickup) → optional stops → Where to (dropoff), with a
-// "+" to add a stop and "×" to remove one (replaces the old free-text textarea
-// that read like a comment field). Pickup/dropoff geocode via Mapbox (their
-// hidden lat/lng feed Pool matching); stops are address-only, written to the
-// hidden `waypoints` field the server action already reads (one per line).
+// Route input block: From (pickup) → optional stops → Where to (dropoff). Each
+// row is a Mapbox address field (POI-aware), so a STOP is geocoded too — its
+// coords feed the live ETA and are persisted on the mission's waypoints. An
+// "Add a stop" row inserts a stop between the pickup and dropoff. As soon as the
+// pickup and dropoff are both picked, we fetch a live distance + travel time
+// (via /api/eta, through any picked stops) and show "27 km · 40 min" under the
+// card — like any ride app. Stops are written to the hidden `waypoints` field as
+// JSON [{address,lat,lng}] (the server action reads it back).
 
 const MAX_STOPS = 5;
+
+interface StopState {
+  id: string; // stable key: the stop fields are stateful, so index keys would
+  // carry one row's typed text into another when a middle stop is removed.
+  text: string;
+  place: Place | null;
+}
+
+interface Metrics {
+  distanceKm: number;
+  durationMin: number;
+}
 
 export function RouteStops({
   pickupDefault,
   dropoffDefault,
   stopsDefault,
+  pickupAtLocal,
 }: {
   pickupDefault: Place | null;
   dropoffDefault: Place | null;
-  stopsDefault: string[];
+  stopsDefault: DefaultPlace[];
+  pickupAtLocal?: string;
 }) {
-  const [stops, setStops] = useState<string[]>(stopsDefault);
+  const [pickup, setPickup] = useState<Place | null>(pickupDefault);
+  const [dropoff, setDropoff] = useState<Place | null>(dropoffDefault);
+  const [stops, setStops] = useState<StopState[]>(() =>
+    stopsDefault.map((d, i) => ({
+      id: `s${i}`, // deterministic for the initial set (SSR-safe)
+      text: d.label,
+      place:
+        Number.isFinite(d.lat) && Number.isFinite(d.lng)
+          ? { label: d.label, lat: d.lat as number, lng: d.lng as number }
+          : null,
+    })),
+  );
+  // Ids for stops added after mount (client-only, so non-deterministic is fine).
+  const nextId = useRef(stopsDefault.length);
+  const [eta, setEta] = useState<Metrics | null>(null);
+  const [etaLoading, setEtaLoading] = useState(false);
 
-  const setStop = (i: number, v: string) =>
-    setStops((s) => s.map((x, j) => (j === i ? v : x)));
-  const addStop = () => setStops((s) => (s.length >= MAX_STOPS ? s : [...s, ""]));
+  const addStop = () =>
+    setStops((s) =>
+      s.length >= MAX_STOPS ? s : [...s, { id: `s${nextId.current++}`, text: "", place: null }],
+    );
   const removeStop = (i: number) => setStops((s) => s.filter((_, j) => j !== i));
+  const setStop = (i: number, v: { text: string; place: Place | null }) =>
+    setStops((s) => s.map((x, j) => (j === i ? { ...x, ...v } : x)));
 
-  const waypointsValue = stops.map((s) => s.trim()).filter(Boolean).join("\n");
+  // Stops written as JSON so each carries its coords (used for the cached ETA).
+  const waypoints = stops
+    .map((s) => ({
+      address: s.text.trim(),
+      lat: s.place?.lat ?? null,
+      lng: s.place?.lng ?? null,
+    }))
+    .filter((w) => w.address);
+  const waypointsValue = JSON.stringify(waypoints);
+
+  const pickedStops = stops.filter((s) => s.place).map((s) => s.place as Place);
+  const canRoute = !!(pickup && dropoff);
+
+  // Live ETA: pickup → picked stops → dropoff. Traffic-aware when a future pickup
+  // time is set (depart_at), matching the value cached at posting. Debounced +
+  // aborted so rapid edits don't pile up requests.
+  useEffect(() => {
+    if (!pickup || !dropoff) {
+      setEta(null);
+      setEtaLoading(false);
+      return;
+    }
+    const points = [pickup, ...pickedStops, dropoff].map((p) => ({ lat: p.lat, lng: p.lng }));
+    const at = pickupAtLocal ? parisLocalToUtc(pickupAtLocal) : null;
+    const departAt =
+      at && at.getTime() > Date.now() ? at.toISOString().replace(/\.\d{3}Z$/, "Z") : null;
+
+    const controller = new AbortController();
+    setEtaLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/eta", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ points, departAt }),
+          signal: controller.signal,
+        });
+        const data = (await res.json()) as { metrics?: Metrics | null };
+        setEta(data.metrics ?? null);
+      } catch (e) {
+        if ((e as Error)?.name !== "AbortError") setEta(null);
+      } finally {
+        // A superseded (aborted) run must not clear the flag the newer run owns.
+        if (!controller.signal.aborted) setEtaLoading(false);
+      }
+    }, 400);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pickup?.lat,
+    pickup?.lng,
+    dropoff?.lat,
+    dropoff?.lng,
+    pickedStops.map((p) => `${p.lng},${p.lat}`).join(";"),
+    pickupAtLocal,
+  ]);
+
+  const viaCount = pickedStops.length;
 
   return (
     <div className="field">
@@ -50,33 +147,24 @@ export function RouteStops({
                 lngName="pickup_lng"
                 defaultValue={pickupDefault}
                 placeholder="From — hôtel, address, airport…"
+                onChange={(s) => setPickup(s.place)}
               />
             </div>
-            <button
-              type="button"
-              className="route-add"
-              onClick={addStop}
-              disabled={stops.length >= MAX_STOPS}
-              aria-label="Add a stop"
-              title={stops.length >= MAX_STOPS ? "Max stops reached" : "Add a stop"}
-            >
-              <Plus size={20} />
-            </button>
           </div>
 
           {/* Stops */}
           {stops.map((s, i) => (
-            <div className="route-row route-row--stop" key={i}>
+            <div className="route-row route-row--stop" key={s.id}>
               <span className="route-ic route-ic--stop" aria-hidden>
-                <GripVertical size={16} />
+                <Square size={11} fill="currentColor" strokeWidth={0} />
               </span>
               <div className="route-input">
-                <input
-                  type="text"
-                  value={s}
-                  onChange={(e) => setStop(i, e.target.value)}
+                <AddressAutocomplete
+                  defaultValue={{ label: s.text, lat: s.place?.lat, lng: s.place?.lng }}
                   placeholder={`Stop ${i + 1}`}
-                  aria-label={`Stop ${i + 1}`}
+                  compact
+                  proximity={pickup ? [pickup.lng, pickup.lat] : undefined}
+                  onChange={(st) => setStop(i, st)}
                 />
               </div>
               <button
@@ -91,6 +179,18 @@ export function RouteStops({
             </div>
           ))}
 
+          {/* Add a stop */}
+          {stops.length < MAX_STOPS && (
+            <div className="route-row route-row--add">
+              <span className="route-ic route-ic--add" aria-hidden>
+                <Plus size={16} />
+              </span>
+              <button type="button" className="route-addbtn" onClick={addStop}>
+                Add a stop
+              </button>
+            </div>
+          )}
+
           {/* Dropoff */}
           <div className="route-row">
             <span className="route-ic route-ic--to" aria-hidden>
@@ -103,13 +203,32 @@ export function RouteStops({
                 lngName="dropoff_lng"
                 defaultValue={dropoffDefault}
                 placeholder="Where to?"
+                proximity={pickup ? [pickup.lng, pickup.lat] : undefined}
+                onChange={(s) => setDropoff(s.place)}
               />
             </div>
           </div>
         </div>
       </div>
 
+      {/* Live distance + travel time */}
+      {canRoute && (eta || etaLoading) && (
+        <div className={`route-eta${eta ? "" : " route-eta--loading"}`} role="status" aria-live="polite">
+          <Route size={16} aria-hidden />
+          {eta ? (
+            <span>
+              {formatKm(eta.distanceKm)} · {formatDuration(eta.durationMin)}
+              {viaCount > 0 && ` · via ${viaCount} stop${viaCount === 1 ? "" : "s"}`}
+            </span>
+          ) : (
+            <span>Estimating distance & time…</span>
+          )}
+        </div>
+      )}
+
       <input type="hidden" name="waypoints" value={waypointsValue} />
+      <input type="hidden" name="route_distance_km" value={eta?.distanceKm ?? ""} />
+      <input type="hidden" name="route_duration_min" value={eta?.durationMin ?? ""} />
     </div>
   );
 }
