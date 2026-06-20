@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-06-20 — Session 13 — Route card redesign: stop autocomplete + live ETA + France-biased geocoding
+**Branch:** `session-13-route-eta-geocoding` (off `main`, not yet merged/deployed) · **Env:** local → Vercel.
+
+**Why:** founder feedback on the new-mission route block (4 asks). Item 5 (the full **mission-page**
+redesign — breathing, card separation, light colours) is the agreed **next** chunk, after these land.
+
+**What shipped (this branch):**
+- **Stops are now geocoded** (`components/route-stops.tsx`): each stop is a Mapbox `AddressAutocomplete`
+  (was a plain text box), so a stop carries coords. Written to the hidden `waypoints` field as JSON
+  `[{address,lat,lng}]`; parsed by a **shared** `parseWaypointsField` (`lib/waypoints.ts`) used by both the
+  server action and the client preview (legacy newline fallback) so they can't drift.
+- **Route card redesign:** the floating blue **+** next to "From" is gone — replaced by an **"Add a stop"**
+  row in the rail; the stop marker is the **red square** from the founder's reference (`route-ic--stop`);
+  more padding + soft shadow so the card breathes (`app/globals.css`).
+- **Live distance + travel time** while picking addresses (like any ride app): `AddressAutocomplete` got an
+  `onChange` that lifts the picked place; `RouteStops` fetches `POST /api/eta` (new route) → `routeMetrics`,
+  debounced/aborted, shown as "27 km · 37 min" (·​ "via N stops" when routed through stops). Traffic-aware
+  (`depart_at` = the chosen pickup time). The same value feeds the **preview card** (road ETA, hidden
+  `route_distance_km/min`) and is recomputed authoritatively at posting (now **through the stops** — closes
+  the D23 multi-stop-ETA follow-up).
+- **France-biased autocomplete** (`components/address-autocomplete.tsx`): added a **`country` allowlist**
+  (`fr,mc,it,ch,de,es,be,lu,nl,gb,at,pt`) to the Search Box suggest call → no more USA/Canada junk, while
+  Cannes→Geneva/Berlin/Milano still resolve; dropoff/stops bias `proximity` to the picked pickup.
+
+**Verified** — `tsc` + `next build` clean. Browser (real Supabase, Business dev-login): POI search returns
+**France-only** results ("Aéroport Nice" → correct airport; pickup-proximity confirmed on the dropoff
+suggest URL); live ETA "27 km · 37 min" appears on pickup+dropoff pick; adding an **Antibes** stop re-routes
+to "28 km · 1 h 04 · via 1 stop" and stores `waypoints` with coords; the **preview card** shows the stop as
+a proper leg (Cannes → Antibes → Nice) + road ETA — not raw JSON.
+
+**Reviewed** — ran a 37-agent adversarial workflow (5 dimensions, 2-skeptic verify). 7 confirmed, **all
+fixed:** (HIGH ×3, same bug) the preview `review()` still split the now-JSON `waypoints` by newline → showed
+the raw JSON blob (and `[]` for 0-stop missions) — fixed via the shared `parseWaypointsField`; (HIGH) the
+`driving-traffic` 3-coord cap was stale (real limit 25) so 2+ stops silently lost traffic + `depart_at` —
+raised to 25; (LOW) an aborted ETA run's `finally` could clear the loading flag a newer run owns — guarded
+on `signal.aborted`; (LOW) the live ETA line wasn't announced to screen readers — `role="status"
+aria-live="polite"`; (MED) `/api/eta` didn't bound the points array — cap 25. `tsc`+`build` green after.
+
+**Note:** running `npm run build` while the `next dev` preview server is live corrupts `.next` (500s) —
+restart the dev server after a build, or don't build while it's running.
+
+**Next:** founder review → deploy this branch; then **item 5 — the mission-page redesign** (HTML-mockup loop).
+
+---
+
 ## 2026-06-19 — Session 12 — Mission-form pickers, then O5 vehicle taxonomy + real ETA
 **Branches:** `session-11b-pickers-stops` (date/time + stops — merged + deployed) ·
 `session-12-vehicle-taxonomy-eta` (O5 + ETA — to deploy). **Env:** local → Vercel. **Decisions:** D23.
