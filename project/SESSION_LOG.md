@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-06-21 — Session 15 — New-mission Pricing card + read-only Summary rail
+**Branch:** `main` (working tree, **uncommitted** — awaiting founder review/deploy) · **Env:** local → Vercel.
+
+**Why:** founder feedback on the S14 two-pane form — the **Ceiling** input lived in the right-hand Summary
+rail, split from the **Estimated base fare** (which sat in Trip details). The founder's point: the rail should
+be a **read-only preview**, not an input section; group the two fare inputs together.
+
+**Design loop (D25):** Claude-Code inline HTML mockup from the real navy tokens first → founder reacted
+("the new pricing card is nice, I like it") and asked why the *rest* looked different (answer: the mockup is a
+hand-built replica, the real app was untouched) → confirmed via Q&A: a **new dedicated Pricing card**, **SPEED
+WIN moves with it**, **actions stay in the rail**, and the **card header matches the others** (no navy tint) →
+implemented for real.
+
+**What shipped (`app/(dispatch)/dispatch/new/mission-form.tsx` only — no other file, no schema, no token change):**
+- **New "Pricing" section card** (5th, left pane) grouping the three existing pricing inputs:
+  **Estimated base fare** (moved out of Trip details), **Ceiling** (moved out of the rail), **SPEED WIN**
+  (moved out of the rail) — plus the too-low warning + a one-line helper. Same `.mx-card__*` slate icon chip
+  + uppercase title as the other four cards (Lucide `Wallet` icon).
+- **Summary rail is now read-only** — **0 input fields**. Shows the Ceiling as a value, the live starting fare
+  (`.mx-fare`), and a **"Pricing mode"** line (SPEED WIN badge / "Standard climb"), then the actions
+  (Review / Save draft / Post). Empty-state when no ceiling yet. The `createMission` contract is unchanged
+  (same field `name`s submit from the relocated inputs); the D22 draft/Review flow + live ETA + waypoints all
+  preserved. Reference textarea in Trip details nudged to `marginBottom:0` (cosmetic, now last field there).
+
+**Verified** — `tsc` + `next build` green (25 routes). Browser (real Supabase, Business dev-login): 5 cards
+incl. Pricing; exactly one ceiling/base/speed_win input each (no duplicates); rail has **0 inputs**; live fare
+120 → **60,00 €** standard / **84,00 €** SPEED WIN; too-low warning fires (base 140 > ceiling 120) inside the
+Pricing card; responsive collapse <900px intact (`position:static`, single column); no console errors.
+
+**Reviewed** — 18-agent adversarial workflow (4 dims → 2-skeptic verify); 14 raw findings → **1 confirmed
+(LOW)**: the too-low warning was **hidden in preview** mode (it had moved into the `display:none` `.mx-sections`).
+**Fixed** — a compact version now renders in the read-only rail **only in preview** (`tooLow && mode==="preview"`)
+so there's no edit-mode duplication and the post-time nudge is restored. Re-verified in-browser (edit: warning
+in the card only; preview: "Below the recommended base fare — may go unfulfilled." in the rail).
+
+**Next:** founder review → push `main` to deploy when okayed. **Not deployed.** Optional follow-up still open:
+the Driver-app layout redesign + the small navy polish items (green "Complete ride", logo re-export).
+
+---
+
 ## 2026-06-21 — Session 14 — Mission-page redesign: app-wide navy + two-pane new-mission form (Direction B)
 **Branch:** `session-14-mission-redesign-navy` (off `main`, merged + deployed) · **Env:** local → Vercel.
 **Decisions:** D24 (navy + two-pane), D25 (design = Claude-Code inline HTML mockups).

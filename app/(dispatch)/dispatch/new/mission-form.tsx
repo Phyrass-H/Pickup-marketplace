@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Car, MapPin, CalendarClock, ClipboardList, Route } from "lucide-react";
+import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
@@ -340,7 +340,7 @@ export function MissionForm({
                 />
               </label>
 
-              <label className="field">
+              <label className="field" style={{ marginBottom: 0 }}>
                 <span>Reference / notes (optional — shown on the schedule line)</span>
                 <textarea
                   name="comment"
@@ -357,18 +357,65 @@ export function MissionForm({
                   }}
                 />
               </label>
+            </div>
 
-              <label className="field" style={{ marginBottom: 0 }}>
-                <span>Estimated base fare € (optional)</span>
+            {/* Pricing — base fare + ceiling + SPEED WIN grouped together */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <Wallet />
+                </span>
+                <h3 className="mx-card__title">Pricing</h3>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <label className="field" style={{ flex: 1, marginBottom: 0 }}>
+                  <span>Estimated base fare € (optional)</span>
+                  <input
+                    type="number"
+                    name="base_fare"
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    value={baseFare}
+                    onChange={(e) => setBaseFare(e.target.value)}
+                  />
+                </label>
+                <label className="field" style={{ flex: 1, marginBottom: 0 }}>
+                  <span>Ceiling € (your maximum)</span>
+                  <input
+                    type="number"
+                    name="ceiling"
+                    required
+                    min={0}
+                    step="0.01"
+                    inputMode="decimal"
+                    value={ceiling}
+                    onChange={(e) => setCeiling(e.target.value)}
+                  />
+                </label>
+              </div>
+              {tooLow && (
+                <div className="notice warn" style={{ margin: "12px 0 0" }}>
+                  Trips below the recommended fare are rarely accepted and may go
+                  unfulfilled. You can still post it.
+                </div>
+              )}
+              <p className="muted small" style={{ margin: "10px 0 0" }}>
+                The base fare drives a soft “below recommended” warning only. The
+                ceiling is the most a Driver can climb to.
+              </p>
+              <div className="mx-sumdiv" />
+              <label className="mx-speed">
                 <input
-                  type="number"
-                  name="base_fare"
-                  min={0}
-                  step="0.01"
-                  inputMode="decimal"
-                  value={baseFare}
-                  onChange={(e) => setBaseFare(e.target.value)}
+                  type="checkbox"
+                  name="speed_win"
+                  checked={speedWin}
+                  onChange={(e) => setSpeedWin(e.target.checked)}
                 />
+                <span>
+                  <strong>SPEED WIN</strong> — start high (70% of ceiling) and climb
+                  fast for near-instant pickup
+                </span>
               </label>
             </div>
           </div>
@@ -513,55 +560,64 @@ export function MissionForm({
 
             <div className="mx-sumdiv" />
 
-            <label className="field" style={{ marginBottom: 0 }}>
-              <span>Ceiling € (your maximum)</span>
-              <input
-                type="number"
-                name="ceiling"
-                required
-                min={0}
-                step="0.01"
-                inputMode="decimal"
-                value={ceiling}
-                onChange={(e) => setCeiling(e.target.value)}
-              />
-            </label>
-            {tooLow && (
-              <div className="notice warn" style={{ margin: "10px 0 0" }}>
-                Trips below the recommended fare are rarely accepted and may go
-                unfulfilled. You can still post it.
-              </div>
-            )}
-
-            {showFare && (
-              <div
-                style={{ marginTop: 14 }}
-                role="status"
-                aria-live="polite"
-                aria-label="Starting fare"
-              >
-                <div className="mx-fare">
-                  {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+            {showFare ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    gap: 12,
+                  }}
+                >
+                  <span className="muted small">Ceiling (your maximum)</span>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>
+                    {formatMoney(ceilingNum)}
+                  </span>
                 </div>
-                <div className="mx-fare-sub">
-                  starting fare · climbs up to {formatMoney(ceilingNum)}
+                <div
+                  style={{ marginTop: 14 }}
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Starting fare"
+                >
+                  <div className="mx-fare">
+                    {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+                  </div>
+                  <div className="mx-fare-sub">
+                    starting fare · climbs up to {formatMoney(ceilingNum)}
+                  </div>
                 </div>
-              </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    marginTop: 12,
+                  }}
+                >
+                  <span className="muted small">Pricing mode</span>
+                  {speedWin ? (
+                    <span className="badge speed">SPEED WIN</span>
+                  ) : (
+                    <span className="muted small">Standard climb</span>
+                  )}
+                </div>
+                {tooLow && mode === "preview" && (
+                  <div
+                    className="notice warn"
+                    style={{ margin: "12px 0 0", padding: "9px 12px", fontSize: 13 }}
+                  >
+                    Below the recommended base fare — may go unfulfilled.
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mx-summary__empty">
+                Set a ceiling under Pricing to see the starting fare.
+              </p>
             )}
-
-            <div className="mx-sumdiv" />
-            <label className="mx-speed">
-              <input
-                type="checkbox"
-                name="speed_win"
-                checked={speedWin}
-                onChange={(e) => setSpeedWin(e.target.checked)}
-              />
-              <span>
-                <strong>SPEED WIN</strong> — start high (70% of ceiling) and climb
-                fast for near-instant pickup
-              </span>
-            </label>
 
             <div className="mx-sumdiv" />
             {mode === "edit" ? (
