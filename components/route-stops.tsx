@@ -179,16 +179,14 @@ export function RouteStops({
             </div>
           ))}
 
-          {/* Add a stop */}
+          {/* Add a stop — the whole row is the button so the + reads as one */}
           {stops.length < MAX_STOPS && (
-            <div className="route-row route-row--add">
+            <button type="button" className="route-row route-row--add" onClick={addStop}>
               <span className="route-ic route-ic--add" aria-hidden>
                 <Plus size={16} />
               </span>
-              <button type="button" className="route-addbtn" onClick={addStop}>
-                Add a stop
-              </button>
-            </div>
+              <span className="route-addrow__label">Add a stop</span>
+            </button>
           )}
 
           {/* Dropoff */}
@@ -209,22 +207,28 @@ export function RouteStops({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Live distance + travel time */}
-      {canRoute && (eta || etaLoading) && (
-        <div className={`route-eta${eta ? "" : " route-eta--loading"}`} role="status" aria-live="polite">
-          <Route size={16} aria-hidden />
-          {eta ? (
-            <span>
-              {formatKm(eta.distanceKm)} · {formatDuration(eta.durationMin)}
-              {viaCount > 0 && ` · via ${viaCount} stop${viaCount === 1 ? "" : "s"}`}
+        {/* Live distance + travel time — a footer inside the route card */}
+        {canRoute && (eta || etaLoading) && (
+          <div
+            className={`route-eta${eta ? "" : " route-eta--loading"}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="route-eta__ic" aria-hidden>
+              <Route size={15} />
             </span>
-          ) : (
-            <span>Estimating distance & time…</span>
-          )}
-        </div>
-      )}
+            {eta ? (
+              <span>
+                {formatKm(eta.distanceKm)} · {formatDuration(eta.durationMin)}
+                {viaCount > 0 && ` · via ${viaCount} stop${viaCount === 1 ? "" : "s"}`}
+              </span>
+            ) : (
+              <span>Estimating distance &amp; time…</span>
+            )}
+          </div>
+        )}
+      </div>
 
       <input type="hidden" name="waypoints" value={waypointsValue} />
       <input type="hidden" name="route_distance_km" value={eta?.distanceKm ?? ""} />

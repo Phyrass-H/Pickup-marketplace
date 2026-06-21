@@ -1050,26 +1050,44 @@ textarea::placeholder {
 }
 .route-input input[type="text"]:focus,
 .route-input .ac input[type="text"]:focus { background: var(--surface); border-color: var(--accent); }
-/* "Add a stop" row (replaces the floating + button) */
-.route-row--add { padding: 2px 0; }
-.route-addbtn {
-  background: none; border: none; color: var(--accent); font-weight: 600;
-  font-size: 14px; cursor: pointer; padding: 6px 0; font-family: inherit; text-align: left;
+/* "Add a stop" — the whole row is one button (icon + label both clickable) */
+.route-row--add {
+  width: 100%; border: none; background: none; cursor: pointer;
+  font-family: inherit; text-align: left; padding: 4px 0;
 }
-.route-addbtn:hover { color: var(--accent-hover); text-decoration: underline; }
+.route-row--add .route-ic--add {
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+.route-addrow__label {
+  font-size: 14px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); padding: 8px 16px; border-radius: 8px;
+  transition: background var(--dur) var(--ease);
+}
+.route-row--add:hover .route-addrow__label { background: var(--blue-100); }
+.route-row--add:hover .route-ic--add {
+  border-style: solid; border-color: var(--accent);
+  background: var(--accent-soft); color: var(--accent);
+}
+.route-row--add:focus-visible { outline: none; }
+.route-row--add:focus-visible .route-addrow__label { box-shadow: var(--ring); }
 .route-rm {
   display: grid; place-items: center; width: 32px; height: 32px; flex: none;
   border: none; border-radius: 8px; background: transparent; color: var(--text-faint); cursor: pointer;
 }
 .route-rm:hover { background: var(--tone-danger-bg); color: var(--danger); }
-/* Live distance + travel time under the route */
+/* Live distance + travel time — a footer inside the route card */
 .route-eta {
-  display: flex; align-items: center; gap: 8px; margin-top: 12px;
-  padding: 10px 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
-  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  font-size: 15px; font-weight: 600; color: var(--text);
 }
-.route-eta svg { flex: none; }
-.route-eta--loading { background: var(--surface-2); color: var(--text-muted); font-weight: 500; }
+.route-eta__ic {
+  display: grid; place-items: center; width: 28px; height: 28px; flex: none;
+  border-radius: 50%; background: var(--accent-soft); color: var(--accent);
+}
+.route-eta--loading { color: var(--text-muted); font-weight: 500; }
+.route-eta--loading .route-eta__ic { background: var(--surface-2); color: var(--text-faint); }
 
 /* ---- Segmented control (body type: sedan / van) ---- */
 .seg { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2);
