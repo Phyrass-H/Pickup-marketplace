@@ -108,17 +108,22 @@ export function MissionForm({
     lng: w.lng ?? null,
   }));
 
-  // Live route snapshot for the Summary rail (mini-route + ETA). Seeded from the
-  // draft so a resumed draft shows its route/ETA immediately; RouteStops keeps it
-  // current via onSummaryChange.
+  // A resumed draft's cached road ETA — seeds both the rail snapshot and the
+  // RouteStops eta state so the figure shows immediately (no flicker to blank
+  // before the live fetch returns).
+  const draftEta =
+    draft?.distance_km != null && draft?.duration_min != null
+      ? { distanceKm: Number(draft.distance_km), durationMin: Number(draft.duration_min) }
+      : null;
+
+  // Live route snapshot for the Summary rail (mini-route + ETA). RouteStops keeps
+  // it current via onSummaryChange.
   const [routeSummary, setRouteSummary] = useState<RouteSummary>(() => ({
     pickup: pickupDefault,
     dropoff: dropoffDefault,
     stopCount: stopsDefault.filter((s) => s.lat != null && s.lng != null).length,
-    eta:
-      draft?.distance_km != null && draft?.duration_min != null
-        ? { distanceKm: Number(draft.distance_km), durationMin: Number(draft.duration_min) }
-        : null,
+    eta: draftEta,
+    etaLoading: false,
   }));
 
   function review() {
@@ -240,7 +245,7 @@ export function MissionForm({
                 <span className="mx-card__ic" aria-hidden>
                   <Car />
                 </span>
-                <span className="mx-card__title">Vehicle &amp; class</span>
+                <h3 className="mx-card__title">Vehicle &amp; class</h3>
               </div>
               <ServiceClassFields
                 defaults={{
@@ -258,13 +263,14 @@ export function MissionForm({
                 <span className="mx-card__ic" aria-hidden>
                   <MapPin />
                 </span>
-                <span className="mx-card__title">Route</span>
+                <h3 className="mx-card__title">Route</h3>
               </div>
               <RouteStops
                 pickupDefault={pickupDefault}
                 dropoffDefault={dropoffDefault}
                 stopsDefault={stopsDefault}
                 pickupAtLocal={pickupAt}
+                etaDefault={draftEta}
                 onSummaryChange={setRouteSummary}
               />
             </div>
@@ -275,7 +281,7 @@ export function MissionForm({
                 <span className="mx-card__ic" aria-hidden>
                   <CalendarClock />
                 </span>
-                <span className="mx-card__title">Schedule</span>
+                <h3 className="mx-card__title">Schedule</h3>
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <span>Pickup date &amp; time</span>
@@ -294,7 +300,7 @@ export function MissionForm({
                 <span className="mx-card__ic" aria-hidden>
                   <ClipboardList />
                 </span>
-                <span className="mx-card__title">Trip details</span>
+                <h3 className="mx-card__title">Trip details</h3>
               </div>
               <div style={{ display: "flex", gap: 12 }}>
                 <label className="field" style={{ flex: 1 }}>
@@ -462,8 +468,8 @@ export function MissionForm({
         </div>
 
         {/* ---------- RIGHT: sticky live Summary rail ---------- */}
-        <aside className="mx-summary">
-          <div className="mx-summary__band">Mission summary</div>
+        <aside className="mx-summary" aria-labelledby="mx-sum-title">
+          <h2 id="mx-sum-title" className="mx-summary__band">Mission summary</h2>
           <div className="mx-summary__body">
             {routeSummary.pickup || routeSummary.dropoff ? (
               <div className="route" style={{ marginTop: 0 }}>
@@ -490,14 +496,20 @@ export function MissionForm({
               </p>
             )}
 
-            {routeSummary.eta && (
+            {routeSummary.eta ? (
               <div style={{ marginTop: 11 }}>
-                <span className="mx-eta">
+                <span className="mx-eta" role="status" aria-live="polite">
                   <Route size={15} aria-hidden />{" "}
                   {formatTripMeta(routeSummary.eta.distanceKm, routeSummary.eta.durationMin, null)}
                 </span>
               </div>
-            )}
+            ) : routeSummary.etaLoading && routeSummary.pickup && routeSummary.dropoff ? (
+              <div style={{ marginTop: 11 }}>
+                <span className="mx-eta mx-eta--loading" role="status" aria-live="polite">
+                  Estimating distance &amp; time…
+                </span>
+              </div>
+            ) : null}
 
             <div className="mx-sumdiv" />
 
@@ -522,7 +534,12 @@ export function MissionForm({
             )}
 
             {showFare && (
-              <div style={{ marginTop: 14 }}>
+              <div
+                style={{ marginTop: 14 }}
+                role="status"
+                aria-live="polite"
+                aria-label="Starting fare"
+              >
                 <div className="mx-fare">
                   {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
                 </div>

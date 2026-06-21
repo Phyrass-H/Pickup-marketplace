@@ -1124,7 +1124,7 @@ textarea::placeholder {
 }
 .mx-card__ic svg { width: 17px; height: 17px; }
 .mx-card__title {
-  font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
+  margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
   text-transform: uppercase; color: var(--text-muted);
 }
 
@@ -1135,18 +1135,19 @@ textarea::placeholder {
   border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md);
 }
 .mx-summary__band {
-  background: var(--accent); color: var(--text-on-accent);
+  margin: 0; background: var(--accent); color: var(--text-on-accent);
   padding: 13px 18px; font-size: 12px; font-weight: 700;
   letter-spacing: 0.05em; text-transform: uppercase;
 }
 .mx-summary__body { padding: 16px 18px; }
-.mx-summary__empty { color: var(--text-faint); font-size: 13px; margin: 0; }
+.mx-summary__empty { color: var(--text-muted); font-size: 13px; margin: 0; }
 .mx-sumdiv { height: 1px; background: var(--border); margin: 14px 0; }
 .mx-eta {
   display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
   color: var(--accent); background: var(--accent-soft); padding: 6px 11px; border-radius: var(--radius-md);
 }
 .mx-eta svg { flex: none; }
+.mx-eta--loading { color: var(--text-muted); background: var(--surface-2); font-weight: 500; }
 .mx-fare { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
 .mx-fare-sub { font-size: 12px; color: var(--text-muted); }
 .mx-speed { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; cursor: pointer; }

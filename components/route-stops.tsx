@@ -37,6 +37,7 @@ export interface RouteSummary {
   dropoff: Place | null;
   stopCount: number;
   eta: Metrics | null;
+  etaLoading: boolean;
 }
 
 export function RouteStops({
@@ -44,12 +45,14 @@ export function RouteStops({
   dropoffDefault,
   stopsDefault,
   pickupAtLocal,
+  etaDefault,
   onSummaryChange,
 }: {
   pickupDefault: Place | null;
   dropoffDefault: Place | null;
   stopsDefault: DefaultPlace[];
   pickupAtLocal?: string;
+  etaDefault?: Metrics | null;
   onSummaryChange?: (s: RouteSummary) => void;
 }) {
   const [pickup, setPickup] = useState<Place | null>(pickupDefault);
@@ -66,7 +69,9 @@ export function RouteStops({
   );
   // Ids for stops added after mount (client-only, so non-deterministic is fine).
   const nextId = useRef(stopsDefault.length);
-  const [eta, setEta] = useState<Metrics | null>(null);
+  // Seed from a resumed draft's cached ETA so the rail/footer show it immediately
+  // (the live fetch recomputes it shortly after).
+  const [eta, setEta] = useState<Metrics | null>(etaDefault ?? null);
   const [etaLoading, setEtaLoading] = useState(false);
 
   const addStop = () =>
@@ -142,9 +147,9 @@ export function RouteStops({
   // Publish a display snapshot upward (for the live Summary rail). Effect, not
   // render, so it never warns; onSummaryChange is expected to be a stable setter.
   useEffect(() => {
-    onSummaryChange?.({ pickup, dropoff, stopCount: viaCount, eta });
+    onSummaryChange?.({ pickup, dropoff, stopCount: viaCount, eta, etaLoading });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, dropoff, viaCount, eta]);
+  }, [pickup, dropoff, viaCount, eta, etaLoading]);
 
   return (
     <div className="field" style={{ marginBottom: 0 }}>
