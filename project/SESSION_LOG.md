@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-06-21 — Session 14 — Mission-page redesign: app-wide navy + two-pane new-mission form (Direction B)
+**Branch:** `session-14-mission-redesign-navy` (off `main`, merged + deployed) · **Env:** local → Vercel.
+**Decisions:** D24 (navy + two-pane), D25 (design = Claude-Code inline HTML mockups).
+
+**Why:** the founder wants the **new-mission page** (`/dispatch/new`) to breathe — clear sectioning, less
+narrow, a more "serious/solid/confident" look, away from the bright "Facebook" blue.
+
+**Design loop (D25):** instead of Claude Design zips, this session used **Claude-Code-authored HTML mockups
+rendered inline** (the visualize widget) from the real tokens + data → founder reacted in plain language →
+iterated (two layout directions; cool vs warm; **four navy depths** → locked **#25344C**, between ink and
+navy; fixed a `+`-marker alignment bug live in the mock) → then implemented for real.
+
+**What shipped:**
+- **App-wide navy palette** (token layer, `app/globals.css`): action blue → **navy #25344C** (`--blue-*`,
+  `--ring`); status **"info"** (Confirmed/Accepted) → **steel #1b5e8a** (mirrored in `lib/dispatch-status.ts`)
+  so it stays distinct from the navy CTA; hardcoded blues fixed (`.badge.status`, `.notice.info`, date-picker
+  focus). Brand logo gradient untouched (logo-only).
+- **`/dispatch/new` → Direction B two-pane** (`mission-form.tsx`, `page.tsx`): ONE `<form>`; left = 4 section
+  cards (Vehicle/Route/Schedule/Trip) with slate icon chips + uppercase titles; right = a **sticky navy
+  Summary rail** — mini-route, live **ETA** (mirrors the route card), Ceiling, a **live starting fare**
+  (re-prices on ceiling/SPEED-WIN change), SPEED WIN toggle, actions. Collapses to 1 column <900px. The D22
+  draft/Review flow + live ETA + waypoints all preserved. `RouteStops` publishes a snapshot via
+  `onSummaryChange` + accepts `etaDefault` (no behavioural change to its inputs).
+
+**Verified** — `tsc` + `next build` green. Browser (real DB, 1320px + mobile): two-pane render, rail ETA ==
+route-card ETA, live fare 120→60€ / SPEED WIN→84€, Review preview fare agrees, responsive collapse, **Driver
+app** navy OK (Accept reads primary, logo intact). Deploy **confirmed live** (CSS bundle hash changed; has
+`.mx-summary` + `#25344c`).
+
+**Reviewed** — planning workflow (3 agents: palette audit + form architecture + risks) front-loaded the
+change; 4-dim adversarial review (16 agents) → 5 LOW findings **all fixed** (draft-ETA seeding + loading
+state, aria-live on the fare, heading semantics, empty-state contrast); **final post-deploy 3-angle agent
+check (11 agents) = ALL CLEAR (0 confirmed).**
+
+**Follow-ups (optional, noted not done):** Driver "Complete ride" could be intentionally green (the
+`success-btn` class falls through to navy `.btn`); re-export the logo to harmonise its sky-blue with navy;
+the Dispatch sidebar doesn't auto-collapse on a phone (pre-existing; Dispatch is desktop-first).
+
+---
+
 ## 2026-06-20 — Session 13 — Route card redesign: stop autocomplete + live ETA + France-biased geocoding
 **Branch:** `session-13-route-eta-geocoding` (off `main`, not yet merged/deployed) · **Env:** local → Vercel.
 

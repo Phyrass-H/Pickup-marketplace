@@ -216,6 +216,33 @@ single-category model from the spine). Known follow-ups: bind the Driver's car t
 for fully-robust specific-car matching; geocode intermediate stops so ETA covers detours (today it's the
 direct pickup→dropoff route). [[d17]]
 
+### D24 — App-wide serious navy (#25344C) + Direction B two-pane new-mission form (2026-06-21)
+Founder call: the bright action blue (#2563EB) read too "consumer/Facebook" and the new-mission page felt
+narrow/cramped. **(1) Palette:** the action accent moves **app-wide** to a deep **navy #25344C** (hover
+#1B2738, soft #E9EDF4) — swapped at the **token layer** (the `--blue-*` raws that `--accent*` chains to) so
+every component follows with no per-component edits; `--ring` re-toned to navy so keyboard focus matches; the
+status **info** tone (Confirmed/Accepted) shifted to a desaturated **steel #1B5E8A** (mirrored in
+`lib/dispatch-status.ts` — the two MUST stay in sync) so a status pill never reads as a clickable navy
+button; the few hardcoded blues (`.badge.status`, `.notice.info`, the date-picker focus ring) were
+re-pointed to tokens. The **brand logo gradient is logo-only and unchanged**. Navy depth was picked from a
+4-option inline comparison (ink / navy / steel / slate-blue) → the **midpoint of ink and navy**. **(2)
+Layout:** `/dispatch/new` becomes a **two-pane** form — 4 section cards (Vehicle / Route / Schedule / Trip
+details) on the left + a **sticky live Summary rail** (mini-route, ETA, ceiling, live starting fare =
+`ceiling × (speedWin ? 0.7 : 0.5)`, SPEED WIN, actions) on the right, collapsing to one column <900px. It
+stays **one `<form>`** so the `createMission` contract is unchanged; the D22 draft/Review flow, the live ETA
+(`/api/eta`) and waypoints are preserved. `RouteStops` publishes a display snapshot up via `onSummaryChange`
+and accepts an `etaDefault` to seed the rail on draft-resume. Verified app-wide incl. the Driver app;
+deployed; a final 3-angle adversarial agent check returned ALL CLEAR. [[d19]] [[d20]] [[d22]]
+
+### D25 — Design loop = Claude-Code-authored inline HTML mockups (augments D19/D20) (2026-06-21)
+The founder found Claude Design (the export-zip round-trip of D19/D20) not yet smooth. New standing loop for
+screen redesigns: **Claude Code builds a self-contained HTML mockup from the real tokens + data and renders
+it inline** (the visualize widget); the founder reacts in plain language; we iterate the mockup (cheap to
+change) until locked, then implement it for real against the repo and deploy. Used end-to-end this session
+(two layout directions; cool vs warm palette; four navy depths) before any code was written. The Claude
+Design zip path stays available when the founder prefers to design there; the **inline-mockup loop is the
+default** for screens Claude Code can mock from existing code. [[d19]] [[d20]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
