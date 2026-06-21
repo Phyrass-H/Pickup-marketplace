@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Car, MapPin, CalendarClock, ClipboardList, Route } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
-import { RouteStops } from "@/components/route-stops";
+import { RouteStops, type RouteSummary } from "@/components/route-stops";
 import { ServiceClassFields } from "@/components/service-class-fields";
 import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
 import {
@@ -43,16 +44,18 @@ interface PreviewData {
   guest: string;
   flight: string;
   reference: string;
-  ceiling: number;
   distanceKm: number | null;
   roadKm: number | null;
   roadMin: number | null;
 }
 
-// Client form. Step 1 = fill in; "Review" snapshots the fields into a final card
-// PREVIEW (O11); from there you Post to the Pool or Save as draft (O15). The
-// editable fields stay mounted (hidden) in preview so the form still submits
-// everything. The SPEED WIN copy + auto-suggest reflect the 70%-start curve.
+// Client form (Direction B). The fields live in a two-pane layout: section cards
+// on the left, a sticky live Summary rail on the right (mini-route, ETA, ceiling,
+// live starting fare, SPEED WIN, actions). Everything is inside ONE <form> so the
+// createMission server action still gets a single FormData snapshot. "Review"
+// snapshots the editable fields into the preview card (O11); from there you Post
+// or Save as draft (O15). Editable cards stay mounted (hidden) in preview so they
+// still submit; the rail (ceiling / SPEED WIN / actions) stays visible throughout.
 export function MissionForm({
   error,
   prefillDate,
@@ -105,6 +108,19 @@ export function MissionForm({
     lng: w.lng ?? null,
   }));
 
+  // Live route snapshot for the Summary rail (mini-route + ETA). Seeded from the
+  // draft so a resumed draft shows its route/ETA immediately; RouteStops keeps it
+  // current via onSummaryChange.
+  const [routeSummary, setRouteSummary] = useState<RouteSummary>(() => ({
+    pickup: pickupDefault,
+    dropoff: dropoffDefault,
+    stopCount: stopsDefault.filter((s) => s.lat != null && s.lng != null).length,
+    eta:
+      draft?.distance_km != null && draft?.duration_min != null
+        ? { distanceKm: Number(draft.distance_km), durationMin: Number(draft.duration_min) }
+        : null,
+  }));
+
   function review() {
     const form = formRef.current;
     if (!form) return;
@@ -147,7 +163,6 @@ export function MissionForm({
       guest: String(fd.get("passenger_name") ?? "").trim(),
       flight: String(fd.get("flight_number") ?? "").trim(),
       reference: String(fd.get("comment") ?? "").trim(),
-      ceiling: ceilingN,
       distanceKm: tripDistanceKm(
         pickupLat,
         pickupLng,
@@ -181,11 +196,11 @@ export function MissionForm({
     return hours > 0 && hours <= 5;
   })();
 
+  const showFare = ceiling !== "" && Number.isFinite(ceilingNum) && ceilingNum > 0;
+
   return (
-    <form ref={formRef} action={createMission} className="card" onKeyDown={onKeyDown}>
-      {draft && (
-        <input type="hidden" name="mission_id" value={draft.id} />
-      )}
+    <form ref={formRef} action={createMission} onKeyDown={onKeyDown}>
+      {draft && <input type="hidden" name="mission_id" value={draft.id} />}
 
       {draft && mode === "edit" && (
         <div className="notice info">Editing a saved draft.</div>
@@ -212,260 +227,357 @@ export function MissionForm({
         </div>
       )}
       {error === "db" && (
-        <div className="notice error">
-          Something went wrong. Please try again.
-        </div>
+        <div className="notice error">Something went wrong. Please try again.</div>
       )}
 
-      {/* ---------- EDITABLE FIELDS (stay mounted in preview so they submit) ---------- */}
-      <div style={{ display: mode === "preview" ? "none" : "block" }}>
-        <ServiceClassFields
-          defaults={{
-            category: draft?.category,
-            body: draft?.required_body_type,
-            make: draft?.required_make,
-            model: draft?.required_model,
-          }}
-        />
-
-        <RouteStops
-          pickupDefault={pickupDefault}
-          dropoffDefault={dropoffDefault}
-          stopsDefault={stopsDefault}
-          pickupAtLocal={pickupAt}
-        />
-
-        <div className="field">
-          <span>Pickup date &amp; time</span>
-          <DateTimePicker value={pickupAt} onChange={setPickupAt} />
-        </div>
-        {pickupAt && (
-          <p className="muted small" style={{ marginTop: -2 }}>
-            {prettyParisLocal(pickupAt)} · Europe/Paris
-          </p>
-        )}
-
-        <div style={{ display: "flex", gap: 12 }}>
-          <label className="field" style={{ flex: 1 }}>
-            <span>Passengers</span>
-            <input
-              type="number"
-              name="pax_count"
-              min={0}
-              inputMode="numeric"
-              defaultValue={draft?.pax_count ?? ""}
-            />
-          </label>
-          <label className="field" style={{ flex: 1 }}>
-            <span>Luggage</span>
-            <input
-              type="number"
-              name="luggage_count"
-              min={0}
-              inputMode="numeric"
-              defaultValue={draft?.luggage_count ?? ""}
-            />
-          </label>
-        </div>
-
-        <label className="field">
-          <span>Guest / passenger name</span>
-          <input type="text" name="passenger_name" defaultValue={draft?.passenger_name ?? ""} />
-        </label>
-
-        <label className="field">
-          <span>Flight number (optional)</span>
-          <input
-            type="text"
-            name="flight_number"
-            placeholder="AF1234"
-            defaultValue={draft?.flight_number ?? ""}
-          />
-        </label>
-
-        <label className="field">
-          <span>Reference / notes (optional — shown on the schedule line)</span>
-          <textarea
-            name="comment"
-            rows={2}
-            defaultValue={draft?.comment ?? ""}
-            placeholder="e.g. Room 312 · or an event name like “Cannes Gala” · or instructions"
-            style={{
-              width: "100%",
-              padding: 12,
-              fontSize: 16,
-              border: "1px solid var(--border)",
-              borderRadius: 10,
-              fontFamily: "inherit",
-            }}
-          />
-        </label>
-
-        <div style={{ display: "flex", gap: 12 }}>
-          <label className="field" style={{ flex: 1 }}>
-            <span>Estimated base fare € (optional)</span>
-            <input
-              type="number"
-              name="base_fare"
-              min={0}
-              step="0.01"
-              inputMode="decimal"
-              value={baseFare}
-              onChange={(e) => setBaseFare(e.target.value)}
-            />
-          </label>
-          <label className="field" style={{ flex: 1 }}>
-            <span>Ceiling € (your maximum)</span>
-            <input
-              type="number"
-              name="ceiling"
-              required
-              min={0}
-              step="0.01"
-              inputMode="decimal"
-              value={ceiling}
-              onChange={(e) => setCeiling(e.target.value)}
-            />
-          </label>
-        </div>
-
-        {tooLow && (
-          <div className="notice warn">
-            Trips below the recommended fare are rarely accepted and may go
-            unfulfilled. You can still post it.
-          </div>
-        )}
-
-        <label className="check" style={{ marginBottom: 14 }}>
-          <input
-            type="checkbox"
-            name="speed_win"
-            checked={speedWin}
-            onChange={(e) => setSpeedWin(e.target.checked)}
-          />
-          SPEED WIN — urgent: start the fare high (70% of your ceiling) and climb
-          fast for near-instant pickup
-        </label>
-      </div>
-
-      {/* ---------- PREVIEW ---------- */}
-      {mode === "preview" && preview && (
-        <div>
-          <p className="muted small" style={{ marginTop: 0 }}>
-            Review before posting — this is how it enters the Pool.
-          </p>
-
-          <div className="card" style={{ background: "var(--surface-2, #f8fafc)" }}>
-            <div className="card-row">
-              <span className="fare">
-                {formatMoney(round2(preview.ceiling * (speedWin ? 0.7 : 0.5)))}
-              </span>
-              <span style={{ display: "flex", gap: 6 }}>
-                {speedWin && <span className="badge speed">SPEED WIN</span>}
-                <span className="badge">
-                  {serviceClassLabel(preview.category as VehicleCategory, preview.body as BodyType)}
+      <div className="mx-form-grid">
+        {/* ---------- LEFT: section cards (kept mounted, hidden in preview) ---------- */}
+        <div className="mx-left">
+          <div className="mx-sections" style={{ display: mode === "preview" ? "none" : undefined }}>
+            {/* Vehicle & class */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <Car />
                 </span>
-              </span>
-            </div>
-            <div className="muted small" style={{ marginTop: 4 }}>
-              starting fare · climbs up to {formatMoney(preview.ceiling)} (your ceiling)
-            </div>
-
-            <div className="muted small" style={{ marginTop: 8 }}>
-              {prettyParisLocal(preview.pickupAtLocal)}
-              {(() => {
-                const meta = formatTripMeta(preview.roadKm, preview.roadMin, preview.distanceKm);
-                return meta ? ` · ${meta}` : "";
-              })()}
-            </div>
-
-            <div className="route">
-              <div className="leg">
-                <span className="dot" />
-                <span>{preview.pickup}</span>
+                <span className="mx-card__title">Vehicle &amp; class</span>
               </div>
-              {preview.stops.map((s, i) => (
-                <div className="leg" key={i}>
-                  <span className="dot" style={{ background: "#98a2b3" }} />
-                  <span className="muted">{s}</span>
-                </div>
-              ))}
-              <div className="leg">
-                <span className="dot end" />
-                <span>{preview.dropoff || "—"}</span>
-              </div>
+              <ServiceClassFields
+                defaults={{
+                  category: draft?.category,
+                  body: draft?.required_body_type,
+                  make: draft?.required_make,
+                  model: draft?.required_model,
+                }}
+              />
             </div>
 
-            <dl className="kv" style={{ marginTop: 12 }}>
-              {preview.requiredCar && (
-                <>
-                  <dt>Specific car</dt>
-                  <dd>{preview.requiredCar}</dd>
-                </>
+            {/* Route */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <MapPin />
+                </span>
+                <span className="mx-card__title">Route</span>
+              </div>
+              <RouteStops
+                pickupDefault={pickupDefault}
+                dropoffDefault={dropoffDefault}
+                stopsDefault={stopsDefault}
+                pickupAtLocal={pickupAt}
+                onSummaryChange={setRouteSummary}
+              />
+            </div>
+
+            {/* Schedule */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <CalendarClock />
+                </span>
+                <span className="mx-card__title">Schedule</span>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <span>Pickup date &amp; time</span>
+                <DateTimePicker value={pickupAt} onChange={setPickupAt} />
+              </div>
+              {pickupAt && (
+                <p className="muted small" style={{ margin: "8px 0 0" }}>
+                  {prettyParisLocal(pickupAt)} · Europe/Paris
+                </p>
               )}
-              <dt>Guest</dt>
-              <dd>{preview.guest || "—"}</dd>
-              <dt>Pax / luggage</dt>
-              <dd>
-                {preview.pax || "—"} pax · {preview.luggage || "—"} bags
-              </dd>
-              {preview.flight && (
-                <>
-                  <dt>Flight</dt>
-                  <dd>{preview.flight}</dd>
-                </>
-              )}
-              {preview.reference && (
-                <>
-                  <dt>Reference</dt>
-                  <dd>{preview.reference}</dd>
-                </>
-              )}
-            </dl>
+            </div>
+
+            {/* Trip details */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <ClipboardList />
+                </span>
+                <span className="mx-card__title">Trip details</span>
+              </div>
+              <div style={{ display: "flex", gap: 12 }}>
+                <label className="field" style={{ flex: 1 }}>
+                  <span>Passengers</span>
+                  <input
+                    type="number"
+                    name="pax_count"
+                    min={0}
+                    inputMode="numeric"
+                    defaultValue={draft?.pax_count ?? ""}
+                  />
+                </label>
+                <label className="field" style={{ flex: 1 }}>
+                  <span>Luggage</span>
+                  <input
+                    type="number"
+                    name="luggage_count"
+                    min={0}
+                    inputMode="numeric"
+                    defaultValue={draft?.luggage_count ?? ""}
+                  />
+                </label>
+              </div>
+
+              <label className="field">
+                <span>Guest / passenger name</span>
+                <input type="text" name="passenger_name" defaultValue={draft?.passenger_name ?? ""} />
+              </label>
+
+              <label className="field">
+                <span>Flight number (optional)</span>
+                <input
+                  type="text"
+                  name="flight_number"
+                  placeholder="AF1234"
+                  defaultValue={draft?.flight_number ?? ""}
+                />
+              </label>
+
+              <label className="field">
+                <span>Reference / notes (optional — shown on the schedule line)</span>
+                <textarea
+                  name="comment"
+                  rows={2}
+                  defaultValue={draft?.comment ?? ""}
+                  placeholder="e.g. Room 312 · or an event name like “Cannes Gala” · or instructions"
+                  style={{
+                    width: "100%",
+                    padding: 12,
+                    fontSize: 16,
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    fontFamily: "inherit",
+                  }}
+                />
+              </label>
+
+              <label className="field" style={{ marginBottom: 0 }}>
+                <span>Estimated base fare € (optional)</span>
+                <input
+                  type="number"
+                  name="base_fare"
+                  min={0}
+                  step="0.01"
+                  inputMode="decimal"
+                  value={baseFare}
+                  onChange={(e) => setBaseFare(e.target.value)}
+                />
+              </label>
+            </div>
           </div>
 
-          {startsSoon && !speedWin && (
-            <div className="notice warn">
-              This pickup is in under 5 hours. Consider SPEED WIN so a Driver grabs
-              it fast.{" "}
-              <button
-                type="button"
-                className="dx-link"
-                style={{ fontWeight: 600 }}
-                onClick={() => setSpeedWin(true)}
-              >
-                Enable SPEED WIN
-              </button>
+          {/* PREVIEW card */}
+          {mode === "preview" && preview && (
+            <div>
+              <p className="muted small" style={{ marginTop: 0 }}>
+                Review before posting — this is how it enters the Pool.
+              </p>
+
+              <div className="card" style={{ background: "var(--surface-2, #f8fafc)" }}>
+                <div className="card-row">
+                  <span className="fare">
+                    {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+                  </span>
+                  <span style={{ display: "flex", gap: 6 }}>
+                    {speedWin && <span className="badge speed">SPEED WIN</span>}
+                    <span className="badge">
+                      {serviceClassLabel(preview.category as VehicleCategory, preview.body as BodyType)}
+                    </span>
+                  </span>
+                </div>
+                <div className="muted small" style={{ marginTop: 4 }}>
+                  starting fare · climbs up to {formatMoney(ceilingNum)} (your ceiling)
+                </div>
+
+                <div className="muted small" style={{ marginTop: 8 }}>
+                  {prettyParisLocal(preview.pickupAtLocal)}
+                  {(() => {
+                    const meta = formatTripMeta(preview.roadKm, preview.roadMin, preview.distanceKm);
+                    return meta ? ` · ${meta}` : "";
+                  })()}
+                </div>
+
+                <div className="route">
+                  <div className="leg">
+                    <span className="dot" />
+                    <span>{preview.pickup}</span>
+                  </div>
+                  {preview.stops.map((s, i) => (
+                    <div className="leg" key={i}>
+                      <span className="dot" style={{ background: "#98a2b3" }} />
+                      <span className="muted">{s}</span>
+                    </div>
+                  ))}
+                  <div className="leg">
+                    <span className="dot end" />
+                    <span>{preview.dropoff || "—"}</span>
+                  </div>
+                </div>
+
+                <dl className="kv" style={{ marginTop: 12 }}>
+                  {preview.requiredCar && (
+                    <>
+                      <dt>Specific car</dt>
+                      <dd>{preview.requiredCar}</dd>
+                    </>
+                  )}
+                  <dt>Guest</dt>
+                  <dd>{preview.guest || "—"}</dd>
+                  <dt>Pax / luggage</dt>
+                  <dd>
+                    {preview.pax || "—"} pax · {preview.luggage || "—"} bags
+                  </dd>
+                  {preview.flight && (
+                    <>
+                      <dt>Flight</dt>
+                      <dd>{preview.flight}</dd>
+                    </>
+                  )}
+                  {preview.reference && (
+                    <>
+                      <dt>Reference</dt>
+                      <dd>{preview.reference}</dd>
+                    </>
+                  )}
+                </dl>
+              </div>
+
+              {startsSoon && !speedWin && (
+                <div className="notice warn" style={{ marginTop: 14 }}>
+                  This pickup is in under 5 hours. Consider SPEED WIN so a Driver grabs
+                  it fast.{" "}
+                  <button
+                    type="button"
+                    className="dx-link"
+                    style={{ fontWeight: 600 }}
+                    onClick={() => setSpeedWin(true)}
+                  >
+                    Enable SPEED WIN
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
 
-      {clientError && <div className="notice error">{clientError}</div>}
+        {/* ---------- RIGHT: sticky live Summary rail ---------- */}
+        <aside className="mx-summary">
+          <div className="mx-summary__band">Mission summary</div>
+          <div className="mx-summary__body">
+            {routeSummary.pickup || routeSummary.dropoff ? (
+              <div className="route" style={{ marginTop: 0 }}>
+                <div className="leg">
+                  <span className="dot" />
+                  <span>{routeSummary.pickup?.label || "—"}</span>
+                </div>
+                {routeSummary.stopCount > 0 && (
+                  <div className="leg">
+                    <span className="dot" style={{ background: "#98a2b3" }} />
+                    <span className="muted">
+                      +{routeSummary.stopCount} stop{routeSummary.stopCount === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                )}
+                <div className="leg">
+                  <span className="dot end" />
+                  <span>{routeSummary.dropoff?.label || "—"}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="mx-summary__empty">
+                Pick a route to see the distance, time and starting fare.
+              </p>
+            )}
 
-      {/* ---------- ACTIONS ---------- */}
-      {mode === "edit" ? (
-        <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" className="btn" style={{ flex: 1 }} onClick={review}>
-            Review mission →
-          </button>
-          <button type="submit" name="intent" value="draft" className="btn secondary">
-            Save as draft
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button type="button" className="btn secondary" onClick={() => setMode("edit")}>
-            ← Edit
-          </button>
-          <button type="submit" name="intent" value="draft" className="btn secondary">
-            Save as draft
-          </button>
-          <button type="submit" name="intent" value="pooled" className="btn" style={{ flex: 1 }}>
-            {draft ? "Post draft to the Pool" : "Post to the Pool"}
-          </button>
-        </div>
-      )}
+            {routeSummary.eta && (
+              <div style={{ marginTop: 11 }}>
+                <span className="mx-eta">
+                  <Route size={15} aria-hidden />{" "}
+                  {formatTripMeta(routeSummary.eta.distanceKm, routeSummary.eta.durationMin, null)}
+                </span>
+              </div>
+            )}
+
+            <div className="mx-sumdiv" />
+
+            <label className="field" style={{ marginBottom: 0 }}>
+              <span>Ceiling € (your maximum)</span>
+              <input
+                type="number"
+                name="ceiling"
+                required
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                value={ceiling}
+                onChange={(e) => setCeiling(e.target.value)}
+              />
+            </label>
+            {tooLow && (
+              <div className="notice warn" style={{ margin: "10px 0 0" }}>
+                Trips below the recommended fare are rarely accepted and may go
+                unfulfilled. You can still post it.
+              </div>
+            )}
+
+            {showFare && (
+              <div style={{ marginTop: 14 }}>
+                <div className="mx-fare">
+                  {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+                </div>
+                <div className="mx-fare-sub">
+                  starting fare · climbs up to {formatMoney(ceilingNum)}
+                </div>
+              </div>
+            )}
+
+            <div className="mx-sumdiv" />
+            <label className="mx-speed">
+              <input
+                type="checkbox"
+                name="speed_win"
+                checked={speedWin}
+                onChange={(e) => setSpeedWin(e.target.checked)}
+              />
+              <span>
+                <strong>SPEED WIN</strong> — start high (70% of ceiling) and climb
+                fast for near-instant pickup
+              </span>
+            </label>
+
+            <div className="mx-sumdiv" />
+            {mode === "edit" ? (
+              <div className="mx-actions">
+                <button type="button" className="btn" onClick={review}>
+                  Review mission →
+                </button>
+                <button type="submit" name="intent" value="draft" className="btn secondary">
+                  Save as draft
+                </button>
+              </div>
+            ) : (
+              <div className="mx-actions">
+                <button type="submit" name="intent" value="pooled" className="btn">
+                  {draft ? "Post draft to the Pool" : "Post to the Pool"}
+                </button>
+                <button type="button" className="btn secondary" onClick={() => setMode("edit")}>
+                  ← Edit
+                </button>
+                <button type="submit" name="intent" value="draft" className="btn secondary">
+                  Save as draft
+                </button>
+              </div>
+            )}
+
+            {clientError && (
+              <div className="notice error" style={{ margin: "10px 0 0" }}>
+                {clientError}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
     </form>
   );
 }

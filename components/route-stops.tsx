@@ -29,16 +29,28 @@ interface Metrics {
   durationMin: number;
 }
 
+// Snapshot published upward so a parent (the new-mission Summary rail) can mirror
+// the route + live ETA without owning the inputs. RouteStops stays the source of
+// truth for the form fields; this is display-only.
+export interface RouteSummary {
+  pickup: Place | null;
+  dropoff: Place | null;
+  stopCount: number;
+  eta: Metrics | null;
+}
+
 export function RouteStops({
   pickupDefault,
   dropoffDefault,
   stopsDefault,
   pickupAtLocal,
+  onSummaryChange,
 }: {
   pickupDefault: Place | null;
   dropoffDefault: Place | null;
   stopsDefault: DefaultPlace[];
   pickupAtLocal?: string;
+  onSummaryChange?: (s: RouteSummary) => void;
 }) {
   const [pickup, setPickup] = useState<Place | null>(pickupDefault);
   const [dropoff, setDropoff] = useState<Place | null>(dropoffDefault);
@@ -127,12 +139,15 @@ export function RouteStops({
 
   const viaCount = pickedStops.length;
 
-  return (
-    <div className="field">
-      <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 8 }}>
-        Route
-      </span>
+  // Publish a display snapshot upward (for the live Summary rail). Effect, not
+  // render, so it never warns; onSummaryChange is expected to be a stable setter.
+  useEffect(() => {
+    onSummaryChange?.({ pickup, dropoff, stopCount: viaCount, eta });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup, dropoff, viaCount, eta]);
 
+  return (
+    <div className="field" style={{ marginBottom: 0 }}>
       <div className="route-block">
         <div className="route-rail">
           {/* Pickup */}

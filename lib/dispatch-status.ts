@@ -67,9 +67,12 @@ export function missionTone(
   }
 }
 
+// Mirrors --tone-* in app/globals.css — keep the two in sync. The "info"
+// (Confirmed/Accepted) tone is a desaturated steel, kept distinct from the navy
+// action accent so a status pill never reads as a clickable button.
 export const TONE_COLOR: Record<Tone, string> = {
   neutral: "#667085",
-  info: "#1d6fe0",
+  info: "#1b5e8a",
   success: "#157347",
   warn: "#b54708",
   danger: "#b42318",
@@ -77,7 +80,7 @@ export const TONE_COLOR: Record<Tone, string> = {
 
 export const TONE_BG: Record<Tone, string> = {
   neutral: "#eef2f7",
-  info: "#e7f0ff",
+  info: "#e3ebf2",
   success: "#e6f6ec",
   warn: "#fff6ed",
   danger: "#fef3f2",

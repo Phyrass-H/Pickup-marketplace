@@ -15,11 +15,13 @@
   --slate-700: #334155;
   --slate-900: #0f172a;
 
-  /* ===== Action blue ===== */
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
+  /* ===== Action navy (the primary accent — serious, not bright blue) =====
+     Names kept as --blue-* so the --accent aliases below need no change; the
+     values are now a deep navy. */
+  --blue-600: #25344c;
+  --blue-700: #1b2738;
+  --blue-50: #e9edf4;
+  --blue-100: #d6deea;
 
   /* ===== Raw semantic hues ===== */
   --green-600: #16a34a;
@@ -52,7 +54,7 @@
      Each has a saturated -fg (pill text + dot + row edge) and a -bg.
      These mirror lib/dispatch-status.ts TONE_COLOR / TONE_BG. */
   --tone-neutral-fg: #667085;  --tone-neutral-bg: #eef2f7;  /* Pooled / Completed */
-  --tone-info-fg:    #1d6fe0;  --tone-info-bg:    #e7f0ff;  /* Confirmed / Accepted */
+  --tone-info-fg:    #1b5e8a;  --tone-info-bg:    #e3ebf2;  /* Confirmed / Accepted (steel — distinct from navy CTAs) */
   --tone-success-fg: #157347;  --tone-success-bg: #e6f6ec;  /* En route → On board */
   --tone-warn-fg:    #b54708;  --tone-warn-bg:    #fff6ed;  /* Unfilled (near pickup) */
   --tone-danger-fg:  #b42318;  --tone-danger-bg:  #fef3f2;  /* Not confirmed / Expired */
@@ -107,7 +109,7 @@
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.08);
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06);
   --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.16);
-  --ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
+  --ring: 0 0 0 3px rgba(37, 51, 76, 0.35);
   --ring-danger: 0 0 0 3px rgba(220, 38, 38, 0.3);
   --scrim: rgba(16, 24, 40, 0.55);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -303,7 +305,7 @@ h2 {
   color: var(--danger);
 }
 .badge.status {
-  background: #e7f0ff;
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
@@ -439,9 +441,9 @@ textarea::placeholder {
   border: 1px solid #fecdca;
 }
 .notice.info {
-  background: #eff8ff;
+  background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid #b2ddff;
+  border: 1px solid var(--blue-100);
 }
 .notice.success {
   background: #edfcf2;
@@ -973,7 +975,7 @@ textarea::placeholder {
   transition: border-color .12s, box-shadow .12s;
 }
 .dtp-btn:hover { border-color: var(--border-strong); }
-.dtp-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dtp-btn:focus-visible { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 .dtp-btn.is-set { color: var(--text); font-weight: 500; }
 .dtp-btn svg { color: var(--accent); flex: none; }
 .dtp-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1099,3 +1101,61 @@ textarea::placeholder {
 .seg-btn:hover { color: var(--text); }
 .seg-btn.is-on { background: var(--surface); color: var(--accent); font-weight: 600;
   box-shadow: 0 1px 2px rgba(16,24,40,.08); }
+
+/* ===================================================================
+   New-mission redesign (Direction B): two-pane form + sticky Summary rail
+   (app/(dispatch)/dispatch/new/mission-form.tsx). Colours come from the
+   --accent (navy) tokens so the palette stays in one place.
+   =================================================================== */
+.mx-form-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start;
+}
+.mx-left { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.mx-sections { display: flex; flex-direction: column; gap: 16px; }
+
+/* section card header: monochrome slate icon chip + uppercase title */
+.mx-card__head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; padding-bottom: 13px; border-bottom: 1px solid var(--border);
+}
+.mx-card__ic {
+  width: 30px; height: 30px; border-radius: 8px; flex: none;
+  display: grid; place-items: center; background: var(--slate-100); color: var(--slate-600);
+}
+.mx-card__ic svg { width: 17px; height: 17px; }
+.mx-card__title {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+
+/* sticky Summary rail */
+.mx-summary {
+  position: sticky; top: 80px; /* clears the 57px sticky topbar + breathing */
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-md);
+}
+.mx-summary__band {
+  background: var(--accent); color: var(--text-on-accent);
+  padding: 13px 18px; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.mx-summary__body { padding: 16px 18px; }
+.mx-summary__empty { color: var(--text-faint); font-size: 13px; margin: 0; }
+.mx-sumdiv { height: 1px; background: var(--border); margin: 14px 0; }
+.mx-eta {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+  color: var(--accent); background: var(--accent-soft); padding: 6px 11px; border-radius: var(--radius-md);
+}
+.mx-eta svg { flex: none; }
+.mx-fare { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
+.mx-fare-sub { font-size: 12px; color: var(--text-muted); }
+.mx-speed { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.mx-speed input { margin-top: 2px; flex: none; }
+.mx-actions { display: flex; flex-direction: column; gap: 8px; }
+.mx-actions .btn { width: 100%; }
+
+/* Collapse to a single column: the rail un-sticks and stacks below the form. */
+@media (max-width: 900px) {
+  .mx-form-grid { grid-template-columns: 1fr; gap: 16px; }
+  .mx-summary { position: static; }
+}

@@ -29,8 +29,8 @@ export default async function NewMissionPage({
   }
 
   return (
-    <div className="dx-narrow">
-      <p className="muted" style={{ marginTop: 0, marginBottom: 14 }}>
+    <div>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 16, maxWidth: 620 }}>
         Review it before it goes live. Posts into the matching Driver Pool — you
         set the ceiling; PickUp prices up to that maximum.
       </p>
