@@ -1,10 +1,12 @@
-# PickUp — Design Brief (for Claude Design)
+# PickUp — Design Brief (brand + screens)
 
-> Paste this into a Claude Design project, and/or link the GitHub repo so Claude
-> Design reads the real components + this brief. It captures brand, constraints,
-> and every screen so its redesign maps cleanly back onto the codebase. When a
-> design is ready, use **Export → Send to local coding agent** to hand it back to
-> Claude Code (this repo) to build for real.
+> The **default design loop is now D25**: Claude Code authors a self-contained HTML
+> mockup from the real tokens + data, renders it inline, the founder reacts, we
+> iterate, then implement for real. This brief is the shared context for that.
+> It also still works for **Claude Design** — paste it into a project and/or link
+> the GitHub repo, then **Export → Send to local coding agent** to hand a design back.
+> Either way it captures brand, constraints, and every screen so a redesign maps
+> cleanly back onto the codebase.
 
 ## What PickUp is
 A **B2B VTC booking marketplace** — a French *centrale de réservation VTC*. It
@@ -24,13 +26,16 @@ not a design showcase**: functional and intuitive over decorative.
 - **Logo:** `public/logo.png` — a location pin with an infinity/“8” loop, in a soft
   **purple→blue gradient**. Tall aspect ratio (~924×1153, ratio 0.80). Keep the
   gradient on the mark only; the UI itself stays solid/flat.
-- **Direction (chosen by the founder):** clean, conventional, "trustworthy SaaS"
-  blue. Don't reinvent patterns people know. Easy on the eyes, functional.
-- **Palette (current — open to refinement):**
-  - Action blue `#2563EB` (hover `#1D4ED8`) — primary buttons, links, active states
+- **Direction (chosen by the founder, Session 14 / D24):** **serious, solid, confident** — a deep **navy**,
+  premium/trustworthy (B2B, not a bright consumer SaaS). Restrained, near-monochrome; lean on familiar
+  patterns. (Superseded the earlier "trustworthy SaaS blue" — the bright `#2563EB` read too consumer.)
+- **Palette (current — navy):**
+  - Action **navy `#25344C`** (hover `#1B2738`, soft tint `#E9EDF4`) — primary buttons, links, active states
   - Text / headings slate `#0F172A` · Muted `#64748B`
   - Page `#F8FAFC` · Surface `#FFFFFF` · Border `#E2E8F0`
-  - Success `#16A34A` · Warning `#D97706` · Danger `#DC2626`
+  - Success `#16A34A` · Warning `#D97706` · Danger `#DC2626` · Status "info"/Confirmed **steel `#1B5E8A`**
+  - Set at the **token layer** in `app/globals.css` (the `--blue-*` raws hold navy; `--accent*` chains to
+    them). Logo gradient (purple→sky-blue) is **logo-only** and unchanged.
 - **Type:** system sans stack today (`-apple-system, Segoe UI, Roboto, …`). A
   refined web font is welcome if it stays fast + professional. h1 ~22px, h2 ~17px.
 
@@ -50,9 +55,11 @@ not a design showcase**: functional and intuitive over decorative.
    blue=confirmed, amber=unfilled near pickup, red=accepted-not-confirmed near pickup,
    grey=pooled). Click a row → expands in place with full detail + Driver phone.
 2. **Calendar** (`/dispatch/calendar`) — month grid, trips as coloured dots/time/place.
-3. **New mission** (`/dispatch/new`) — booking form: category, addresses (Mapbox
-   autocomplete), stops, pickup time, pax/luggage, flight, room/event reference,
-   **ceiling**, SPEED WIN toggle, live soft-warning if ceiling < estimate.
+3. **New mission** (`/dispatch/new`) — **two-pane** (S14 / D24): left = section cards (Vehicle & class /
+   Route / Schedule / Trip details); right = a **sticky live Summary rail** (mini-route, live ETA, ceiling,
+   **live starting fare**, SPEED WIN, actions). Every Route field (incl. stops) is Mapbox autocomplete; a
+   live "27 km · 35 min" ETA routes through stops. Preview-before-post + save-as-draft. Collapses to one
+   column <900px.
 4. **Settings** (`/dispatch/settings`) — business name/field, **logo** (crop editor),
    Dispatcher contact, **documents** (Kbis upload, status pill), billing stub.
 5. **History** (`/dispatch/history`) — past trips, month-grouped.

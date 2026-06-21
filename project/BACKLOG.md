@@ -42,11 +42,10 @@
   👤 penalty/compensation amounts.
 - ⚙️ **Scheduled jobs** (Supabase cron / Vercel cron): Lock-in auto-confirm +
   T-180 reminder, expiry of unfilled missions, return-to-pool on no-confirm.
-- 🔨 **Maps/geocoding** (Google/Mapbox): autocomplete + lat/lng + stops ✅ (D17); **road distance +
-  travel time (ETA)** ✅ (Session 12 / D23 — Mapbox Directions at creation → `distance_km`/`duration_min`,
-  shown as "27 km · 40 min"). Still to do: **geocode intermediate stops** so the ETA covers detours
-  (today it's the direct pickup→dropoff route); feed ETA into a better recommended base fare; and use
-  `duration_min` to replace the crude ±90-min `accept_mission` slot-conflict buffer.
+- 🔨 **Maps/geocoding** (Mapbox): autocomplete + lat/lng ✅ (D17); **road ETA** ✅ (S12/D23); stops are now
+  **geocoded** and the ETA is **routed through them** ✅ (S13); **France-biased** suggestions (country
+  allowlist, pickup-proximity) ✅ (S13). Still to do: feed the ETA into a better **recommended base fare**
+  (manual estimate today); use `duration_min` to replace the crude ±90-min `accept_mission` slot-conflict buffer.
 - 🔨 Intelligent **flight tracking** API (paid) → auto-shift pickup on delay.
 - 🔨 Native **welcome banner** (branded greeting) for the Driver app.
 
@@ -130,9 +129,13 @@
   - ↳ **Supabase redirect URLs** — add `driver.*` + `dispatch.*` `/auth/callback` before real email.
 - 🔨 **PWA polish**: icons, install prompt, offline shell — **per-role manifest** so each subdomain
   installs as its own app (PickUp Driver / PickUp Dispatch).
-- 🔨 **Design/skin** pass (Claude Design handoff). ✅ **Dispatch shipped** (Session 10 / D20:
-  token system + Geist + Lucide + sidebar shell + flight/T-180 schedule + full calendar). ↳ **Driver
-  app next** — deliver as a pixel-perfect phone mockup (`.design-handoff/…/ui_kits/driver/`), then apply.
+- 🔨 **Design/skin** pass. ✅ **Dispatch** (S10 / D20: tokens + Geist + Lucide + sidebar + schedule +
+  calendar). ✅ **Route card** (S13: stop autocomplete + live ETA + "Add a stop" button + red stop marker).
+  ✅ **App-wide navy + new-mission two-pane** (S14 / D24: navy `#25344C` at the token layer; `/dispatch/new` =
+  section cards + sticky live Summary rail; status "info" → steel). The design loop is now **D25** (Claude
+  Code inline HTML mockups). ↳ **Driver app layout next** — design it (D25 mockup or a Claude Design phone
+  mockup), then apply. Navy polish (small): Driver "Complete ride" → green; re-export the logo to harmonise
+  its sky-blue with navy.
 - 🅥 Security audit / pen test (plan post-V1).
 
 ## H2. Engineering hardening (quality — before real production) ⚙️
