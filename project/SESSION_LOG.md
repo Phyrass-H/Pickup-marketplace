@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-06-22 — Session 16 — Service-class redesign: tier tiles + tidied specific-car
+**Branch:** `main` (committed `6c0a326`, **pushed + deployed**) · **Env:** local → Vercel. **Design loop:** D25.
+
+**Why:** founder feedback — the **"Service class (routes to the matching Pool)"** control in the Vehicle &
+class card was a native `<select>` sitting right above the modern segmented Body-type control, so it read as
+outdated. Also flagged a real dead control: **Eco + a body** showed a single-option dropdown ("Any eco Sedan
+(recommended)") because the catalog has **no Eco models**.
+
+**Design loop (D25):** Claude-Code inline HTML mockups from the real navy tokens → founder compared
+segmented-vs-tiles → chose the **richer tier tiles**; asked to keep the specific-car **a simple dropdown** (no
+opt-in/search) and approved **hiding it for Eco**. Iterated the mock to the final before any code.
+
+**What shipped (`components/service-class-fields.tsx` + additive CSS in `app/globals.css`):**
+- **Service class → three selectable tiles** (Eco / Business / First), each with a short example (Eco:
+  "Standard comfort"; Business: "Mercedes E, BMW 5, Audi A6"; First: "S-Class, 7 Series, Maybach"). Replaces
+  the native `<select>`; a **hidden `<input name="category">`** carries the tier so the submit contract is
+  unchanged. Selected = navy border + `--accent-soft` fill.
+- **Body type → full-width** segmented control (`.seg--full`; `.seg`/`.seg-btn` themselves untouched).
+- **Specific car → still a dropdown** for Business/First, but **hidden for Eco** (no catalog models) — a
+  one-line `.tier-empty` note replaces the dead single-option dropdown. Gate:
+  `showCarPicker = body && (carsFor(tier,body).length>0 || specific)`. Default helper vs the "fewer matches"
+  warning when a model is picked. Removed the now-redundant per-body `carRangeHint` line.
+- New additive CSS: `.tier-tiles`/`.tier-tile`(`.is-on`,`:focus-visible`), `.seg--full`, `.scf-label`,
+  `.tier-empty`. **No schema, no token change**, no other component touched.
+
+**Verified** — `tsc` + `next build` green (25 routes). Browser (real DB, Business dev-login): tiles render +
+select (old `<select name=category>` gone); clicking a tier updates the hidden `category`; full-width body seg;
+Business+Sedan → dropdown (40 opts) + default helper; picking Classe E → `required_make=Mercedes-Benz` /
+`required_model=Classe E` + "fewer matches" warning; **Eco → picker hidden + note**, make/model cleared;
+no console errors. All four form fields submit exactly as before.
+
+**Reviewed** — 12-agent adversarial workflow (4 dims → 2-skeptic verify); 8 raw → **1 confirmed (MED)**: the
+**selected** tile's example text (`--text-muted` on `--accent-soft`) was **4.05:1**, below WCAG AA. **Fixed** —
+recoloured `.tier-tile__eg` to `--slate-600` (~6.5:1 on the tinted tile, ~7.6:1 on white); re-verified the
+computed colour in-browser (`rgb(71,85,105)`).
+
+**Next:** deployed; founder review. Driver-app layout redesign + small navy polish items still open.
+
+---
+
 ## 2026-06-21 — Session 15 — New-mission Pricing card + read-only Summary rail
 **Branch:** `main` (working tree, **uncommitted** — awaiting founder review/deploy) · **Env:** local → Vercel.
 
