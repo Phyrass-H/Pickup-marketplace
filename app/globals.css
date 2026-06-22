@@ -1101,6 +1101,33 @@ textarea::placeholder {
 .seg-btn:hover { color: var(--text); }
 .seg-btn.is-on { background: var(--surface); color: var(--accent); font-weight: 600;
   box-shadow: 0 1px 2px rgba(16,24,40,.08); }
+/* full-width variant: segments share the row evenly (Vehicle & class body type) */
+.seg--full { display: flex; width: 100%; }
+.seg--full .seg-btn { flex: 1; text-align: center; padding: 9px 0; }
+
+/* ---- Service-class tier tiles + helpers (Vehicle & class card) ---- */
+.scf-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.scf-label--mt { margin-top: 16px; }
+.tier-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tier-tile {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px;
+  background: var(--surface); cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.tier-tile:hover { border-color: var(--border-strong); }
+.tier-tile.is-on { border: 1.5px solid var(--accent); background: var(--accent-soft);
+  padding: 10.5px 11.5px; }
+.tier-tile:focus-visible { outline: none; box-shadow: var(--ring); }
+.tier-tile__name { font-size: 14px; font-weight: 600; color: var(--text); }
+.tier-tile.is-on .tier-tile__name { color: var(--accent); }
+.tier-tile__eg { font-size: 11px; color: var(--slate-600); line-height: 1.35; }
+.tier-empty {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--text-muted); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+}
+.tier-empty svg { flex: none; color: var(--text-faint); }
 
 /* ===================================================================
    New-mission redesign (Direction B): two-pane form + sticky Summary rail

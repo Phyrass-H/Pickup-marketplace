@@ -1,24 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import { Info } from "lucide-react";
 import {
   SERVICE_TIERS,
   BODY_TYPES,
   TIER_LABEL,
   BODY_LABEL,
   carsFor,
-  carRangeHint,
   type ServiceTier,
   type BodyType,
 } from "@/lib/vehicle-catalog";
 
 type BodyChoice = "" | BodyType; // "" = any body (reaches sedan AND van drivers)
 
-// Dispatcher's service-class picker (O5): pick a TIER (Eco/Business/Luxury) + a
-// BODY (Any/Sedan/Van) — that routes the mission to the matching Pool — and, only
-// if the Guest insists, a SPECIFIC car from the catalog. "Any" body keeps the
-// mission visible to both sedan and van Drivers in the tier. Emits the form
-// fields category / required_body_type / required_make / required_model.
+// Short, illustrative examples per tier (presentational only — the Pool match is
+// driven by the Driver's auto-classified tier, not this copy).
+const TIER_EG: Record<ServiceTier, string> = {
+  eco: "Standard comfort",
+  business: "Mercedes E, BMW 5, Audi A6",
+  luxury: "S-Class, 7 Series, Maybach",
+};
+
+// Dispatcher's service-class picker (O5): pick a TIER (Eco/Business/First) as a
+// tile, a BODY (Any/Sedan/Van) as a segmented control — together they route the
+// mission to the matching Pool — and, only if the Guest insists, a SPECIFIC car
+// from the catalog (a dropdown; hidden for Eco, which has no catalog models).
+// Emits the form fields category / required_body_type / required_make / required_model.
 export function ServiceClassFields({
   defaults,
 }: {
@@ -47,7 +55,6 @@ export function ServiceClassFields({
   }
 
   const cars = body ? carsFor(tier, body) : [];
-  const hint = body ? carRangeHint(tier, body) : "";
   const [reqMake, reqModel] = specific ? specific.split("|") : ["", ""];
   // Keep a resumed specific car selectable even if it's not in the current slice.
   const specificMissing = !!specific && !cars.some((c) => `${c.make}|${c.model}` === specific);
@@ -57,21 +64,32 @@ export function ServiceClassFields({
     ...BODY_TYPES.map((b) => ({ value: b, label: BODY_LABEL[b] })),
   ];
 
+  // The specific-car picker only makes sense when a body is chosen AND the tier
+  // has catalog models for it (Eco has none) — or a resumed draft already names one.
+  const showCarPicker = !!body && (cars.length > 0 || !!specific);
+  const showEcoNote = !!body && !showCarPicker;
+
   return (
     <div className="field">
-      <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-        Service class (routes to the matching Pool)
-      </span>
-
-      <select name="category" value={tier} onChange={(e) => changeTier(e.target.value as ServiceTier)}>
+      <span className="scf-label">Service class (routes to the matching Pool)</span>
+      <div className="tier-tiles" role="group" aria-label="Service class">
         {SERVICE_TIERS.map((t) => (
-          <option key={t} value={t}>
-            {TIER_LABEL[t]}
-          </option>
+          <button
+            type="button"
+            key={t}
+            className={`tier-tile${tier === t ? " is-on" : ""}`}
+            aria-pressed={tier === t}
+            onClick={() => changeTier(t)}
+          >
+            <span className="tier-tile__name">{TIER_LABEL[t]}</span>
+            <span className="tier-tile__eg">{TIER_EG[t]}</span>
+          </button>
         ))}
-      </select>
+      </div>
+      <input type="hidden" name="category" value={tier} />
 
-      <div className="seg" style={{ marginTop: 8 }} role="group" aria-label="Body type">
+      <span className="scf-label scf-label--mt">Body type</span>
+      <div className="seg seg--full" role="group" aria-label="Body type">
         {bodyChoices.map((c) => (
           <button
             type="button"
@@ -86,22 +104,16 @@ export function ServiceClassFields({
       </div>
       <input type="hidden" name="required_body_type" value={body} />
 
-      {hint && (
-        <p className="muted small" style={{ marginTop: 6 }}>
-          e.g. {hint}
-        </p>
-      )}
-
-      {body && (
+      {showCarPicker && (
         <>
+          <span className="scf-label scf-label--mt">Specific car (optional)</span>
           <select
             value={specific}
             onChange={(e) => setSpecific(e.target.value)}
             aria-label="Specific car"
-            style={{ marginTop: 8 }}
           >
             <option value="">
-              Any {TIER_LABEL[tier]} {BODY_LABEL[body].toLowerCase()} (recommended)
+              Any {TIER_LABEL[tier]} {BODY_LABEL[body as BodyType].toLowerCase()} (recommended)
             </option>
             {specificMissing && (
               <option value={specific}>
@@ -114,11 +126,21 @@ export function ServiceClassFields({
               </option>
             ))}
           </select>
-          {specific && (
-            <p className="muted small" style={{ marginTop: 6 }}>
-              Only Drivers with this exact car will see the mission — expect fewer matches.
-            </p>
-          )}
+          <p className="muted small" style={{ marginTop: 6 }}>
+            {specific
+              ? "Only Drivers with this exact car will see the mission — expect fewer matches."
+              : "Pick an exact model only if the Guest insists — it narrows the Pool."}
+          </p>
+        </>
+      )}
+
+      {showEcoNote && (
+        <>
+          <span className="scf-label scf-label--mt">Specific car</span>
+          <div className="tier-empty">
+            <Info size={14} aria-hidden />
+            {TIER_LABEL[tier]} matches any standard car — no specific models to choose.
+          </div>
         </>
       )}
 
