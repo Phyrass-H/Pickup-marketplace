@@ -209,3 +209,24 @@ full ML dynamic pricing · Amadeus GDS.
   Pool grows (noted in D17).
 - **O16/O18** settings page + mission-page redesign — the Driver design pass (BACKLOG H) is where the visual
   rework lands; this session improved structure (preview/draft/help-legal) but not the full skin.
+
+## L. Dispatch mission-form — guidance & smart UX (founder idea dump, 2026-06-23) 🔨
+> Theme: the mission page must be a **guided** experience. Most Businesses (hotel staff) don't know the VTC
+> profession, so the form should teach the why/how inline and stop bad missions before they post. These are
+> features/polish — buildable now (no third-party APIs). The strategic / V2 ideas from the same dump live in
+> `IDEAS.md` (§ "Founder idea dump — 2026-06-23").
+- 🔨 **Input-driven guidance messages** — small contextual hints triggered by what the Dispatcher enters, e.g.
+  luggage count high → "Consider a Van"; nudges on long-distance / late-night. Calm, non-blocking (same style
+  as the existing too-low-fare warning).
+- 🔨 **Per-section "why/how" microcopy** — a short helper line on each mission-form section so a non-expert
+  Dispatcher knows what good input looks like (the "very guided page" the founder keeps asking for).
+- 🔨 **Smart "most-used" defaults** — pre-select the Dispatcher's *most frequently used* tier + body, not just
+  the last one. A one-off different choice must NOT move the default; only a repeated pattern shifts it.
+  (Per-dispatcher frequency from their own mission history — derivable on read, no schema change.)
+- 🔨 **Saved base addresses (favourites)** — let a Business store frequent pickup/drop-off points (e.g. its own
+  hotel) and pick them in one tap instead of retyping. Additive: a per-business saved-places list.
+- 🔨 **Multiple passenger names** — allow more than one Guest name + surname on a mission. (Additive field.)
+- 🔨 **Dress-code option** — specify driver attire with a few presets keyed to tier (e.g. First → suit/tie;
+  Business → smart; Eco → neat). Founder defines the option set. (Additive field.)
+- ↳ Saved places / multiple passengers / dress code each need a small **additive** migration (founder-approved,
+  → `docs/migrations/`); smart-defaults and guidance copy need none. All in-phase (not third-party APIs).
