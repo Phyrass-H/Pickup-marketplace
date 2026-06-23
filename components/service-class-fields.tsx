@@ -108,6 +108,7 @@ export function ServiceClassFields({
         <>
           <span className="scf-label scf-label--mt">Specific car (optional)</span>
           <select
+            className="car-select"
             value={specific}
             onChange={(e) => setSpecific(e.target.value)}
             aria-label="Specific car"
