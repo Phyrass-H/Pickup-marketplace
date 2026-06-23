@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-06-24 — Session 17 — Named passengers (first + surname, capacity-capped) + idea-dump filed
+**Branch:** `main` (committed + deployed) · **Env:** local → Vercel. **Migration:** founder-applied
+`docs/migrations/2026-06-23_named_passengers.sql` (additive `mission.passenger_names jsonb`).
+
+**Why:** founder ask — let the Dispatcher name **multiple Guests** (First name + Surname) on a mission, **capped
+by the vehicle** (Sedan 4 / Van 7). Designed via the D25 preview loop (mockups → founder chose: rows = headcount,
+structured storage, Sedan 4 / Van 7, prominent Add button).
+
+**What shipped:**
+- **`components/passenger-list.tsx`** (new): rows of `{first,last}`, "Add passenger", **capped by Body type**
+  (`seatCap`: Sedan 4 / Van 7 / Any 7, nudge past 4). Rows = headcount; names optional; remove disabled at 1,
+  add disabled at cap; emits a hidden `passenger_names` JSON field. **`lib/passengers.ts`** (new): shared
+  `Passenger` type, `seatCap`, `parsePassengers`, `primaryPassengerName`, `splitFullName` (DRY across the
+  component, the preview and the server action).
+- **Cross-card cap sync:** `ServiceClassFields` gained an `onBodyChange` callback; `MissionForm` lifts the body
+  value and passes it to `PassengerList`, so the cap reacts to the Vehicle & class selection.
+- **Form rewire** (`mission-form.tsx`): replaced the "Passengers" number input + the single "Guest name" text
+  input with `<PassengerList>`; `review()` derives guest + pax from the named list. **Action** (`actions.ts`):
+  writes `passenger_names` (jsonb) + the denormalised `passenger_name` (first NAMED Guest) + `pax_count`
+  (= rows). **Types:** `mission.passenger_names: Json|null`.
+- **Migration:** additive `passenger_names jsonb`, **applied by the founder** in the Supabase SQL editor —
+  schema rule #4: I can't run DDL with the app keys (PostgREST does rows, not table structure), only the founder
+  via the dashboard.
+
+**Verified** — `tsc` + `next build` green. Browser (real DB): add/remove rows; **cap reacts to Body** (Sedan→4,
+Van→7) cross-card; **save-as-draft writes `passenger_names`** → **resume reads the names back** (Jean Dupont +
+Marie Martin, tier/body/cap restored); preview shows "Jean Dupont · 2 pax"; **posted live → schedule shows the
+Guest**; no console errors. (Dev preview got flaky mid-session from a build/dev `.next` clash — fixed by
+`rm -rf .next` + clean restart; the ChunkLoadError was env, not code.)
+
+**Reviewed** — 19-agent adversarial workflow (4 dims → 2-skeptic verify); 15 raw → **5 confirmed, all fixed:**
+(MED) legacy/pre-migration drafts carried their count only in the old number field → resume now **pads rows up to
+`pax_count`** so the count survives a resume+save; (MED) an untouched form stored a junk `[{"",""}]` blob → now
+stores **null** when no Guest is named (count preserved in `pax_count`); (LOW) the cap warning was mounted fresh
+so screen readers missed it → **always-mounted `role=status` live region**; (LOW) `.pl-note` text failed WCAG AA
+at 12px → darkened to `#854f0b` (~6.5:1). `tsc`+build green after; live-region fix confirmed in-browser.
+Decision kept (founder's model): rows = headcount, so an untouched mission reads "1 pax" by design.
+
+**Also filed earlier this span (committed `0f346ee`):** founder idea-dump → **BACKLOG § L** (guided-form polish:
+input-driven hints, why/how microcopy, smart most-used defaults, saved base addresses, multiple passengers ✅
+this session, dress code) + **IDEAS "Founder idea dump — 2026-06-23"** (V2/strategic: Bus tier, First/VIP van,
+cargo vehicle, driver specialisation, pricing engine, driver-vetting toggle, anti-disintermediation, overtime,
+At-Disposal UX). Also: **specific-car dropdown** restyled (`appearance:none` + custom chevron, S16 follow-up,
+committed `a7618a1`).
+
+**Next:** deployed. The **BACKLOG § L** guided-form polish items are the obvious follow-on (founder priority:
+features/polish before APIs/integrations).
+
+---
+
 ## 2026-06-22 — Session 16 — Service-class redesign: tier tiles + tidied specific-car
 **Branch:** `main` (committed `6c0a326`, **pushed + deployed**) · **Env:** local → Vercel. **Design loop:** D25.
 

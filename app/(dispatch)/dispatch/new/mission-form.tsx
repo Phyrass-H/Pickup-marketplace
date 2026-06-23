@@ -6,7 +6,15 @@ import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
 import { ServiceClassFields } from "@/components/service-class-fields";
+import { PassengerList } from "@/components/passenger-list";
 import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
+import {
+  parsePassengers,
+  primaryPassengerName,
+  splitFullName,
+  VAN_SEATS,
+  type Passenger,
+} from "@/lib/passengers";
 import {
   parisLocalToUtc,
   prettyParisLocal,
@@ -73,6 +81,38 @@ export function MissionForm({
   const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
   const [baseFare, setBaseFare] = useState(draft?.base_fare != null ? String(draft.base_fare) : "");
   const [speedWin, setSpeedWin] = useState(draft?.speed_win ?? false);
+
+  // Body type is chosen in the Vehicle & class card, but the passenger cap lives
+  // in the Trip-details PassengerList — lift it so the cap reacts to it.
+  const initBody =
+    draft?.required_body_type === "van"
+      ? "van"
+      : draft?.required_body_type === "sedan"
+        ? "sedan"
+        : "";
+  const [body, setBody] = useState<string>(initBody);
+
+  // Seed passenger rows: a draft's structured passenger_names, else best-effort
+  // from a legacy single passenger_name, else one blank row (the PassengerList default).
+  const draftPassengers = parsePassengers(draft?.passenger_names);
+  const seedBase =
+    draftPassengers.length > 0
+      ? draftPassengers
+      : draft?.passenger_name
+        ? [splitFullName(draft.passenger_name)]
+        : [];
+  // Preserve the stored headcount on resume: a draft (especially one predating
+  // passenger_names) can carry pax_count > the named rows. Pad with blank rows up
+  // to pax_count so resuming + re-saving never shrinks the count. Bounded to the
+  // largest vehicle so a stray value can't spawn hundreds of rows.
+  const seedTarget = Math.min(
+    Math.max(seedBase.length, Number(draft?.pax_count) || 0),
+    VAN_SEATS,
+  );
+  const seededPassengers: Passenger[] | undefined =
+    seedTarget > 0
+      ? Array.from({ length: seedTarget }, (_, i) => seedBase[i] ?? { first: "", last: "" })
+      : undefined;
 
   // Calendar prefill (?date=) → that day at 09:00; a resumed draft wins over it.
   const calendarValue =
@@ -155,6 +195,7 @@ export function MissionForm({
     const dropLng = Number(fd.get("dropoff_lng"));
     const rMake = String(fd.get("required_make") ?? "").trim();
     const rModel = String(fd.get("required_model") ?? "").trim();
+    const passengers = parsePassengers(fd.get("passenger_names"));
     setPreview({
       category,
       body: String(fd.get("required_body_type") ?? ""),
@@ -163,9 +204,9 @@ export function MissionForm({
       dropoff: String(fd.get("dropoff_address") ?? "").trim(),
       stops: parseWaypointsField(fd.get("waypoints")).map((w) => w.address),
       pickupAtLocal: at,
-      pax: String(fd.get("pax_count") ?? ""),
+      pax: passengers.length ? String(passengers.length) : "",
       luggage: String(fd.get("luggage_count") ?? ""),
-      guest: String(fd.get("passenger_name") ?? "").trim(),
+      guest: primaryPassengerName(passengers),
       flight: String(fd.get("flight_number") ?? "").trim(),
       reference: String(fd.get("comment") ?? "").trim(),
       distanceKm: tripDistanceKm(
@@ -254,6 +295,7 @@ export function MissionForm({
                   make: draft?.required_make,
                   model: draft?.required_model,
                 }}
+                onBodyChange={setBody}
               />
             </div>
 
@@ -302,32 +344,17 @@ export function MissionForm({
                 </span>
                 <h3 className="mx-card__title">Trip details</h3>
               </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <label className="field" style={{ flex: 1 }}>
-                  <span>Passengers</span>
-                  <input
-                    type="number"
-                    name="pax_count"
-                    min={0}
-                    inputMode="numeric"
-                    defaultValue={draft?.pax_count ?? ""}
-                  />
-                </label>
-                <label className="field" style={{ flex: 1 }}>
-                  <span>Luggage</span>
-                  <input
-                    type="number"
-                    name="luggage_count"
-                    min={0}
-                    inputMode="numeric"
-                    defaultValue={draft?.luggage_count ?? ""}
-                  />
-                </label>
-              </div>
+              <PassengerList body={body} defaultPassengers={seededPassengers} />
 
-              <label className="field">
-                <span>Guest / passenger name</span>
-                <input type="text" name="passenger_name" defaultValue={draft?.passenger_name ?? ""} />
+              <label className="field" style={{ marginTop: 16 }}>
+                <span>Luggage</span>
+                <input
+                  type="number"
+                  name="luggage_count"
+                  min={0}
+                  inputMode="numeric"
+                  defaultValue={draft?.luggage_count ?? ""}
+                />
               </label>
 
               <label className="field">

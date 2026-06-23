@@ -229,6 +229,7 @@ export interface Database {
           flight_number: string | null;
           flight_eta: string | null;
           passenger_name: string | null;
+          passenger_names: Json | null;
           pax_count: number | null;
           luggage_count: number | null;
           comment: string | null;
@@ -270,6 +271,7 @@ export interface Database {
           flight_number?: string | null;
           flight_eta?: string | null;
           passenger_name?: string | null;
+          passenger_names?: Json | null;
           pax_count?: number | null;
           luggage_count?: number | null;
           comment?: string | null;

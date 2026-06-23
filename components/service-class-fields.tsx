@@ -29,8 +29,10 @@ const TIER_EG: Record<ServiceTier, string> = {
 // Emits the form fields category / required_body_type / required_make / required_model.
 export function ServiceClassFields({
   defaults,
+  onBodyChange,
 }: {
   defaults?: { category?: string | null; body?: string | null; make?: string | null; model?: string | null };
+  onBodyChange?: (body: BodyChoice) => void;
 }) {
   const initTier: ServiceTier = (SERVICE_TIERS as string[]).includes(defaults?.category ?? "")
     ? (defaults!.category as ServiceTier)
@@ -52,6 +54,7 @@ export function ServiceClassFields({
   function changeBody(b: BodyChoice) {
     setBody(b);
     setSpecific("");
+    onBodyChange?.(b);
   }
 
   const cars = body ? carsFor(tier, body) : [];

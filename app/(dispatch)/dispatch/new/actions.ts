@@ -8,6 +8,7 @@ import { isValidLatLng } from "@/lib/geo";
 import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
 import { parseWaypointsField } from "@/lib/waypoints";
+import { parsePassengers, primaryPassengerName } from "@/lib/passengers";
 import type { VehicleCategory, BodyType, MissionStatus } from "@/lib/database.types";
 
 // Tiers offered post-O5 ('van' is a legacy enum value, no longer a tier).
@@ -68,10 +69,14 @@ export async function createMission(formData: FormData) {
   const baseFare = num(formData.get("base_fare"));
   const speedWin = formData.get("speed_win") === "on";
 
-  const passengerName = String(formData.get("passenger_name") ?? "").trim();
+  // Named Guests (first + surname). The list IS the headcount (rows = pax_count);
+  // passenger_name keeps the first named Guest as a denormalised display string.
+  const passengers = parsePassengers(formData.get("passenger_names"));
+  const named = passengers.filter((p) => p.first || p.last);
+  const passengerName = primaryPassengerName(passengers);
+  const paxCount = passengers.length > 0 ? passengers.length : null;
   const flightNumber = String(formData.get("flight_number") ?? "").trim();
   const comment = String(formData.get("comment") ?? "").trim();
-  const paxCount = num(formData.get("pax_count"));
   const luggageCount = num(formData.get("luggage_count"));
 
   // Service class: category is the TIER; body + an optional specific car narrow
@@ -153,6 +158,10 @@ export async function createMission(formData: FormData) {
     waypoints: waypoints.length > 0 ? waypoints : null,
     pickup_at: pickupAt!.toISOString(),
     passenger_name: passengerName || null,
+    // Store the rows only when at least one is named — avoids persisting a junk
+    // [{"",""}] blob for a mission whose Guests weren't named. The headcount is
+    // preserved separately in pax_count, so the count survives even when null here.
+    passenger_names: named.length > 0 ? passengers : null,
     pax_count: paxCount,
     luggage_count: luggageCount,
     flight_number: flightNumber || null,

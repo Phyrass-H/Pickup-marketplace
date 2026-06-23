@@ -1128,6 +1128,40 @@ textarea::placeholder {
   border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
 }
 .tier-empty svg { flex: none; color: var(--text-faint); }
+
+/* ---- Passenger list (named Guests, capacity-capped) ---- */
+.pl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pl-cap {
+  flex: none; font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border: 1px solid var(--blue-100);
+  padding: 3px 10px; border-radius: 999px;
+}
+.pl-rows { display: flex; flex-direction: column; gap: 10px; }
+.pl-row { display: flex; align-items: center; gap: 10px; }
+.pl-n { flex: none; min-width: 56px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+.pl-cols { display: flex; gap: 10px; flex: 1; min-width: 0; }
+.pl-cols input { flex: 1; min-width: 0; }
+.pl-rm {
+  flex: none; width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-muted); display: grid; place-items: center; cursor: pointer;
+}
+.pl-rm:hover { border-color: var(--border-strong); color: var(--text); }
+.pl-rm-space { flex: none; width: 40px; }
+.pl-add {
+  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+  padding: 11px 16px; border-radius: 10px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--text-on-accent); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.pl-add:hover { background: var(--accent-hover); }
+.pl-add:disabled {
+  background: var(--surface); color: var(--text-muted);
+  border: 1px dashed var(--border-strong); cursor: not-allowed;
+}
+.pl-note {
+  display: flex; align-items: center; gap: 7px; font-size: 12px; color: #854f0b;
+  background: var(--warn-bg); border: 1px solid #fddcab; border-radius: 8px; padding: 8px 11px; margin-top: 10px;
+}
+.pl-note svg { flex: none; }
 /* Specific-car dropdown: drop the OS-native chrome for a consistent custom chevron
    (a bare native <select> renders thin/old-school on desktop, fine on mobile). */
 .car-select {
