@@ -11,7 +11,9 @@ import {
 } from "@/lib/format";
 import type { MissionStatus } from "@/lib/database.types";
 import { isExecutable } from "@/lib/mission-flow";
+import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
+import { BoardFileLink } from "@/components/board-file-link";
 import { StatusControl } from "./status-control";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +106,16 @@ export default async function RidesPage() {
 
       {missions?.map((m) => {
         const c = contacts.get(m.id);
+        const languages = parseLanguages(m.required_languages);
+        const dressLabel = dressCodeLabel(m.dress_code);
+        const flagLabels = activeFlagLabels(m.driver_flags);
+        const hasService =
+          languages.length > 0 ||
+          !!dressLabel ||
+          flagLabels.length > 0 ||
+          !!m.board_name ||
+          !!m.board_file_path ||
+          !!m.driver_message;
         return (
           <div className="card" key={m.id}>
             <div className="card-row">
@@ -152,6 +164,50 @@ export default async function RidesPage() {
                 )}
               </div>
             </div>
+
+            {/* Driver & service requirements + revealed board / message (S19) */}
+            {hasService && (
+              <dl className="kv" style={{ marginTop: 12 }}>
+                {languages.length > 0 && (
+                  <>
+                    <dt>Languages</dt>
+                    <dd>{languages.join(", ")}</dd>
+                  </>
+                )}
+                {dressLabel && (
+                  <>
+                    <dt>Dress code</dt>
+                    <dd>{dressLabel}</dd>
+                  </>
+                )}
+                {flagLabels.length > 0 && (
+                  <>
+                    <dt>Requests</dt>
+                    <dd>{flagLabels.join(" · ")}</dd>
+                  </>
+                )}
+                {(m.board_name || m.board_file_path) && (
+                  <>
+                    <dt>Name board</dt>
+                    <dd>
+                      {m.board_name || "—"}
+                      {m.board_file_path && (
+                        <>
+                          {" · "}
+                          <BoardFileLink missionId={m.id} />
+                        </>
+                      )}
+                    </dd>
+                  </>
+                )}
+                {m.driver_message && (
+                  <>
+                    <dt>Message</dt>
+                    <dd>{m.driver_message}</dd>
+                  </>
+                )}
+              </dl>
+            )}
 
             {/* Trip execution: progress + the next status button */}
             {(isExecutable(m.status) || m.status === "completed") && (

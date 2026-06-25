@@ -5,6 +5,62 @@
 
 ---
 
+## 2026-06-25 — Session 19 — New "Driver & service" card on the mission form (language / dress code / requests / board / message)
+**Branch:** `main` (working tree — **built + client-verified, NOT yet committed/deployed**; **blocked on the founder
+running one additive migration**) · **Env:** local → Vercel.
+
+**Why:** founder ask (dump 2026-06-25, BACKLOG § M item 2) — a dedicated Driver section on `/dispatch/new`. Designed
+via the D25 preview loop first (6 mockup iterations, founder-approved), then built to match.
+
+**Scope shipped (all KEEP, no third-party APIs beyond Supabase Storage which was already in-stack):**
+- **New card `Driver & service`** between Trip details and Pricing. `components/driver-service-fields.tsx` (client).
+  - **Languages** — fixed curated set (Français/English/Italiano/Español/Deutsch/العربية) multi-select chips. Display
+    + preference only; **NOT a hard Pool filter** (would shrink the Pool — deliberate, flagged). Matched against the
+    Driver's existing `driver.languages`. No proficiency "level" (Drivers don't store one — founder dropped it).
+  - **Dress code** — 4-rung scale (`driver_choice`→`smart_casual`→`business_formal`→`suit_tie`). **Anti-suit default:**
+    keyed to the service tier (eco→Driver's choice, business→Smart casual, First→Business formal) and **never** lands
+    on Suit & tie. The default **tracks the tier** until the Dispatcher manually picks one (a `touchedRef`); a manual
+    pick then sticks for that mission. (Cross-mission *learned* default after N repeats = deferred, see below.) Suit &
+    tie carries a neutral "Specific event or VIP protocol" note w/ a Sparkles icon.
+  - **Requests** — jsonb flags: meet_greet, **greeter (wait at the car)**, luggage_help, child_seat, quiet_ride, pets.
+    (Dropped "card only" — PickUp handles payment; dropped PRM — it's a vehicle category, parked to IDEAS for the Bus
+    expansion.) Meet & greet reveals a **name board**: `board_name` text **or** an attached PDF/JPG/PNG.
+  - **Message to the Driver** — private free-text, revealed only post-accept.
+- **DB (additive, founder runs):** `docs/migrations/2026-06-25_mission_driver_section.sql` adds `required_languages
+  text[]`, `dress_code text`, `driver_flags jsonb`, `board_name text`, `board_file_path text`, `driver_message text`.
+  Hand-mirrored into `lib/database.types.ts` (D3).
+- **Board file** → reuses the existing private `documents` Storage bucket (`lib/supabase/storage.ts`). Uploaded inside
+  `createMission` with a **random storage path** (no insert-return-id needed) and a **conditional-spread** write
+  (mirrors the `eta` pattern) so re-saving a draft never wipes an existing board. Failed upload is non-fatal. A
+  dismiss/meet-greet-off writes `board_file_path: null` via `board_file_clear`. On-demand signed URL via
+  `lib/mission-board-actions.ts` (`getMissionBoardUrl`, authz: Dispatcher-of-business OR assigned Driver) +
+  `components/board-file-link.tsx` (so lists never eagerly mint URLs).
+- **Wiring:** `actions.ts` reads+writes all 6 fields (both draft/pooled, insert/update). `mission-form.tsx` lifts the
+  service tier (new `onTierChange` on `ServiceClassFields`), renders the card, and adds the fields to the Review
+  preview. Trip-details Reference placeholder trimmed ("or instructions" removed — instructions now have their own box).
+- **Display (select('*') flows columns through automatically):** Dispatch `trip-row.tsx` shows everything (owner).
+  Driver `missions/[id]` shows **languages/dress/requests pre-accept** (self-select); `rides` reveals **board + private
+  message post-accept** (gated by `MINE_STATUSES`). Pool `mission-card.tsx` shows compact requirement tags.
+- **CSS:** new `.ds-*` + `.mc-tag` classes in `globals.css`, built from the real navy tokens / tier-tile + chip idiom.
+
+**Verification:** `tsc` + ESLint clean. **Adversarial review** (4 parallel skeptics: server-action data-flow, board-URL
+security, client-form correctness, display/reveal-gating) — auth **sound** (no IDOR / cross-business / pooled-leak,
+fail-closed), schema/types/writes an exact 3-way match, parsers throw-proof, degrades cleanly pre-migration. One MEDIUM
+found + **fixed**: the "dismiss existing board" X was cosmetic → now actually clears via `board_file_clear`. **Browser-
+verified (client-side, pre-migration):** card matches the approved mockup, no console errors; tier→dress default tracks
+(Business→Smart casual, First→Business formal, Eco→Driver's choice); a manual Suit & tie pick **sticks** through a tier
+change; meet & greet reveals the board+file; chips serialize to the right hidden fields.
+
+**BLOCKED ON FOUNDER:** run the one additive migration in the Supabase SQL editor (the `alter table public.mission
+add column if not exists …` block / the migration file). **Do NOT deploy before it's applied** — the live `createMission`
+writes those columns, so posting would break until they exist. After it's applied: deploy + full end-to-end verify
+(post a mission with the new fields → see it on Dispatch + Driver).
+
+**Deferred / flagged (no dirty routes — surfaced):** the **learned** dress-code default (adopt a Business's repeated
+override as their default after ~3 times) — needs history aggregation, invisible polish; **language as a hard Pool
+filter** (kept display-only on purpose); **orphan cleanup** of replaced board files in Storage (minor leak); client MIME
+is trusted (bucket `allowedMimeTypes` is the backstop). PRM → IDEAS (Bus expansion).
+
 ## 2026-06-25 — Session 18 — Fix: "Review" silently posted the mission (React node-reuse) + irreversible-post guardrails
 **Branch:** `main` (working tree — **not yet committed/deployed**, awaiting founder review) · **Env:** local → Vercel.
 

@@ -111,3 +111,9 @@
 ### At-Disposal (mise à disposition) form UX — build with O12 (V2)
 - 🅥 When **At-Disposal** is selected, the date/time picker should switch to a **from → to + hours/day** model
   instead of a single pickup instant. (O12 / hourly is confirmed **V2** — build this alongside it.)
+
+### PRM / accessible transport — bundle with the Bus / vehicle-taxonomy expansion (later)
+- 🅥 **PRM (wheelchair-accessible)** is a **vehicle category**, not a per-mission Driver flag — it needs an
+  accessible vehicle + a Driver equipped/trained for it, so it belongs in the taxonomy, not the Driver card.
+  Deferred out of the mission-form Driver section (2026-06-25, founder). Build it together with the **Bus
+  tier / First-van / cargo-vehicle** expansion (see the vehicle-taxonomy V2 + Exception-tier notes).

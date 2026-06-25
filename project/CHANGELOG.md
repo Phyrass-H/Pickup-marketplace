@@ -6,6 +6,18 @@
 ---
 
 ## 25 June 2026
+- **New "Driver & service" section on the mission form.** When posting a trip you can now tell the Driver:
+  - **Which language(s)** they should speak (French, English, Italian, Spanish, German, Arabic).
+  - **A dress code** — *Driver's choice → Smart casual → Business formal → Suit & tie*. It's clever about it: the
+    sensible default is set from your service class (Eco/Business/First) and **never** jumps straight to suit & tie —
+    you have to choose that on purpose. So Businesses stop over-asking for a suit when it isn't needed.
+  - **Quick requests** — Meet & greet, Greeter (the Driver waits at the car), Luggage help, Child seat, Quiet ride,
+    Pets on board.
+  - **A name board** — type the Guest's name, or **attach a PDF/photo** when it's a company or brand board.
+  - **A private message to the Driver** for any special instructions (shown to them once they accept the trip).
+  The Driver sees the language, dress code and requests *before* accepting (so they can pick trips they're right for),
+  and the name board + private message *after* they accept. (One small database update is needed before this goes
+  live — flagged for Céline to run.)
 - **Fixed a serious bug:** clicking **"Review"** on a new mission was accidentally posting it live and jumping to
   the schedule. Review now only shows a preview — nothing goes out until you click **"Post to the Pool"**.
 - Added a clear **"This is final" warning** at the moment you post a mission.

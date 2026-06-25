@@ -9,6 +9,7 @@ import {
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
+import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 
 // Presentational Pool card: live PDP fare, date/time, ETA (road distance +
 // travel time when cached, else straight-line), and the route.
@@ -22,6 +23,16 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
   );
   const meta = formatTripMeta(mission.distance_km, mission.duration_min, straightKm);
   const stops = parseWaypoints(mission.waypoints).length;
+
+  // Compact requirements a Driver weighs before tapping in (S19): dress code,
+  // requested languages, request flags. Board name + message stay hidden until
+  // accept, so they're not surfaced here.
+  const languages = parseLanguages(mission.required_languages);
+  const reqTags = [
+    dressCodeLabel(mission.dress_code),
+    languages.length > 0 ? languages.join(" / ") : null,
+    ...activeFlagLabels(mission.driver_flags),
+  ].filter((b): b is string => !!b);
 
   return (
     <Link href={`/missions/${mission.id}`} className="card">
@@ -59,6 +70,16 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
           <span>{mission.dropoff_address ?? "—"}</span>
         </div>
       </div>
+
+      {reqTags.length > 0 && (
+        <div className="mc-tags">
+          {reqTags.map((tag, i) => (
+            <span className="mc-tag" key={i}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
     </Link>
   );
 }

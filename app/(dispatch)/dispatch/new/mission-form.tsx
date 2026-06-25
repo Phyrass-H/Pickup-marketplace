@@ -2,12 +2,20 @@
 
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle } from "lucide-react";
+import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle, UserRound } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
 import { ServiceClassFields } from "@/components/service-class-fields";
+import { DriverServiceFields } from "@/components/driver-service-fields";
 import { PassengerList } from "@/components/passenger-list";
+import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
+import {
+  parseLanguages,
+  parseDriverFlags,
+  activeFlagLabels,
+  dressCodeLabel,
+} from "@/lib/driver-service";
 import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
 import {
   parsePassengers,
@@ -85,6 +93,11 @@ interface PreviewData {
   guest: string;
   flight: string;
   reference: string;
+  languages: string[];
+  dressLabel: string | null;
+  flagLabels: string[];
+  boardName: string;
+  driverMessage: string;
   distanceKm: number | null;
   roadKm: number | null;
   roadMin: number | null;
@@ -124,6 +137,13 @@ export function MissionForm({
         ? "sedan"
         : "";
   const [body, setBody] = useState<string>(initBody);
+
+  // Service tier (category) lifted from the Vehicle & class card so the Driver
+  // card's dress-code default tracks the chosen service class (S19).
+  const initTier: ServiceTier = (SERVICE_TIERS as string[]).includes(draft?.category ?? "")
+    ? (draft!.category as ServiceTier)
+    : "business";
+  const [tier, setTier] = useState<ServiceTier>(initTier);
 
   // Seed passenger rows: a draft's structured passenger_names, else best-effort
   // from a legacy single passenger_name, else one blank row (the PassengerList default).
@@ -244,6 +264,11 @@ export function MissionForm({
       guest: primaryPassengerName(passengers),
       flight: String(fd.get("flight_number") ?? "").trim(),
       reference: String(fd.get("comment") ?? "").trim(),
+      languages: parseLanguages(fd.get("required_languages")),
+      dressLabel: dressCodeLabel(String(fd.get("dress_code") ?? "")),
+      flagLabels: activeFlagLabels(fd.get("driver_flags")),
+      boardName: String(fd.get("board_name") ?? "").trim(),
+      driverMessage: String(fd.get("driver_message") ?? "").trim(),
       distanceKm: tripDistanceKm(pickupLat, pickupLng, dropLat, dropLng),
       roadKm: toNum(fd.get("route_distance_km")),
       roadMin: toNum(fd.get("route_duration_min")),
@@ -325,6 +350,7 @@ export function MissionForm({
                   model: draft?.required_model,
                 }}
                 onBodyChange={setBody}
+                onTierChange={setTier}
               />
             </div>
 
@@ -402,7 +428,7 @@ export function MissionForm({
                   name="comment"
                   rows={2}
                   defaultValue={draft?.comment ?? ""}
-                  placeholder="e.g. Room 312 · or an event name like “Cannes Gala” · or instructions"
+                  placeholder="e.g. Room 312 · or an event name like “Cannes Gala”"
                   style={{
                     width: "100%",
                     padding: 12,
@@ -413,6 +439,27 @@ export function MissionForm({
                   }}
                 />
               </label>
+            </div>
+
+            {/* Driver & service — language / dress code / requests / message (S19) */}
+            <div className="card">
+              <div className="mx-card__head">
+                <span className="mx-card__ic" aria-hidden>
+                  <UserRound />
+                </span>
+                <h3 className="mx-card__title">Driver &amp; service</h3>
+              </div>
+              <DriverServiceFields
+                tier={tier}
+                defaults={{
+                  languages: parseLanguages(draft?.required_languages),
+                  dressCode: draft?.dress_code ?? null,
+                  flags: parseDriverFlags(draft?.driver_flags),
+                  boardName: draft?.board_name ?? null,
+                  driverMessage: draft?.driver_message ?? null,
+                  hasBoardFile: !!draft?.board_file_path,
+                }}
+              />
             </div>
 
             {/* Pricing — base fare + ceiling + SPEED WIN grouped together */}
@@ -547,6 +594,36 @@ export function MissionForm({
                     <>
                       <dt>Reference</dt>
                       <dd>{preview.reference}</dd>
+                    </>
+                  )}
+                  {preview.languages.length > 0 && (
+                    <>
+                      <dt>Languages</dt>
+                      <dd>{preview.languages.join(", ")}</dd>
+                    </>
+                  )}
+                  {preview.dressLabel && (
+                    <>
+                      <dt>Dress code</dt>
+                      <dd>{preview.dressLabel}</dd>
+                    </>
+                  )}
+                  {preview.flagLabels.length > 0 && (
+                    <>
+                      <dt>Requests</dt>
+                      <dd>{preview.flagLabels.join(" · ")}</dd>
+                    </>
+                  )}
+                  {preview.boardName && (
+                    <>
+                      <dt>Name board</dt>
+                      <dd>{preview.boardName}</dd>
+                    </>
+                  )}
+                  {preview.driverMessage && (
+                    <>
+                      <dt>Message to Driver</dt>
+                      <dd>{preview.driverMessage}</dd>
                     </>
                   )}
                 </dl>

@@ -11,7 +11,9 @@ import {
 } from "@/lib/format";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
+import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
+import { BoardFileLink } from "@/components/board-file-link";
 
 // A Driver's car, shown to the Dispatch so it can tell the Guest what to look
 // for at pickup (brand, colour, plate). Captured at Driver onboarding/settings.
@@ -43,6 +45,9 @@ export function TripRow({
 }) {
   const t = missionTone(mission, undefined, { archived });
   const reference = mission.comment?.trim() || null;
+  const languages = parseLanguages(mission.required_languages);
+  const dressLabel = dressCodeLabel(mission.dress_code);
+  const flagLabels = activeFlagLabels(mission.driver_flags);
   const waypoints = parseWaypoints(mission.waypoints);
   const alert = t.tone === "danger";
   const flightEta = mission.flight_eta ? formatTime(mission.flight_eta) : null;
@@ -158,6 +163,44 @@ export function TripRow({
             <>
               <dt>Reference</dt>
               <dd>{reference}</dd>
+            </>
+          )}
+          {languages.length > 0 && (
+            <>
+              <dt>Languages</dt>
+              <dd>{languages.join(", ")}</dd>
+            </>
+          )}
+          {dressLabel && (
+            <>
+              <dt>Dress code</dt>
+              <dd>{dressLabel}</dd>
+            </>
+          )}
+          {flagLabels.length > 0 && (
+            <>
+              <dt>Requests</dt>
+              <dd>{flagLabels.join(" · ")}</dd>
+            </>
+          )}
+          {(mission.board_name || mission.board_file_path) && (
+            <>
+              <dt>Name board</dt>
+              <dd>
+                {mission.board_name || "—"}
+                {mission.board_file_path && (
+                  <>
+                    {" · "}
+                    <BoardFileLink missionId={mission.id} />
+                  </>
+                )}
+              </dd>
+            </>
+          )}
+          {mission.driver_message && (
+            <>
+              <dt>Message to Driver</dt>
+              <dd>{mission.driver_message}</dd>
             </>
           )}
           <dt>Pax / luggage</dt>

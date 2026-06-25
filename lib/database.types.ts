@@ -242,6 +242,12 @@ export interface Database {
           required_body_type: BodyType | null;
           required_make: string | null;
           required_model: string | null;
+          required_languages: string[] | null;
+          dress_code: string | null;
+          driver_flags: Json | null;
+          board_name: string | null;
+          board_file_path: string | null;
+          driver_message: string | null;
           distance_km: number | null;
           duration_min: number | null;
           cancelled_by: CancellationParty | null;
@@ -284,6 +290,12 @@ export interface Database {
           required_body_type?: BodyType | null;
           required_make?: string | null;
           required_model?: string | null;
+          required_languages?: string[] | null;
+          dress_code?: string | null;
+          driver_flags?: Json | null;
+          board_name?: string | null;
+          board_file_path?: string | null;
+          driver_message?: string | null;
           distance_km?: number | null;
           duration_min?: number | null;
           cancelled_by?: CancellationParty | null;

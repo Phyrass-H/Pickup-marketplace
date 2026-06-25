@@ -11,6 +11,7 @@ import {
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
+import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { AcceptButton } from "./accept-button";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,9 @@ export default async function MissionDetailPage({
     mission.dropoff_lng,
   );
   const tripMeta = formatTripMeta(mission.distance_km, mission.duration_min, distanceKm);
+  const languages = parseLanguages(mission.required_languages);
+  const dressLabel = dressCodeLabel(mission.dress_code);
+  const flagLabels = activeFlagLabels(mission.driver_flags);
 
   return (
     <>
@@ -110,9 +114,27 @@ export default async function MissionDetailPage({
               <dd>{mission.comment}</dd>
             </>
           )}
+          {languages.length > 0 && (
+            <>
+              <dt>Languages</dt>
+              <dd>{languages.join(", ")}</dd>
+            </>
+          )}
+          {dressLabel && (
+            <>
+              <dt>Dress code</dt>
+              <dd>{dressLabel}</dd>
+            </>
+          )}
+          {flagLabels.length > 0 && (
+            <>
+              <dt>Requests</dt>
+              <dd>{flagLabels.join(" · ")}</dd>
+            </>
+          )}
         </dl>
         <p className="muted small" style={{ marginTop: 12 }}>
-          Guest name and contact details are revealed once you accept.
+          Guest name, the name board and any private message are revealed once you accept.
         </p>
       </div>
 

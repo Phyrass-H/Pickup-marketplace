@@ -10,7 +10,17 @@ import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
 import { parseWaypointsField } from "@/lib/waypoints";
 import { parsePassengers, primaryPassengerName } from "@/lib/passengers";
+import { parseLanguages, parseDriverFlags, DRESS_CODES } from "@/lib/driver-service";
+import {
+  DOCS_BUCKET,
+  ensureBucket,
+  uploadFile,
+  fileExt,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/supabase/storage";
 import type { VehicleCategory, BodyType, MissionStatus } from "@/lib/database.types";
+
+const BOARD_MIME = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
 
 // Tiers offered post-O5 ('van' is a legacy enum value, no longer a tier).
 const CATEGORIES: readonly VehicleCategory[] = ["eco", "business", "luxury"];
@@ -95,6 +105,15 @@ export async function createMission(formData: FormData) {
   const requiredMake = String(formData.get("required_make") ?? "").trim() || null;
   const requiredModel = String(formData.get("required_model") ?? "").trim() || null;
 
+  // Driver & service card (S19): requested languages, dress code, request flags,
+  // the meet & greet name board, and a private message to the Driver.
+  const requiredLanguages = parseLanguages(formData.get("required_languages"));
+  const dressRaw = String(formData.get("dress_code") ?? "").trim();
+  const dressCode = (DRESS_CODES as readonly string[]).includes(dressRaw) ? dressRaw : null;
+  const driverFlags = parseDriverFlags(formData.get("driver_flags"));
+  const boardName = String(formData.get("board_name") ?? "").trim();
+  const driverMessage = String(formData.get("driver_message") ?? "").trim();
+
   // Intermediate stops (KEEP). Stored as jsonb waypoints, each with its coords.
   const waypoints = parseWaypointsField(formData.get("waypoints"));
   // Picked stops (with coords) extend the cached ETA through the detour.
@@ -152,6 +171,34 @@ export async function createMission(formData: FormData) {
 
   const status: MissionStatus = asDraft ? "draft" : "pooled";
 
+  // Optional meet & greet board file → the private "documents" bucket. The path
+  // uses a random id (not the mission id) so the row needn't exist first. We only
+  // WRITE board_file_path when a new file was uploaded (conditional spread, like
+  // eta below), so re-saving a draft never wipes a previously-attached board.
+  // A failed upload is non-fatal: the mission still saves, just without the file.
+  let boardUpload: { board_file_path: string | null } | Record<string, never> = {};
+  const boardFile = formData.get("board_file");
+  if (
+    boardFile instanceof File &&
+    boardFile.size > 0 &&
+    boardFile.size <= MAX_UPLOAD_BYTES &&
+    BOARD_MIME.includes(boardFile.type)
+  ) {
+    try {
+      await ensureBucket(DOCS_BUCKET, false);
+      const path = `mission/${ctx.business.id}/board-${crypto.randomUUID()}.${fileExt(boardFile)}`;
+      await uploadFile(DOCS_BUCKET, path, boardFile);
+      boardUpload = { board_file_path: path };
+    } catch {
+      boardUpload = {};
+    }
+  }
+  // Explicit removal of a previously-attached board (the Dispatcher dismissed it
+  // or turned meet & greet off), but only when no replacement file was uploaded.
+  if (Object.keys(boardUpload).length === 0 && formData.get("board_file_clear") === "1") {
+    boardUpload = { board_file_path: null };
+  }
+
   const row = {
     business_id: ctx.business.id,
     dispatcher_id: ctx.dispatcher.id,
@@ -184,6 +231,11 @@ export async function createMission(formData: FormData) {
     required_body_type: requiredBody,
     required_make: requiredMake,
     required_model: requiredModel,
+    required_languages: requiredLanguages.length > 0 ? requiredLanguages : null,
+    dress_code: dressCode,
+    driver_flags: Object.keys(driverFlags).length > 0 ? driverFlags : null,
+    board_name: boardName || null,
+    driver_message: driverMessage || null,
   };
 
   const supabase = await createClient();
@@ -193,8 +245,8 @@ export async function createMission(formData: FormData) {
     // this a draft saved hours/days ago would be posted already near/at the
     // ceiling. A plain re-save-as-draft keeps the original created_at.
     const updateRow = asDraft
-      ? { ...row, ...eta }
-      : { ...row, ...eta, created_at: new Date().toISOString() };
+      ? { ...row, ...eta, ...boardUpload }
+      : { ...row, ...eta, ...boardUpload, created_at: new Date().toISOString() };
     const { data: updated, error } = await supabase
       .from("mission")
       .update(updateRow)
@@ -207,7 +259,7 @@ export async function createMission(formData: FormData) {
     // (stale tab / double-submit). Don't report a phantom success.
     if (!updated || updated.length === 0) redirect(backTo("gone"));
   } else {
-    const { error } = await supabase.from("mission").insert({ ...row, ...eta });
+    const { error } = await supabase.from("mission").insert({ ...row, ...eta, ...boardUpload });
     if (error) redirect(backTo("db"));
   }
 
