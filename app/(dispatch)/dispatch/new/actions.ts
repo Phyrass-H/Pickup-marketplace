@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
@@ -210,6 +211,8 @@ export async function createMission(formData: FormData) {
     if (error) redirect(backTo("db"));
   }
 
+  // Refresh the layout so the sidebar Drafts badge reflects the new count.
+  revalidatePath("/dispatch", "layout");
   redirect(asDraft ? "/dispatch/drafts" : "/dispatch");
 }
 
@@ -227,5 +230,6 @@ export async function discardDraft(formData: FormData) {
     .eq("id", id)
     .eq("business_id", ctx.business.id)
     .eq("status", "draft");
+  revalidatePath("/dispatch", "layout");
   redirect("/dispatch/drafts");
 }

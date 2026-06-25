@@ -70,10 +70,17 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   `aria-activedescendant`, scroll-into-view), **Enter** selects the highlighted suggestion (retrieves coords,
   closes the list, does NOT submit the form), **Esc** closes. `.ac-item.is-active` mirrors the hover style.
   Verified live (arrows move the highlight, Enter picked Nice with coords 43.71/7.26, Esc closes, no console errors).
+- ✅ **Draft indicator in the sidebar** (`dispatch-shell.tsx` + `(dispatch)/layout.tsx` + `dispatch/new/actions.ts`):
+  the **Drafts** nav item shows a navy count badge when drafts exist (a small dot when the sidebar is collapsed).
+  Count is fetched in the layout (`count: "exact", head: true`) and kept **fresh** after save/post/discard via
+  `revalidatePath("/dispatch", "layout")` in `createMission` + `discardDraft` (the layout otherwise persists across
+  client nav and would go stale). Verified live: badge matched the DB (1), **1→2 on save**, **2→1 on discard**,
+  collapsed-mode dot OK, no console errors. (Dev preview got flaky mid-verification — restarted the dev server for a
+  clean run; confirmed read-only via service role that no stray test drafts were left.)
 
-**Next:** continue the **2026-06-25 dump** quick-polish — draft indicator in the sidebar, driver search in the
-Calendar (no-design); then the visual ones via the D25 preview loop — desktop width, sidebar spacing. Bigger form
-work after: reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
+**Next:** continue the **2026-06-25 dump** quick-polish — driver search in the Calendar (no-design); then the visual
+ones via the D25 preview loop — desktop width, sidebar spacing. Bigger form work after: reference/comment split, a
+Driver section [language/dress code/message-to-driver], ultra-luxury tier.
 
 ---
 

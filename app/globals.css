@@ -768,6 +768,12 @@ textarea::placeholder {
 .dx-navitem svg { width: 18px; height: 18px; flex: none; }
 .dx-navitem--cta { color: var(--text-on-accent); background: var(--accent); font-weight: 600; }
 .dx-navitem--cta:hover { background: var(--accent-hover); color: #fff; }
+.dx-badge {
+  margin-left: auto; flex: none; display: inline-flex; align-items: center;
+  justify-content: center; min-width: 18px; height: 18px; padding: 0 6px;
+  border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px;
+  font-weight: 600; line-height: 1;
+}
 .dx-sidebar__foot {
   display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px;
   border-top: 1px solid var(--border); flex: none;
@@ -783,7 +789,11 @@ textarea::placeholder {
 .dx-sidebar.is-collapsed .dx-label { display: none; }
 .dx-sidebar.is-collapsed .dx-sidebar__brand { justify-content: center; padding: 0; }
 .dx-sidebar.is-collapsed .dx-sidebar__brand .brand-logo { display: none; }
-.dx-sidebar.is-collapsed .dx-navitem { justify-content: center; padding: 9px 0; }
+.dx-sidebar.is-collapsed .dx-navitem { justify-content: center; padding: 9px 0; position: relative; }
+.dx-sidebar.is-collapsed .dx-badge {
+  position: absolute; top: 5px; right: 9px; margin: 0;
+  min-width: 9px; width: 9px; height: 9px; padding: 0; font-size: 0;
+}
 .dx-sidebar.is-collapsed .dx-acct { justify-content: center; padding: 6px 0 2px; }
 .dx-link {
   background: none; border: none; color: var(--text-muted); cursor: pointer;

@@ -36,10 +36,12 @@ const STORAGE_KEY = "pickup-dx-collapsed";
 export function DispatchShell({
   businessName,
   logoUrl,
+  draftCount = 0,
   children,
 }: {
   businessName: string;
   logoUrl?: string | null;
+  draftCount?: number;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -112,6 +114,14 @@ export function DispatchShell({
             >
               <Icon />
               <span className="dx-label">{label}</span>
+              {href === "/dispatch/drafts" && draftCount > 0 && (
+                <span
+                  className="dx-badge"
+                  title={`${draftCount} draft${draftCount === 1 ? "" : "s"}`}
+                >
+                  {draftCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
