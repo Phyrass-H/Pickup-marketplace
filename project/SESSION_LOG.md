@@ -83,6 +83,14 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   was already populated by the server). Placeholder/aria-label → "Search guest or driver…". Verified live:
   "Marc"/"Dubois" → 7 driver-matched trips (no guest carries those), "Willis" → 1 (guest search intact),
   nonsense → 0; no console errors.
+- ⚠️ **Deploy ops gotcha (2026-06-25):** Vercel's GitHub auto-deploy **silently dropped** commit `1bc8671` — it
+  created NO deployment for it, so the live calendar kept showing the OLD guest-only search even though the code was
+  correct and `next build` passed locally. The founder reported "search doesn't work" twice; root cause was the
+  missing deploy, not the code. Fix: pushed an **empty re-trigger commit** (`git commit --allow-empty`, `4c34c6c`) —
+  Vercel picked that one up and deployed `success`. **Lesson:** after `git push origin main`, verify a deployment was
+  actually created — `gh api repos/Phyrass-H/Pickup-marketplace/deployments --jq '.[0].sha'` should equal the pushed
+  SHA. If a push is dropped, push an empty commit to re-trigger (or Vercel dashboard → Redeploy). The GitHub
+  deployments `?sha=` filter needs the FULL 40-char SHA; the short SHA returns empty.
 
 **Next:** the visual quick-polish via the D25 preview loop — desktop width, sidebar spacing. Bigger form work after:
 reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
