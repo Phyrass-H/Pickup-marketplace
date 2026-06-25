@@ -58,4 +58,6 @@ touches it; don't read them all at startup (see `project/NEXT_SESSION.md` for th
 ## Working agreement
 - Develop on the branch you were assigned for the session. Commit with clear messages.
 - Do not open a PR unless explicitly asked.
-- When you finish a chunk of work, append to `project/SESSION_LOG.md`.
+- When you finish a chunk of work, append to `project/SESSION_LOG.md` (technical detail) **and** add a
+  plain-language line per shipped item to `project/CHANGELOG.md` (the founder-facing history). Do this as you
+  ship and again at end of session, so `CHANGELOG.md` always reflects the latest.
