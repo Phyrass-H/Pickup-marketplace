@@ -690,7 +690,8 @@ textarea::placeholder {
   color: var(--text);
   cursor: pointer;
 }
-.ac-item:hover {
+.ac-item:hover,
+.ac-item.is-active {
   background: #f2f5f9;
 }
 

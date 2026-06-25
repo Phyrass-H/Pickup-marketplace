@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -56,7 +56,8 @@ function asPlace(d: DefaultPlace | null | undefined): Place | null {
 // what the form submits, and only carry a value once the user PICKS a suggestion
 // (a retrieve call fills the coords). `onChange` lets a parent mirror the chosen
 // place (used to compute the live route ETA). Riviera proximity + an EU country
-// allowlist by default; "Geneva"/"Milano"/"Berlin" still resolve.
+// allowlist by default; "Geneva"/"Milano"/"Berlin" still resolve. The dropdown is
+// a keyboard combobox: ↑/↓ move the highlight, Enter picks it, Esc closes.
 export function AddressAutocomplete({
   labelName,
   latName,
@@ -84,9 +85,13 @@ export function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [active, setActive] = useState(-1); // keyboard-highlighted suggestion
   const boxRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const session = useRef<string>(newSession());
+  const listId = useId();
+  const optionId = (i: number) => `${listId}-opt-${i}`;
 
   useEffect(() => {
     if (!TOKEN) return;
@@ -120,6 +125,7 @@ export function AddressAutocomplete({
           }))
           .filter((s) => s.mapbox_id && s.name);
         setSuggestions(list);
+        setActive(-1); // fresh results → no stale highlight
         setOpen(true);
       } catch (e) {
         if ((e as Error)?.name !== "AbortError") setSuggestions([]);
@@ -139,10 +145,18 @@ export function AddressAutocomplete({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  // Keep the keyboard-highlighted option scrolled into view (the list scrolls).
+  useEffect(() => {
+    if (active < 0) return;
+    const li = listRef.current?.children[active] as HTMLElement | undefined;
+    li?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
   // Resolve a chosen suggestion to coordinates (Search Box retrieve step).
   async function pick(s: Suggestion) {
     if (!TOKEN) return;
     setOpen(false);
+    setActive(-1);
     setBusy(true);
     try {
       const url =
@@ -175,11 +189,49 @@ export function AddressAutocomplete({
 
   function onInput(v: string) {
     setQuery(v);
+    setActive(-1);
     // Editing the text after a pick invalidates the chosen coords.
     const next = picked && v === picked.label ? picked : null;
     if (next !== picked) setPicked(next);
     onChange?.({ text: v, place: next });
   }
+
+  // Keyboard combobox: ↑/↓ move the highlight, Enter picks it, Esc closes.
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setActive(0);
+      } else {
+        setActive((i) => (i + 1) % suggestions.length);
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setActive(suggestions.length - 1);
+      } else {
+        setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+      }
+    } else if (e.key === "Enter") {
+      // Only swallow Enter when it's selecting a highlighted suggestion, so a
+      // plain Enter elsewhere still hits the form's own guard.
+      if (open && active >= 0 && suggestions[active]) {
+        e.preventDefault();
+        pick(suggestions[active]);
+      }
+    } else if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+        setActive(-1);
+      }
+    }
+  }
+
+  const listOpen = open && suggestions.length > 0;
 
   return (
     <div className="ac" ref={boxRef}>
@@ -190,16 +242,30 @@ export function AddressAutocomplete({
         placeholder={placeholder}
         onChange={(e) => onInput(e.target.value)}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
+        onKeyDown={onKeyDown}
+        role="combobox"
+        aria-expanded={listOpen}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={listOpen && active >= 0 ? optionId(active) : undefined}
       />
       {labelName && <input type="hidden" name={labelName} value={picked?.label ?? ""} />}
       {latName && <input type="hidden" name={latName} value={picked?.lat ?? ""} />}
       {lngName && <input type="hidden" name={lngName} value={picked?.lng ?? ""} />}
 
-      {open && suggestions.length > 0 && (
-        <ul className="ac-list">
-          {suggestions.map((s) => (
-            <li key={s.mapbox_id}>
-              <button type="button" className="ac-item" onClick={() => pick(s)}>
+      {listOpen && (
+        <ul className="ac-list" id={listId} role="listbox" ref={listRef}>
+          {suggestions.map((s, i) => (
+            <li key={s.mapbox_id} role="presentation">
+              <button
+                type="button"
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === active}
+                className={`ac-item${i === active ? " is-active" : ""}`}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => pick(s)}
+              >
                 <span style={{ fontWeight: 500 }}>{s.name}</span>
                 {s.address && (
                   <span className="muted" style={{ display: "block", fontSize: 12 }}>

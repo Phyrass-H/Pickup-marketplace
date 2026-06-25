@@ -64,9 +64,16 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   scoped `delete` SQL for the Supabase SQL editor (Claude does not delete shared-DB rows without authorization;
   the auto-mode classifier correctly blocked an attempt).
 
-**Next:** continue the **2026-06-25 dump** (keyboard autocomplete nav, draft indicator, calendar driver search,
-desktop width, sidebar spacing, reference/comment split, a Driver section [language/dress code/message-to-driver],
-ultra-luxury tier).
+**Quick-polish batch (same session, shipping items as completed):**
+- ✅ **Keyboard nav in the address autocomplete** (`components/address-autocomplete.tsx`): the Mapbox suggestion
+  dropdown is now a proper ARIA combobox — **↑/↓** move the highlight (wrap-around, `aria-selected` +
+  `aria-activedescendant`, scroll-into-view), **Enter** selects the highlighted suggestion (retrieves coords,
+  closes the list, does NOT submit the form), **Esc** closes. `.ac-item.is-active` mirrors the hover style.
+  Verified live (arrows move the highlight, Enter picked Nice with coords 43.71/7.26, Esc closes, no console errors).
+
+**Next:** continue the **2026-06-25 dump** quick-polish — draft indicator in the sidebar, driver search in the
+Calendar (no-design); then the visual ones via the D25 preview loop — desktop width, sidebar spacing. Bigger form
+work after: reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
 
 ---
 
