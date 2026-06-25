@@ -52,7 +52,10 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
 - **Discard confirmation (founder ask; `components/draft-actions.tsx`, new):** discarding a draft now needs an
   **inline confirm** ("Discard this draft? This can't be undone." + Cancel + red Discard), also pending-guarded.
   `drafts/page.tsx` now renders `<DraftActions>` instead of the bare discard form. Verified end-to-end (confirm
-  shows, Cancel reverts, Discard deletes), `tsc` clean, no console errors.
+  shows, Cancel reverts, Discard deletes), `tsc` clean, no console errors. **Visual follow-up:** the draft card's
+  "Continue editing" button was squeezed — `.btn` defaults to `width:100%`, so once Discard left its `<form>`
+  wrapper it fought the flex layout; pinned Discard to content width (`flex:none; width:auto`). Verified
+  (Continue 423px / Discard 93px, balanced).
 - **Slowness (founder Q):** it's `npm run dev` (dev-mode compilation) + Supabase/Mapbox network round-trips before
   the redirect — NOT hardware; production is faster. No code change. (Optional future: move the Mapbox ETA call off
   the critical post path.)

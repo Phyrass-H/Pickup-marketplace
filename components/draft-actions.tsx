@@ -65,7 +65,14 @@ export function DraftActions({
       <Link href={editHref} className="btn" style={{ flex: 1 }}>
         Continue editing
       </Link>
-      <button type="button" className="btn secondary" onClick={() => setConfirming(true)}>
+      {/* .btn defaults to width:100%; pin Discard to its content so it doesn't
+          fight "Continue editing" (flex:1) and squeeze it. */}
+      <button
+        type="button"
+        className="btn secondary"
+        onClick={() => setConfirming(true)}
+        style={{ flex: "none", width: "auto" }}
+      >
         Discard
       </button>
     </div>
