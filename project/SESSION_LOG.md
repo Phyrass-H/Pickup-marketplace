@@ -78,9 +78,14 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   collapsed-mode dot OK, no console errors. (Dev preview got flaky mid-verification — restarted the dev server for a
   clean run; confirmed read-only via service role that no stray test drafts were left.)
 
-**Next:** continue the **2026-06-25 dump** quick-polish — driver search in the Calendar (no-design); then the visual
-ones via the D25 preview loop — desktop width, sidebar spacing. Bigger form work after: reference/comment split, a
-Driver section [language/dress code/message-to-driver], ultra-luxury tier.
+- ✅ **Driver search in the Calendar** (`components/dispatch-calendar.tsx`): the existing guest search now ALSO
+  matches the **assigned driver's name** — the `match` filter ORs `e.driver` alongside `e.guest` (`CalEntry.driver`
+  was already populated by the server). Placeholder/aria-label → "Search guest or driver…". Verified live:
+  "Marc"/"Dubois" → 7 driver-matched trips (no guest carries those), "Willis" → 1 (guest search intact),
+  nonsense → 0; no console errors.
+
+**Next:** the visual quick-polish via the D25 preview loop — desktop width, sidebar spacing. Bigger form work after:
+reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
 
 ---
 

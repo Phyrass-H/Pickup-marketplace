@@ -101,13 +101,19 @@ export function DispatchCalendar({ data }: { data: CalendarData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.ym, data.landWeek]);
 
-  const match = (e: CalEntry) =>
-    (!q || e.guest.toLowerCase().includes(q.toLowerCase())) &&
-    (status === "all" ||
-      (status === "needs"
-        ? e.tone === "warn" || e.tone === "danger"
-        : e.tone === status)) &&
-    (cat === "all" || e.cat === cat);
+  const match = (e: CalEntry) => {
+    const ql = q.toLowerCase();
+    return (
+      (!q ||
+        e.guest.toLowerCase().includes(ql) ||
+        !!e.driver?.toLowerCase().includes(ql)) &&
+      (status === "all" ||
+        (status === "needs"
+          ? e.tone === "warn" || e.tone === "danger"
+          : e.tone === status)) &&
+      (cat === "all" || e.cat === cat)
+    );
+  };
 
   // Group filtered entries by day; tally the KPI counts off the same set.
   const byDay = new Map<number, CalEntry[]>();
@@ -228,8 +234,8 @@ export function DispatchCalendar({ data }: { data: CalendarData }) {
           <div className="dx-search">
             <Search />
             <input
-              aria-label="Search by guest name"
-              placeholder="Search guest…"
+              aria-label="Search by guest or driver name"
+              placeholder="Search guest or driver…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
