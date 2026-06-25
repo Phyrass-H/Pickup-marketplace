@@ -145,6 +145,10 @@ export function MissionForm({
     : "business";
   const [tier, setTier] = useState<ServiceTier>(initTier);
 
+  // First named Guest, lifted from the Trip-details PassengerList so the Driver
+  // card pre-fills the meet & greet board with it (corrected on mount by the list).
+  const [primaryName, setPrimaryName] = useState<string>(draft?.passenger_name ?? "");
+
   // Seed passenger rows: a draft's structured passenger_names, else best-effort
   // from a legacy single passenger_name, else one blank row (the PassengerList default).
   const draftPassengers = parsePassengers(draft?.passenger_names);
@@ -399,7 +403,11 @@ export function MissionForm({
                 </span>
                 <h3 className="mx-card__title">Trip details</h3>
               </div>
-              <PassengerList body={body} defaultPassengers={seededPassengers} />
+              <PassengerList
+                body={body}
+                defaultPassengers={seededPassengers}
+                onPrimaryNameChange={setPrimaryName}
+              />
 
               <label className="field" style={{ marginTop: 16 }}>
                 <span>Luggage</span>
@@ -451,6 +459,7 @@ export function MissionForm({
               </div>
               <DriverServiceFields
                 tier={tier}
+                guestName={primaryName}
                 defaults={{
                   languages: parseLanguages(draft?.required_languages),
                   dressCode: draft?.dress_code ?? null,

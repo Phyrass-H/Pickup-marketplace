@@ -45,9 +45,11 @@ const FLAG_ICON: Record<RequestFlagKey, typeof ClipboardList> = {
 // card so the dress-code default tracks the service class.
 export function DriverServiceFields({
   tier,
+  guestName,
   defaults,
 }: {
   tier: ServiceTier;
+  guestName?: string;
   defaults?: {
     languages?: string[];
     dressCode?: string | null;
@@ -76,6 +78,15 @@ export function DriverServiceFields({
   const [boardFileName, setBoardFileName] = useState<string | null>(null);
   const [keepExisting, setKeepExisting] = useState<boolean>(!!defaults?.hasBoardFile);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Board name defaults to the first Guest and tracks it live until the
+  // Dispatcher types a custom value (e.g. a company/brand board). A resumed
+  // draft with a saved board name counts as already touched.
+  const boardTouchedRef = useRef<boolean>(!!defaults?.boardName);
+  const [boardName, setBoardName] = useState<string>(defaults?.boardName ?? guestName ?? "");
+  useEffect(() => {
+    if (!boardTouchedRef.current) setBoardName(guestName ?? "");
+  }, [guestName]);
 
   const defaultTierCode = TIER_DRESS_DEFAULT[tier];
 
@@ -216,7 +227,11 @@ export function DriverServiceFields({
               type="text"
               name="board_name"
               placeholder="e.g. Mr. Laurent Chopard"
-              defaultValue={defaults?.boardName ?? ""}
+              value={boardName}
+              onChange={(e) => {
+                boardTouchedRef.current = true;
+                setBoardName(e.target.value);
+              }}
             />
           </label>
 
@@ -259,8 +274,8 @@ export function DriverServiceFields({
           ) : null}
 
           <p className="muted small" style={{ margin: "8px 0 0" }}>
-            Type a name, or attach a board — handy when it’s a company or brand name
-            rather than a person. Leave the name blank to use the Guest.
+            Pre-filled with the first Guest — change it for a company or brand name,
+            or attach a board.
           </p>
         </div>
       )}

@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X, Info } from "lucide-react";
-import { seatCap, SEDAN_SEATS, VAN_SEATS, type Passenger } from "@/lib/passengers";
+import {
+  primaryPassengerName,
+  seatCap,
+  SEDAN_SEATS,
+  VAN_SEATS,
+  type Passenger,
+} from "@/lib/passengers";
 
 // Named Guests on a mission (first + surname). The number of rows IS the
 // headcount (createMission derives pax_count from it), capped by the chosen
@@ -11,15 +17,23 @@ import { seatCap, SEDAN_SEATS, VAN_SEATS, type Passenger } from "@/lib/passenger
 export function PassengerList({
   body,
   defaultPassengers,
+  onPrimaryNameChange,
 }: {
   body: string; // "" (any) | "sedan" | "van"
   defaultPassengers?: Passenger[];
+  onPrimaryNameChange?: (name: string) => void;
 }) {
   const [rows, setRows] = useState<Passenger[]>(
     defaultPassengers && defaultPassengers.length > 0
       ? defaultPassengers
       : [{ first: "", last: "" }],
   );
+
+  // Surface the first named Guest so the Driver card can pre-fill the meet &
+  // greet board with it (lifted into MissionForm, mirrors the body/tier lifts).
+  useEffect(() => {
+    onPrimaryNameChange?.(primaryPassengerName(rows));
+  }, [rows, onPrimaryNameChange]);
 
   const cap = seatCap(body);
   const atCap = rows.length >= cap;
