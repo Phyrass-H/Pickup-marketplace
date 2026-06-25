@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import { categoryLabel, formatDateTime, formatMoney } from "@/lib/format";
-import { discardDraft } from "../new/actions";
+import { DraftActions } from "@/components/draft-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -55,17 +55,7 @@ export default async function DispatchDrafts() {
             <div className="muted small" style={{ marginTop: 6 }}>
               Ceiling {formatMoney(m.ceiling)}
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-              <Link href={`/dispatch/new?draft=${m.id}`} className="btn" style={{ flex: 1 }}>
-                Continue editing
-              </Link>
-              <form action={discardDraft}>
-                <input type="hidden" name="mission_id" value={m.id} />
-                <button type="submit" className="btn secondary">
-                  Discard
-                </button>
-              </form>
-            </div>
+            <DraftActions missionId={m.id} editHref={`/dispatch/new?draft=${m.id}`} />
           </div>
         ))
       )}

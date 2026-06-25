@@ -42,9 +42,28 @@ computed a pickup→(0,0) great-circle distance. Switched to the file's existing
 the server action's `num`). Verified: no-dropoff shows no distance; a real dropoff still shows the right figure
 (Nice → Cannes "30 km · 39 min").
 
-**Next:** founder review → push `main` to deploy when okayed. Then continue the **2026-06-25 dump** (keyboard
-autocomplete nav, draft indicator, calendar driver search, desktop width, sidebar spacing, reference/comment split,
-a Driver section [language/dress code/message-to-driver], ultra-luxury tier).
+**Follow-up (same session) — double-submit duplicates + discard confirmation (founder retest):**
+Founder hit **duplicate missions**: a Céline Yow trip posted **7×** (DB: 7 inserts in 14s, 1–4s apart) + a twin
+draft. Root cause: the form had **no in-flight guard**, so repeated clicks during the slow server action each
+inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-clicks on a slow Post/Save).
+- **Fix (`mission-form.tsx`):** a pending-aware `SubmitButton` via `useFormStatus` — while `createMission` runs
+  EVERY submit button is **disabled** and shows "Posting…/Saving…". Verified live: mid-flight the button was
+  `disabled=true`, `aria-busy=true`, label "Saving…". A second click now hits a dead button → no duplicate.
+- **Discard confirmation (founder ask; `components/draft-actions.tsx`, new):** discarding a draft now needs an
+  **inline confirm** ("Discard this draft? This can't be undone." + Cancel + red Discard), also pending-guarded.
+  `drafts/page.tsx` now renders `<DraftActions>` instead of the bare discard form. Verified end-to-end (confirm
+  shows, Cancel reverts, Discard deletes), `tsc` clean, no console errors.
+- **Slowness (founder Q):** it's `npm run dev` (dev-mode compilation) + Supabase/Mapbox network round-trips before
+  the redirect — NOT hardware; production is faster. No code change. (Optional future: move the Mapbox ETA call off
+  the critical post path.)
+- **Duplicate cleanup:** removed my own throwaway test drafts via the UI. The founder's **7 duplicate Céline Yow
+  pooled missions** (17:00 UTC / 19:00 Paris, ceiling 170) + 1 stray Céline draft REMAIN — handed the founder a
+  scoped `delete` SQL for the Supabase SQL editor (Claude does not delete shared-DB rows without authorization;
+  the auto-mode classifier correctly blocked an attempt).
+
+**Next:** continue the **2026-06-25 dump** (keyboard autocomplete nav, draft indicator, calendar driver search,
+desktop width, sidebar spacing, reference/comment split, a Driver section [language/dress code/message-to-driver],
+ultra-luxury tier).
 
 ---
 

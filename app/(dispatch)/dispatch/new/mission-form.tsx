@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
@@ -37,6 +38,38 @@ function toNum(v: FormDataEntryValue | null): number | null {
   if (!s) return null;
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
+}
+
+// Submit button wired to the form's pending state. While the createMission
+// server action is in flight EVERY submit button is disabled, so a slow
+// post/save can't be fired twice (repeated clicks were creating duplicate
+// missions). Only the button that actually submitted shows its pending label.
+// Must live in a child of the <form> for useFormStatus to see it.
+function SubmitButton({
+  intent,
+  className,
+  pendingLabel,
+  children,
+}: {
+  intent: "pooled" | "draft";
+  className: string;
+  pendingLabel: string;
+  children: React.ReactNode;
+}) {
+  const { pending, data } = useFormStatus();
+  const isThis = pending && data?.get("intent") === intent;
+  return (
+    <button
+      type="submit"
+      name="intent"
+      value={intent}
+      className={className}
+      disabled={pending}
+      aria-busy={isThis}
+    >
+      {isThis ? pendingLabel : children}
+    </button>
+  );
 }
 
 interface PreviewData {
@@ -667,21 +700,21 @@ export function MissionForm({
                 <button type="button" className="btn" onClick={review}>
                   Review mission →
                 </button>
-                <button type="submit" name="intent" value="draft" className="btn secondary">
+                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…">
                   Save as draft
-                </button>
+                </SubmitButton>
               </div>
             ) : (
               <div className="mx-actions" key="actions-preview">
-                <button type="submit" name="intent" value="pooled" className="btn">
+                <SubmitButton intent="pooled" className="btn" pendingLabel="Posting…">
                   {draft ? "Post draft to the Pool" : "Post to the Pool"}
-                </button>
+                </SubmitButton>
                 <button type="button" className="btn secondary" onClick={() => setMode("edit")}>
                   ← Edit
                 </button>
-                <button type="submit" name="intent" value="draft" className="btn secondary">
+                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…">
                   Save as draft
-                </button>
+                </SubmitButton>
               </div>
             )}
 
