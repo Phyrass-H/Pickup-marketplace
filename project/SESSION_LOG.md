@@ -6,8 +6,8 @@
 ---
 
 ## 2026-06-25 — Session 19 — New "Driver & service" card on the mission form (language / dress code / requests / board / message)
-**Branch:** `main` (working tree — **built + client-verified, NOT yet committed/deployed**; **blocked on the founder
-running one additive migration**) · **Env:** local → Vercel.
+**Branch:** `main` — **committed `0887247` + DEPLOYED** (Vercel build `success`; deployment SHA verified == pushed SHA,
+no dropped-deploy this time). **Migration applied by the founder.** · **Env:** local → Vercel (live).
 
 **Why:** founder ask (dump 2026-06-25, BACKLOG § M item 2) — a dedicated Driver section on `/dispatch/new`. Designed
 via the D25 preview loop first (6 mockup iterations, founder-approved), then built to match.
@@ -51,10 +51,13 @@ verified (client-side, pre-migration):** card matches the approved mockup, no co
 (Business→Smart casual, First→Business formal, Eco→Driver's choice); a manual Suit & tie pick **sticks** through a tier
 change; meet & greet reveals the board+file; chips serialize to the right hidden fields.
 
-**BLOCKED ON FOUNDER:** run the one additive migration in the Supabase SQL editor (the `alter table public.mission
-add column if not exists …` block / the migration file). **Do NOT deploy before it's applied** — the live `createMission`
-writes those columns, so posting would break until they exist. After it's applied: deploy + full end-to-end verify
-(post a mission with the new fields → see it on Dispatch + Driver).
+**DONE (post-migration):** founder ran the additive migration ("Success, no rows returned"). **Full end-to-end verified
+against the REAL Supabase DB** by driving the live form: picked a Mapbox pickup, set date/time/ceiling + the Driver-card
+fields (Français+English, Smart casual, meet&greet+quiet ride, board name, message), **saved as draft → insert
+succeeded** (redirect to /drafts, badge 1→2), then **resumed the draft → every new column round-tripped** (text[] +
+jsonb through PostgREST confirmed). Test draft discarded after. Then **pushed `0887247` → Vercel deploy `success`**.
+(Did NOT post a live pooled mission to avoid Pool pollution — the display surfaces are guarded `select('*')` reads +
+adversarially reviewed; offer the founder a quick live demo post if they want to eyeball the schedule/Driver views.)
 
 **Deferred / flagged (no dirty routes — surfaced):** the **learned** dress-code default (adopt a Business's repeated
 override as their default after ~3 times) — needs history aggregation, invisible polish; **language as a hard Pool
