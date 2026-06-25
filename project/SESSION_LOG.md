@@ -101,8 +101,16 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   widening the dense views but explicitly NOT the mission page. Verified live: Schedule/Calendar/History fill (1444px,
   0 dead space), new-mission still 1120/1072, Drafts still 560; tsc clean, no console errors.
 
-**Next:** **#7 sidebar spacing** (last visual quick-polish, D25 preview loop). Bigger form work after:
-reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
+- ❌ **#7 sidebar spacing — founder declined** ("sidebar is fine, we won't touch it"). Mocked it (current vs a
+  more-spaced version with a "Manage" section label); founder chose to leave it as-is.
+- 📓 **Session-end docs** (founder request): created **`project/CHANGELOG.md`** — a plain-language, dated,
+  founder-facing history of everything shipped since day 1 (the simple read; `SESSION_LOG.md` stays the technical
+  log). Refreshed `NEXT_SESSION.md` to the S18 resume point + the deploy gotcha. Added BACKLOG **§ M** (the
+  2026-06-25 founder dump: done vs remaining) and **D29** (the dense-view width call).
+
+**Next:** the mission-form fields + guidance (BACKLOG § M + § L) — reference/comment split, a Driver section
+[required language / dress code / message-to-driver], smart defaults + why/how microcopy + input-driven guidance,
+saved base addresses; then the ultra-luxury "Exception" tier (taxonomy V2). See `NEXT_SESSION.md`.
 
 ---
 

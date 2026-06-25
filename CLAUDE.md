@@ -16,6 +16,7 @@ The spec docs live in **`docs/`** and are canonical. Read before deciding anythi
 
 ## For session continuity, read `project/`
 - `project/SESSION_LOG.md` — chronological log of each session (the resume point)
+- `project/CHANGELOG.md` — plain-language, founder-facing history of what shipped (the simple read)
 - `project/DECISIONS.md` — decision log (what was chosen and why)
 - `project/IDEAS.md` — parked ideas / backlog not yet in the spec
 > Keep these current. A new session should pick up from the latest `SESSION_LOG.md` entry.

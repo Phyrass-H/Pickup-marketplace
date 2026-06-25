@@ -231,3 +231,31 @@ full ML dynamic pricing · Amadeus GDS.
   Business → smart; Eco → neat). Founder defines the option set. (Additive field.)
 - ↳ Saved places / multiple passengers / dress code each need a small **additive** migration (founder-approved,
   → `docs/migrations/`); smart-defaults and guidance copy need none. All in-phase (not third-party APIs).
+
+## M. Founder dump 2026-06-25 — bug fixes + Dispatch polish (Session 18) 🔨
+> A founder testing pass produced fixes + small features. Most shipped in S18; the rest are the next chunk.
+> (Detailed log: SESSION_LOG S18 · plain-language: `project/CHANGELOG.md`.)
+
+**✅ Shipped (S18, deployed):**
+- ✅ **"Review" accidentally posted the mission** — fixed (React node-reuse: the Review button was reconciled into
+  the Post button mid-click); + a server **intent guard** so a stray submit writes nothing; + an **irreversible
+  "This is final" warning** at the post step ("Post to the Pool" label kept).
+- ✅ **Duplicate missions from double-clicking** a slow Post/Save (one trip posted 7×) — pending-state guard:
+  every submit button disables + shows "Posting…/Saving…" while the action runs (`useFormStatus`).
+- ✅ **Discard had no confirmation** — inline "Discard this draft? This can't be undone." step (also pending-guarded).
+- ✅ **Keyboard nav** in the address autocomplete (↑/↓/Enter/Esc combobox). ✅ **Draft count badge** on the sidebar
+  Drafts item (fresh via `revalidatePath`). ✅ **Calendar search matches the assigned driver's name** too.
+  ✅ **Desktop width:** dense views (Schedule/Calendar/History) fill the screen (`.dx-main--wide`, mission page
+  left untouched — D29).
+- ✅ Cosmetic: un-squeezed the draft-card buttons; fixed a bogus "~4907 km" preview when no dropoff was picked.
+- ❌ **Sidebar spacing** — founder **declined** (leave the sidebar as-is).
+
+**🔨 Remaining (next chunk — each NEW field = a small founder-run additive migration):**
+- 🔨 **Reference vs message-to-driver split** — the one "Reference / notes" field does two jobs; split into a short,
+  char-limited **Reference** (schedule line: "FIF 2026 Chopard", "Room 312") + a free **message to the driver**.
+  V2: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
+- 🔨 **A "Driver" section** on the mission form — **required language** (drivers already store languages),
+  **dress code** (presets keyed to tier), **message to the driver**. Optional extra flags: meet & greet / name
+  board, child seat, no-cash, quiet ride, luggage help, PRM, pet — a single `jsonb` of flags covers them.
+- ❓ **Ultra-luxury "Exception" tier** (Rolls/Bentley above First) — a taxonomy decision; bundle with the
+  IDEAS vehicle-taxonomy V2 (Bus tier, First-van, cargo vehicle).

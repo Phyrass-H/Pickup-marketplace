@@ -273,6 +273,17 @@ callback and passed to `PassengerList`. `passenger_name` (singular) is kept as a
 (not a junk `[{"",""}]` blob) when no Guest is named. Resume **pads** rows up to `pax_count` so a legacy draft's
 count survives. Shared helpers in `lib/passengers.ts`; UI in `components/passenger-list.tsx`. [[d22]] [[d23]]
 
+### D29 — Dense Dispatch views fill the screen; the new-mission form stays narrow (2026-06-25)
+Founder call: the Dispatch content read "squished to the left" — `.dx-main` was capped at **1120px** and
+left-aligned (no auto-margin), leaving dead space on wide monitors (324px at a 1680px viewport). Rather than widen
+everything and cap the form back (which would *change* the form page), added a **`.dx-main--wide` modifier
+(max-width 1520px)** that the shell (`components/dispatch-shell.tsx`) applies **by `pathname`** to the dense data
+views only — **Schedule, Calendar, History**. The **new-mission form is deliberately left at the 1120px default**
+(founder asked NOT to touch it — it reads worse stretched: the tiles/inputs go sparse); Drafts (560px cards) +
+Settings unchanged. Kept **left-aligned** (no centering) so the content stays in line with the topbar title.
+Preview-first was done by applying the proposed CSS live in the browser at 1680px and screenshotting before/after
+(the D25 loop works for width/layout tweaks too, not just full mockups). [[d24]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
