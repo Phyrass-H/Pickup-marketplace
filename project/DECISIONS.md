@@ -243,6 +243,36 @@ change) until locked, then implement it for real against the repo and deploy. Us
 Design zip path stays available when the founder prefers to design there; the **inline-mockup loop is the
 default** for screens Claude Code can mock from existing code. [[d19]] [[d20]]
 
+### D26 — New-mission form: pricing grouped into a card + the Summary rail is read-only (2026-06-21)
+Founder call (Session 15): the right-hand **Summary rail is a read-only PREVIEW, not an input surface**. The
+**Ceiling**, **Estimated base fare** and **SPEED WIN** were pulled into a dedicated left **"Pricing" section
+card** (a 5th card, matching the others); the rail now shows the ceiling + live starting fare + a "Pricing
+mode" line as *values* (no fields), then the actions (Review / Save draft / Post). The `createMission` contract
+is unchanged. The too-low-fare warning renders in the Pricing card while editing, and a compact copy appears in
+the rail **only in preview mode** (the editable sections are `display:none` there, so the nudge follows the user
+to the post screen). [[d22]] [[d24]]
+
+### D27 — Service class = tier tiles; specific-car a styled dropdown, hidden for Eco (2026-06-22)
+Founder call (Session 16): the service-class **tier** picker (Eco / Business / First) became **three selectable
+tiles** (was a native `<select>`), matching the body-type segmented control right below it. The **specific-car**
+field stays a dropdown but is **`appearance:none` + a custom chevron** (the native one read thin/old-school on
+desktop) and is **hidden entirely for Eco** — the car catalog has only business/luxury models (Eco is the
+unlisted fallback), so an Eco specific-car list was a dead single-option dropdown; a one-line note shows instead.
+Form fields unchanged (`category` via a hidden input / `required_body_type` / `required_make` / `required_model`).
+WCAG-AA fix: the selected tile's example text was re-toned to `--slate-600`. [[d23]] [[d25]]
+
+### D28 — Named passengers: structured `passenger_names` jsonb, rows = headcount, capacity-capped (2026-06-23)
+Founder call (Session 17): a mission can **name N Guests** (`{first,last}`), stored **structured** in an additive
+`mission.passenger_names jsonb` column (founder-applied migration `docs/migrations/2026-06-23_named_passengers.sql`
+— I can't run DDL with the app keys; the founder runs it in the SQL editor). **The number of rows IS the
+headcount** (`pax_count` = rows; default 1 row); names are optional per row. **Capacity-capped by Body type**
+(Sedan 4 / Van 7 / Any 7, nudge past 4) — a **soft** cap (the UI disables Add; the server does not hard-block).
+The cap depends on the body chosen in `ServiceClassFields`, **lifted** into `MissionForm` via an `onBodyChange`
+callback and passed to `PassengerList`. `passenger_name` (singular) is kept as a **denormalised** display string
+(first NAMED Guest) so the schedule line, Driver reveal and mission detail read it unchanged; stored **null**
+(not a junk `[{"",""}]` blob) when no Guest is named. Resume **pads** rows up to `pax_count` so a legacy draft's
+count survives. Shared helpers in `lib/passengers.ts`; UI in `components/passenger-list.tsx`. [[d22]] [[d23]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

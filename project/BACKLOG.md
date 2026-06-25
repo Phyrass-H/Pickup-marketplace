@@ -225,7 +225,8 @@ full ML dynamic pricing · Amadeus GDS.
   (Per-dispatcher frequency from their own mission history — derivable on read, no schema change.)
 - 🔨 **Saved base addresses (favourites)** — let a Business store frequent pickup/drop-off points (e.g. its own
   hotel) and pick them in one tap instead of retyping. Additive: a per-business saved-places list.
-- 🔨 **Multiple passenger names** — allow more than one Guest name + surname on a mission. (Additive field.)
+- ✅ **Multiple passenger names** — SHIPPED (Session 17 / D28): first + surname, multiple per mission, **capped
+  by vehicle** (Sedan 4 / Van 7); structured `passenger_names` jsonb; rows = headcount.
 - 🔨 **Dress-code option** — specify driver attire with a few presets keyed to tier (e.g. First → suit/tie;
   Business → smart; Eco → neat). Founder defines the option set. (Additive field.)
 - ↳ Saved places / multiple passengers / dress code each need a small **additive** migration (founder-approved,

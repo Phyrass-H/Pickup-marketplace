@@ -55,11 +55,13 @@ not a design showcase**: functional and intuitive over decorative.
    blue=confirmed, amber=unfilled near pickup, red=accepted-not-confirmed near pickup,
    grey=pooled). Click a row → expands in place with full detail + Driver phone.
 2. **Calendar** (`/dispatch/calendar`) — month grid, trips as coloured dots/time/place.
-3. **New mission** (`/dispatch/new`) — **two-pane** (S14 / D24): left = section cards (Vehicle & class /
-   Route / Schedule / Trip details); right = a **sticky live Summary rail** (mini-route, live ETA, ceiling,
-   **live starting fare**, SPEED WIN, actions). Every Route field (incl. stops) is Mapbox autocomplete; a
-   live "27 km · 35 min" ETA routes through stops. Preview-before-post + save-as-draft. Collapses to one
-   column <900px.
+3. **New mission** (`/dispatch/new`) — **two-pane** (S14/D24). Left = section cards: **Vehicle & class**
+   (service-class **tier tiles** Eco/Business/First + body segmented Any/Sedan/Van + a specific-car dropdown,
+   hidden for Eco — S16/D27), **Route** (Mapbox autocomplete incl. stops, live "27 km · 35 min" ETA through
+   stops), **Schedule**, **Trip details** (**named Guests** first+surname, **capped by vehicle** Sedan 4/Van 7 —
+   S17/D28; luggage; flight; reference), **Pricing** (estimated base fare + ceiling + SPEED WIN — S15/D26).
+   Right = a **read-only** sticky **Summary rail** (mini-route, live ETA, ceiling, **live starting fare**,
+   pricing mode, actions). Preview-before-post + save-as-draft. Collapses to one column <900px.
 4. **Settings** (`/dispatch/settings`) — business name/field, **logo** (crop editor),
    Dispatcher contact, **documents** (Kbis upload, status pill), billing stub.
 5. **History** (`/dispatch/history`) — past trips, month-grouped.
