@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet } from "lucide-react";
+import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
@@ -191,8 +191,10 @@ export function MissionForm({
       return;
     }
 
-    const dropLat = Number(fd.get("dropoff_lat"));
-    const dropLng = Number(fd.get("dropoff_lng"));
+    // toNum (not Number()) so an empty dropoff is null, not 0 — Number("") is 0,
+    // which is a "finite" coordinate and would yield a bogus pickup→(0,0) distance.
+    const dropLat = toNum(fd.get("dropoff_lat"));
+    const dropLng = toNum(fd.get("dropoff_lng"));
     const rMake = String(fd.get("required_make") ?? "").trim();
     const rModel = String(fd.get("required_model") ?? "").trim();
     const passengers = parsePassengers(fd.get("passenger_names"));
@@ -209,12 +211,7 @@ export function MissionForm({
       guest: primaryPassengerName(passengers),
       flight: String(fd.get("flight_number") ?? "").trim(),
       reference: String(fd.get("comment") ?? "").trim(),
-      distanceKm: tripDistanceKm(
-        pickupLat,
-        pickupLng,
-        Number.isFinite(dropLat) ? dropLat : null,
-        Number.isFinite(dropLng) ? dropLng : null,
-      ),
+      distanceKm: tripDistanceKm(pickupLat, pickupLng, dropLat, dropLng),
       roadKm: toNum(fd.get("route_distance_km")),
       roadMin: toNum(fd.get("route_duration_min")),
     });
@@ -222,13 +219,12 @@ export function MissionForm({
     setMode("preview");
   }
 
-  // Prevent Enter from implicitly submitting while editing (textarea exempt).
+  // Enter inside a single-line <input> implicitly submits the form. Submitting
+  // is only ever an explicit button action here, and in preview mode a stray
+  // implicit submit would fire a LIVE post — so block Enter for inputs in BOTH
+  // modes. <textarea> (newlines) and <button> (keyboard activation) are exempt.
   function onKeyDown(e: React.KeyboardEvent) {
-    if (
-      e.key === "Enter" &&
-      mode === "edit" &&
-      (e.target as HTMLElement).tagName !== "TEXTAREA"
-    ) {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
       e.preventDefault();
     }
   }
@@ -647,8 +643,27 @@ export function MissionForm({
             )}
 
             <div className="mx-sumdiv" />
+            {mode === "preview" && (
+              <div
+                className="notice warn"
+                role="note"
+                style={{ display: "flex", gap: 8, alignItems: "flex-start" }}
+              >
+                <AlertTriangle size={16} style={{ flex: "none", marginTop: 1 }} aria-hidden />
+                <span>
+                  <strong>This is final.</strong> Posting sends the mission live to
+                  the Driver Pool right away — it can’t be un-posted. Use Edit or
+                  Save as draft if you’re not ready.
+                </span>
+              </div>
+            )}
+            {/* Distinct keys per mode so React MOUNTS A FRESH button set instead of
+                reusing (and re-typing) the same <button> node — without this, the
+                edit "Review" button (type=button) is reconciled into the preview
+                "Post to the Pool" submit button in place, and the click that opens
+                the preview submits the form (a live post). See SESSION_LOG S18. */}
             {mode === "edit" ? (
-              <div className="mx-actions">
+              <div className="mx-actions" key="actions-edit">
                 <button type="button" className="btn" onClick={review}>
                   Review mission →
                 </button>
@@ -657,7 +672,7 @@ export function MissionForm({
                 </button>
               </div>
             ) : (
-              <div className="mx-actions">
+              <div className="mx-actions" key="actions-preview">
                 <button type="submit" name="intent" value="pooled" className="btn">
                   {draft ? "Post draft to the Pool" : "Post to the Pool"}
                 </button>

@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-06-25 — Session 18 — Fix: "Review" silently posted the mission (React node-reuse) + irreversible-post guardrails
+**Branch:** `main` (working tree — **not yet committed/deployed**, awaiting founder review) · **Env:** local → Vercel.
+
+**Why:** founder report — on `/dispatch/new`, clicking **"Review mission →"** posted the mission LIVE and jumped to the
+Schedule (no review step, no explicit confirm); separately, "Post to the Pool" sometimes "did nothing". Item **#5**
+of the founder's 2026-06-25 dump. Founder also asked: keep "Post to the Pool" but add an **irreversible** warning.
+
+**Root cause (reproduced + verified in-browser, not guessed):** the edit-mode **Review** button (`type=button`) and the
+preview-mode **Post to the Pool** button (`type=submit`, `intent=pooled`) render in the SAME position inside
+`.mx-actions`, so React **reused the same `<button>` DOM node** and patched its `type` to `submit` *during* the click
+that flips to preview → the browser then submitted the form = a LIVE post. Proven with a capture-phase submit
+interceptor: clicking Review fired a `submit` whose `submitter` was the "Post to the Pool" button. **Ruled out** a
+service worker (there is none — verified) and the Enter key (never pressed).
+
+**What shipped (`mission-form.tsx` + `dispatch/new/actions.ts`, no schema change):**
+- **Node-reuse cure** — distinct React `key`s on the edit vs preview `.mx-actions` containers, so React MOUNTS A FRESH
+  button set instead of re-typing the Review node in place. Review now ONLY previews (verified: **0 submits**).
+- **Server safety net** (`createMission`) — `intent` no longer defaults to `"pooled"`. A submit carrying neither
+  `"pooled"` nor `"draft"` (e.g. a stray implicit submit) now redirects back to the form **writing NOTHING** — it can
+  never silently post a live mission. (Defence in depth.)
+- **Enter-key guard** — broadened: a stray Enter inside any single-line `<input>` is blocked in BOTH edit AND preview
+  (was edit-only); `<textarea>` (newlines) and `<button>` (keyboard activation) left untouched.
+- **Irreversible warning** (founder ask; D25 preview-approved) — amber `.notice warn` at the confirm step:
+  "This is final. Posting sends the mission live to the Driver Pool right away — it can't be un-posted. Use Edit or
+  Save as draft if you're not ready." The **"Post to the Pool"** label is kept.
+
+**Verified** — `tsc` clean (didn't run `next build` while the dev server was live). Browser (real Supabase,
+Business dev-login): Review → preview with **0 submits** + warning renders with the exact wording; "Post to the Pool"
+fires `intent=pooled`, "Save as draft" fires `intent=draft`; **real end-to-end draft create → `/dispatch/drafts` →
+discard** (zero residue); no console errors; screenshot matches the approved mockup.
+
+**Also fixed (pre-existing, surfaced during #5):** the preview card showed a bogus "~4907 km" when **no dropoff** was
+picked — `review()` used `Number(fd.get("dropoff_lat"))`, and `Number("")` is `0` (a "finite" coordinate), so it
+computed a pickup→(0,0) great-circle distance. Switched to the file's existing `toNum` helper (empty → null, matching
+the server action's `num`). Verified: no-dropoff shows no distance; a real dropoff still shows the right figure
+(Nice → Cannes "30 km · 39 min").
+
+**Next:** founder review → push `main` to deploy when okayed. Then continue the **2026-06-25 dump** (keyboard
+autocomplete nav, draft indicator, calendar driver search, desktop width, sidebar spacing, reference/comment split,
+a Driver section [language/dress code/message-to-driver], ultra-luxury tier).
+
+---
+
 ## 2026-06-24 — Session 17 — Named passengers (first + surname, capacity-capped) + idea-dump filed
 **Branch:** `main` (committed + deployed) · **Env:** local → Vercel. **Migration:** founder-applied
 `docs/migrations/2026-06-23_named_passengers.sql` (additive `mission.passenger_names jsonb`).

@@ -38,9 +38,17 @@ export async function createMission(formData: FormData) {
   if (!ctx.user) redirect("/login");
   if (!ctx.dispatcher || !ctx.business) redirect("/onboarding-business");
 
-  const intent = String(formData.get("intent") ?? "pooled");
-  const asDraft = intent === "draft";
   const missionId = String(formData.get("mission_id") ?? "").trim() || null;
+
+  // Posting is an explicit, named button action: 'pooled' (go live in the Pool)
+  // or 'draft' (save for later). A submit that carries NEITHER — e.g. a stray
+  // implicit submit — must never silently post a live mission. Bounce back to
+  // the form, writing nothing. (Defence in depth alongside the client guards.)
+  const intent = String(formData.get("intent") ?? "");
+  if (intent !== "pooled" && intent !== "draft") {
+    redirect(missionId ? `/dispatch/new?draft=${missionId}` : "/dispatch/new");
+  }
+  const asDraft = intent === "draft";
 
   const backTo = (err: string) =>
     missionId
