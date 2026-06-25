@@ -9,16 +9,23 @@ We're continuing PickUp (B2B VTC booking marketplace). This is a LOCAL session o
 GitHub (`main`) and the app auto-deploys to Vercel. **Claude Code is allowed to push `main` to deploy**
 (an `autoMode.allow` rule is set in `.claude/settings.local.json`).
 
-START BY READING (in order):
-- `CLAUDE.md` (root) — hard rules + glossary.
-- `project/SESSION_LOG.md` — newest entry (**Session 18**) is the resume point. `project/CHANGELOG.md` is a
-  **plain-language, founder-facing** history of everything shipped — read it for the big picture fast.
-- `project/DESIGN_BRIEF.md` — brand, palette (**navy** `#25344C`), glossary, every screen, constraints.
-- `project/BACKLOG.md` (newest **§ M** = the 2026-06-25 founder dump; **§ L** = guided-form polish),
-  `project/DECISIONS.md` (newest **D29**), `project/IDEAS.md` (newest **"Founder idea dump — 2026-06-23"**).
-- Skim `docs/` — `00`–`05`, `PickUp_Phase0_Data_Spine.md`, `pickup_schema.sql`, and **`docs/migrations/`**
-  (applied additive migrations: `2026-06-17_driver_service_area.sql`, `2026-06-19_vehicle_taxonomy_and_eta.sql`,
-  `2026-06-23_named_passengers.sql`). These are the source of truth.
+START BY READING — **just these four**; they get you fully up to date without bloating context:
+- `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
+- **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
+- `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
+- `project/SESSION_LOG.md` — skim only the **newest entry (Session 18)** for recent technical detail. Older
+  sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
+
+READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
+and it loses nothing — the docs are all still here, just read when relevant):
+- `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
+- `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
+  **D29**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+- `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
+- `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
+  `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`) — **ONLY** for schema/data work.
+- For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
+  answer — so the bulk never enters the main conversation.
 
 ## HOW THE FOUNDER WANTS TO WORK (standing preferences — honor all)
 1. **Show a preview FIRST for any UI/design job.** Build a self-contained inline mockup from the real tokens +

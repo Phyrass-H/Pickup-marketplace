@@ -4,7 +4,8 @@ PickUp is a **B2B VTC booking marketplace** — a French *centrale de réservati
 Professional VTC **Drivers** ↔ **Businesses** (hotels first) that need transport.
 
 ## Source of truth (do not contradict)
-The spec docs live in **`docs/`** and are canonical. Read before deciding anything:
+The spec docs live in **`docs/`** and are canonical. **Read on demand** — open the relevant one when a decision
+touches it; don't read them all at startup (see `project/NEXT_SESSION.md` for the lean startup set):
 - `docs/00_Overview_and_Index.md` — what PickUp is + the glossary
 - `docs/01_Legal_VAT_Compliance.md` — agent/intermediary positioning, VAT, voucher rules
 - `docs/02_Product_Features_MVP.md` — V1 scope: **KEEP / CUT / MANUAL** per feature
