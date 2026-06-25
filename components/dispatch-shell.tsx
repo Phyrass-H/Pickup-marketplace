@@ -72,6 +72,13 @@ export function DispatchShell({
   }
 
   const title = TITLES[pathname] ?? "Dispatch";
+  // Dense data views fill the screen (was capped at 1120 + left-aligned, leaving
+  // dead space on wide monitors). The new-mission form and other narrow pages
+  // keep the default comfortable width.
+  const wideMain =
+    pathname === "/dispatch" ||
+    pathname === "/dispatch/calendar" ||
+    pathname === "/dispatch/history";
 
   return (
     <div className="dx-shell">
@@ -174,7 +181,7 @@ export function DispatchShell({
         <div className="dx-topbar">
           <span className="dx-topbar__title">{title}</span>
         </div>
-        <main className="dx-main">{children}</main>
+        <main className={`dx-main${wideMain ? " dx-main--wide" : ""}`}>{children}</main>
       </div>
     </div>
   );

@@ -92,7 +92,16 @@ inserted a row (the #5 fix stopped accidental Review-posts, not deliberate re-cl
   SHA. If a push is dropped, push an empty commit to re-trigger (or Vercel dashboard → Redeploy). The GitHub
   deployments `?sha=` filter needs the FULL 40-char SHA; the short SHA returns empty.
 
-**Next:** the visual quick-polish via the D25 preview loop — desktop width, sidebar spacing. Bigger form work after:
+- ✅ **#6 Desktop width** (`dispatch-shell.tsx` + `globals.css`): `.dx-main` was capped at **1120px + left-aligned**,
+  leaving dead space on wide monitors (324px at a 1680px viewport — "squished to the left"). Added a
+  **`.dx-main--wide`** modifier (max-width **1520px**) that the shell applies on the **dense data views only**
+  (Schedule / Calendar / History) via `pathname`. The **new-mission form is deliberately left UNTOUCHED** (founder
+  asked) — it keeps the 1120px default (form grid 1072px, identical to before); Drafts (560px cards) + Settings also
+  unchanged. D25 loop: showed before/after at 1680px (live CSS injection, nothing committed); founder approved
+  widening the dense views but explicitly NOT the mission page. Verified live: Schedule/Calendar/History fill (1444px,
+  0 dead space), new-mission still 1120/1072, Drafts still 560; tsc clean, no console errors.
+
+**Next:** **#7 sidebar spacing** (last visual quick-polish, D25 preview loop). Bigger form work after:
 reference/comment split, a Driver section [language/dress code/message-to-driver], ultra-luxury tier.
 
 ---

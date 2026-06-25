@@ -810,6 +810,7 @@ textarea::placeholder {
 }
 .dx-topbar__title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .dx-main { padding: 24px; max-width: 1120px; width: 100%; }
+.dx-main--wide { max-width: 1520px; }
 .dx-narrow { max-width: 560px; }
 .dx-tel { color: var(--accent); font-weight: 600; cursor: pointer; }
 
