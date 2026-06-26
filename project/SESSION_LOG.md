@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-06-27 — Session 20 — Reference field: a dedicated, char-capped booking tag (Business-only, hidden from the Driver)
+**Branch:** `main` — committed + pushed (deploy verified). **Migration applied by the founder.** · **Env:** local → Vercel (live).
+
+**Why:** founder ask (BACKLOG § M item 3 / NEXT_SESSION item 2) — the remaining half of the S19 Reference split.
+The message-to-Driver half shipped in the S19 Driver card; this finishes the job by turning the old "Reference /
+notes" field (which double-served as reference + instructions) into a short, char-limited **Reference**. Designed via
+the D25 preview loop (6 mockup iterations; the founder rejected a wider Trip-details card redesign — "be close to the
+original, just improve" — so scope was pulled back to ONLY this field).
+
+**Scope shipped (all KEEP, no third-party APIs):**
+- **New `ReferenceField`** (`components/reference-field.tsx`, client) replacing the free-text `comment` textarea in the
+  Trip-details card. Narrow (240px) single-line input, bookmark icon, **20-char cap**, a live `X / 20` counter that
+  turns amber (the `--warning` token) within 3 of the limit, a one-line purpose hint, and a small **"Not shown to the
+  Driver"** note. Controlled input; `.rf-*` classes added to `globals.css` from the real navy tokens.
+- **Dedicated `reference` column** (was reusing `comment`). The Business sees it on the **schedule chip + detail**
+  (`trip-row.tsx`) and the **Review preview** (`mission-form.tsx`); the **Driver never sees it** — the old "Comment"
+  block was removed from the Driver mission detail (`app/(app)/missions/[id]/page.tsx`).
+- **20-char cap enforced server-side** in `actions.ts` (`.slice(0, 20)`) — the input `maxLength` is a convenience; the
+  server slice is the real guard. Preview builder in `mission-form.tsx` slices too.
+- **Seed** (`app/api/seed/route.ts`): the two instruction-flavoured `comment`s moved to `driver_message` (S19) + a short
+  `reference` added ("Chambre 412", "Suite 5").
+- **DB (additive, founder ran):** `docs/migrations/2026-06-27_mission_reference.sql` — `add column reference text` +
+  backfills from the legacy `comment` **truncated to 20** (`left(nullif(btrim(comment),''),20)`). The legacy `comment`
+  column is **left in place** (dropping is non-additive, hard-rule #4) — the app no longer reads/writes it. Mirrored into
+  `lib/database.types.ts` (D3); `comment` kept in the types since the column still exists.
+
+**Verification:** `tsc` clean (no ESLint configured in repo — the prior "lint clean" was `tsc`). **Adversarial review**
+(workflow, 3 parallel skeptics + synthesis: data-flow/round-trip, Driver-hidden guarantee, schema/pre-migration/stray-
+surfaces) — change **sound**, reference shown to Business + hidden from Driver, types match. One **low** acted on: the
+migration backfill now truncates to 20 (was unbounded). **Browser-verified vs the REAL Supabase DB:** field matches the
+approved mockup (240px, icon, counter, note, no console errors); live counter + amber threshold work; **seed wrote
+`reference` through PostgREST**; the schedule renders `.ref` chips incl. **backfilled+truncated legacy values** ("Add
+fresh aqua Pana", "Passager VIP — eau à" — proof the migration backfill + `LEFT(...,20)` ran on real data); **draft
+write+read round-trip via `createMission`** ("Room 999 RT-check" saved → resumed → populated) then the test draft
+restored to empty. No live pooled mission posted (avoided Pool pollution; display surfaces are guarded `select('*')`
+reads + reviewed).
+
+**Deferred / flagged (no dirty routes):** V2 **per-business custom reference label** (Hotel→Room, Restaurant→Table,
+BACKLOG § M) — not built; the legacy `comment` column is now vestigial (a future non-additive cleanup could drop it).
+
 ## 2026-06-25 — Session 19 — New "Driver & service" card on the mission form (language / dress code / requests / board / message)
 **Branch:** `main` — **committed `0887247` + DEPLOYED** (Vercel build `success`; deployment SHA verified == pushed SHA,
 no dropped-deploy this time). **Migration applied by the founder.** · **Env:** local → Vercel (live).

@@ -5,6 +5,13 @@
 
 ---
 
+## 27 June 2026
+- **The "Reference" field on a mission is now a proper short tag.** It used to be a big "Reference / notes" box that
+  did double duty; now it's a compact, single-line **Reference** — a quick tag for your *own* schedule like "Room 312"
+  or "FIF 2026 Chopard". It's capped at **20 characters** (with a live counter), and it's **private to your team —
+  the Driver never sees it** (anything the Driver needs goes in the Driver & service card's message instead). Existing
+  missions keep their tag automatically. **(Now live.)**
+
 ## 25 June 2026
 - **New "Driver & service" section on the mission form.** When posting a trip you can now tell the Driver:
   - **Which language(s)** they should speak (French, English, Italian, Spanish, German, Arabic).
