@@ -284,6 +284,36 @@ Settings unchanged. Kept **left-aligned** (no centering) so the content stays in
 Preview-first was done by applying the proposed CSS live in the browser at 1680px and screenshotting before/after
 (the D25 loop works for width/layout tweaks too, not just full mockups). [[d24]]
 
+### D30 — "Driver & service" mission-form card: anti-suit dress default, display-only languages, board file reuse (2026-06-25)
+Founder ask (S19): a dedicated **Driver section** on `/dispatch/new` (BACKLOG § M item 2 + § L dress-code). Designed
+via the D25 preview loop (6 mockup iterations) first, then built to match. Key calls:
+- **Dress code** = a 4-rung ladder `driver_choice → smart_casual → business_formal → suit_tie`. Its default is
+  **keyed to the service tier** (eco→Driver's choice · business→Smart casual · luxury/First→Business formal) and
+  **never lands on suit & tie** — the Business must pick that on purpose (the founder's anti-over-asking goal). The
+  default **tracks the tier** until the Dispatcher manually picks one (a per-mission `touchedRef`), then their pick
+  sticks. The cross-mission **learned** default (adopt a repeated override after ~N times) is **deferred** (needs
+  history aggregation). Suit & tie wording is neutral ("Specific event or VIP protocol", a `Sparkles` note), since
+  most Drivers already wear a dark suit — anything specific goes in the message.
+- **Requested languages are display / preference only — NOT a hard Pool filter** (filtering would shrink the Pool).
+  Stored as label strings (curated set FR/EN/IT/ES/DE/AR), shown to the Driver and matched visually against their
+  existing free-text `driver.languages`. **No proficiency "level"** — Drivers don't store one (founder dropped it).
+- **Request flags** = one `jsonb` (meet_greet, greeter, luggage_help, child_seat, quiet_ride, pets). **"Card only"
+  dropped** (PickUp handles payment); **PRM dropped** — it's a *vehicle category*, parked to IDEAS for the Bus
+  expansion, not a per-mission flag.
+- **Meet & greet name board** = a typed name **or** an attached PDF/JPG/PNG, reusing the existing private
+  `documents` Storage bucket. Uploaded inside `createMission` with a **random storage path** (no insert-return-id)
+  and a **conditional-spread** write (mirrors the `eta` pattern) so a draft re-save never wipes it; a dismiss writes
+  `board_file_path: null` via `board_file_clear`. On-demand signed URL (`lib/mission-board-actions.ts` →
+  `getMissionBoardUrl`, authz = Dispatcher-of-business OR assigned Driver) so lists never eagerly mint URLs. The
+  **board name auto-fills from the first Guest** (name + surname) and tracks it live until overridden — lifted from
+  `PassengerList` via `onPrimaryNameChange`, same pattern as the body/tier lifts.
+- **Reveal gating:** languages / dress / flags show to the Driver **pre-accept** (so they self-select); board name +
+  file + private message reveal only **post-accept** (same rule as Guest contact). **Migration**
+  `docs/migrations/2026-06-25_mission_driver_section.sql` (founder-applied): additive `required_languages text[]`,
+  `dress_code text`, `driver_flags jsonb`, `board_name text`, `board_file_path text`, `driver_message text`.
+  Adversarially reviewed (auth sound, schema/types/writes exact match) + browser-verified end-to-end (draft
+  write+read round-trip vs the real DB). [[d27]] [[d28]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

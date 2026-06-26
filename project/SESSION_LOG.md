@@ -59,6 +59,12 @@ jsonb through PostgREST confirmed). Test draft discarded after. Then **pushed `0
 (Did NOT post a live pooled mission to avoid Pool pollution — the display surfaces are guarded `select('*')` reads +
 adversarially reviewed; offer the founder a quick live demo post if they want to eyeball the schedule/Driver views.)
 
+**Follow-up (same day, deployed `5eb2a40`):** the meet & greet **name board now auto-fills with the first Guest**
+(name + surname) and tracks it live until the Dispatcher types a custom company/brand name (then it sticks). Lifted
+the primary Guest out of `PassengerList` via a new `onPrimaryNameChange` → `MissionForm` → `DriverServiceFields`
+(same pattern as the body/tier lifts); the board input became controlled with a `touchedRef`. Browser-verified
+(pre-fills live, override sticks, no console errors). Changelog `899b60f`.
+
 **Deferred / flagged (no dirty routes — surfaced):** the **learned** dress-code default (adopt a Business's repeated
 override as their default after ~3 times) — needs history aggregation, invisible polish; **language as a hard Pool
 filter** (kept display-only on purpose); **orphan cleanup** of replaced board files in Storage (minor leak); client MIME

@@ -227,10 +227,11 @@ full ML dynamic pricing · Amadeus GDS.
   hotel) and pick them in one tap instead of retyping. Additive: a per-business saved-places list.
 - ✅ **Multiple passenger names** — SHIPPED (Session 17 / D28): first + surname, multiple per mission, **capped
   by vehicle** (Sedan 4 / Van 7); structured `passenger_names` jsonb; rows = headcount.
-- 🔨 **Dress-code option** — specify driver attire with a few presets keyed to tier (e.g. First → suit/tie;
-  Business → smart; Eco → neat). Founder defines the option set. (Additive field.)
-- ↳ Saved places / multiple passengers / dress code each need a small **additive** migration (founder-approved,
-  → `docs/migrations/`); smart-defaults and guidance copy need none. All in-phase (not third-party APIs).
+- ✅ **Dress-code option** — SHIPPED (Session 19 / D30): a 4-rung ladder (Driver's choice → Smart casual →
+  Business formal → Suit & tie) **inside the new "Driver & service" card**, with a **tier-keyed default that never
+  lands on suit & tie**. Part of the § M Driver-section build.
+- ↳ Saved places needs a small **additive** migration (founder-approved, → `docs/migrations/`); smart-defaults and
+  guidance copy need none. (Multiple passengers + dress code already shipped.) All in-phase (not third-party APIs).
 
 ## M. Founder dump 2026-06-25 — bug fixes + Dispatch polish (Session 18) 🔨
 > A founder testing pass produced fixes + small features. Most shipped in S18; the rest are the next chunk.
@@ -250,12 +251,17 @@ full ML dynamic pricing · Amadeus GDS.
 - ✅ Cosmetic: un-squeezed the draft-card buttons; fixed a bogus "~4907 km" preview when no dropoff was picked.
 - ❌ **Sidebar spacing** — founder **declined** (leave the sidebar as-is).
 
+**✅ Shipped (S19, deployed — the "Driver & service" card, D30):**
+- ✅ **A "Driver" section** on the mission form — SHIPPED: **languages** (display/preference, not a hard filter),
+  **dress code** (tier-keyed, anti-suit default), **request flags** (`jsonb`: meet & greet, greeter, luggage help,
+  child seat, quiet ride, pets — "card only" + PRM deliberately dropped), a **meet & greet name board** (typed name
+  **or** an attached PDF/JPG/PNG, auto-filled from the first Guest), and a **private message to the Driver**
+  (revealed post-accept). Migration `2026-06-25_mission_driver_section.sql` applied.
+- ✅ **Message-to-the-driver half of the Reference split** — SHIPPED as the private message in the Driver card.
+
 **🔨 Remaining (next chunk — each NEW field = a small founder-run additive migration):**
-- 🔨 **Reference vs message-to-driver split** — the one "Reference / notes" field does two jobs; split into a short,
-  char-limited **Reference** (schedule line: "FIF 2026 Chopard", "Room 312") + a free **message to the driver**.
-  V2: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
-- 🔨 **A "Driver" section** on the mission form — **required language** (drivers already store languages),
-  **dress code** (presets keyed to tier), **message to the driver**. Optional extra flags: meet & greet / name
-  board, child seat, no-cash, quiet ride, luggage help, PRM, pet — a single `jsonb` of flags covers them.
+- 🔨 **Reference field (the remaining half of the split)** — the schedule "Reference / notes" field still does double
+  duty; make it a short, **char-limited Reference** (schedule line: "FIF 2026 Chopard", "Room 312"). The free
+  message half is done (Driver card). V2: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
 - ❓ **Ultra-luxury "Exception" tier** (Rolls/Bentley above First) — a taxonomy decision; bundle with the
   IDEAS vehicle-taxonomy V2 (Bus tier, First-van, cargo vehicle).
