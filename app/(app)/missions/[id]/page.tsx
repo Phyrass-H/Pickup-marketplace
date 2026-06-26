@@ -108,12 +108,6 @@ export default async function MissionDetailPage({
               <dd>{mission.flight_number}</dd>
             </>
           )}
-          {mission.comment && (
-            <>
-              <dt>Comment</dt>
-              <dd>{mission.comment}</dd>
-            </>
-          )}
           {languages.length > 0 && (
             <>
               <dt>Languages</dt>

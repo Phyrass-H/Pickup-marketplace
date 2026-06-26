@@ -9,6 +9,7 @@ import { RouteStops, type RouteSummary } from "@/components/route-stops";
 import { ServiceClassFields } from "@/components/service-class-fields";
 import { DriverServiceFields } from "@/components/driver-service-fields";
 import { PassengerList } from "@/components/passenger-list";
+import { ReferenceField } from "@/components/reference-field";
 import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
 import {
   parseLanguages,
@@ -267,7 +268,7 @@ export function MissionForm({
       luggage: String(fd.get("luggage_count") ?? ""),
       guest: primaryPassengerName(passengers),
       flight: String(fd.get("flight_number") ?? "").trim(),
-      reference: String(fd.get("comment") ?? "").trim(),
+      reference: String(fd.get("reference") ?? "").trim().slice(0, 20),
       languages: parseLanguages(fd.get("required_languages")),
       dressLabel: dressCodeLabel(String(fd.get("dress_code") ?? "")),
       flagLabels: activeFlagLabels(fd.get("driver_flags")),
@@ -430,23 +431,7 @@ export function MissionForm({
                 />
               </label>
 
-              <label className="field" style={{ marginBottom: 0 }}>
-                <span>Reference / notes (optional — shown on the schedule line)</span>
-                <textarea
-                  name="comment"
-                  rows={2}
-                  defaultValue={draft?.comment ?? ""}
-                  placeholder="e.g. Room 312 · or an event name like “Cannes Gala”"
-                  style={{
-                    width: "100%",
-                    padding: 12,
-                    fontSize: 16,
-                    border: "1px solid var(--border)",
-                    borderRadius: 10,
-                    fontFamily: "inherit",
-                  }}
-                />
-              </label>
+              <ReferenceField defaultValue={draft?.reference} />
             </div>
 
             {/* Driver & service — language / dress code / requests / message (S19) */}

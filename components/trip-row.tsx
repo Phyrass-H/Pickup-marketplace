@@ -44,7 +44,7 @@ export function TripRow({
   archived?: boolean;
 }) {
   const t = missionTone(mission, undefined, { archived });
-  const reference = mission.comment?.trim() || null;
+  const reference = mission.reference?.trim() || null;
   const languages = parseLanguages(mission.required_languages);
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);

@@ -95,7 +95,10 @@ export async function createMission(formData: FormData) {
   const passengerName = primaryPassengerName(passengers);
   const paxCount = passengers.length > 0 ? passengers.length : null;
   const flightNumber = String(formData.get("flight_number") ?? "").trim();
-  const comment = String(formData.get("comment") ?? "").trim();
+  // Reference: a short booking tag (room / event) for the Business's own
+  // schedule line — never shown to the Driver. Capped at 20 chars server-side
+  // (the input's maxLength is a convenience; this is the real guard).
+  const reference = String(formData.get("reference") ?? "").trim().slice(0, 20);
   const luggageCount = num(formData.get("luggage_count"));
 
   // Service class: category is the TIER; body + an optional specific car narrow
@@ -221,7 +224,7 @@ export async function createMission(formData: FormData) {
     pax_count: paxCount,
     luggage_count: luggageCount,
     flight_number: flightNumber || null,
-    comment: comment || null,
+    reference: reference || null,
     base_fare: baseFare,
     ceiling: ceiling!,
     pdp_start: pdpStart,

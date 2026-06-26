@@ -233,6 +233,7 @@ export interface Database {
           pax_count: number | null;
           luggage_count: number | null;
           comment: string | null;
+          reference: string | null;
           base_fare: number | null;
           ceiling: number;
           pdp_start: number | null;
@@ -281,6 +282,7 @@ export interface Database {
           pax_count?: number | null;
           luggage_count?: number | null;
           comment?: string | null;
+          reference?: string | null;
           base_fare?: number | null;
           ceiling: number;
           pdp_start?: number | null;
