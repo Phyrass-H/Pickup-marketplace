@@ -1229,38 +1229,96 @@ textarea::placeholder {
 }
 
 /* ---- Passenger list (named Guests, capacity-capped) ---- */
-.pl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .pl-cap {
-  flex: none; font-size: 12px; font-weight: 600; color: var(--accent);
+  display: inline-block; margin-left: 10px; vertical-align: middle;
+  font-size: 12px; font-weight: 600; color: var(--accent);
   background: var(--accent-soft); border: 1px solid var(--blue-100);
-  padding: 3px 10px; border-radius: 999px;
+  padding: 2px 9px; border-radius: 999px;
 }
-.pl-rows { display: flex; flex-direction: column; gap: 10px; }
-.pl-row { display: flex; align-items: center; gap: 10px; }
-.pl-n { flex: none; min-width: 56px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.pl-cols { display: flex; gap: 10px; flex: 1; min-width: 0; }
-.pl-cols input { flex: 1; min-width: 0; }
-.pl-rm {
-  flex: none; width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text-muted); display: grid; place-items: center; cursor: pointer;
-}
-.pl-rm:hover { border-color: var(--border-strong); color: var(--text); }
-.pl-rm-space { flex: none; width: 40px; }
+/* Add passenger — a quiet outline button in the header, not a heavy CTA block. */
 .pl-add {
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
-  padding: 11px 16px; border-radius: 10px; border: 1px solid var(--accent);
-  background: var(--accent); color: var(--text-on-accent); font-size: 14px; font-weight: 600; cursor: pointer;
+  flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--accent); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
 }
-.pl-add:hover { background: var(--accent-hover); }
-.pl-add:disabled {
-  background: var(--surface); color: var(--text-muted);
-  border: 1px dashed var(--border-strong); cursor: not-allowed;
+.pl-add:hover { background: var(--surface-2); border-color: var(--accent); }
+.pl-add:disabled { color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
+
+.pl-rows { display: flex; flex-direction: column; gap: 10px; }
+
+/* One Guest block: a label line (main star + remove) above a fields line. */
+.pl-guest { border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+.pl-guest--main { background: var(--accent-soft); border-color: var(--blue-100); }
+.pl-ghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.pl-star {
+  display: inline-flex; align-items: center; gap: 7px; padding: 0;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 12.5px; color: var(--text-muted);
 }
+.pl-star > svg { flex: none; }
+.pl-star:hover .pl-star__set { text-decoration: underline; }
+.pl-star--main { color: var(--accent); font-weight: 600; cursor: default; }
+.pl-star__set { color: var(--accent); }
+.pl-grm {
+  flex: none; width: 28px; height: 28px; border: none; background: none; border-radius: 6px;
+  color: var(--text-faint); display: grid; place-items: center; cursor: pointer;
+}
+.pl-grm:hover { color: var(--text); background: var(--surface-2); }
+.pl-fields { display: flex; gap: 10px; flex-wrap: wrap; }
+.pl-fields > input { flex: 1; min-width: 120px; }
+.pl-phone {
+  flex: 1; min-width: 150px; display: flex; align-items: center; gap: 7px;
+  height: 44px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); padding: 0 12px;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.pl-phone:focus-within { border-color: var(--accent); box-shadow: var(--ring); }
+.pl-phone > svg { flex: none; color: var(--text-faint); }
+.pl-phone input {
+  flex: 1; min-width: 0; height: 100%; border: none; background: transparent;
+  padding: 0; font-size: var(--text-base); color: var(--text); font-family: inherit;
+}
+.pl-phone input:focus { box-shadow: none; }
+.pl-share { margin-top: 10px; }
+
+/* Share-with-Driver switch — shared by the form and the schedule trip detail. */
+.sw {
+  display: inline-flex; align-items: center; gap: 8px; padding: 0;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+}
+.sw:disabled { cursor: default; opacity: 0.7; }
+.sw-track {
+  flex: none; width: 38px; height: 22px; border-radius: 999px;
+  background: var(--border-strong); position: relative;
+  transition: background var(--dur) var(--ease);
+}
+.sw-track--on { background: var(--accent); }
+.sw-knob {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; transition: left var(--dur) var(--ease);
+}
+.sw-track--on .sw-knob { left: 18px; }
+.sw-label { font-size: 12.5px; color: var(--text-muted); }
+.sw-label--on { color: var(--text); }
+
 .pl-note {
   display: flex; align-items: center; gap: 7px; font-size: 12px; color: #854f0b;
   background: var(--warn-bg); border: 1px solid #fddcab; border-radius: 8px; padding: 8px 11px; margin-top: 10px;
 }
 .pl-note svg { flex: none; }
+
+/* Schedule trip detail — a Guest's number + the Share switch. */
+.dx-guests { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.dx-guest {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding-top: 10px;
+}
+.dx-guest__who { font-size: 13px; color: var(--text-muted); }
+.dx-guest__tel { font-size: 14px; color: var(--accent); font-weight: 600; text-decoration: none; }
+.dx-guest__tel:hover { text-decoration: underline; }
+.dx-guest .sw { margin-left: auto; }
 
 /* Reference — a short, ≤20-char booking tag (room / event) shown on the Business
    schedule line only, never to the Driver. Replaces the old free-text comment.

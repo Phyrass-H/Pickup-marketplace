@@ -21,9 +21,11 @@ import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
 import {
   parsePassengers,
   primaryPassengerName,
+  mergeContacts,
   splitFullName,
   VAN_SEATS,
   type Passenger,
+  type GuestContact,
 } from "@/lib/passengers";
 import {
   parisLocalToUtc,
@@ -115,10 +117,12 @@ export function MissionForm({
   error,
   prefillDate,
   draft,
+  draftContacts,
 }: {
   error?: string;
   prefillDate?: string;
   draft?: MissionRow | null;
+  draftContacts?: GuestContact[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -150,9 +154,13 @@ export function MissionForm({
   // card pre-fills the meet & greet board with it (corrected on mount by the list).
   const [primaryName, setPrimaryName] = useState<string>(draft?.passenger_name ?? "");
 
-  // Seed passenger rows: a draft's structured passenger_names, else best-effort
-  // from a legacy single passenger_name, else one blank row (the PassengerList default).
-  const draftPassengers = parsePassengers(draft?.passenger_names);
+  // Seed passenger rows: a draft's structured passenger_names (names + main flag)
+  // merged with its side-table phones, else best-effort from a legacy single
+  // passenger_name, else one blank row (the PassengerList default).
+  const draftPassengers = mergeContacts(
+    parsePassengers(draft?.passenger_names),
+    draftContacts ?? [],
+  );
   const seedBase =
     draftPassengers.length > 0
       ? draftPassengers
@@ -169,7 +177,10 @@ export function MissionForm({
   );
   const seededPassengers: Passenger[] | undefined =
     seedTarget > 0
-      ? Array.from({ length: seedTarget }, (_, i) => seedBase[i] ?? { first: "", last: "" })
+      ? Array.from(
+          { length: seedTarget },
+          (_, i) => seedBase[i] ?? { first: "", last: "", phone: "" },
+        )
       : undefined;
 
   // Calendar prefill (?date=) → that day at 09:00; a resumed draft wins over it.

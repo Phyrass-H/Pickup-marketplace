@@ -14,6 +14,12 @@ import { isExecutable } from "@/lib/mission-flow";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
+import { PhoneShareToggle } from "@/components/phone-share-toggle";
+import {
+  parsePassengers,
+  zipGuestContacts,
+  type GuestContact,
+} from "@/lib/passengers";
 
 // A Driver's car, shown to the Dispatch so it can tell the Guest what to look
 // for at pickup (brand, colour, plate). Captured at Driver onboarding/settings.
@@ -37,14 +43,28 @@ export interface DriverContact {
 export function TripRow({
   mission,
   driver,
+  guestContacts,
   archived = false,
 }: {
   mission: MissionRow;
   driver?: DriverContact | null;
+  guestContacts?: GuestContact[] | null;
   archived?: boolean;
 }) {
   const t = missionTone(mission, undefined, { archived });
   const reference = mission.reference?.trim() || null;
+  // Guests with a phone (the Business owns these numbers). The Share switch flips
+  // whether the assigned Driver can see each one; archived/past trips are read-only.
+  const guests = zipGuestContacts(
+    parsePassengers(mission.passenger_names),
+    guestContacts ?? [],
+  );
+  // Sharing is read-only once a trip is finished (and on archived/history rows).
+  const shareLocked =
+    archived ||
+    mission.status === "completed" ||
+    mission.status === "cancelled" ||
+    mission.status === "expired";
   const languages = parseLanguages(mission.required_languages);
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);
@@ -244,6 +264,28 @@ export function TripRow({
             </>
           )}
         </dl>
+
+        {guests.length > 0 && (
+          <div className="dx-guests">
+            {guests.map((g) => (
+              <div className="dx-guest" key={g.index}>
+                <span className="dx-guest__who">
+                  {g.main ? "Main contact" : "Guest"}
+                  {g.name ? ` · ${g.name}` : ""}
+                </span>
+                <a className="dx-guest__tel" href={`tel:${g.phone}`}>
+                  {g.phone}
+                </a>
+                <PhoneShareToggle
+                  missionId={mission.id}
+                  index={g.index}
+                  shared={g.shared}
+                  disabled={shareLocked}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </details>
   );

@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 import { LiveRefresh } from "@/components/live-refresh";
 import { TripRow, type DriverContact } from "@/components/trip-row";
+import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
 import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -27,11 +28,13 @@ function DayGroup({
   dayKey,
   missions,
   contacts,
+  guestContacts,
   today,
 }: {
   dayKey: string;
   missions: MissionRow[];
   contacts: Map<string, DriverContact>;
+  guestContacts: Map<string, GuestContact[]>;
   today?: boolean;
 }) {
   return (
@@ -43,7 +46,12 @@ function DayGroup({
         </span>
       </div>
       {missions.map((m) => (
-        <TripRow key={m.id} mission={m} driver={contacts.get(m.id) ?? null} />
+        <TripRow
+          key={m.id}
+          mission={m}
+          driver={contacts.get(m.id) ?? null}
+          guestContacts={guestContacts.get(m.id) ?? null}
+        />
       ))}
     </section>
   );
@@ -84,6 +92,20 @@ export default async function DispatchSchedule() {
     }
   }
 
+  // Guest phone numbers (side table, RLS-scoped to this Business). Drivers can't
+  // read these; the Share switch in each row controls reveal to the assigned Driver.
+  const guestContacts = new Map<string, GuestContact[]>();
+  const missionIds = (missions ?? []).map((m) => m.id);
+  if (missionIds.length > 0) {
+    const { data: gc } = await supabase
+      .from("mission_guest_contact")
+      .select("mission_id, contacts")
+      .in("mission_id", missionIds);
+    for (const r of gc ?? []) {
+      guestContacts.set(r.mission_id, parseGuestContacts(r.contacts));
+    }
+  }
+
   // Group by Paris day; split into today / future / past.
   const todayKey = parisDayKey(new Date());
   const groups = new Map<string, MissionRow[]>();
@@ -121,7 +143,13 @@ export default async function DispatchSchedule() {
           <ColumnHead />
 
           {/* Today is always shown and pinned on top. */}
-          <DayGroup dayKey={todayKey} missions={todayMissions} contacts={contacts} today />
+          <DayGroup
+            dayKey={todayKey}
+            missions={todayMissions}
+            contacts={contacts}
+            guestContacts={guestContacts}
+            today
+          />
           {todayMissions.length === 0 && (
             <p className="muted small" style={{ margin: "0 0 8px 2px" }}>
               No trips today.
@@ -129,7 +157,13 @@ export default async function DispatchSchedule() {
           )}
 
           {futureKeys.map((k) => (
-            <DayGroup key={k} dayKey={k} missions={groups.get(k)!} contacts={contacts} />
+            <DayGroup
+              key={k}
+              dayKey={k}
+              missions={groups.get(k)!}
+              contacts={contacts}
+              guestContacts={guestContacts}
+            />
           ))}
 
           {pastKeys.length > 0 && (
@@ -139,7 +173,13 @@ export default async function DispatchSchedule() {
               </summary>
               <div style={{ marginTop: 8 }}>
                 {pastKeys.map((k) => (
-                  <DayGroup key={k} dayKey={k} missions={groups.get(k)!} contacts={contacts} />
+                  <DayGroup
+              key={k}
+              dayKey={k}
+              missions={groups.get(k)!}
+              contacts={contacts}
+              guestContacts={guestContacts}
+            />
                 ))}
               </div>
             </details>

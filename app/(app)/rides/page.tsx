@@ -15,6 +15,12 @@ import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-s
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { StatusControl } from "./status-control";
+import {
+  parsePassengers,
+  parseGuestContacts,
+  zipGuestContacts,
+  type GuestPhone,
+} from "@/lib/passengers";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +58,8 @@ export default async function RidesPage() {
   // for missions that are already assigned to THIS driver (fetched above under
   // RLS). This is the "reveal phone on acceptance" gate, enforced in code.
   const contacts = new Map<string, Contact>();
+  // Guest phones the Business has SHARED, revealed to this assigned Driver only.
+  const guestPhones = new Map<string, GuestPhone[]>();
   if (missions && missions.length > 0) {
     const admin = createAdminClient();
     const dispatcherIds = [...new Set(missions.map((m) => m.dispatcher_id))];
@@ -76,6 +84,22 @@ export default async function RidesPage() {
         dispatcherPhone: d?.phone ?? null,
         businessName: b?.name ?? null,
       });
+    }
+
+    // Reveal SHARED Guest phones via the service role (Drivers can't read the
+    // mission_guest_contact table via RLS). Gated to phones the Business toggled
+    // shared, on missions already assigned to THIS Driver (the query above).
+    const { data: gc } = await admin
+      .from("mission_guest_contact")
+      .select("mission_id, contacts")
+      .in("mission_id", missions.map((m) => m.id));
+    const gcByMission = new Map((gc ?? []).map((r) => [r.mission_id, r.contacts]));
+    for (const m of missions) {
+      const revealed = zipGuestContacts(
+        parsePassengers(m.passenger_names),
+        parseGuestContacts(gcByMission.get(m.id)),
+      ).filter((g) => g.shared);
+      if (revealed.length > 0) guestPhones.set(m.id, revealed);
     }
   }
 
@@ -145,6 +169,19 @@ export default async function RidesPage() {
                   <span>{m.passenger_name}</span>
                 </div>
               )}
+              {(guestPhones.get(m.id) ?? []).map((g) => (
+                <div className="contact-row" key={g.index}>
+                  <span className="muted small">
+                    {g.name ? `${g.name}${g.main ? " (main)" : ""}` : "Guest phone"}
+                  </span>
+                  <a
+                    href={`tel:${g.phone}`}
+                    style={{ color: "var(--accent)", fontWeight: 600 }}
+                  >
+                    {g.phone}
+                  </a>
+                </div>
+              ))}
               <div className="contact-row">
                 <span className="muted small">Business</span>
                 <span>{c?.businessName ?? "—"}</span>

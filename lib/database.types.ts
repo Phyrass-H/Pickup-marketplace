@@ -309,6 +309,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["mission"]["Insert"]>;
         Relationships: [];
       };
+      mission_guest_contact: {
+        Row: {
+          mission_id: string;
+          contacts: Json;
+          updated_at: string;
+        };
+        Insert: {
+          mission_id: string;
+          contacts?: Json;
+          updated_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["mission_guest_contact"]["Insert"]
+        >;
+        Relationships: [];
+      };
       status_event: {
         Row: {
           id: string;

@@ -9,7 +9,12 @@ import { isValidLatLng } from "@/lib/geo";
 import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
 import { parseWaypointsField } from "@/lib/waypoints";
-import { parsePassengers, primaryPassengerName } from "@/lib/passengers";
+import {
+  parsePassengers,
+  primaryPassengerName,
+  passengerRowData,
+  guestContacts,
+} from "@/lib/passengers";
 import { parseLanguages, parseDriverFlags, DRESS_CODES } from "@/lib/driver-service";
 import {
   DOCS_BUCKET,
@@ -89,9 +94,11 @@ export async function createMission(formData: FormData) {
   const speedWin = formData.get("speed_win") === "on";
 
   // Named Guests (first + surname). The list IS the headcount (rows = pax_count);
-  // passenger_name keeps the first named Guest as a denormalised display string.
+  // passenger_name keeps the MAIN Guest's name as a denormalised display string.
+  // Names + the main flag go on the mission row (Pool Drivers can read it); phones
+  // go in a Driver-unreadable side table (mission_guest_contact), aligned by index.
   const passengers = parsePassengers(formData.get("passenger_names"));
-  const named = passengers.filter((p) => p.first || p.last);
+  const hasGuestData = passengers.some((p) => p.first || p.last || p.phone);
   const passengerName = primaryPassengerName(passengers);
   const paxCount = passengers.length > 0 ? passengers.length : null;
   const flightNumber = String(formData.get("flight_number") ?? "").trim();
@@ -217,10 +224,9 @@ export async function createMission(formData: FormData) {
     waypoints: waypoints.length > 0 ? waypoints : null,
     pickup_at: pickupAt!.toISOString(),
     passenger_name: passengerName || null,
-    // Store the rows only when at least one is named — avoids persisting a junk
-    // [{"",""}] blob for a mission whose Guests weren't named. The headcount is
-    // preserved separately in pax_count, so the count survives even when null here.
-    passenger_names: named.length > 0 ? passengers : null,
+    // Names + main flag only (no phone) — this row is Pool-readable. Stored when
+    // any Guest has a name or phone; pax_count preserves the headcount.
+    passenger_names: hasGuestData ? passengerRowData(passengers) : null,
     pax_count: paxCount,
     luggage_count: luggageCount,
     flight_number: flightNumber || null,
@@ -242,6 +248,7 @@ export async function createMission(formData: FormData) {
   };
 
   const supabase = await createClient();
+  let effectiveId: string | null = missionId;
   if (missionId) {
     // Resume an existing DRAFT of this Business. When POSTING it live, reset the
     // climb origin: the PDP fare is measured from created_at (pdp.ts), so without
@@ -262,8 +269,37 @@ export async function createMission(formData: FormData) {
     // (stale tab / double-submit). Don't report a phantom success.
     if (!updated || updated.length === 0) redirect(backTo("gone"));
   } else {
-    const { error } = await supabase.from("mission").insert({ ...row, ...eta, ...boardUpload });
-    if (error) redirect(backTo("db"));
+    const { data: inserted, error } = await supabase
+      .from("mission")
+      .insert({ ...row, ...eta, ...boardUpload })
+      .select("id")
+      .single();
+    if (error || !inserted) redirect(backTo("db"));
+    effectiveId = inserted.id;
+  }
+
+  // Guest phones live in a side table Drivers can't read (privacy gate), aligned
+  // by index to passenger_names. Upsert when any number was entered; otherwise
+  // clear any prior row (e.g. a phone removed on re-save). RLS scopes both to this
+  // Business's own mission.
+  if (effectiveId) {
+    const contacts = guestContacts(passengers);
+    const { error: contactErr } = contacts.some((c) => c.phone)
+      ? await supabase.from("mission_guest_contact").upsert({
+          mission_id: effectiveId,
+          contacts,
+          updated_at: new Date().toISOString(),
+        })
+      : await supabase
+          .from("mission_guest_contact")
+          .delete()
+          .eq("mission_id", effectiveId);
+    // The mission row is already saved; a phone side-table failure shouldn't undo
+    // a posted mission — but never swallow it silently (e.g. table missing
+    // pre-migration). Surface it in the server logs.
+    if (contactErr) {
+      console.error("mission_guest_contact write failed:", contactErr.message);
+    }
   }
 
   // Refresh the layout so the sidebar Drafts badge reflects the new count.
