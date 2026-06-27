@@ -12,13 +12,13 @@
   pinned to the top as you scroll**, and a **colour-coded bar down the left of each row matches its status** (red =
   needs a call, amber = unfilled, steel = confirmed, grey = pooled/done) so you spot what needs attention instantly.
   The History page got the same treatment.
-- **Trip routes now read as clean place names, not long postal addresses.** The schedule line shows a short label —
-  e.g. "Chemin de Rabiac, Antibes → Av. Jean Médecin, Nice" instead of the full street/postcode/country — so a busy
-  schedule stays tidy and scannable at scale. The exact address is still there when you open the trip and for the
-  Driver's navigation (and on hover). **Reference also gets its own column** now, separate from the guest name.
-  Newly-posted trips now go one better: **hotels, airports and stations show by name** — e.g. "Carlton Cannes, a
-  Regent Hotel → Nice-Côte d'Azur Airport" — captured automatically from the map when you pick the address. Trips
-  posted before this still show the clean street + town. (No action needed; it just works on new bookings.)
+- **The schedule line now shows just the pickup, as a clean short label.** Instead of a long "street, postcode,
+  country → destination", each row shows only the **pickup** as "street, town" — e.g. "Bd de la Croisette, Cannes" —
+  so a busy schedule stays tidy and scannable at scale. The destination and the exact pickup address are still there
+  when you open the trip (and the full address shows on hover). The column is now labelled **Pickup**, and
+  **Reference gets its own column** too, separate from the guest name. (We briefly tried showing hotel/airport *names*
+  from the map, but the provider's names were unreliable — vacation-rental listings, odd suffixes — so we kept the
+  clean street + town instead.)
 - **The "this is final" warning now appears as a pop-up when you actually post.** It used to sit in the review panel
   the whole time you were checking a mission over, which felt like a warning for no reason. Now the review panel is
   clean, and the moment you hit **Post to the Pool** a short confirmation pops up — "Posting sends this live to the

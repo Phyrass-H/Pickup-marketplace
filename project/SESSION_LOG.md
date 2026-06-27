@@ -5,6 +5,28 @@
 
 ---
 
+## 2026-06-27 — Session 23 — Schedule line → pickup only (POI names rolled back)
+**Branch:** `main`. No migration. Files: `components/trip-row.tsx`, `app/(dispatch)/dispatch/page.tsx` +
+`history/page.tsx`, `app/globals.css`.
+
+**Why:** founder found the S22 **phase-2 POI labels "weird"** — Mapbox's POI names are unreliable (vacation-rental
+listings, "CITY-LOCKER — Gare de Cannes", marketing suffixes "a Regent Hotel"). Offered three clean (non-POI)
+alternatives via a Geist-loaded mockup; founder picked **"Pickup only"** (AskUserQuestion).
+
+**Shipped:** the schedule line now shows **only the pickup**, as the clean string-derived `shortPlaceLabel(pickup_address)`
+(street + town) — no destination, no arrow, no POI name. Column header `Route` → **`Pickup`** (schedule + history). The
+destination + exact address remain in the expanded detail + the `title` hover. Grid rebalanced to spread the freed width
+(`56px minmax(0,1.5fr) 104px minmax(150px,1.1fr) 120px minmax(140px,0.9fr) 150px`) so pickup-only doesn't reopen the old
+dead-space gap. **`pickup_label`/`dropoff_label` capture is left in place** (harmless, additive; the columns stay) but is
+no longer read in the line — can be ripped out later if the founder wants.
+
+**Verified vs the REAL DB:** header reads `Time · Pickup · Flight · Guest · Ref · Driver · Status`; rows show clean
+pickups ("Bd de la Croisette Cs 40052, Cannes", "Chemin De Rabiac-Estagnol, Antibes"); `tsc` clean; no console errors.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign.
+
+---
+
 ## 2026-06-27 — Session 22 — Schedule redesign: a framed, sticky, zebra-striped table that scans at a glance
 **Branch:** `main`. **No migration, no APIs.** Files: `app/globals.css`, `app/(dispatch)/dispatch/page.tsx`,
 `app/(dispatch)/dispatch/history/page.tsx`.
