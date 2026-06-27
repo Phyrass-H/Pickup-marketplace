@@ -410,26 +410,42 @@ export function MissionForm({
                 onPrimaryNameChange={setPrimaryName}
               />
 
-              <label className="field" style={{ marginTop: 16 }}>
-                <span>Luggage</span>
-                <input
-                  type="number"
-                  name="luggage_count"
-                  min={0}
-                  inputMode="numeric"
-                  defaultValue={draft?.luggage_count ?? ""}
-                />
-              </label>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 12,
+                  marginTop: 16,
+                  marginBottom: 14,
+                }}
+              >
+                <label
+                  className="field"
+                  style={{ flex: 1, minWidth: 140, marginBottom: 0 }}
+                >
+                  <span>Luggage</span>
+                  <input
+                    type="number"
+                    name="luggage_count"
+                    min={0}
+                    inputMode="numeric"
+                    defaultValue={draft?.luggage_count ?? ""}
+                  />
+                </label>
 
-              <label className="field">
-                <span>Flight number (optional)</span>
-                <input
-                  type="text"
-                  name="flight_number"
-                  placeholder="AF1234"
-                  defaultValue={draft?.flight_number ?? ""}
-                />
-              </label>
+                <label
+                  className="field"
+                  style={{ flex: 1, minWidth: 140, marginBottom: 0 }}
+                >
+                  <span>Flight number (optional)</span>
+                  <input
+                    type="text"
+                    name="flight_number"
+                    placeholder="AF1234"
+                    defaultValue={draft?.flight_number ?? ""}
+                  />
+                </label>
+              </div>
 
               <ReferenceField defaultValue={draft?.reference} />
             </div>

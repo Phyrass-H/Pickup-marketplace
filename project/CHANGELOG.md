@@ -6,6 +6,8 @@
 ---
 
 ## 27 June 2026
+- **Luggage and Flight number now sit side by side** on the mission form (they used to be stacked), so the Trip
+  details section is tidier. They drop back to stacked on a narrow phone screen.
 - **The "Reference" field on a mission is now a proper short tag.** It used to be a big "Reference / notes" box that
   did double duty; now it's a compact, single-line **Reference** — a quick tag for your *own* schedule like "Room 312"
   or "FIF 2026 Chopard". It's capped at **20 characters** (with a live counter), and it's **private to your team —

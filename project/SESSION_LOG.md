@@ -42,6 +42,11 @@ write+read round-trip via `createMission`** ("Room 999 RT-check" saved → resum
 restored to empty. No live pooled mission posted (avoided Pool pollution; display surfaces are guarded `select('*')`
 reads + reviewed).
 
+**Follow-up (same session, founder ask):** **Luggage + Flight number now share one line** in the Trip-details card —
+equal halves via the existing Pricing-row idiom (`display:flex; gap:12` + two `label.field` at `flex:1, minWidth:140`),
+wrapping to stacked under ~290px (mobile). Mockup-approved (balanced halves) then built; browser-verified at 1440px
+(both 321px, same line, gap 12) and confirmed wrap on a narrow viewport. No schema/logic change.
+
 **Deferred / flagged (no dirty routes):** V2 **per-business custom reference label** (Hotel→Room, Restaurant→Table,
 BACKLOG § M) — not built; the legacy `comment` column is now vestigial (a future non-additive cleanup could drop it).
 
