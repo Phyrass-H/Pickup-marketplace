@@ -824,7 +824,7 @@ textarea::placeholder {
    addresses show in full, instead of the old ocean of gaps between columns. */
 .dx-colhead, .dx-trip > summary {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 104px 176px 116px 150px 150px;
+  grid-template-columns: 56px minmax(0, 1.5fr) 104px minmax(150px, 1.1fr) 120px minmax(140px, 0.9fr) 150px;
   gap: 16px; align-items: center;
 }
 .dx-colhead {

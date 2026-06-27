@@ -12,7 +12,7 @@ function ColumnHead() {
   return (
     <div className="dx-colhead">
       <span>Time</span>
-      <span>Route</span>
+      <span>Pickup</span>
       <span>Flight</span>
       <span>Guest</span>
       <span>Ref</span>
