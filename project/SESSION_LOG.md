@@ -5,6 +5,37 @@
 
 ---
 
+## 2026-06-27 — Session 24 — Schedule route → stacked rail (pickup → stops → drop-off)
+**Branch:** `main`. No migration. Files: `lib/format.ts`, `components/trip-row.tsx`, `app/globals.css`,
+`app/(dispatch)/dispatch/page.tsx` + `history/page.tsx`.
+
+**Why:** founder reworked the route line through many D25 mockups (all Geist-loaded so the font matched). Rejected:
+S22 POI labels, S23 pickup-only, an edge **fade-out** mask, and a side-by-side 2-line layout. **Chosen:** a vertical
+**route rail** — pickup over stop(s) over drop-off — so each address gets the full column width on its own line
+(long addresses fit; no truncation games), with the drop-off in a light-grey "shade".
+
+**Shipped:**
+- **`addressLine()` (`lib/format.ts`)** — the full address **minus the trailing country** ("…, Nice, France" → "…,
+  Nice"); keeps house number / street / postcode / city. (Distinct from `shortPlaceLabel`, now unused but kept.)
+- **Stacked rail in `trip-row.tsx`**: `.dx-trip__route` is now `flex-column`; each leg is a `.dx-route__node` = a dot
+  + the `addressLine`. **Dots:** `--pk` solid `var(--text)`, `--via` solid `#cbd2dd`, `--dp` hollow ring `#98a2b3`;
+  a `::before` connector links each node to the one above. **Text tones:** pickup `var(--text)`/500, via `#8a94a6`,
+  drop-off `#98a2b3`. Stops come from `parseWaypoints(mission.waypoints)` (already parsed) — each waypoint is a via
+  node. Empty drop-off → "—". Exact address on `title` hover + in the detail.
+- Column header `Pickup` → **`Route`** (schedule + history); route grid track widened to `minmax(0,1.9fr)` for the
+  full addresses.
+
+**Verified vs the REAL DB:** Schedule + History render the rail; a genuine existing 1-stop trip (M. Dupont, "Hôtel
+Martinez, Cannes") shows **pk → via → dp** with the right dot types and the country stripped; missing drop-off shows
+"—"; `tsc` clean; no console errors. (A DB write to fabricate stops for testing was correctly auto-blocked — used the
+real stop trip instead.)
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign. **Deployed**
+(supersedes the S23 pickup-only line on the live site). Optional follow-up offered: rip out the now-unused POI-name
+capture from the form.
+
+---
+
 ## 2026-06-27 — Session 23 — Schedule line → pickup only (POI names rolled back)
 **Branch:** `main`. No migration. Files: `components/trip-row.tsx`, `app/(dispatch)/dispatch/page.tsx` +
 `history/page.tsx`, `app/globals.css`.
