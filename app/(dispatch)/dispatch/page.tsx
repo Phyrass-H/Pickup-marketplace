@@ -17,7 +17,8 @@ function ColumnHead() {
       <span>Time</span>
       <span>Route</span>
       <span>Flight</span>
-      <span>Guest / ref</span>
+      <span>Guest</span>
+      <span>Ref</span>
       <span>Driver</span>
       <span>Status</span>
     </div>
@@ -140,46 +141,49 @@ export default async function DispatchSchedule() {
 
       {!isEmpty && (
         <>
-          <ColumnHead />
+          <div className="dx-sched">
+            <ColumnHead />
 
-          {/* Today is always shown and pinned on top. */}
-          <DayGroup
-            dayKey={todayKey}
-            missions={todayMissions}
-            contacts={contacts}
-            guestContacts={guestContacts}
-            today
-          />
-          {todayMissions.length === 0 && (
-            <p className="muted small" style={{ margin: "0 0 8px 2px" }}>
-              No trips today.
-            </p>
-          )}
-
-          {futureKeys.map((k) => (
+            {/* Today is always shown and pinned on top. */}
             <DayGroup
-              key={k}
-              dayKey={k}
-              missions={groups.get(k)!}
+              dayKey={todayKey}
+              missions={todayMissions}
               contacts={contacts}
               guestContacts={guestContacts}
+              today
             />
-          ))}
+            {todayMissions.length === 0 && (
+              <p className="muted small" style={{ margin: 0, padding: "10px 16px" }}>
+                No trips today.
+              </p>
+            )}
+
+            {futureKeys.map((k) => (
+              <DayGroup
+                key={k}
+                dayKey={k}
+                missions={groups.get(k)!}
+                contacts={contacts}
+                guestContacts={guestContacts}
+              />
+            ))}
+          </div>
 
           {pastKeys.length > 0 && (
-            <details style={{ marginTop: 8 }}>
+            <details>
               <summary className="dx-fold" style={{ cursor: "pointer", listStyle: "none" }}>
                 Earlier trips ({pastKeys.reduce((n, k) => n + groups.get(k)!.length, 0)})
               </summary>
-              <div style={{ marginTop: 8 }}>
+              <div className="dx-sched" style={{ marginTop: 8 }}>
+                <ColumnHead />
                 {pastKeys.map((k) => (
                   <DayGroup
-              key={k}
-              dayKey={k}
-              missions={groups.get(k)!}
-              contacts={contacts}
-              guestContacts={guestContacts}
-            />
+                    key={k}
+                    dayKey={k}
+                    missions={groups.get(k)!}
+                    contacts={contacts}
+                    guestContacts={guestContacts}
+                  />
                 ))}
               </div>
             </details>

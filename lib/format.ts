@@ -87,6 +87,48 @@ export function formatTripMeta(
   return straightKm != null ? formatDistance(straightKm) : "";
 }
 
+// Countries we drop from the tail of a geocoded address (beta = Riviera, but be
+// generous so cross-border Monaco/Italy trips read cleanly too).
+const COUNTRY_RE =
+  /^(france|monaco|italia|italy|españa|espagne|spain|deutschland|allemagne|germany|suisse|switzerland|belgique|belgium|united kingdom|royaume-uni|uk)$/i;
+
+// Short, scannable label for the dense schedule line: the place name + its town,
+// with the postcode and country stripped. Derived at render time from the stored
+// formatted address — "1055 Chemin De Rabiac-Estagnol, 06600 Antibes, France"
+// becomes "Chemin De Rabiac-Estagnol, Antibes". The EXACT address still shows in
+// the expanded trip detail + the Driver's navigation, so nothing is lost. (Phase 1:
+// string-derived; a later additive migration can store Mapbox's structured POI
+// fields for the prettier "Nice Airport · T1" form.)
+export function shortPlaceLabel(address: string | null | undefined): string {
+  const raw = (address ?? "").trim();
+  if (!raw) return "";
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  // Drop a trailing country segment ("…, Nice, France" → "…, Nice").
+  if (parts.length > 1 && COUNTRY_RE.test(parts[parts.length - 1])) parts.pop();
+  if (parts.length === 0) return raw;
+
+  // Town = the postcode-bearing segment with its postcode removed ("06600 Antibes"
+  // → "Antibes"), scanning from the end; else the last segment, sans any postcode.
+  let town = "";
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const m = parts[i].match(/^\d{4,6}\s+(.+)$/);
+    if (m) {
+      town = m[1].trim();
+      break;
+    }
+  }
+  if (!town && parts.length > 1) {
+    town = parts[parts.length - 1].replace(/\b\d{4,6}\b/, "").trim();
+  }
+
+  // Name = the first segment without a leading house number ("58 Bd …" → "Bd …").
+  const name = parts[0].replace(/^\d+\s*(?:bis|ter)?\s+/i, "").trim() || parts[0];
+
+  // Skip the town when the name already carries it ("Port de Nice" + "Nice").
+  if (town && !name.toLowerCase().includes(town.toLowerCase())) return `${name}, ${town}`;
+  return name;
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   return dateTime.format(new Date(iso));

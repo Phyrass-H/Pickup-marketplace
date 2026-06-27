@@ -14,7 +14,8 @@ function ColumnHead() {
       <span>Time</span>
       <span>Route</span>
       <span>Flight</span>
-      <span>Guest / ref</span>
+      <span>Guest</span>
+      <span>Ref</span>
       <span>Driver</span>
       <span>Status</span>
     </div>
@@ -76,7 +77,7 @@ export default async function DispatchHistory() {
       {isEmpty && <div className="empty">No past missions yet.</div>}
 
       {[...groups.entries()].map(([monthKey, list]) => (
-        <section key={monthKey}>
+        <section key={monthKey} className="dx-sched">
           <div className="dx-day">
             <h2 style={{ textTransform: "capitalize" }}>{formatMonth(monthKey)}</h2>
             <span className="dx-count">

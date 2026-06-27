@@ -814,38 +814,58 @@ textarea::placeholder {
 .dx-narrow { max-width: 560px; }
 .dx-tel { color: var(--accent); font-weight: 600; cursor: pointer; }
 
-/* ---- Schedule: column head + day groups ---- */
-.dx-colhead {
-  display: grid; grid-template-columns: 58px 1.7fr 132px 1.25fr 1fr auto;
-  gap: 18px; padding: 0 16px 8px; font-size: 12px; font-weight: 600;
-  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em;
+/* ---- Schedule / history: ONE framed table the eye can scan ---- */
+.dx-sched {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); overflow: clip; margin-bottom: 14px;
 }
-.dx-day { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 0 6px; }
-.dx-day h2 { margin: 0; font-size: 15px; text-transform: capitalize; }
-.dx-day--today h2 { color: var(--accent); }
-.dx-count { font-size: 13px; color: var(--text-muted); }
+
+/* Shared 6-col grid (head + every row). The route track takes the slack so
+   addresses show in full, instead of the old ocean of gaps between columns. */
+.dx-colhead, .dx-trip > summary {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 104px 176px 116px 150px 150px;
+  gap: 16px; align-items: center;
+}
+.dx-colhead {
+  position: sticky; top: 57px; z-index: 5; /* clears the 57px sticky topbar */
+  padding: 10px 16px; background: var(--surface-2);
+  border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.dx-colhead > span:last-child { text-align: right; } /* Status, right-aligned */
+
+/* Day / month band — a full-width separator between groups. */
+.dx-day {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 0; padding: 8px 16px; background: var(--tone-neutral-bg);
+  border-bottom: 1px solid var(--border);
+}
+.dx-day h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent); text-transform: capitalize; }
+.dx-count { font-size: 12px; color: var(--text-muted); }
 .dx-fold {
   background: none; border: none; color: var(--text-muted); font-size: 13px;
-  cursor: pointer; font-family: inherit; margin-top: 20px; padding: 0;
+  cursor: pointer; font-family: inherit; margin: 14px 0 6px; padding: 0;
 }
 .dx-fold:hover { color: var(--text); }
 
-/* ---- Trip rows ---- */
+/* ---- Trip rows: flush table rows · colored status rail · zebra ---- */
 .dx-trip {
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 4px solid var(--edge, var(--border)); border-radius: var(--radius-md);
-  margin-bottom: 6px; overflow: hidden;
+  border-left: 4px solid var(--edge, transparent);
+  border-bottom: 1px solid var(--border-light, #eef1f5);
 }
-.dx-trip[open] { box-shadow: var(--shadow-sm); }
-.dx-trip--alert { background: var(--tone-danger-bg); border-color: #f4cdc8; }
-.dx-trip--alert > summary:hover { background: #fdece9; }
+.dx-trip:nth-of-type(even) > summary { background: #fafbfc; } /* zebra */
+.dx-trip[open] > summary { background: var(--accent-soft); }
+.dx-trip--alert { border-bottom-color: #f4cdc8; }
+.dx-trip--alert > summary,
+.dx-trip--alert[open] > summary { background: var(--tone-danger-bg); }
+.dx-trip > summary:hover { background: #f0f3f8; }
+.dx-trip--alert > summary:hover { background: #fbe0db; }
 .dx-trip > summary {
-  list-style: none; cursor: pointer; display: grid;
-  grid-template-columns: 58px 1.7fr 132px 1.25fr 1fr auto; gap: 18px;
-  align-items: center; padding: 13px 16px;
+  list-style: none; cursor: pointer; padding: 12px 16px;
 }
 .dx-trip > summary::-webkit-details-marker { display: none; }
-.dx-trip > summary:hover { background: var(--surface-2); }
+.dx-trip > summary > .status-pill { justify-self: end; } /* hug the right edge */
 .dx-trip__time { font-weight: 600; }
 .dx-trip__route { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; font-size: 14px; }
 .dx-trip__route > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -857,7 +877,9 @@ textarea::placeholder {
   white-space: nowrap; background: var(--slate-100); color: var(--text-muted);
 }
 .dx-flight-empty { color: var(--text-faint); }
-.dx-trip__meta { min-width: 0; overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+.dx-trip__guest { min-width: 0; overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+.dx-trip__ref { min-width: 0; overflow: hidden; }
+.dx-trip__ref .ref { margin-left: 0; } /* own column now — no inline indent */
 .dx-trip__driver { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dx-trip__detail { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
 

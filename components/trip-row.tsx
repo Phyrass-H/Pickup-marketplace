@@ -8,6 +8,7 @@ import {
   formatTime,
   formatTripMeta,
   serviceClassLabel,
+  shortPlaceLabel,
 } from "@/lib/format";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
@@ -94,9 +95,13 @@ export function TripRow({
         <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
 
         <span className="dx-trip__route">
-          <span>{mission.pickup_address}</span>
+          {/* Short glance label in the line (full address stays in the detail
+              below + the Driver's nav). `title` reveals the exact address on hover. */}
+          <span title={mission.pickup_address}>{shortPlaceLabel(mission.pickup_address)}</span>
           <span className="dx-arrow">→</span>
-          <span>{mission.dropoff_address ?? "—"}</span>
+          <span title={mission.dropoff_address ?? undefined}>
+            {mission.dropoff_address ? shortPlaceLabel(mission.dropoff_address) : "—"}
+          </span>
         </span>
 
         <span className="dx-trip__flight">
@@ -110,9 +115,14 @@ export function TripRow({
           )}
         </span>
 
-        <span className="dx-trip__meta">
-          {mission.passenger_name ?? "—"}
-          {reference && <span className="ref">{reference}</span>}
+        <span className="dx-trip__guest">{mission.passenger_name ?? "—"}</span>
+
+        <span className="dx-trip__ref">
+          {reference ? (
+            <span className="ref">{reference}</span>
+          ) : (
+            <span className="dx-flight-empty">—</span>
+          )}
         </span>
 
         <span className="dx-trip__driver">
