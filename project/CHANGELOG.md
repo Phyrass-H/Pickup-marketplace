@@ -6,6 +6,23 @@
 ---
 
 ## 27 June 2026
+- **The schedule is far easier to read at a glance.** The trip list is now a clean, aligned table: columns line up,
+  the route shows much more of the address (no more cramped "…"), and every other row has a faint stripe so your eye
+  runs straight across — even with 30 trips on screen. Each day is a clear banded divider, the **column headings stay
+  pinned to the top as you scroll**, and a **colour-coded bar down the left of each row matches its status** (red =
+  needs a call, amber = unfilled, steel = confirmed, grey = pooled/done) so you spot what needs attention instantly.
+  The History page got the same treatment.
+- **Trip routes now read as clean place names, not long postal addresses.** The schedule line shows a short label —
+  e.g. "Chemin de Rabiac, Antibes → Av. Jean Médecin, Nice" instead of the full street/postcode/country — so a busy
+  schedule stays tidy and scannable at scale. The exact address is still there when you open the trip and for the
+  Driver's navigation (and on hover). **Reference also gets its own column** now, separate from the guest name.
+  (Next step, when you want it: capture the map provider's landmark names so airports/hotels show as "Nice Airport ·
+  T1" and the like.)
+- **The "this is final" warning now appears as a pop-up when you actually post.** It used to sit in the review panel
+  the whole time you were checking a mission over, which felt like a warning for no reason. Now the review panel is
+  clean, and the moment you hit **Post to the Pool** a short confirmation pops up — "Posting sends this live to the
+  Driver Pool right away — it can't be un-posted." — with **Post to the Pool** to go ahead or **Cancel** to step back. You can also dismiss it with the Escape key or by clicking outside it.
+  Nothing posts until you confirm. (This is also the app's first proper confirmation pop-up.)
 - **Address search surfaces real places better.** Typing a shop or chain (e.g. "FNAC") now puts the actual nearby
   branches at the top — including the Nice store — instead of a useless "— Brand" entry, and shows more results so the
   one you want isn't cut off. (Heads-up: a few spots aren't in the map provider's database as their own point — the

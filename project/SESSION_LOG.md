@@ -5,6 +5,92 @@
 
 ---
 
+## 2026-06-27 — Session 22 — Schedule redesign: a framed, sticky, zebra-striped table that scans at a glance
+**Branch:** `main`. **No migration, no APIs.** Files: `app/globals.css`, `app/(dispatch)/dispatch/page.tsx`,
+`app/(dispatch)/dispatch/history/page.tsx`.
+
+**Why:** founder ask — the schedule "bars" needed to *separate things properly, align, and stay readable at 30 trips*.
+The old layout flung 6 columns across 1520px with **oceans of dead gap** (yet the route still truncated), weak 6px
+row gaps, and the status pill marooned at the far right from a faint 4px edge. Designed via the D25 loop (visualize
+mockup → founder approved **zebra + full-width** via a one-tap AskUserQuestion).
+
+**Scope shipped (all KEEP):**
+- **Grid rebalanced** on the shared `.dx-colhead` + `.dx-trip > summary`: `56px minmax(0,1fr) 104px 200px 156px 150px`,
+  gap 16 — the **ROUTE track takes the slack** so addresses show in full instead of gaps; **Status right-aligned**
+  (`justify-self:end` + colhead last-span `text-align:right`).
+- **New `.dx-sched` framed table card** (border + `radius-lg` + `overflow:clip`) wraps each list. `overflow:clip`
+  (NOT `hidden`) is deliberate — it clips to the radius **without** becoming a scroll container, so the sticky header
+  still works.
+- **`.dx-colhead` is now `position:sticky; top:57px`** (clears the 57px sticky topbar) — column labels stay pinned
+  through a long scroll. Verified pinned at exactly 57px.
+- **Flush table rows:** removed per-row border/radius/margin; kept the **4px colored status rail** (`--edge` = tone
+  colour); 1px hairline between rows; **zebra** (`.dx-trip:nth-of-type(even) > summary` tint `#fafbfc`, resets per day
+  group); `[open]`→navy-soft; alert rows keep the red wash; hover `#f0f3f8`.
+- **`.dx-day` is now a full-width tinted band** (`--tone-neutral-bg`) with the date (navy) + trip count — a strong
+  day/month separator.
+- **Same treatment on History** (each month `<section>` got `className="dx-sched"`; the schedule's "Earlier trips"
+  table also got a `ColumnHead`). The **Calendar is untouched** (shares `.status-pill` only — left as-is).
+- **Glance labels (phase 1) + Reference its own column** (founder-approved follow-on, same session, via the Geist-in-mockup
+  D25 loop):
+  - **`shortPlaceLabel()` in `lib/format.ts`** — renders a short, scannable route label in the line instead of the full
+    postal address: drops the country + postcode, keeps the place name (minus a leading house number) + town. e.g.
+    `1055 Chemin De Rabiac-Estagnol, 06600 Antibes, France` → **Chemin De Rabiac-Estagnol, Antibes**;
+    `6 Av. Jean Médecin, 06000 Nice, France` → **Av. Jean Médecin, Nice**. The **exact address is preserved** in the
+    expanded detail + Driver nav, and on a `title=` hover over the line. (Phase 2, deferred: an additive migration to
+    capture Mapbox's structured POI fields → the prettier `Nice Airport · T1` form.)
+  - **Reference split into its own column.** `.dx-trip__meta` (guest + ref chip) → two cells `.dx-trip__guest` +
+    `.dx-trip__ref`; the shared grid is now **7-col** `56px minmax(0,1fr) 104px 176px 116px 150px 150px`; both
+    `ColumnHead`s changed `Guest / ref` → `Guest` + `Ref`; the `.ref` chip's inline `margin-left` is reset in the new
+    column. Empty ref shows a faint "—".
+
+**Verification:** `tsc` clean, no console errors. **Browser-verified vs the REAL Supabase DB at 1600px:** Schedule
+(23 rows / 9 days) + History (20 rows) both render framed / striped / aligned; the dense **10-trip "jeudi 25 juin"**
+day shows zebra clearly; status pills + left rails **colour-match by tone** (grey Completed/Pooled, steel
+Confirmed/Accepted, amber Unfilled, red Not confirmed); the sticky colhead **pins at 57px** on a long scroll.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign. Both the S21
+popup and this redesign are **local / undeployed**.
+
+---
+
+## 2026-06-27 — Session 21 — "This is final" moved off the review rail into a Post-to-Pool confirm popup
+**Branch:** `main`. **No migration, no third-party APIs** — pure client UI on the new-mission form.
+
+**Why:** founder ask — the "This is final. Posting sends the mission live… can't be un-posted…" notice sat permanently
+in the **review Summary rail** (`mode === "preview"`), where it read as alarming *before* any post intent ("confusing
+to have that message for no reason"). The founder also asked whether the app could use a **popup** (it never had one
+for a confirmation — only inline confirms like discard-draft). Answer: yes, and the existing `.modal-overlay`/
+`.modal-card` infra (avatar cropper) was reused. Designed via the D25 preview loop (visualize mockup → founder
+approved → "improve text size and go").
+
+**Scope shipped (KEEP, no schema change):** all in `app/(dispatch)/dispatch/new/mission-form.tsx`.
+- **Removed** the always-on `mode === "preview"` "This is final" `.notice.warn` from the Summary rail. The rail now
+  goes straight from the fare block → the action buttons.
+- The rail's **"Post to the Pool" is now `type="button"`** — it opens the confirm popup instead of submitting. The
+  **real pooled submit moved into the modal**, so posting always takes a deliberate second click. (This also *reduces*
+  the S18 node-reuse risk — the preview primary is no longer a submit at all.)
+- **New confirm modal** (`confirmPost` state) reusing `.modal-overlay`/`.modal-card`: amber warning chip + **"This is
+  final"** title (19px) + a **tightened message** (15px, `--text-muted`: "Posting sends this live to the Driver Pool
+  right away — it can't be un-posted." — the original's redundant "Use Edit or Save as draft…" tail was dropped since
+  Cancel covers it; `text-wrap: balance` evens the two lines so no word is orphaned) + **Cancel** / **Post to the
+  Pool**. Lives **inside the `<form>`** so its `SubmitButton
+  intent="pooled"` shares the same FormData + pending double-submit guard.
+- **Three exits, all cancel:** `Cancel` button, **Escape** (a `useEffect` keydown listener, only while open), and a
+  **backdrop click** (`e.target === e.currentTarget`). Clicking the card body does **not** close.
+- **`ConfirmCancelButton`** reads `useFormStatus().pending` and disables once Post is in flight — so a Cancel click
+  can't close the modal while an already-submitted post completes in the background.
+
+**Verification:** `tsc` clean. **Browser-verified vs the REAL Supabase DB** (dev-login as demo Business, reached the
+review step): rail no longer shows the warning (the three action buttons only); clicking Post opens the popup matching
+the approved mockup (title 19px / body 15px, navy primary + amber chip); **Esc, backdrop, and Cancel all close it,
+inside-card click keeps it open, and no navigation/post fired**; the modal's Post is a genuine form submit
+(`form`-associated, `submitter` carries `intent=pooled`, verified via an intercepted `submit` event so no junk mission
+was created); no console errors.
+
+**Next:** unchanged from S20 — mission-form guidance (BACKLOG § L), saved base addresses, Driver app redesign.
+
+---
+
 ## 2026-06-27 — Session 20 — Reference field: a dedicated, char-capped booking tag (Business-only, hidden from the Driver)
 **Branch:** `main` — committed + pushed (deploy verified). **Migration applied by the founder.** · **Env:** local → Vercel (live).
 
