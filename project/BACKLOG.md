@@ -155,7 +155,11 @@
 - 🅥 Security audit / pen test (also in H) — plan post-V1.
 
 ## I. Small follow-ups noted in code
-- Promote the per-booking **reference** (room/event) to a dedicated DB column.
+- ✅ Promote the per-booking **reference** (room/event) to a dedicated DB column. **SHIPPED S20**
+  (`mission.reference`, migration `2026-06-27_mission_reference`; legacy `comment` now vestigial).
+- ✅ **Guest phone to the Driver (O2)** — **SHIPPED S20** with a Share gate: optional phone per Guest, revealed to the
+  assigned Driver post-accept only when the Business toggles Share. Numbers in a Driver-unreadable side table
+  (`mission_guest_contact`), so an un-shared number is physically private.
 - **Calendar day → schedule** click-through (filter schedule to a day).
 - Upgrade live status from polling to **Supabase Realtime websockets**
   (add `status_event` to the `supabase_realtime` publication).
@@ -260,8 +264,8 @@ full ML dynamic pricing · Amadeus GDS.
 - ✅ **Message-to-the-driver half of the Reference split** — SHIPPED as the private message in the Driver card.
 
 **🔨 Remaining (next chunk — each NEW field = a small founder-run additive migration):**
-- 🔨 **Reference field (the remaining half of the split)** — the schedule "Reference / notes" field still does double
-  duty; make it a short, **char-limited Reference** (schedule line: "FIF 2026 Chopard", "Room 312"). The free
-  message half is done (Driver card). V2: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
+- ✅ **Reference field (the remaining half of the split)** — **SHIPPED S20:** the old "Reference / notes" field is now
+  a short, **20-char Reference** (Business-only schedule tag, hidden from the Driver), backed by a dedicated
+  `mission.reference` column. V2 still open: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
 - ❓ **Ultra-luxury "Exception" tier** (Rolls/Bentley above First) — a taxonomy decision; bundle with the
   IDEAS vehicle-taxonomy V2 (Bus tier, First-van, cargo vehicle).

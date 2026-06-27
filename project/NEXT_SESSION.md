@@ -13,7 +13,7 @@ START BY READING — **just these four**; they get you fully up to date without 
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim only the **newest entry (Session 19)** for recent technical detail. Older
+- `project/SESSION_LOG.md` — skim only the **newest entry (Session 20)** for recent technical detail. Older
   sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
@@ -23,8 +23,9 @@ and it loses nothing — the docs are all still here, just read when relevant):
   **D30**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
 - `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
-  `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`) —
-  **ONLY** for schema/data work. (All applied to the live DB.)
+  `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
+  `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`) — **ONLY** for schema/data work.
+  (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -75,6 +76,15 @@ CURRENT STATE (live, deployed from `main`):
     name **or** an attached PDF/JPG/PNG, **auto-filled from the first Guest**), and a **private message to the
     Driver** (revealed post-accept). Migration `2026-06-25_mission_driver_section.sql` (applied). Driver sees
     language/dress/flags pre-accept; board + message post-accept.
+  - **S20** — three Trip-details improvements. (1) The old free-text "Reference / notes" is now a **dedicated
+    `reference` column** + a compact **20-char Reference** field — a Business-only schedule tag, **hidden from the
+    Driver** (migration `2026-06-27_mission_reference`; legacy `comment` column now vestigial). (2) **Luggage + Flight
+    number share one line** (equal halves, wraps on mobile). (3) **Passenger phones + a Share gate:** each Guest has an
+    optional **phone** + a selectable, highlighted **main contact** (star); a per-phone **Share with Driver** toggle
+    (off by default) in the form AND the schedule trip detail. **Airtight privacy** — numbers live in a
+    **`mission_guest_contact`** side table Drivers can't read (RLS deny-by-default); `mission.passenger_names` keeps
+    only `{first,last,main}`; a SHARED number is revealed to the assigned Driver post-accept via the service role
+    (migration `2026-06-27_mission_guest_contact`).
 - **Drafts:** a **discard confirmation** (inline "Discard this draft? This can't be undone.") + a **count badge**
   on the sidebar Drafts item, kept fresh after save/post/discard via `revalidatePath("/dispatch","layout")`.
 - **Auth (testing):** key-gated dev-login on the live subdomains:
@@ -86,30 +96,29 @@ CURRENT STATE (live, deployed from `main`):
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
-+ agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone across
-parties is fine for the MVP.
++ agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
+the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP (features/polish phase). With the Driver card shipped (S19), the big remaining founder asks
-are **mission-form guidance + the leftover field + the Driver app redesign** — all buildable now, no third-party
+RECOMMENDED NEXT STEP (features/polish phase). With S20's Trip-details work shipped, the big remaining founder asks
+are **mission-form guidance + saved base addresses + the Driver app redesign** — all buildable now, no third-party
 APIs; any NEW field needs a small founder-run additive migration:
 1. **Mission-form guidance (BACKLOG § L — NO schema change):** **per-section why/how microcopy**, **input-driven
    guidance** (e.g. lots of luggage → "Consider a Van"; long-distance / late-night nudges), and **smart "most-used"
    defaults** (pre-select the Dispatcher's most-frequent tier+body; a one-off doesn't move the default). This is the
    "very guided page" the founder keeps asking for — and it's the highest-leverage in-app polish left.
-2. **Reference field — the remaining half of the split** (BACKLOG § M): the message-to-driver half shipped in the
-   S19 Driver card; still to do = make the schedule "Reference / notes" field a short, **char-limited Reference**
-   ("FIF 2026 Chopard", "Room 312"). V2: per-business **custom reference label** (Hotel→Room, Restaurant→Table).
-3. **Saved base addresses (favourites)** (§ L) — additive table; a hotel picks its own address in one tap.
-4. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use
+2. **Saved base addresses (favourites)** (§ L) — additive table; a hotel picks its own pickup address in one tap.
+3. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use
    the D25 preview loop (or a Claude Design phone mockup), then build. Small navy polish bundled here: Driver
    **"Complete ride"** → green; re-export the **logo** to harmonise its sky-blue with navy.
-5. **Ultra-luxury "Exception" tier** (Rolls/Bentley, above First — IDEAS vehicle-taxonomy V2) — a deliberate
+4. **Ultra-luxury "Exception" tier** (Rolls/Bentley, above First — IDEAS vehicle-taxonomy V2) — a deliberate
    taxonomy decision; bundle with the Bus tier / First-van / cargo-vehicle / PRM expansion.
-(✅ shipped S19: the **"Driver & service" card** — languages, tier-keyed dress code, request flags, name board
-[typed or attached file, auto-filled from the first Guest], private message — which closes the dress-code ask [§ L]
-and the Driver-section ask [§ M item 2]. Earlier: multiple passengers [S17]; the Review / double-submit / discard
-fixes, keyboard nav, draft badge, calendar driver search, desktop width [S18]. ❌ the founder **declined** the
-sidebar-spacing tweak — leave it.)
+(✅ shipped S20: (1) **dedicated Reference field** — short, 20-char, Driver-hidden — which **closes the § M Reference
+split**; (2) **Luggage + Flight on one line**; (3) **passenger phones with an airtight Share-with-Driver gate** —
+optional phone + selectable main contact + a Share toggle in the form and the schedule; numbers in a Driver-unreadable
+side table, revealed post-accept only when shared — which **delivers § I/O2 "guest phone to the Driver", with a gate**.
+Earlier — S19: the "Driver & service" card [§ M Driver-section + dress code]. S18: Review/double-submit/discard fixes,
+keyboard nav, draft badge, calendar driver search, desktop width. S17: multiple passengers. ❌ the founder **declined**
+the sidebar-spacing tweak — leave it.)
 
 DEFERRED until the founder okays the integration phase: **Notifications (Resend)** — the #1 functional gap
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);
