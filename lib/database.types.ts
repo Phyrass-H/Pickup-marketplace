@@ -224,6 +224,8 @@ export interface Database {
           dropoff_address: string | null;
           dropoff_lat: number | null;
           dropoff_lng: number | null;
+          pickup_label: string | null;
+          dropoff_label: string | null;
           waypoints: Json | null;
           pickup_at: string;
           flight_number: string | null;
@@ -273,6 +275,8 @@ export interface Database {
           dropoff_address?: string | null;
           dropoff_lat?: number | null;
           dropoff_lng?: number | null;
+          pickup_label?: string | null;
+          dropoff_label?: string | null;
           waypoints?: Json | null;
           pickup_at: string;
           flight_number?: string | null;

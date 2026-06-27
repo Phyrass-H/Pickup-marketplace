@@ -48,6 +48,35 @@ function asPlace(d: DefaultPlace | null | undefined): Place | null {
   return null;
 }
 
+// Mapbox Search Box `retrieve` properties (the bits we use for the glance label).
+interface RetrieveProps {
+  full_address?: string;
+  name?: string;
+  name_preferred?: string;
+  feature_type?: string;
+  context?: {
+    place?: { name?: string };
+    locality?: { name?: string };
+  };
+}
+
+// A short, scannable place label from the structured retrieve result — the POI
+// name (hotel / airport / venue) or street, plus its town, with the postcode &
+// country left off. This is what the dense schedule line shows; the exact address
+// stays in pickup_address. Falls back to "" when the shape is unexpected, so the
+// schedule can derive a label from the address string instead (shortPlaceLabel).
+function glanceLabelFromProps(props: RetrieveProps | undefined): string {
+  if (!props) return "";
+  const rawName = (props.name_preferred || props.name || "").trim();
+  const town = (props.context?.place?.name || props.context?.locality?.name || "").trim();
+  // Drop a leading house number for a tidy label ("58 Bd …" → "Bd …").
+  const name = rawName.replace(/^\d+\s*(?:bis|ter)?\s+/i, "").trim() || rawName;
+  if (!name) return town;
+  // Skip the town when the name already carries it ("Aéroport Nice …" + "Nice").
+  if (town && !name.toLowerCase().includes(town.toLowerCase())) return `${name}, ${town}`;
+  return name;
+}
+
 // Mapbox-backed address field. Uses the **Search Box API** (suggest → retrieve),
 // NOT the Geocoding API — Search Box includes points of interest (hotels,
 // airports, venues), which a VTC booking form is full of; plain geocoding only
@@ -62,6 +91,7 @@ export function AddressAutocomplete({
   labelName,
   latName,
   lngName,
+  placeLabelName,
   defaultValue,
   placeholder,
   proximity = [7.2619, 43.7102], // Nice
@@ -72,6 +102,7 @@ export function AddressAutocomplete({
   labelName?: string;
   latName?: string;
   lngName?: string;
+  placeLabelName?: string; // hidden input carrying the short glance label (phase 2)
   defaultValue?: DefaultPlace | null;
   placeholder?: string;
   proximity?: [number, number];
@@ -82,6 +113,9 @@ export function AddressAutocomplete({
   const [px, py] = proximity;
   const [query, setQuery] = useState(defaultValue?.label ?? "");
   const [picked, setPicked] = useState<Place | null>(asPlace(defaultValue));
+  // Short glance label captured on pick (empty until a fresh pick, so a resumed
+  // draft that isn't re-picked submits "" and the server keeps the stored label).
+  const [placeLabel, setPlaceLabel] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -174,7 +208,7 @@ export function AddressAutocomplete({
       const data = (await res.json()) as {
         features?: {
           geometry?: { coordinates?: [number, number] };
-          properties?: { full_address?: string; name?: string };
+          properties?: RetrieveProps;
         }[];
       };
       const f = data.features?.[0];
@@ -184,6 +218,7 @@ export function AddressAutocomplete({
         const place: Place = { label, lng: c[0], lat: c[1] };
         setPicked(place);
         setQuery(label);
+        setPlaceLabel(glanceLabelFromProps(f?.properties)); // short label for the schedule
         onChange?.({ text: label, place });
       }
       session.current = newSession(); // fresh session for the next search
@@ -198,9 +233,10 @@ export function AddressAutocomplete({
   function onInput(v: string) {
     setQuery(v);
     setActive(-1);
-    // Editing the text after a pick invalidates the chosen coords.
+    // Editing the text after a pick invalidates the chosen coords + glance label.
     const next = picked && v === picked.label ? picked : null;
     if (next !== picked) setPicked(next);
+    if (!next) setPlaceLabel("");
     onChange?.({ text: v, place: next });
   }
 
@@ -260,6 +296,7 @@ export function AddressAutocomplete({
       {labelName && <input type="hidden" name={labelName} value={picked?.label ?? ""} />}
       {latName && <input type="hidden" name={latName} value={picked?.lat ?? ""} />}
       {lngName && <input type="hidden" name={lngName} value={picked?.lng ?? ""} />}
+      {placeLabelName && <input type="hidden" name={placeLabelName} value={placeLabel} />}
 
       {listOpen && (
         <ul className="ac-list" id={listId} role="listbox" ref={listRef}>

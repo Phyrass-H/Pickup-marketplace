@@ -88,6 +88,15 @@ export async function createMission(formData: FormData) {
   const dropoffValid =
     dropoffLat != null && dropoffLng != null && isValidLatLng(dropoffLat, dropoffLng);
   const zone = pickupAddress ? pickupAddress.split(",")[0]!.trim() || null : null;
+  // Short glance labels captured at pick-time from Mapbox's structured POI/place
+  // data (phase 2). Written only when present (conditional spread below) so a
+  // draft re-saved without re-picking keeps its stored label rather than wiping it.
+  const pickupLabel = String(formData.get("pickup_label") ?? "").trim();
+  const dropoffLabel = String(formData.get("dropoff_label") ?? "").trim();
+  const labels = {
+    ...(pickupLabel ? { pickup_label: pickupLabel } : {}),
+    ...(dropoffLabel ? { dropoff_label: dropoffLabel } : {}),
+  };
   const pickupLocal = String(formData.get("pickup_at") ?? "").trim();
   const ceiling = num(formData.get("ceiling"));
   const baseFare = num(formData.get("base_fare"));
@@ -255,8 +264,8 @@ export async function createMission(formData: FormData) {
     // this a draft saved hours/days ago would be posted already near/at the
     // ceiling. A plain re-save-as-draft keeps the original created_at.
     const updateRow = asDraft
-      ? { ...row, ...eta, ...boardUpload }
-      : { ...row, ...eta, ...boardUpload, created_at: new Date().toISOString() };
+      ? { ...row, ...eta, ...boardUpload, ...labels }
+      : { ...row, ...eta, ...boardUpload, ...labels, created_at: new Date().toISOString() };
     const { data: updated, error } = await supabase
       .from("mission")
       .update(updateRow)
@@ -271,7 +280,7 @@ export async function createMission(formData: FormData) {
   } else {
     const { data: inserted, error } = await supabase
       .from("mission")
-      .insert({ ...row, ...eta, ...boardUpload })
+      .insert({ ...row, ...eta, ...boardUpload, ...labels })
       .select("id")
       .single();
     if (error || !inserted) redirect(backTo("db"));

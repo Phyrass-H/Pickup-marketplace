@@ -96,11 +96,17 @@ export function TripRow({
 
         <span className="dx-trip__route">
           {/* Short glance label in the line (full address stays in the detail
-              below + the Driver's nav). `title` reveals the exact address on hover. */}
-          <span title={mission.pickup_address}>{shortPlaceLabel(mission.pickup_address)}</span>
+              below + the Driver's nav). `title` reveals the exact address on hover.
+              Prefer the label captured from Mapbox's POI data (phase 2); fall back
+              to one derived from the address string for older missions. */}
+          <span title={mission.pickup_address}>
+            {mission.pickup_label || shortPlaceLabel(mission.pickup_address)}
+          </span>
           <span className="dx-arrow">→</span>
           <span title={mission.dropoff_address ?? undefined}>
-            {mission.dropoff_address ? shortPlaceLabel(mission.dropoff_address) : "—"}
+            {mission.dropoff_address
+              ? mission.dropoff_label || shortPlaceLabel(mission.dropoff_address)
+              : "—"}
           </span>
         </span>
 

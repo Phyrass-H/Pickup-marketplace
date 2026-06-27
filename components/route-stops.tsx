@@ -165,6 +165,7 @@ export function RouteStops({
                 labelName="pickup_address"
                 latName="pickup_lat"
                 lngName="pickup_lng"
+                placeLabelName="pickup_label"
                 defaultValue={pickupDefault}
                 placeholder="From — hôtel, address, airport…"
                 onChange={(s) => setPickup(s.place)}
@@ -219,6 +220,7 @@ export function RouteStops({
                 labelName="dropoff_address"
                 latName="dropoff_lat"
                 lngName="dropoff_lng"
+                placeLabelName="dropoff_label"
                 defaultValue={dropoffDefault}
                 placeholder="Where to?"
                 proximity={pickup ? [pickup.lng, pickup.lat] : undefined}
