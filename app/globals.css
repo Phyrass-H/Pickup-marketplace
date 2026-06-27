@@ -871,11 +871,13 @@ textarea::placeholder {
 .dx-trip__route { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dx-route__node { display: flex; align-items: flex-start; gap: 9px; min-width: 0; position: relative; }
 .dx-route__dot {
-  width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 4px; position: relative;
+  width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 4px;
 }
-/* Connector line linking each node up to the one above. */
-.dx-route__node + .dx-route__node .dx-route__dot::before {
-  content: ""; position: absolute; left: 2.75px; bottom: 7px; width: 1.5px; height: 13px;
+/* Connector line linking each node up to the one above. Drawn on the NODE (not the
+   dot) so the drop-off dot's 1.5px ring can't shift it off-centre; left 2.75px
+   centres the 1.5px line under the 7px dot, which sits flush at the node's left. */
+.dx-route__node + .dx-route__node::before {
+  content: ""; position: absolute; left: 2.75px; top: -8px; width: 1.5px; height: 13px;
   background: var(--border-strong);
 }
 .dx-route__dot--pk { background: var(--text); }
