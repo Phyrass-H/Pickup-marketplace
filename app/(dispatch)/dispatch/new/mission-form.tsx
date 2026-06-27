@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle, UserRound } from "lucide-react";
 import { createMission } from "./actions";
@@ -83,6 +83,24 @@ function SubmitButton({
   );
 }
 
+// Cancel inside the confirm-post modal. Reads the form's pending state so it
+// disables once Post is in flight — otherwise a Cancel click would close the
+// modal while the (already-submitted) post completes in the background.
+function ConfirmCancelButton({ onCancel }: { onCancel: () => void }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="button"
+      className="btn secondary"
+      onClick={onCancel}
+      disabled={pending}
+      autoFocus
+    >
+      Cancel
+    </button>
+  );
+}
+
 interface PreviewData {
   category: string;
   body: string;
@@ -128,6 +146,8 @@ export function MissionForm({
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const [clientError, setClientError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
+  // The "This is final" confirm popup, opened by Post to the Pool (S21).
+  const [confirmPost, setConfirmPost] = useState(false);
 
   const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
   const [baseFare, setBaseFare] = useState(draft?.base_fare != null ? String(draft.base_fare) : "");
@@ -313,6 +333,16 @@ export function MissionForm({
   })();
 
   const showFare = ceiling !== "" && Number.isFinite(ceilingNum) && ceilingNum > 0;
+
+  // Escape closes the confirm-post popup (matches the click-the-backdrop exit).
+  useEffect(() => {
+    if (!confirmPost) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setConfirmPost(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [confirmPost]);
 
   return (
     <form ref={formRef} action={createMission} onKeyDown={onKeyDown}>
@@ -774,20 +804,9 @@ export function MissionForm({
             )}
 
             <div className="mx-sumdiv" />
-            {mode === "preview" && (
-              <div
-                className="notice warn"
-                role="note"
-                style={{ display: "flex", gap: 8, alignItems: "flex-start" }}
-              >
-                <AlertTriangle size={16} style={{ flex: "none", marginTop: 1 }} aria-hidden />
-                <span>
-                  <strong>This is final.</strong> Posting sends the mission live to
-                  the Driver Pool right away — it can’t be un-posted. Use Edit or
-                  Save as draft if you’re not ready.
-                </span>
-              </div>
-            )}
+            {/* The "This is final" warning lives in a confirm popup that opens on
+                Post to the Pool now (S21) — not here in the review rail, where it
+                read as alarming before any post intent. */}
             {/* Distinct keys per mode so React MOUNTS A FRESH button set instead of
                 reusing (and re-typing) the same <button> node — without this, the
                 edit "Review" button (type=button) is reconciled into the preview
@@ -804,9 +823,12 @@ export function MissionForm({
               </div>
             ) : (
               <div className="mx-actions" key="actions-preview">
-                <SubmitButton intent="pooled" className="btn" pendingLabel="Posting…">
+                {/* type=button: opens the confirm popup, does NOT submit. The real
+                    pooled submit lives in the modal so posting always takes a
+                    deliberate second click. */}
+                <button type="button" className="btn" onClick={() => setConfirmPost(true)}>
                   {draft ? "Post draft to the Pool" : "Post to the Pool"}
-                </SubmitButton>
+                </button>
                 <button type="button" className="btn secondary" onClick={() => setMode("edit")}>
                   ← Edit
                 </button>
@@ -824,6 +846,55 @@ export function MissionForm({
           </div>
         </aside>
       </div>
+
+      {/* "This is final" confirm popup (S21). Lives inside the <form> so its
+          pooled SubmitButton submits the same FormData and shares the pending
+          guard. Click-the-backdrop and Escape both cancel. */}
+      {confirmPost && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mx-confirm-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmPost(false);
+          }}
+        >
+          <div className="modal-card" style={{ maxWidth: 420 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 34,
+                  height: 34,
+                  flex: "none",
+                  borderRadius: 8,
+                  background: "var(--warn-bg)",
+                  color: "var(--warn)",
+                }}
+              >
+                <AlertTriangle size={20} />
+              </span>
+              <h2 id="mx-confirm-title" style={{ margin: 0, fontSize: 19 }}>
+                This is final
+              </h2>
+            </div>
+            <p style={{ margin: "0 0 18px", fontSize: 15, lineHeight: 1.55, color: "var(--text-muted)", textWrap: "balance" }}>
+              Posting sends this live to the Driver Pool right away — it can’t be
+              un-posted.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <ConfirmCancelButton onCancel={() => setConfirmPost(false)} />
+              <SubmitButton intent="pooled" className="btn" pendingLabel="Posting…">
+                {draft ? "Post draft to the Pool" : "Post to the Pool"}
+              </SubmitButton>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
