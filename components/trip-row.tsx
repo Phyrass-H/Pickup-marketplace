@@ -3,12 +3,12 @@ import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
+  addressLine,
   formatDateTime,
   formatMoney,
   formatTime,
   formatTripMeta,
   serviceClassLabel,
-  shortPlaceLabel,
 } from "@/lib/format";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
@@ -94,12 +94,34 @@ export function TripRow({
       <summary>
         <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
 
+        {/* Stacked route rail: pickup → stop(s) → drop-off, one address per line so
+            long addresses fit without truncation. Each line is the full address
+            minus the redundant trailing country; the exact address shows on hover.
+            Dots: dark = pickup, grey = a via-stop, hollow = drop-off. */}
         <span className="dx-trip__route">
-          {/* Pickup only (founder pref): a clean derived street + town label — the
-              map provider's raw POI names read as junk ("CITY-LOCKER — Gare …").
-              The destination + the exact pickup address live in the expanded
-              detail; `title` shows the full pickup address on hover. */}
-          <span title={mission.pickup_address}>{shortPlaceLabel(mission.pickup_address)}</span>
+          <span className="dx-route__node">
+            <span className="dx-route__dot dx-route__dot--pk" aria-hidden />
+            <span className="dx-route__addr dx-route__addr--pk" title={mission.pickup_address}>
+              {addressLine(mission.pickup_address)}
+            </span>
+          </span>
+          {waypoints.map((w, i) => (
+            <span className="dx-route__node" key={i}>
+              <span className="dx-route__dot dx-route__dot--via" aria-hidden />
+              <span className="dx-route__addr dx-route__addr--via" title={w.address}>
+                {addressLine(w.address)}
+              </span>
+            </span>
+          ))}
+          <span className="dx-route__node">
+            <span className="dx-route__dot dx-route__dot--dp" aria-hidden />
+            <span
+              className="dx-route__addr dx-route__addr--dp"
+              title={mission.dropoff_address ?? undefined}
+            >
+              {mission.dropoff_address ? addressLine(mission.dropoff_address) : "—"}
+            </span>
+          </span>
         </span>
 
         <span className="dx-trip__flight">

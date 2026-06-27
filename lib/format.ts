@@ -129,6 +129,18 @@ export function shortPlaceLabel(address: string | null | undefined): string {
   return name;
 }
 
+// The schedule route line: the full address MINUS the redundant trailing country
+// (beta is all France/Monaco, so "…, Nice, France" → "…, Nice"). Keeps the house
+// number, street, postcode + city untouched. The exact, full address still shows
+// on hover + in the expanded trip detail.
+export function addressLine(address: string | null | undefined): string {
+  const raw = (address ?? "").trim();
+  if (!raw) return "";
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length > 1 && COUNTRY_RE.test(parts[parts.length - 1])) parts.pop();
+  return parts.join(", ");
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   return dateTime.format(new Date(iso));
