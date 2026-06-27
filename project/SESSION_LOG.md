@@ -78,6 +78,14 @@ detail. A number reaches the Driver ONLY when shared, and only post-accept.
 - **Flagged (accepted, no dirty routes):** `shareGuestPhone` bounds the index against the phone list, not the name list
   (harmless — both written atomically); orphan side-table rows are deleted on re-save when phones are removed.
 
+**Follow-up 3 (same session, founder bug report): address autocomplete POIs.** The Mapbox Search Box `/suggest` was
+returning a non-routable `feature_type:"brand"` entry as the top hit ("Fnac — Brand") and `limit=6` cut real branches.
+Fix (`components/address-autocomplete.tsx`): fetch `limit=10`, **drop `brand`/`category` suggestions**, show up to 8.
+Diagnosed against the live Mapbox API (curl); "FNAC" now leads with **"Fnac — La Riviera, 06000 Nice"** (browser-verified
+in the live form, no console errors). Flagged as Mapbox **data-coverage gaps** (no code fix): the **Eden-Roc restaurant**
+(part of Hôtel du Cap-Eden-Roc) and the **Galeries Lafayette Nice store** (Mapbox indexes only the brand counters inside
+it) aren't standalone POIs — a stronger POI source (Google Places) would be the real fix, deferred as a paid integration.
+
 **Deferred / flagged (no dirty routes):** V2 **per-business custom reference label** (Hotel→Room, Restaurant→Table,
 BACKLOG § M) — not built; the legacy `comment` column is now vestigial (a future non-additive cleanup could drop it).
 

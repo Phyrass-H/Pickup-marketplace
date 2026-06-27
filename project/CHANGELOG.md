@@ -6,6 +6,11 @@
 ---
 
 ## 27 June 2026
+- **Address search surfaces real places better.** Typing a shop or chain (e.g. "FNAC") now puts the actual nearby
+  branches at the top — including the Nice store — instead of a useless "— Brand" entry, and shows more results so the
+  one you want isn't cut off. (Heads-up: a few spots aren't in the map provider's database as their own point — the
+  **Eden-Roc restaurant** is part of "Hôtel du Cap-Eden-Roc", and the **Galeries Lafayette Nice** store only shows the
+  shop counters inside it. Search the hotel name or a counter and it still lands in the right place.)
 - **Passenger phone numbers, with a "Share with Driver" switch.** On a mission you can now add a **phone for each
   Guest** and mark one as the **main contact** (the lead person — the boss, the parent, the assistant's principal —
   whoever the Driver should deal with). A phone is **never shared automatically**: you flip a **Share** switch to let

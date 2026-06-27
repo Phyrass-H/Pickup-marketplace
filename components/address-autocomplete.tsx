@@ -104,9 +104,11 @@ export function AddressAutocomplete({
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(async () => {
       try {
+        // Fetch 10 (the Search Box max) so a real location isn't cut off when a
+        // brand query (e.g. "Fnac", "Galeries Lafayette") front-loads several hits.
         const url =
           `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(query)}` +
-          `&language=fr&limit=6&country=${countries}&proximity=${px},${py}` +
+          `&language=fr&limit=10&country=${countries}&proximity=${px},${py}` +
           `&session_token=${session.current}&access_token=${TOKEN}`;
         const res = await fetch(url, { signal: controller.signal });
         const data = (await res.json()) as {
@@ -115,15 +117,21 @@ export function AddressAutocomplete({
             name?: string;
             full_address?: string;
             place_formatted?: string;
+            feature_type?: string;
           }[];
         };
         const list: Suggestion[] = (data.suggestions ?? [])
+          // Drop 'brand'/'category' suggestions: they're search categories
+          // ("Fnac — Brand"), not a specific place you can be picked up from —
+          // they waste the top slot and resolve to nothing on retrieve.
+          .filter((s) => s.feature_type !== "brand" && s.feature_type !== "category")
           .map((s) => ({
             mapbox_id: s.mapbox_id ?? "",
             name: s.name ?? "",
             address: s.full_address || s.place_formatted || "",
           }))
-          .filter((s) => s.mapbox_id && s.name);
+          .filter((s) => s.mapbox_id && s.name)
+          .slice(0, 8);
         setSuggestions(list);
         setActive(-1); // fresh results → no stale highlight
         setOpen(true);
