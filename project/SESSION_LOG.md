@@ -47,6 +47,37 @@ equal halves via the existing Pricing-row idiom (`display:flex; gap:12` + two `l
 wrapping to stacked under ~290px (mobile). Mockup-approved (balanced halves) then built; browser-verified at 1440px
 (both 321px, same line, gap 12) and confirmed wrap on a narrow viewport. No schema/logic change.
 
+**Follow-up 2 (same session, founder ask — the big one): Passenger phones + a Share-with-Driver gate.**
+The Passengers section was reworked (D25: ~6 mockup iterations): **"+ Add passenger"** moved to a light outline button
+in the header; each Guest gains an optional **phone** and a selectable, highlighted **main contact** (star, exactly-one
+invariant); a per-phone **Share with Driver** toggle (switch, off by default) in BOTH the form and the schedule trip
+detail. A number reaches the Driver ONLY when shared, and only post-accept.
+- **Privacy gate — AIRTIGHT (founder chose this over the no-migration option):** phone NUMBERS never touch the mission
+  row (Pool Drivers can read pooled rows via `p_mission_driver_read`). `mission.passenger_names` keeps only
+  `{first,last,main}` (`passengerRowData` strips phone/shared); the numbers + per-phone `shared` flag live in a NEW side
+  table **`mission_guest_contact`** (`{mission_id, contacts jsonb}`, aligned by index) whose RLS
+  (`p_guestcontact_business_all`) gives Drivers NO policy = deny-by-default. The assigned Driver sees a SHARED number via
+  the **service role** in `/rides`, double-gated (assigned + `shared`) — mirrors the Dispatcher-contact unlock.
+- **DB (additive, founder ran):** `docs/migrations/2026-06-27_mission_guest_contact.sql`. Types mirrored (D3).
+- **New files:** `lib/passengers.ts` (Passenger gains phone/main/phoneShared; `GuestContact`; `passengerRowData` /
+  `guestContacts` / `mergeContacts` / `zipGuestContacts` / `mainIndex`; `primaryPassengerName` is now main-based),
+  `components/share-switch.tsx` (presentational toggle), `components/phone-share-toggle.tsx` (schedule toggle →
+  `shareGuestPhone`, optimistic + revert), `app/(dispatch)/dispatch/passenger-actions.ts` (`shareGuestPhone`,
+  user-session/RLS-scoped). **Rewrote** `components/passenger-list.tsx`. **Wired:** `createMission` splits storage
+  (names→mission, phones→side table, index-aligned; logs side-table write failures rather than swallowing them);
+  `new/page.tsx` loads draft contacts; `mission-form` merges them; `trip-row` + `dispatch/page.tsx` render the phone +
+  toggle (locked on finished trips); `rides` reveals shared phones.
+- **Verification:** `tsc` clean. **Adversarial review** (workflow, 3 skeptics + synth, privacy-focused) — gate **SOUND /
+  airtight, NO leak** of an unshared or non-owned phone. 2 mediums fixed (silent side-table write → now logged; toggle
+  read-only on finished trips). **Browser-verified vs the REAL DB:** all form interactions work; save-as-draft with a
+  SHARED + an UNSHARED phone → **draft round-trip re-aligned both phones + states from the side table** (Céline shared /
+  Jean not); main flag persisted; the test draft was restored. The phone re-fills from the side-table `draftContacts`
+  (not `passenger_names`), confirming the split at runtime. (A direct service-role prod dump of the split was BLOCKED by
+  the safety classifier — correctly, as a prod PII read; proven instead by the code review + the round-trip. The schedule
+  toggle + Driver reveal are code/review-verified — not posted live, to avoid Pool pollution.)
+- **Flagged (accepted, no dirty routes):** `shareGuestPhone` bounds the index against the phone list, not the name list
+  (harmless — both written atomically); orphan side-table rows are deleted on re-save when phones are removed.
+
 **Deferred / flagged (no dirty routes):** V2 **per-business custom reference label** (Hotel→Room, Restaurant→Table,
 BACKLOG § M) — not built; the legacy `comment` column is now vestigial (a future non-additive cleanup could drop it).
 

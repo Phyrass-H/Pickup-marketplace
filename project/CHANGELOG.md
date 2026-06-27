@@ -6,6 +6,12 @@
 ---
 
 ## 27 June 2026
+- **Passenger phone numbers, with a "Share with Driver" switch.** On a mission you can now add a **phone for each
+  Guest** and mark one as the **main contact** (the lead person — the boss, the parent, the assistant's principal —
+  whoever the Driver should deal with). A phone is **never shared automatically**: you flip a **Share** switch to let
+  the Driver call the Guest — either when you post the trip, or **later from the schedule** if the Driver is having
+  trouble reaching them. The Driver only ever sees a number you've shared, and only after they've accepted the trip.
+  And it's genuinely private — an un-shared number is kept somewhere Drivers can't read at all, not just hidden on screen.
 - **Luggage and Flight number now sit side by side** on the mission form (they used to be stacked), so the Trip
   details section is tidier. They drop back to stacked on a narrow phone screen.
 - **The "Reference" field on a mission is now a proper short tag.** It used to be a big "Reference / notes" box that
