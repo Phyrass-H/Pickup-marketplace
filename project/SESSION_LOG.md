@@ -48,8 +48,25 @@ mockup → founder approved **zebra + full-width** via a one-tap AskUserQuestion
 day shows zebra clearly; status pills + left rails **colour-match by tone** (grey Completed/Pooled, steel
 Confirmed/Accepted, amber Unfilled, red Not confirmed); the sticky colhead **pins at 57px** on a long scroll.
 
-**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign. Both the S21
-popup and this redesign are **local / undeployed**.
+**Phase 2 — structured POI glance labels (BUILT, migration-gated, NOT yet deployed):** capture a clean place label at
+address-pick-time from Mapbox Search Box's structured `retrieve` data (the POI name for hotels/airports/venues, else
+street + town), store it on the mission, and prefer it in the schedule line over the string-derived phase-1 label.
+- **Migration (founder runs):** `docs/migrations/2026-06-27_mission_place_labels.sql` — `add column pickup_label`,
+  `dropoff_label text` (additive, nullable). Mirrored in `lib/database.types.ts`.
+- **`address-autocomplete.tsx`:** new `placeLabelName` hidden-input prop + `glanceLabelFromProps()` (POI name / street,
+  minus house number, + `context.place`/`locality` town, skipping a town already in the name). Captured on pick; cleared
+  when the text is edited (so a resumed draft that isn't re-picked submits "" and the server keeps the stored label).
+- **`route-stops.tsx`:** pickup/dropoff fields pass `placeLabelName="pickup_label"` / `"dropoff_label"`.
+- **`actions.ts`:** reads both, **conditional-spread** (`...labels`) into insert + update so an empty submit never wipes a
+  stored label.
+- **`trip-row.tsx`:** renders `mission.pickup_label || shortPlaceLabel(pickup_address)` (graceful fallback for old rows).
+- **Migration applied by the founder; verified end-to-end vs the REAL Supabase DB + deployed.** Posted a real mission
+  through the form (real picks): pickup → **"Carlton Cannes, a Regent Hotel"**, dropoff → **"Nice-Côte d'Azur Airport"**
+  — both written to the new columns and rendered in the schedule line; older rows fall back to the phase-1 label. The
+  verification mission was then deleted. `tsc` clean, no console errors.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign. The S21 popup +
+S22 schedule redesign / phase-1 labels / Ref column / phase-2 POI labels are all **deployed**.
 
 ---
 
