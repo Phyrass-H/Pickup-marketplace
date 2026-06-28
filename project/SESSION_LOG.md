@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-06-28 — Session 29 — Saved address generalized ("Your address", either end) + pickup pre-fill toggle + route swap
+**Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_business_address_and_prefill.sql` —
+renames `default_pickup_*` → `business_address_*` (idempotent DO block, keeps values) + adds `prefill_pickup boolean
+default true`. Files: `lib/database.types.ts`, `app/(dispatch)/dispatch/settings/page.tsx` + `actions.ts`,
+`app/(dispatch)/dispatch/new/page.tsx` + `mission-form.tsx`, `components/route-stops.tsx`, `app/globals.css`.
+
+**Why (founder feedback on S28):** (1) "Default Guest instructions" is case-by-case → remove. (2) **Not all
+Businesses are hotels** — a Business is a fixed point that can be the pickup (departure) OR the drop-off (arrival),
+and for a concierge it may be **neither**. So a single "default pickup" was wrong-headed.
+
+**Shipped:**
+- **Removed** the Guest-instructions field (the `default_booking_notes` column is left vestigial).
+- **Generalized the saved place** to **"Your address"** (`business_address_*`) — neutral, no "hotel" wording (also
+  scrubbed the reception helper + the pickup placeholder "From — address, airport, station…").
+- **Pre-fill toggle** (`prefill_pickup`, default on): on a NEW mission the pickup starts with the saved address; a
+  Business whose address is never an endpoint (concierge) switches it off. A resumed **draft keeps its own pickup**;
+  the prefill is always **fully editable/clearable**.
+- **Pickup ⇄ drop-off swap button** in the Route card (`route-stops.tsx`): for an arrival (move the address to the
+  drop-off) or to fix a reversed entry without retyping. Implemented by tracking each end as `{text, place}` and
+  **remounting the two uncontrolled `AddressAutocomplete`s via a `swapNonce` key** (they submit via their own hidden
+  inputs, so a key-bump is what flips the displayed + submitted values); text is preserved even when unpicked.
+- Wiring: `/dispatch/new` loads `ctx.business` always, computes `pickupPrefill` (address × toggle), passes it to
+  `MissionForm`, which uses it only for new missions.
+
+**Verified:** `tsc` clean; static harness on the real `globals.css` (swap button centred on the route card; the
+"Your address" + toggle layout; Guest-instructions gone); isolated worktree production build [pending at log-time].
+Swap logic reasoned through (closure-swap + key remount; onChange doesn't fire on mount, so no loop). Could not drive
+the live form (another session holds :3000) — founder to run the migration then click through on localhost.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), the **saved-addresses address book** (this is its first
+saved place), Driver app redesign.
+
+---
+
 ## 2026-06-28 — Session 28 — Business settings rebuilt (left-nav account area: Company / Contact / Branding / Booking defaults + Billing/Notifications stubs)
 **Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_business_profile_fields.sql` — 13 additive
 nullable columns on `business`. Files: `lib/database.types.ts`, `app/(dispatch)/dispatch/settings/page.tsx` (rewrite),

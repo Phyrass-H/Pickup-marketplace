@@ -70,15 +70,15 @@ export default async function BusinessSettingsPage({
   const { ok, error, s } = await searchParams;
   const docs = await getLatestDocuments("business", business.id, BUSINESS_DOC_TYPES);
 
-  const pickupDefault =
-    business.default_pickup_lat != null && business.default_pickup_lng != null
+  const addressDefault =
+    business.business_address_lat != null && business.business_address_lng != null
       ? {
-          label: business.default_pickup_address ?? "",
-          lat: business.default_pickup_lat,
-          lng: business.default_pickup_lng,
+          label: business.business_address ?? "",
+          lat: business.business_address_lat,
+          lng: business.business_address_lng,
         }
-      : business.default_pickup_address
-        ? { label: business.default_pickup_address }
+      : business.business_address
+        ? { label: business.business_address }
         : undefined;
 
   const sections: SettingsSection[] = [
@@ -197,7 +197,7 @@ export default async function BusinessSettingsPage({
                 defaultValue={business.reception_phone ?? ""}
                 placeholder="+33 1 53 43 43 00"
               />
-              <small className="set-note">The hotel’s front-desk line (optional).</small>
+              <small className="set-note">Your reception / front-desk line (optional).</small>
             </label>
           </div>
           <button className="btn" type="submit">
@@ -228,22 +228,35 @@ export default async function BusinessSettingsPage({
         <form action={updateBookingDefaults} className="card">
           <SectionHead
             title="Booking defaults"
-            desc="Pre-fill the new-mission form so posting a trip is faster."
+            desc="Your address and defaults that pre-fill the new-mission form."
           />
           <label className="field">
-            <span>Default pickup address</span>
+            <span>Your address</span>
             <AddressAutocomplete
-              labelName="default_pickup_address"
-              latName="default_pickup_lat"
-              lngName="default_pickup_lng"
-              placeLabelName="default_pickup_label"
-              defaultValue={pickupDefault}
-              placeholder="Your hotel — pick it from the suggestions"
+              labelName="business_address"
+              latName="business_address_lat"
+              lngName="business_address_lng"
+              placeLabelName="business_address_label"
+              defaultValue={addressDefault}
+              placeholder="Your address — pick it from the suggestions"
             />
             <small className="set-note">
-              Pre-fills the pickup on every new mission. Pick it from the dropdown so it has a
-              location.
+              Used to pre-fill bookings. Pick it from the dropdown so it has a location.
             </small>
+          </label>
+          <label className="set-toggle">
+            <input
+              type="checkbox"
+              name="prefill_pickup"
+              defaultChecked={business.prefill_pickup ?? true}
+            />
+            <span className="set-toggle__text">
+              <strong>Pre-fill my address as the pickup</strong>
+              <small className="set-note">
+                On a new mission, start the pickup with your address (swap it to the drop-off for
+                an arrival). Turn this off if your address is never an endpoint.
+              </small>
+            </span>
           </label>
           <div className="grid-2">
             <label className="field">
@@ -259,15 +272,6 @@ export default async function BusinessSettingsPage({
               </select>
             </label>
           </div>
-          <label className="field">
-            <span>Default Guest instructions</span>
-            <textarea
-              name="default_booking_notes"
-              rows={3}
-              defaultValue={business.default_booking_notes ?? ""}
-              placeholder="e.g. Meet the Guest at the concierge desk"
-            />
-          </label>
           <button className="btn" type="submit">
             Save booking defaults
           </button>

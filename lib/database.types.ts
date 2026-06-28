@@ -85,13 +85,15 @@ export interface Database {
           vat_number: string | null;
           registered_address: string | null;
           reception_phone: string | null;
-          // Booking defaults (pre-fill the new-mission form).
-          default_pickup_address: string | null;
-          default_pickup_lat: number | null;
-          default_pickup_lng: number | null;
-          default_pickup_label: string | null;
+          // Booking defaults. business_address = the Business's own address (used on
+          // either end); prefill_pickup = auto-fill it into a new mission's pickup.
+          business_address: string | null;
+          business_address_lat: number | null;
+          business_address_lng: number | null;
+          business_address_label: string | null;
+          prefill_pickup: boolean;
           default_vehicle_category: string | null;
-          default_booking_notes: string | null;
+          default_booking_notes: string | null; // legacy (Guest-instructions field removed)
           // Billing (storable now; Stripe deferred).
           billing_email: string | null;
           created_at: string;
@@ -108,10 +110,11 @@ export interface Database {
           vat_number?: string | null;
           registered_address?: string | null;
           reception_phone?: string | null;
-          default_pickup_address?: string | null;
-          default_pickup_lat?: number | null;
-          default_pickup_lng?: number | null;
-          default_pickup_label?: string | null;
+          business_address?: string | null;
+          business_address_lat?: number | null;
+          business_address_lng?: number | null;
+          business_address_label?: string | null;
+          prefill_pickup?: boolean;
           default_vehicle_category?: string | null;
           default_booking_notes?: string | null;
           billing_email?: string | null;

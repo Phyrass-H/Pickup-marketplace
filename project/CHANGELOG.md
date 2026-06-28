@@ -6,6 +6,11 @@
 ---
 
 ## 28 June 2026
+- **Your saved address now works for any business, on either end of a trip.** It's labelled "Your address" (not
+  "pickup"), since a business can be the start of a trip (a departure) or the destination (an arrival). On a new
+  booking it pre-fills the pickup to save typing — and there's a **swap button** to flip pickup and drop-off in one
+  tap (for an arrival, or to fix a reversed entry). If your address is never an endpoint (e.g. a concierge service),
+  a switch in settings turns the pre-fill off. Also removed the "Default Guest instructions" field (too case-by-case).
 - **The Business account is now a proper settings area.** Instead of four lonely fields, there's a real left-nav
   settings page (like Booking/Airbnb): **Company** (business type, legal name, SIRET, VAT number, registered address, plus
   your Kbis), **Contact** (now showing your account email + a reception number), **Branding** (logo), and **Booking

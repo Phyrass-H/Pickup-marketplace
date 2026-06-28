@@ -80,22 +80,22 @@ export async function updateContact(formData: FormData) {
   redirect(back("contact"));
 }
 
-// ---- Booking defaults (pre-fill the new-mission form) ----
+// ---- Booking defaults (the Business's saved address + pre-fill toggle) ----
 export async function updateBookingDefaults(formData: FormData) {
   const { admin, dispatcher } = await currentSeat();
-  const lat = num(formData.get("default_pickup_lat"));
-  const lng = num(formData.get("default_pickup_lng"));
+  const lat = num(formData.get("business_address_lat"));
+  const lng = num(formData.get("business_address_lng"));
   const located = lat != null && lng != null && isValidLatLng(lat, lng);
   const catRaw = clean(formData.get("default_vehicle_category"));
   const { error } = await admin
     .from("business")
     .update({
-      default_pickup_address: clean(formData.get("default_pickup_address")) || null,
-      default_pickup_lat: located ? lat : null,
-      default_pickup_lng: located ? lng : null,
-      default_pickup_label: clean(formData.get("default_pickup_label")) || null,
+      business_address: clean(formData.get("business_address")) || null,
+      business_address_lat: located ? lat : null,
+      business_address_lng: located ? lng : null,
+      business_address_label: clean(formData.get("business_address_label")) || null,
+      prefill_pickup: formData.get("prefill_pickup") === "on",
       default_vehicle_category: VEHICLE_CATEGORIES.includes(catRaw) ? catRaw : null,
-      default_booking_notes: clean(formData.get("default_booking_notes")) || null,
     })
     .eq("id", dispatcher.business_id);
   if (error) redirect(back("booking", "error=db"));

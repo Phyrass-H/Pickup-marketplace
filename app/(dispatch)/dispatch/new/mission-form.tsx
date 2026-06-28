@@ -6,6 +6,7 @@ import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
+import type { Place } from "@/components/address-autocomplete";
 import { ServiceClassFields } from "@/components/service-class-fields";
 import { DriverServiceFields } from "@/components/driver-service-fields";
 import { PassengerList } from "@/components/passenger-list";
@@ -143,11 +144,13 @@ export function MissionForm({
   prefillDate,
   draft,
   draftContacts,
+  pickupPrefill,
 }: {
   error?: string;
   prefillDate?: string;
   draft?: MissionRow | null;
   draftContacts?: GuestContact[];
+  pickupPrefill?: Place | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -229,11 +232,15 @@ export function MissionForm({
     Number.isFinite(baseNum) &&
     ceilingNum < baseNum;
 
-  // Prefill addresses when resuming a draft.
+  // Prefill addresses: a resumed draft keeps its own pickup; a NEW mission starts
+  // with the Business's saved address (when "pre-fill as pickup" is on) so a
+  // departure is one less thing to type. Either way the field stays fully editable.
   const pickupDefault =
     draft && draft.pickup_lat != null && draft.pickup_lng != null
       ? { label: draft.pickup_address, lat: draft.pickup_lat, lng: draft.pickup_lng }
-      : null;
+      : draft
+        ? null
+        : (pickupPrefill ?? null);
   const dropoffDefault =
     draft && draft.dropoff_lat != null && draft.dropoff_lng != null
       ? { label: draft.dropoff_address ?? "", lat: draft.dropoff_lat, lng: draft.dropoff_lng }
