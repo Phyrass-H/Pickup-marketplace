@@ -875,9 +875,11 @@ textarea::placeholder {
 }
 /* Connector line linking each node up to the one above. Drawn on the NODE (not the
    dot) so the drop-off dot's 1.5px ring can't shift it off-centre; left 2.75px
-   centres the 1.5px line under the 7px dot, which sits flush at the node's left. */
+   centres the 1.5px line under the 7px dot, which sits flush at the node's left.
+   top/height leave a ~2px gap at each end so the line stops just short of both
+   dots (a cleaner finish) rather than running flush into them. */
 .dx-route__node + .dx-route__node::before {
-  content: ""; position: absolute; left: 2.75px; top: -8px; width: 1.5px; height: 13px;
+  content: ""; position: absolute; left: 2.75px; top: -6px; width: 1.5px; height: 8px;
   background: var(--border-strong);
 }
 .dx-route__dot--pk { background: var(--text); }

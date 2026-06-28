@@ -6,6 +6,8 @@
 ---
 
 ## 27 June 2026
+- **Small finish on the schedule's route line** — the little connector now stops just short of the pickup dot and the
+  drop-off ring instead of running flush into them.
 - **The schedule is far easier to read at a glance.** The trip list is now a clean, aligned table: columns line up,
   the route shows much more of the address (no more cramped "…"), and every other row has a faint stripe so your eye
   runs straight across — even with 30 trips on screen. Each day is a clear banded divider, the **column headings stay

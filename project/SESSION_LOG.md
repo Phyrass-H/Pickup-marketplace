@@ -242,6 +242,11 @@ in the live form, no console errors). Flagged as Mapbox **data-coverage gaps** (
 (part of Hôtel du Cap-Eden-Roc) and the **Galeries Lafayette Nice store** (Mapbox indexes only the brand counters inside
 it) aren't standalone POIs — a stronger POI source (Google Places) would be the real fix, deferred as a paid integration.
 
+**Follow-up 4 (same session, founder polish): route-rail connector gap.** The stacked route-rail connector
+(`.dx-route__node + .dx-route__node::before`) now leaves a ~2px gap at each end (`top:-6px; height:8px`, was
+`-8px/13px`) so it stops just short of both dots — a cleaner finish. Approved via an enlarged before/after mockup;
+geometry browser-verified (connector bottom y=2 vs the dot's top edge y=4 → 2px gap).
+
 **Deferred / flagged (no dirty routes):** V2 **per-business custom reference label** (Hotel→Room, Restaurant→Table,
 BACKLOG § M) — not built; the legacy `comment` column is now vestigial (a future non-additive cleanup could drop it).
 
