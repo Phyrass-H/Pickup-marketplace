@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-06-28 — Session 25 — Schedule rows shrink as one (responsive grid + minimum + side-scroll)
+**Branch:** `main`. No migration. CSS-only — file: `app/globals.css` (shared schedule **and** history grid).
+
+**Why:** founder narrowed the Schedule window and the addresses **vanished** while the `Route` / `Flight` column
+headers visually **collided**. Root cause: the dense 7-col grid had **4 rigid pixel tracks** (time `56px`, flight
+`104px`, ref `120px`, status `150px`); when width ran out the only flexible track — route `minmax(0,1.9fr)` —
+absorbed all the loss and collapsed to `0` (addresses clipped to nothing), and the un-clipped header cells spilled
+into each other. Founder's words: *"I'd like the whole trip card to equally shrink horizontally"* + *"fix a minimum
+limit to keep it clean and avoid colliding rows."* (Two visualize mockups signed off before coding — D25 loop.)
+
+**Shipped (`app/globals.css`):**
+- **Every column is now flexible** — `grid-template-columns` is seven `minmax(<floor>, <fr>)` tracks (time `.5fr`,
+  **route `4fr`** so it stays widest at rest, flight `.95`, guest `1.15`, ref `.75`, driver `1.15`, status `1.1fr`).
+  The whole row scales down together as the window narrows; addresses/guest/driver truncate with `…` instead of one
+  column collapsing. Gap `16px` → `12px`.
+- **Anti-collision belt-and-braces:** `.dx-colhead > span` now clips (`nowrap`+`ellipsis`) so the header labels can
+  never overlap at any width; the **flight badge** (`.dx-flight`) and the **ref pill** (`.dx-trip__ref .ref`) now
+  truncate on one line instead of hard-clipping / wrapping to two lines.
+- **Minimum limit + side-scroll** (`@media (max-width: 880px)`): below the summed floors the table holds a
+  `min-width: 572px` and the `.dx-sched` becomes its own horizontal scroller (`overflow-x:auto; overflow-y:hidden`),
+  so rows keep their shape and nothing collides — you side-scroll to reach Status. In that regime the column header
+  drops its `top:57` sticky offset (`position:static`) so it rides with the scroll instead of leaving a gap.
+  Breakpoint clears the squeeze even with the sidebar expanded (236px, user-toggled, doesn't auto-collapse).
+- **Status floor `116px`** fits the longest pill ("Not confirmed" incl. the `!`) so the at-a-glance signal never
+  truncates.
+
+**Verified** (static harness linking the **real** `globals.css` + the actual schedule DOM, Node server on :4612,
+since another session held the Next dev server on :3000): **1440px** full addresses + route-dominant, no bloat;
+**1040px** uniform shrink, single-line truncation everywhere (ref no longer wraps); **800px** holds 572px min and
+side-scrolls — scrolled right, Status fully reachable, header+rows aligned, zero overlap. History shares the grid,
+so fixed there too. Calendar untouched (own `.dx-peektrip`/fixed drawer — deliberately not made a CSS container).
+
+**Tradeoff flagged:** in the <880px scroll regime the column header isn't viewport-pinned (rides the scroll). If the
+founder wants it always pinned at narrow widths, the upgrade is an internal-scroll table pane — offered, not built.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign. **Not yet
+pushed** — awaiting founder's go to deploy.
+
+---
+
 ## 2026-06-27 — Session 24 — Schedule route → stacked rail (pickup → stops → drop-off)
 **Branch:** `main`. No migration. Files: `lib/format.ts`, `components/trip-row.tsx`, `app/globals.css`,
 `app/(dispatch)/dispatch/page.tsx` + `history/page.tsx`.

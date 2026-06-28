@@ -5,6 +5,13 @@
 
 ---
 
+## 28 June 2026
+- **The schedule no longer breaks when you shrink the window.** Before, narrowing the browser made the addresses
+  disappear and the "Route" and "Flight" headers overlap. Now the whole trip row shrinks together — every column gives
+  up a little space and long text just trims with "…" — so it always stays a clean, aligned table. If you squeeze it
+  really narrow, the table keeps a sensible minimum width and you scroll sideways instead of anything colliding. (Same
+  fix applies to the History list.)
+
 ## 27 June 2026
 - **Small finish on the schedule's route line** — the little connector now stops just short of the pickup dot and the
   drop-off ring instead of running flush into them.

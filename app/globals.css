@@ -820,13 +820,28 @@ textarea::placeholder {
   border-radius: var(--radius-lg); overflow: clip; margin-bottom: 14px;
 }
 
-/* Shared 6-col grid (head + every row). The route track takes the slack so
-   addresses show in full, instead of the old ocean of gaps between columns. */
+/* Shared 7-col grid (head + every row). EVERY track is flexible — minmax(floor, fr)
+   — so the whole row shrinks together as the window narrows, instead of the old
+   rigid pixel columns (time / flight / ref / status) forcing the route track alone
+   to collapse to 0 (which hid the addresses and let the "Route" / "Flight" header
+   labels spill into each other). Route keeps the largest fr so it stays the widest
+   column at rest; the floors are the per-cell minimums. Past the summed floors the
+   table holds its minimum and side-scrolls — see the narrow @media further down. */
 .dx-colhead, .dx-trip > summary {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1.9fr) 104px minmax(140px, 1fr) 120px minmax(140px, 0.9fr) 150px;
-  gap: 16px; align-items: center;
+  grid-template-columns:
+    minmax(44px,  0.5fr)    /* time   */
+    minmax(86px,  4fr)      /* route  — widest at rest, shrinks with the rest */
+    minmax(56px,  0.95fr)   /* flight */
+    minmax(56px,  1.15fr)   /* guest  */
+    minmax(50px,  0.75fr)   /* ref    */
+    minmax(56px,  1.15fr)   /* driver */
+    minmax(116px, 1.1fr);   /* status — floor fits the longest pill ("Not confirmed") */
+  gap: 12px; align-items: center;
 }
+/* Header labels clip instead of spilling into the next column — belt-and-braces
+   so "Route" / "Flight" can never visually collide, at any width. */
+.dx-colhead > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dx-colhead {
   position: sticky; top: 57px; z-index: 5; /* clears the 57px sticky topbar */
   padding: 10px 16px; background: var(--surface-2);
@@ -894,14 +909,20 @@ textarea::placeholder {
 .dx-route__addr--dp { color: #98a2b3; }
 .dx-trip__flight { min-width: 0; overflow: hidden; }
 .dx-flight {
-  display: inline-flex; align-items: center; gap: 4px; flex: none; font-size: 11px;
+  display: inline-block; max-width: 100%; font-size: 11px; vertical-align: middle;
   font-weight: 600; padding: 3px 9px; border-radius: var(--radius-pill);
-  white-space: nowrap; background: var(--slate-100); color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--slate-100); color: var(--text-muted);
 }
 .dx-flight-empty { color: var(--text-faint); }
 .dx-trip__guest { min-width: 0; overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
 .dx-trip__ref { min-width: 0; overflow: hidden; }
-.dx-trip__ref .ref { margin-left: 0; } /* own column now — no inline indent */
+/* Own column now — no inline indent; truncate rather than wrap to two lines when
+   the column is squeezed. */
+.dx-trip__ref .ref {
+  margin-left: 0; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .dx-trip__driver { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dx-trip__detail { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
 
@@ -1014,6 +1035,22 @@ textarea::placeholder {
 /* ---- Narrow screens: let the sidebar collapse to the icon rail ---- */
 @media (max-width: 720px) {
   .dx-main { padding: 16px; }
+}
+
+/* Past the summed column floors the dense grid can't shrink any further without
+   columns colliding. Instead of clipping the right-hand columns, the table holds a
+   minimum width and scrolls sideways as one piece — every row keeps its shape and
+   nothing overlaps. (In this narrow regime the column header rides with the
+   horizontal scroll rather than pinning under the topbar — the right trade while
+   you're side-scrolling a squeezed window.) The breakpoint clears the point where
+   the table is squeezed even with the sidebar expanded. */
+@media (max-width: 880px) {
+  .dx-sched { overflow-x: auto; overflow-y: hidden; }
+  .dx-colhead, .dx-trip, .dx-day { min-width: 572px; }
+  /* The table is now its own horizontal scroller, so the header rides with the
+     scroll instead of pinning under the topbar — drop the sticky 57px offset that
+     would otherwise float it down and leave a gap. */
+  .dx-colhead { position: static; }
 }
 
 /* ===================================================================
