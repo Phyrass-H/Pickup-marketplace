@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-06-28 — Session 28 — Business settings rebuilt (left-nav account area: Company / Contact / Branding / Booking defaults + Billing/Notifications stubs)
+**Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_business_profile_fields.sql` — 13 additive
+nullable columns on `business`. Files: `lib/database.types.ts`, `app/(dispatch)/dispatch/settings/page.tsx` (rewrite),
+`app/(dispatch)/dispatch/settings/actions.ts` (rewrite), `components/settings-tabs.tsx` (new), `app/globals.css`.
+
+**Why (founder):** the Business account was "very poor" — only 4 editable fields (business name, field of activity,
+contact name, phone). Asked for a solid account modelled on Booking/Airbnb. Ran a research workflow (audit + data-model
+map + competitor study + IA synthesis + adversarial critique); founder signed off the IA + an inline mockup (D25), chose
+"4 real sections + deferred stubs" and "include a geocoded default pickup".
+
+**Shipped — a left-nav settings shell (`SettingsTabs` client component) with 7 sections; each real section is its own
+server-action form so they save independently (the action echoes `?s=<key>` so the saved section re-opens):**
+- **Company** (the credibility jump): business name, **business type** (select, replaces free-text field_of_activity),
+  legal entity name, **SIRET**, **VAT (TVA)**, registered address + the existing Kbis `DocumentSection`. → `updateCompany`.
+- **Contact**: Dispatcher name + mobile (revealed to Driver) + **reception/switchboard**; **account email now shown**
+  (read-only, "contact support to change"). → `updateContact`.
+- **Branding**: relocated `AvatarEditor` (logo). No new code.
+- **Booking defaults**: **geocoded default pickup** (reuses `AddressAutocomplete` — pre-fills the new-mission form),
+  default vehicle class, default Guest instructions. → `updateBookingDefaults`.
+- **Billing** (deferred stub): saveable **billing email** now; payment-method + invoices are clearly-flagged "coming
+  soon". Agent-positioned copy — fare *collected on the Driver's behalf*, PickUp service fee + 20% VAT on the fee a
+  separate line, never PickUp-as-seller; **no derived VAT / invoice preview**. → `updateBillingEmail`.
+- **Notifications** (deferred stub): single "coming soon" card — NO inert toggles (per the critique).
+- **Help & legal**: existing `HelpLegalCard` + an account/data line + history link.
+- **Migration columns:** business_type, legal_name, siret, vat_number, registered_address, reception_phone,
+  default_pickup_address/_lat/_lng/_label, default_vehicle_category, default_booking_notes, billing_email (all nullable,
+  IF NOT EXISTS). `getAppContext` already `select("*")`s business, so they flow through; `?? ""`/`null` degrade safely
+  pre-migration (page RENDERS; only the new-field SAVES need the column).
+
+**Deliberately CUT (per Doc 02, even though competitors show them):** team/multi-seat, roles, financial dashboard,
+multi-property, PO/cost-centre field, legal-form field (trimmed by the critic).
+
+**Verified:** `tsc` clean; static harness on the **real** `globals.css` confirms the layout (left nav, Company section
+2-col field grids, Documents card, "soon" tags) wide + responsive (nav → scrollable row < 720px); production build in an
+isolated worktree [pending result at log-time]. Could not drive the live form (another session holds :3000) — founder to
+run the migration then click through on localhost.
+
+**Next:** unchanged — mission-form guidance (BACKLOG §L), saved base addresses (this lays groundwork via default pickup),
+Driver app redesign.
+
+---
+
 ## 2026-06-28 — Session 27 — New-mission validation: honest message, located-pickup bug, drop-off required to post
 **Branch:** `main`. No migration. Files: `app/(dispatch)/dispatch/new/mission-form.tsx`,
 `app/(dispatch)/dispatch/new/actions.ts`.

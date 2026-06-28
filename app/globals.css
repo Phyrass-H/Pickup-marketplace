@@ -831,6 +831,41 @@ textarea::placeholder {
 .dx-main { padding: 24px; max-width: 1120px; width: 100%; }
 .dx-main--wide { max-width: 1520px; }
 .dx-narrow { max-width: 560px; }
+
+/* ---- Business settings: left-nav sections + content ---- */
+.dx-settings { width: 100%; max-width: 884px; }
+.set-top { margin-bottom: 18px; }
+.set-title { font-size: 22px; font-weight: 600; margin: 0 0 2px; letter-spacing: -0.01em; }
+.set-sub { font-size: 13px; color: var(--text-muted); margin: 0; }
+.set-wrap { display: grid; grid-template-columns: 196px 1fr; gap: 22px; align-items: start; }
+.set-nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 73px; }
+.set-nitem {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 11px; border: none; background: none; border-radius: 8px;
+  font-family: inherit; font-size: 14px; color: var(--text-muted); cursor: pointer; text-align: left;
+}
+.set-nitem:hover { background: var(--surface-2); color: var(--text); }
+.set-nitem.is-on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.set-nitem__ic { display: flex; flex: none; }
+.set-nitem__label { flex: 1 1 auto; min-width: 0; }
+.set-soon {
+  flex: none; font-size: 10px; font-weight: 600; color: var(--tone-warn-fg);
+  background: var(--tone-warn-bg); padding: 1px 7px; border-radius: var(--radius-pill); white-space: nowrap;
+}
+.set-content { min-width: 0; }
+.set-content > section[hidden] { display: none; }
+.set-head { margin-bottom: 14px; }
+.set-head__title { font-size: 16px; font-weight: 600; margin: 0 0 3px; }
+.set-head__desc { font-size: 13px; color: var(--text-muted); margin: 0; }
+.set-note { display: block; font-size: 12px; color: var(--text-faint); margin-top: 5px; }
+.set-stub__row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.set-stub__row strong { font-size: 14px; }
+
+@media (max-width: 720px) {
+  .set-wrap { grid-template-columns: 1fr; gap: 14px; }
+  .set-nav { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  .set-nitem { white-space: nowrap; }
+}
 .dx-tel { color: var(--accent); font-weight: 600; cursor: pointer; }
 
 /* ---- Schedule / history: ONE framed table the eye can scan ---- */

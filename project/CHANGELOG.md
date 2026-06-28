@@ -6,6 +6,12 @@
 ---
 
 ## 28 June 2026
+- **The Business account is now a proper settings area.** Instead of four lonely fields, there's a real left-nav
+  settings page (like Booking/Airbnb): **Company** (business type, legal name, SIRET, VAT number, registered address, plus
+  your Kbis), **Contact** (now showing your account email + a reception number), **Branding** (logo), and **Booking
+  defaults** — including a saved **default pickup address** that pre-fills every new mission. **Billing** and
+  **Notifications** are there too as honest "coming soon" sections so the account feels complete without anything being
+  half-wired. (Needs a one-line database change to switch on.)
 - **The new-mission form is honest about what's missing, and won't post a trip with no destination.** The warning
   used to be one fixed sentence that listed everything (even fields you'd already filled) — now it names *only* what's
   actually missing, in plain words ("add a drop-off address and a ceiling price"). You can no longer post a live

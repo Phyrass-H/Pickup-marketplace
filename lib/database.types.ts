@@ -75,9 +75,25 @@ export interface Database {
         Row: {
           id: string;
           name: string;
-          field_of_activity: string | null;
+          field_of_activity: string | null; // legacy free-text (superseded by business_type)
           logo_url: string | null;
           stripe_customer_id: string | null;
+          // Company identity (2026-06-28 migration) — human-verified off the Kbis.
+          business_type: string | null;
+          legal_name: string | null;
+          siret: string | null;
+          vat_number: string | null;
+          registered_address: string | null;
+          reception_phone: string | null;
+          // Booking defaults (pre-fill the new-mission form).
+          default_pickup_address: string | null;
+          default_pickup_lat: number | null;
+          default_pickup_lng: number | null;
+          default_pickup_label: string | null;
+          default_vehicle_category: string | null;
+          default_booking_notes: string | null;
+          // Billing (storable now; Stripe deferred).
+          billing_email: string | null;
           created_at: string;
         };
         Insert: {
@@ -86,6 +102,19 @@ export interface Database {
           field_of_activity?: string | null;
           logo_url?: string | null;
           stripe_customer_id?: string | null;
+          business_type?: string | null;
+          legal_name?: string | null;
+          siret?: string | null;
+          vat_number?: string | null;
+          registered_address?: string | null;
+          reception_phone?: string | null;
+          default_pickup_address?: string | null;
+          default_pickup_lat?: number | null;
+          default_pickup_lng?: number | null;
+          default_pickup_label?: string | null;
+          default_vehicle_category?: string | null;
+          default_booking_notes?: string | null;
+          billing_email?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["business"]["Insert"]>;
