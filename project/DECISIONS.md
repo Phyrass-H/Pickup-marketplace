@@ -314,6 +314,51 @@ via the D25 preview loop (6 mockup iterations) first, then built to match. Key c
   Adversarially reviewed (auth sound, schema/types/writes exact match) + browser-verified end-to-end (draft
   write+read round-trip vs the real DB). [[d27]] [[d28]]
 
+### D31 — Schedule rows shrink as one: fully-flexible grid + minimum + side-scroll (2026-06-28)
+S25. Narrowing the Schedule made addresses vanish and the `Route`/`Flight` headers overlap — because the dense grid
+had **4 rigid pixel columns** (time/flight/ref/status), so the only flexible track (route `minmax(0,1.9fr)`) absorbed
+all the loss and collapsed to 0. Founder's words: *"the whole trip card to equally shrink horizontally"* + *"fix a
+minimum limit"*. Decision: make **every** column `minmax(floor, fr)` so the row scales together; clip the header
+cells (anti-overlap); below the summed floors hold `min-width: 572px` and **side-scroll** (`@media ≤880`, header drops
+its sticky `top` offset). **Rejected** a reflow-to-stacked-cards (founder explicitly wanted the table to stay a table,
+just smaller). CSS-only; History shares the grid; calendar untouched (own `.dx-peektrip`/fixed drawer).
+
+### D32 — Per-stop trip progress WITHOUT touching the status enum (2026-06-28)
+S26. A multi-stop trip had no progress story (stops stored in `waypoints` but no per-stop state; status jumped
+`on_board → completed`; the Driver never even saw the stops mid-trip). Decision: keep the `mission_status` enum (hard
+rule) and add **one additive counter** `stops_reached`. Between "on board" and "completed" the Driver taps
+**"Reached — <stop>"** (server action `reachStop` — validates next-in-order + `on_board`); `advanceStatus → completed`
+**guards** all stops are done. Business sees it on the dense **route rail** (reached = green, next = accent halo) + an
+**"On board · k/N"** pill — **no new pill status** (would fight the tone system). **No `status_event` rows for stops**
+(that table is enum-constrained). Real-time stays refresh-based (notifications deferred). Migration
+`2026-06-28_mission_stops_reached`.
+
+### D33 — New-mission validation: honest message + drop-off required to POST (2026-06-28)
+S27. The "Review" warning was a **fixed catch-all** that recited every required field even when filled (it told the
+founder to choose a vehicle class they'd chosen). Decision: make it **dynamic** — name only what's missing, in plain
+words ("a pickup chosen from the address suggestions"). Fixed a latent bug: `review()` read coords with `Number()`,
+and `Number("")` is `0` (finite), so an **un-located pickup slipped past** the client gate → switched to `toNum` +
+`isValidLatLng`. And: a **POSTED (live) mission now requires a LOCATED drop-off** (picked from suggestions, like
+pickup), enforced client + server (`error="nodrop"`); **DRAFTS stay lenient** (parked incomplete). Founder's call —
+drop-off is critical for a transfer; the DB allows null only for future by-the-hour bookings. No migration.
+
+### D34 — Business settings IA + the saved place is "the Business's address" (either end), not a "default pickup" (2026-06-28/29)
+S28–S29. The Business account was 4 editable fields. **Researched** (audit + data-model + Booking/Airbnb/B2B study +
+adversarial critique workflow) and **founder signed off an inline IA mockup** (D25). Decision: a **left-nav settings
+area** — **Company** (business type / SIRET / VAT (TVA) / legal name / registered address + the existing Kbis),
+**Contact** (+ account email read-only, reception line), **Branding**, **Booking defaults**; **Billing** + **Notifications**
+as **clearly-marked DEFERRED stubs** (agent-positioned billing copy — fare *collected on the Driver's behalf*, service
+fee + 20% VAT on the fee a separate line, **no derived VAT / invoice preview**). **CUT** (Doc 02): team/multi-seat,
+roles, financial dashboard, multi-property. Each section is its own server-action form (`?s=<key>` re-opens the saved
+tab); sections are server-rendered + passed into a client `SettingsTabs`. Migration `2026-06-28_business_profile_fields`.
+**Founder follow-up (S29):** *not all Businesses are hotels*, and a Business is a fixed point that can be the **pickup
+(departure) OR drop-off (arrival)** — or, for a concierge, **neither**. So a single "default pickup" was wrong. The
+saved place is now **"Your address"** (`business_address_*`, renamed from `default_pickup_*`) with a **`prefill_pickup`
+toggle** (default on; off when the address is never an endpoint) that auto-fills it into a new mission's pickup (new
+missions only; drafts keep their own; always editable), plus a **pickup ⇄ drop-off swap** button (remounts the
+uncontrolled `AddressAutocomplete`s via a `swapNonce` key). First entry toward the **saved-addresses address book**.
+Removed the case-by-case "Default Guest instructions". Migration `2026-06-28_business_address_and_prefill`. [[d25]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

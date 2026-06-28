@@ -13,18 +13,19 @@ START BY READING — **just these four**; they get you fully up to date without 
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim only the **newest entry (Session 20)** for recent technical detail. Older
-  sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 25–29, all 2026-06-28/29)** for recent technical
+  detail. Older sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
 - `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
 - `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
-  **D30**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+  **D34**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
 - `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
   `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
-  `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`) — **ONLY** for schema/data work.
+  `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
+  `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`) — **ONLY** for schema/data work.
   (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
@@ -93,32 +94,63 @@ CURRENT STATE (live, deployed from `main`):
   Local (`npm run dev`): dev-login is open, no key. `GET /api/seed` (dev-only) creates a Business +
   Dispatcher + missions. Real magic-link wired but OFF (turning it on is a deferred integration).
 - **Env:** `.env.local` (git-ignored) needs the 3 Supabase keys + `NEXT_PUBLIC_MAPBOX_TOKEN`; same in Vercel.
+- **Shipped 2026-06-28/29 (Sessions 25–29) — all live (decisions [[d31]]–[[d34]]):**
+  - **S25 — Schedule/History responsive (no schema):** the dense grid is now **fully flexible** — every column
+    `minmax(floor, fr)`, so narrowing shrinks the whole row together (no more vanishing addresses / colliding
+    `Route`/`Flight` headers); below the floors it holds `min-width:572px` and **side-scrolls** (`@media ≤880`).
+  - **S26 — Per-stop trip progress** (migration `2026-06-28_mission_stops_reached`, `stops_reached int`): the Driver
+    finally **sees the stops mid-trip** and taps **"Reached — <stop>"** (action `reachStop`) between "on board" and
+    "Complete ride" (which is **guarded** until all stops done); the dense **route rail checks off live** (reached =
+    green, next = accent) + an **"On board · k/N"** pill. Status enum untouched.
+  - **S27 — New-mission validation (no schema):** the "Review" warning is now **dynamic** (names only what's missing,
+    plain words) — fixed a latent `Number("")===0` bug that let an **un-located pickup** slip through; and a **POSTED
+    mission now requires a located drop-off** (`error="nodrop"`) while **drafts stay lenient**.
+  - **S28 — Business settings rebuilt** (migration `2026-06-28_business_profile_fields`): a **left-nav account area**
+    (Booking/Airbnb-modelled) replacing the 4-field page — **Company** (business type / SIRET / VAT / legal name /
+    registered address + Kbis), **Contact** (+ account email read-only, reception), **Branding**, **Booking defaults**;
+    **Billing + Notifications** are honest **"coming soon" stubs** (agent-positioned billing copy, billing email saveable
+    now). CUT: team/multi-seat, roles, financial dashboard, multi-property. Client `SettingsTabs` + per-section forms.
+  - **S29 — Business-neutral saved address + pre-fill toggle + swap** (migration `2026-06-28_business_address_and_prefill`,
+    renames `default_pickup_*` → `business_address_*` + adds `prefill_pickup bool`): the saved place is **"Your address"**
+    (a Business can be the pickup OR the drop-off — or, for a concierge, neither). A **toggle** "pre-fill my address as
+    the pickup" (default on) auto-fills it into a **new** mission's pickup (drafts keep their own; always editable), with a
+    **pickup ⇄ drop-off swap** button. Groundwork for the saved-addresses book. Removed "Default Guest instructions".
+- **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
+  couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
+  that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
+  `next build` in a detached git worktree** (`node_modules` symlinked, `.env.local` copied) to validate compile/RSC
+  without corrupting the running server's `.next`. Reuse these when :3000 is taken.
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP (features/polish phase). With S20's Trip-details work shipped, the big remaining founder asks
-are **mission-form guidance + saved base addresses + the Driver app redesign** — all buildable now, no third-party
-APIs; any NEW field needs a small founder-run additive migration:
+RECOMMENDED NEXT STEP (features/polish phase). With Sessions 25–29 shipped (schedule responsive · per-stop progress ·
+new-mission validation fix · the full **Business settings rebuild** · the business-neutral saved address + pre-fill +
+swap), the big remaining founder asks are **mission-form guidance + the saved-addresses address book + the Driver app
+redesign** — all buildable now, no third-party APIs; any NEW field needs a small founder-run additive migration:
 1. **Mission-form guidance (BACKLOG § L — NO schema change):** **per-section why/how microcopy**, **input-driven
    guidance** (e.g. lots of luggage → "Consider a Van"; long-distance / late-night nudges), and **smart "most-used"
    defaults** (pre-select the Dispatcher's most-frequent tier+body; a one-off doesn't move the default). This is the
-   "very guided page" the founder keeps asking for — and it's the highest-leverage in-app polish left.
-2. **Saved base addresses (favourites)** (§ L) — additive table; a hotel picks its own pickup address in one tap.
+   "very guided page" the founder keeps asking for — and it's the highest-leverage in-app polish left. (Note: the
+   Business-level **default vehicle class** now exists in Settings → Booking defaults; the new-mission form does **not
+   read it yet** — wiring it is a quick win to fold in here.)
+2. **Saved-addresses address book** (§ L) — the Business's own address is now its **first saved place** (S29), and the
+   pre-fill + **swap** plumbing already exists. Next step: a small additive table for **multiple** saved addresses + a
+   one-tap insert/picker on both ends of the new-mission Route card. (Also still pending: **wire the saved default
+   pickup into the form** — done in S29 via `pickupPrefill`; multiple-address picker is the extension.)
 3. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use
    the D25 preview loop (or a Claude Design phone mockup), then build. Small navy polish bundled here: Driver
    **"Complete ride"** → green; re-export the **logo** to harmonise its sky-blue with navy.
 4. **Ultra-luxury "Exception" tier** (Rolls/Bentley, above First — IDEAS vehicle-taxonomy V2) — a deliberate
    taxonomy decision; bundle with the Bus tier / First-van / cargo-vehicle / PRM expansion.
-(✅ shipped S20: (1) **dedicated Reference field** — short, 20-char, Driver-hidden — which **closes the § M Reference
-split**; (2) **Luggage + Flight on one line**; (3) **passenger phones with an airtight Share-with-Driver gate** —
-optional phone + selectable main contact + a Share toggle in the form and the schedule; numbers in a Driver-unreadable
-side table, revealed post-accept only when shared — which **delivers § I/O2 "guest phone to the Driver", with a gate**.
-Earlier — S19: the "Driver & service" card [§ M Driver-section + dress code]. S18: Review/double-submit/discard fixes,
-keyboard nav, draft badge, calendar driver search, desktop width. S17: multiple passengers. ❌ the founder **declined**
-the sidebar-spacing tweak — leave it.)
+(✅ shipped 2026-06-28/29, S25–S29 — see the "Shipped" block in CURRENT STATE above + [[d31]]–[[d34]]: schedule
+responsive shrink+min+side-scroll; per-stop Driver "Reached" progress + Business rail/pill; honest new-mission
+validation + drop-off-required-to-post; the **Business settings area** (Company/Contact/Branding/Booking defaults +
+Billing/Notifications stubs); business-neutral **"Your address"** + pre-fill toggle + pickup⇄drop-off swap. Earlier —
+S20: Reference field + Luggage/Flight line + Guest-phone Share gate. S19: the "Driver & service" card. ❌ the founder
+**declined** the sidebar-spacing tweak — leave it.)
 
 DEFERRED until the founder okays the integration phase: **Notifications (Resend)** — the #1 functional gap
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);
