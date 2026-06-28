@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-06-28 — Session 27 — New-mission validation: honest message, located-pickup bug, drop-off required to post
+**Branch:** `main`. No migration. Files: `app/(dispatch)/dispatch/new/mission-form.tsx`,
+`app/(dispatch)/dispatch/new/actions.ts`.
+
+**Why (founder bug report):** leaving drop-off + ceiling empty and clicking "Review mission" showed a **fixed
+catch-all** message ("Please choose a vehicle category, a pickup picked from the suggestions, a pickup time, and a
+ceiling") that listed fields the founder HAD filled (category), and the mission then **posted with no drop-off**.
+Three real problems.
+
+**Fixed:**
+1. **Honest, dynamic message.** `review()` now names ONLY the missing fields, e.g. "Before posting, add a drop-off
+   address and a ceiling price." (`joinAnd()` helper for the "a, b, and c" list). Wording is plain — "a pickup
+   **chosen from the address suggestions**" instead of jargon.
+2. **Latent located-pickup bug.** `review()` read coords with `Number()` — `Number("")` is `0`, which is "finite",
+   so an un-geocoded pickup slipped past the Review gate (only the server caught it). Switched to `toNum` + the
+   shared `isValidLatLng`, so an address that wasn't picked from suggestions is correctly flagged client-side.
+3. **Drop-off required to POST (founder decision).** A live mission now needs a **located** drop-off (picked from
+   suggestions, like pickup) — enforced in `review()` AND server-side in `createMission` (`!asDraft && (!dropoffAddress
+   || !dropoffValid)` → `redirect(backTo("nodrop"))`, new `error="nodrop"` notice). **Drafts stay lenient** — you can
+   still park an incomplete one from the edit view. The server `error="missing"` fallback copy was clarified too.
+
+**Verified:** `tsc` clean; the exact missing-field + `joinAnd` logic unit-tested in node across six scenarios
+(founder's case, typed-but-unpicked pickup, only-ceiling, all-present→preview, empty form, the coord-0 edge) — all
+correct. Couldn't drive the live form (another session holds :3000) but the change is hot-reloaded on the founder's
+`localhost:3000` to confirm. No new CSS (reuses `.notice.error`).
+
+**Next:** unchanged queue — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign.
+
+---
+
 ## 2026-06-28 — Session 26 — Per-stop trip progress (Driver "Reached" tap + Business rail check-off)
 **Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_mission_stops_reached.sql` —
 `alter table mission add column if not exists stops_reached int not null default 0;`. Files: `lib/database.types.ts`,

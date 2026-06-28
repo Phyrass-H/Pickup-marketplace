@@ -153,6 +153,13 @@ export async function createMission(formData: FormData) {
     redirect(backTo("missing"));
   }
 
+  // A LIVE mission (posted to the Pool) must have a located destination — Drivers
+  // need to know where the trip goes, and it's what gives the fare/ETA a distance.
+  // A draft may legitimately be parked without one and finished later.
+  if (!asDraft && (!dropoffAddress || !dropoffValid)) {
+    redirect(backTo("nodrop"));
+  }
+
   // datetime-local carries no timezone — interpret it as Europe/Paris wall time
   // and convert to a real UTC instant (fixes the old server-local-zone bug).
   const pickupAt = parisLocalToUtc(pickupLocal);

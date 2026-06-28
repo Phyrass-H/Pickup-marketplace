@@ -6,6 +6,11 @@
 ---
 
 ## 28 June 2026
+- **The new-mission form is honest about what's missing, and won't post a trip with no destination.** The warning
+  used to be one fixed sentence that listed everything (even fields you'd already filled) — now it names *only* what's
+  actually missing, in plain words ("add a drop-off address and a ceiling price"). You can no longer post a live
+  mission without a real drop-off picked from the address suggestions (drafts can still be saved unfinished). Also
+  fixed a hidden bug where a pickup that wasn't picked from the suggestions could slip through the Review step.
 - **Trips with stops now show their progress, on both sides.** When a ride has intermediate stops, the Driver gets a
   "Reached — ⟨stop⟩" button (one tap per stop) between "Guest on board" and "Complete ride" — and finally sees the
   full route during the trip, not just pickup and drop-off. On the Business schedule the stops **check off live** as

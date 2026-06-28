@@ -32,7 +32,7 @@ import {
   prettyParisLocal,
   utcToParisLocalInput,
 } from "@/lib/time";
-import { tripDistanceKm } from "@/lib/geo";
+import { tripDistanceKm, isValidLatLng } from "@/lib/geo";
 import {
   formatMoney,
   formatTripMeta,
@@ -49,6 +49,13 @@ function toNum(v: FormDataEntryValue | null): number | null {
   if (!s) return null;
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
+}
+
+// "a, b, and c" — for naming exactly the fields that are still missing.
+function joinAnd(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
 // Submit button wired to the form's pending state. While the createMission
@@ -261,29 +268,35 @@ export function MissionForm({
     const fd = new FormData(form);
     const category = String(fd.get("category") ?? "");
     const pickup = String(fd.get("pickup_address") ?? "").trim();
-    const pickupLat = Number(fd.get("pickup_lat"));
-    const pickupLng = Number(fd.get("pickup_lng"));
+    const dropoff = String(fd.get("dropoff_address") ?? "").trim();
     const at = String(fd.get("pickup_at") ?? "").trim();
-    const ceilingN = Number(fd.get("ceiling"));
-
-    if (
-      !category ||
-      !pickup ||
-      !Number.isFinite(pickupLat) ||
-      !at ||
-      !Number.isFinite(ceilingN) ||
-      ceilingN <= 0
-    ) {
-      setClientError(
-        "Please choose a vehicle category, a pickup picked from the suggestions, a pickup time, and a ceiling.",
-      );
-      return;
-    }
-
-    // toNum (not Number()) so an empty dropoff is null, not 0 — Number("") is 0,
-    // which is a "finite" coordinate and would yield a bogus pickup→(0,0) distance.
+    // toNum (not Number()) — Number("") is 0, a "finite" coordinate that would let a
+    // never-located pickup/dropoff pass as valid and yield a bogus (0,0) distance.
+    const pickupLat = toNum(fd.get("pickup_lat"));
+    const pickupLng = toNum(fd.get("pickup_lng"));
     const dropLat = toNum(fd.get("dropoff_lat"));
     const dropLng = toNum(fd.get("dropoff_lng"));
+    const ceilingN = toNum(fd.get("ceiling"));
+    const pickupLocated =
+      pickupLat != null && pickupLng != null && isValidLatLng(pickupLat, pickupLng);
+    const dropoffLocated =
+      dropLat != null && dropLng != null && isValidLatLng(dropLat, dropLng);
+
+    // Name ONLY what's actually missing — not a fixed catch-all sentence. Drop-off
+    // is required to POST (a draft can still be saved incomplete from the edit view).
+    const missing: string[] = [];
+    if (!category) missing.push("a vehicle class");
+    if (!pickup) missing.push("a pickup address");
+    else if (!pickupLocated) missing.push("a pickup chosen from the address suggestions");
+    if (!dropoff) missing.push("a drop-off address");
+    else if (!dropoffLocated) missing.push("a drop-off chosen from the address suggestions");
+    if (!at) missing.push("a pickup time");
+    if (ceilingN == null || ceilingN <= 0) missing.push("a ceiling price");
+
+    if (missing.length > 0) {
+      setClientError(`Before posting, add ${joinAnd(missing)}.`);
+      return;
+    }
     const rMake = String(fd.get("required_make") ?? "").trim();
     const rModel = String(fd.get("required_model") ?? "").trim();
     const passengers = parsePassengers(fd.get("passenger_names"));
@@ -358,7 +371,14 @@ export function MissionForm({
       )}
       {error === "missing" && (
         <div className="notice error">
-          Please fill in the vehicle category, pickup address, pickup time, and a ceiling.
+          A mission needs at least a vehicle class, a pickup picked from the address
+          suggestions, a pickup time, and a ceiling — even to save as a draft.
+        </div>
+      )}
+      {error === "nodrop" && (
+        <div className="notice error">
+          Add a drop-off and pick it from the address suggestions before posting.
+          (You can still save it as a draft without one.)
         </div>
       )}
       {error === "past" && (
