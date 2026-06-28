@@ -6,6 +6,11 @@
 ---
 
 ## 28 June 2026
+- **Trips with stops now show their progress, on both sides.** When a ride has intermediate stops, the Driver gets a
+  "Reached — ⟨stop⟩" button (one tap per stop) between "Guest on board" and "Complete ride" — and finally sees the
+  full route during the trip, not just pickup and drop-off. On the Business schedule the stops **check off live** as
+  the Driver passes them (reached = green, the next one highlighted) and the status badge shows a little counter, e.g.
+  "On board · 1/2". (Needs a one-line database change to switch on.)
 - **The schedule no longer breaks when you shrink the window.** Before, narrowing the browser made the addresses
   disappear and the "Route" and "Flight" headers overlap. Now the whole trip row shrinks together — every column gives
   up a little space and long text just trims with "…" — so it always stays a clean, aligned table. If you squeeze it

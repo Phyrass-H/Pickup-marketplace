@@ -289,6 +289,21 @@ h2 {
 .route .dot.end {
   background: var(--primary);
 }
+/* Intermediate stops in the shared route rail (Driver card + Dispatch detail).
+   Grey by default; green once the Driver has reached it; an accent halo on the
+   one they're heading to next. */
+.route .dot.mid { background: #cbd2dd; }
+.route .leg--done .dot.mid { background: var(--success); }
+.route .leg--now .dot.mid { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.route .leg--done .leg-addr { color: var(--text-muted); }
+.route .leg--now .leg-addr { color: var(--accent); font-weight: 600; }
+.route .leg-addr { min-width: 0; }
+.leg-tag {
+  flex: none; align-self: center; font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: var(--radius-pill); white-space: nowrap;
+}
+.leg-tag--done { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+.leg-tag--now { background: var(--accent-soft); color: var(--accent); }
 
 /* Badges */
 .badge {
@@ -570,6 +585,10 @@ textarea::placeholder {
   color: var(--danger);
   font-weight: 700;
 }
+/* The "k/N" stop counter on the status pill (e.g. On board · 1/2) — a quieter
+   weight so the status reads first, with a hairline middot separator. */
+.status-pill__sub { font-weight: 600; opacity: 0.72; }
+.status-pill__sub::before { content: "·"; margin-right: 4px; opacity: 0.7; }
 
 /* ---------- Accounts & records: settings / documents ---------- */
 .avatar-row {
@@ -907,6 +926,13 @@ textarea::placeholder {
 .dx-route__addr--pk { color: var(--text); font-weight: 500; }
 .dx-route__addr--via { color: #8a94a6; }
 .dx-route__addr--dp { color: #98a2b3; }
+/* Live stop check-off on the dense summary rail (during an active on-board trip):
+   reached stops go green, the one being driven to next gets an accent halo. The
+   textual "k/N" lives on the status pill — the rail just colours, to stay compact. */
+.dx-route__node--reached .dx-route__dot--via { background: var(--tone-success-fg); }
+.dx-route__node--reached .dx-route__addr--via { color: var(--tone-success-fg); }
+.dx-route__node--current .dx-route__dot--via { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dx-route__node--current .dx-route__addr--via { color: var(--accent); font-weight: 500; }
 .dx-trip__flight { min-width: 0; overflow: hidden; }
 .dx-flight {
   display: inline-block; max-width: 100%; font-size: 11px; vertical-align: middle;

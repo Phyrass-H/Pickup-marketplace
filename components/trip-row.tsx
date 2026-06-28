@@ -70,6 +70,12 @@ export function TripRow({
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);
   const waypoints = parseWaypoints(mission.waypoints);
+  const stopsReached = mission.stops_reached ?? 0;
+  // Compact progress on the pill while passing stops, e.g. "On board · 1/2".
+  const stopProgress =
+    mission.status === "on_board" && waypoints.length > 0
+      ? `${stopsReached}/${waypoints.length}`
+      : "";
   const alert = t.tone === "danger";
   const flightEta = mission.flight_eta ? formatTime(mission.flight_eta) : null;
   const distanceKm = tripDistanceKm(
@@ -105,14 +111,21 @@ export function TripRow({
               {addressLine(mission.pickup_address)}
             </span>
           </span>
-          {waypoints.map((w, i) => (
-            <span className="dx-route__node" key={i}>
-              <span className="dx-route__dot dx-route__dot--via" aria-hidden />
-              <span className="dx-route__addr dx-route__addr--via" title={w.address}>
-                {addressLine(w.address)}
+          {waypoints.map((w, i) => {
+            const reached = i < stopsReached;
+            const current = mission.status === "on_board" && i === stopsReached;
+            return (
+              <span
+                className={`dx-route__node${reached ? " dx-route__node--reached" : ""}${current ? " dx-route__node--current" : ""}`}
+                key={i}
+              >
+                <span className="dx-route__dot dx-route__dot--via" aria-hidden />
+                <span className="dx-route__addr dx-route__addr--via" title={w.address}>
+                  {addressLine(w.address)}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
           <span className="dx-route__node">
             <span className="dx-route__dot dx-route__dot--dp" aria-hidden />
             <span
@@ -156,6 +169,7 @@ export function TripRow({
           <span className="dot" style={{ background: TONE_COLOR[t.tone] }} />
           {t.needsAttention && <span className="attention">!</span>}
           {t.label}
+          {stopProgress && <span className="status-pill__sub">{stopProgress}</span>}
         </span>
       </summary>
 
@@ -167,12 +181,21 @@ export function TripRow({
             <span className="dot" />
             <span>{mission.pickup_address}</span>
           </div>
-          {waypoints.map((w, i) => (
-            <div className="leg" key={i}>
-              <span className="dot" style={{ background: "#98a2b3" }} />
-              <span className="muted">{w.address}</span>
-            </div>
-          ))}
+          {waypoints.map((w, i) => {
+            const reached = i < stopsReached;
+            const current = mission.status === "on_board" && i === stopsReached;
+            return (
+              <div
+                className={`leg leg--stop${reached ? " leg--done" : ""}${current ? " leg--now" : ""}`}
+                key={i}
+              >
+                <span className="dot mid" />
+                <span className="leg-addr muted">{w.address}</span>
+                {reached && <span className="leg-tag leg-tag--done">reached</span>}
+                {current && <span className="leg-tag leg-tag--now">next stop</span>}
+              </div>
+            );
+          })}
           <div className="leg">
             <span className="dot end" />
             <span>{mission.dropoff_address ?? "—"}</span>
@@ -180,7 +203,11 @@ export function TripRow({
         </div>
 
         {(isExecutable(mission.status) || mission.status === "completed") && (
-          <StatusSteps status={mission.status} />
+          <StatusSteps
+            status={mission.status}
+            stopsCount={waypoints.length}
+            stopsReached={stopsReached}
+          />
         )}
 
         <dl className="kv" style={{ marginTop: 14 }}>

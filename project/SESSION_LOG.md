@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-06-28 — Session 26 — Per-stop trip progress (Driver "Reached" tap + Business rail check-off)
+**Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_mission_stops_reached.sql` —
+`alter table mission add column if not exists stops_reached int not null default 0;`. Files: `lib/database.types.ts`,
+`lib/mission-flow.ts`, `app/(app)/rides/actions.ts`, `app/(app)/rides/status-control.tsx`,
+`app/(app)/rides/page.tsx`, `components/status-steps.tsx`, `components/trip-row.tsx`, `app/globals.css`.
+
+**Why:** founder asked how a multi-stop trip should update visually — the Driver had no "stop" button (only en
+route/arrived/on board/completed) and the Business had no way to see stop progress. Investigation confirmed a real
+gap: stops live in `mission.waypoints` but had **no per-stop state**, the status machine jumped `on_board →
+completed`, and the **Driver never even saw the stops mid-trip** (`rides/page.tsx` rendered pickup→drop-off only).
+Two visualize mockups signed off (D25); founder chose **one "Reached" tap per stop**.
+
+**Model (status enum UNTOUCHED — hard rule):** a single additive counter `mission.stops_reached`. A trip with N
+stops runs en_route → arrived → on_board → [reach stop 1 … reach stop N] → completed; while passing stops the
+status stays `on_board` and the counter climbs.
+
+**Shipped:**
+- **Flow helpers (`lib/mission-flow.ts`):** `nextDriverAction(status, stopsCount, stopsReached)` returns the one
+  next thing to tap — a status step OR `{kind:"stop", stopIndex}`; `progressSegments()` / `progressDone()` build a
+  stops-aware bar (one segment per stop, "Drop-off" as the final label when stops exist).
+- **Driver (`status-control.tsx` + `actions.ts`):** between "Guest on board" and "Complete ride" the primary button
+  becomes **"Reached — ⟨stop⟩"** (first address segment), one tap each, via a new **`reachStop(missionId, stopIndex)`**
+  server action (same RLS-verify-then-service-role trust model as `advanceStatus`; only the next stop in order, only
+  while `on_board`). `advanceStatus → completed` now **guards** that all stops are reached first. The Driver card now
+  **renders the full route** (pickup → stops → drop-off) with reached/next states + tags + a stops-aware bar.
+- **Business (`trip-row.tsx`):** the dense summary **route rail checks off live** — reached stops go green
+  (`.dx-route__node--reached`), the next one gets an accent halo (`--current`); the status pill gains a quiet
+  counter **"On board · k/N"** (`.status-pill__sub`). The expanded detail rail mirrors it with "reached" / "next
+  stop" tags. The summary stays text-tag-free to protect the S25 width work — the pill carries the textual signal.
+- **Graceful pre-migration:** `stops_reached ?? 0` everywhere, and `select("*")` simply omits the column until the
+  ALTER runs (no check-offs, no counter) — but the `reachStop` write needs the column, so **run the migration before
+  any live multi-stop on-board trip**.
+
+**Verified:** `tsc` clean. Static harness on the **real** `globals.css` + actual class markup, three states — heading
+to stop 2 (stop 1 green "reached", stop 2 accent "next stop", bar 4/6, button "Reached — Galeries Lafayette",
+Business pill "On board · 1/2"); all stops reached (both green, bar 5/6, green "Complete ride"); both rails + pill
+correct. History shares `TripRow`, so covered.
+
+**Next:** founder to **run the migration**, then push + verify live (held the push for that). Then back to the
+features queue — mission-form guidance (BACKLOG §L), saved base addresses, Driver app redesign.
+
+---
+
 ## 2026-06-28 — Session 25 — Schedule rows shrink as one (responsive grid + minimum + side-scroll)
 **Branch:** `main`. No migration. CSS-only — file: `app/globals.css` (shared schedule **and** history grid).
 

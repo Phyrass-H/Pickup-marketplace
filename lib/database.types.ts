@@ -227,6 +227,7 @@ export interface Database {
           pickup_label: string | null;
           dropoff_label: string | null;
           waypoints: Json | null;
+          stops_reached: number; // count of intermediate stops the Driver has marked reached
           pickup_at: string;
           flight_number: string | null;
           flight_eta: string | null;
@@ -278,6 +279,7 @@ export interface Database {
           pickup_label?: string | null;
           dropoff_label?: string | null;
           waypoints?: Json | null;
+          stops_reached?: number;
           pickup_at: string;
           flight_number?: string | null;
           flight_eta?: string | null;

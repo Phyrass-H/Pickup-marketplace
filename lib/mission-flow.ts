@@ -62,3 +62,67 @@ export function completedSteps(status: MissionStatus): number {
   };
   return idx[status] ?? 0;
 }
+
+// ----- Stops (intermediate waypoints) -----
+// A mission with N stops runs: en_route → arrived → on_board → [reach stop 1 …
+// reach stop N] → completed. The status enum is untouched: while passing stops
+// the mission stays `on_board` and `mission.stops_reached` counts up. The single
+// next thing the Driver taps is either a status advance OR "reached this stop".
+
+export type DriverAction =
+  | { kind: "status"; status: StatusEventStatus } // advance mission.status
+  | { kind: "stop"; stopIndex: number }; // mark waypoints[stopIndex] reached
+
+/** The one next action for the Driver, accounting for any remaining stops. */
+export function nextDriverAction(
+  status: MissionStatus,
+  stopsCount: number,
+  stopsReached: number,
+): DriverAction | null {
+  const next = nextStep(status);
+  if (!next) return null;
+  // On board with stops still to pass → the next tap is a stop, not "completed".
+  if (status === "on_board" && stopsReached < stopsCount) {
+    return { kind: "stop", stopIndex: stopsReached };
+  }
+  return { kind: "status", status: next };
+}
+
+export interface ProgressSegment {
+  key: string;
+  label: string;
+}
+
+/** Ordered progress segments, with one inserted per stop (for the bar). */
+export function progressSegments(stopsCount: number): ProgressSegment[] {
+  const segs: ProgressSegment[] = [
+    { key: "en_route", label: "En route" },
+    { key: "arrived", label: "Arrived" },
+    { key: "on_board", label: "On board" },
+  ];
+  for (let i = 0; i < stopsCount; i++) {
+    segs.push({ key: `stop-${i}`, label: `Stop ${i + 1}` });
+  }
+  segs.push({ key: "completed", label: stopsCount > 0 ? "Drop-off" : "Completed" });
+  return segs;
+}
+
+/** How many progress segments are reached, given status + stops done. */
+export function progressDone(
+  status: MissionStatus,
+  stopsCount: number,
+  stopsReached: number,
+): number {
+  switch (status) {
+    case "en_route":
+      return 1;
+    case "arrived":
+      return 2;
+    case "on_board":
+      return 3 + Math.min(Math.max(stopsReached, 0), stopsCount);
+    case "completed":
+      return stopsCount + 4;
+    default:
+      return 0; // confirmed / pre-execution
+  }
+}

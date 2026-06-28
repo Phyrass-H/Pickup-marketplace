@@ -11,6 +11,7 @@ import {
 } from "@/lib/format";
 import type { MissionStatus } from "@/lib/database.types";
 import { isExecutable } from "@/lib/mission-flow";
+import { parseWaypoints } from "@/lib/waypoints";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
@@ -130,6 +131,8 @@ export default async function RidesPage() {
 
       {missions?.map((m) => {
         const c = contacts.get(m.id);
+        const stops = parseWaypoints(m.waypoints);
+        const stopsReached = m.stops_reached ?? 0;
         const languages = parseLanguages(m.required_languages);
         const dressLabel = dressCodeLabel(m.dress_code);
         const flagLabels = activeFlagLabels(m.driver_flags);
@@ -155,6 +158,21 @@ export default async function RidesPage() {
                 <span className="dot" />
                 <span>{m.pickup_address}</span>
               </div>
+              {stops.map((w, i) => {
+                const reached = i < stopsReached;
+                const current = m.status === "on_board" && i === stopsReached;
+                return (
+                  <div
+                    className={`leg leg--stop${reached ? " leg--done" : ""}${current ? " leg--now" : ""}`}
+                    key={i}
+                  >
+                    <span className="dot mid" />
+                    <span className="leg-addr">{w.address}</span>
+                    {reached && <span className="leg-tag leg-tag--done">reached</span>}
+                    {current && <span className="leg-tag leg-tag--now">next stop</span>}
+                  </div>
+                );
+              })}
               <div className="leg">
                 <span className="dot end" />
                 <span>{m.dropoff_address ?? "—"}</span>
@@ -248,7 +266,11 @@ export default async function RidesPage() {
 
             {/* Trip execution: progress + the next status button */}
             {(isExecutable(m.status) || m.status === "completed") && (
-              <StatusSteps status={m.status} />
+              <StatusSteps
+                status={m.status}
+                stopsCount={stops.length}
+                stopsReached={stopsReached}
+              />
             )}
             {m.status === "accepted" && (
               <p className="muted small" style={{ marginTop: 12 }}>
@@ -257,7 +279,12 @@ export default async function RidesPage() {
               </p>
             )}
             {isExecutable(m.status) && (
-              <StatusControl missionId={m.id} status={m.status} />
+              <StatusControl
+                missionId={m.id}
+                status={m.status}
+                stops={stops}
+                stopsReached={stopsReached}
+              />
             )}
           </div>
         );
