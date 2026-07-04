@@ -797,14 +797,6 @@ textarea::placeholder {
   display: flex; flex-direction: column; gap: 6px; padding: 10px 12px 12px;
   border-top: 1px solid var(--border); flex: none;
 }
-.dx-acct { display: flex; align-items: center; gap: 10px; padding: 6px 11px 2px; }
-.dx-acct__avatar {
-  width: 30px; height: 30px; flex: none; border-radius: var(--radius-md);
-  object-fit: cover; background: var(--slate-100); color: var(--text-muted);
-  display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 13px; text-transform: uppercase;
-  border: 1px solid var(--border);
-}
 .dx-sidebar.is-collapsed .dx-label { display: none; }
 .dx-sidebar.is-collapsed .dx-sidebar__brand { justify-content: center; padding: 0; }
 .dx-sidebar.is-collapsed .dx-sidebar__brand .brand-logo { display: none; }
@@ -813,7 +805,6 @@ textarea::placeholder {
   position: absolute; top: 5px; right: 9px; margin: 0;
   min-width: 9px; width: 9px; height: 9px; padding: 0; font-size: 0;
 }
-.dx-sidebar.is-collapsed .dx-acct { justify-content: center; padding: 6px 0 2px; }
 .dx-link {
   background: none; border: none; color: var(--text-muted); cursor: pointer;
   font-family: inherit; padding: 0; text-align: left;
@@ -823,11 +814,65 @@ textarea::placeholder {
 /* ---- Content + topbar ---- */
 .dx-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .dx-topbar {
-  height: 57px; flex: none; display: flex; align-items: center; padding: 0 24px;
+  height: 57px; flex: none; display: flex; align-items: center;
+  justify-content: space-between; gap: 16px; padding: 0 24px;
   background: var(--surface); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 10;
 }
 .dx-topbar__title { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+
+/* Account chip (top-right) + dropdown */
+.dx-acctmenu { position: relative; flex: none; }
+.dx-acctchip {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 240px;
+  padding: 4px 9px 4px 5px; border: 1px solid var(--border);
+  border-radius: var(--radius-md); background: var(--surface); cursor: pointer;
+  font-family: inherit; color: var(--text);
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.dx-acctchip:hover { background: var(--slate-100); border-color: var(--border-strong); }
+.dx-acctchip.is-open { background: var(--slate-100); border-color: var(--border-strong); }
+.dx-acctchip__logo {
+  width: 26px; height: 26px; flex: none; border-radius: 6px; object-fit: cover;
+  background: var(--surface); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dx-acctchip__logo--initials {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  font-weight: 600; font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase;
+}
+.dx-acctchip__name {
+  min-width: 0; font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dx-acctchip__caret {
+  width: 15px; height: 15px; flex: none; color: var(--text-faint);
+  transition: transform var(--dur) var(--ease);
+}
+.dx-acctchip.is-open .dx-acctchip__caret { transform: rotate(180deg); }
+.dx-acctpop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  min-width: 216px; padding: 6px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.dx-acctpop__head { display: flex; flex-direction: column; padding: 6px 10px 8px; }
+.dx-acctpop__name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dx-acctpop__sub { font-size: 11px; color: var(--text-faint); }
+.dx-acctpop__sep { height: 1px; background: var(--border); margin: 2px -6px 4px; }
+.dx-acctpop__item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 10px; border: none; background: none; border-radius: var(--radius-md);
+  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text);
+  cursor: pointer; text-align: left;
+}
+.dx-acctpop__item:hover { background: var(--slate-100); }
+.dx-acctpop__item:disabled { opacity: 0.6; cursor: default; }
+.dx-acctpop__item svg { width: 16px; height: 16px; flex: none; color: var(--text-muted); }
+@media (max-width: 560px) { .dx-acctchip__name { display: none; } }
 .dx-main { padding: 24px; max-width: 1120px; width: 100%; }
 .dx-main--wide { max-width: 1520px; }
 .dx-narrow { max-width: 560px; }

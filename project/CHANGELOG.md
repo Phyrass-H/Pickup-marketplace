@@ -5,6 +5,13 @@
 
 ---
 
+## 3 July 2026
+- **Your business name now sits in the top-right of the Dispatch screen, not squeezed into the bottom-left corner.**
+  Before, your company showed as a small avatar and name tucked under "Settings" at the bottom of the sidebar — easy
+  to miss. Now it's an account chip in the top bar, on the right: your logo (or initials) next to your business name.
+  Click it for a small menu with "Sign out". "PickUp Dispatch" stays exactly where it was, top-left. Nothing else
+  changed — "Settings" is still in the sidebar and collapsing the sidebar works the same.
+
 ## 28 June 2026
 - **Your saved address now works for any business, on either end of a trip.** It's labelled "Your address" (not
   "pickup"), since a business can be the start of a trip (a departure) or the destination (an arrival). On a new

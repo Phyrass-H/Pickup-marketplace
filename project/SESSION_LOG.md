@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-07-03 — Session 30 — Dispatch: business identity → account chip in the top-right topbar
+**Branch:** `main`. No migration (CSS + client component only). Files: `components/dispatch-shell.tsx`, `app/globals.css`.
+
+**Why (founder):** on the Dispatch dashboard the business was "en bas à gauche avec settings" — a cramped 30px
+avatar + name + a "Sign out" text link tucked under the Settings item at the bottom of the sidebar, reading like a
+footnote instead of the account identity. Showed 3 directions in a visualize mockup (D25 loop): A = polished account
+card at the bottom with a click menu · B = business identity at the TOP of the sidebar as a workspace header · C =
+account chip in the top-right of the topbar. Founder first picked B; on seeing it live, corrected to **C** — keep
+"PickUp Dispatch" in the top-left of the sidebar exactly as before, and put the business name **top-right**.
+
+**Shipped (Option C — the standard SaaS top-right account menu):**
+- **Account chip in the topbar (top-right)** (`.dx-acctchip` in `.dx-topbar`, now `justify-content: space-between`):
+  a 26px logo tile (the `logo_url` image, or a navy monogram of up-to-two initials), the **business name** (13px/600,
+  truncates), and a chevron. Uses the previously-empty right side of the topbar.
+- **Click opens a dropdown** (`.dx-acctpop`, `role="menu"`): a header showing the business name + "Business account",
+  a divider, then **Sign out** (calls the existing `signOut`; "Signing out…" while pending). Dismisses on
+  outside-click, on Escape, and on navigation (three `useEffect`s + a `menuRef`; chevron rotates while open).
+- **Sidebar reverted to "as before":** the top-left is the original `brand-logo` + "PickUp Dispatch" wordmark again;
+  the footer is just the **Settings** nav item. The old bottom `.dx-acct` block (avatar + name + inline Sign out) is
+  gone — its identity moved to the chip, its Sign out into the dropdown. Collapse/expand unchanged.
+- **CSS:** added `.dx-acctmenu/.dx-acctchip*/.dx-acctpop*`; restored `.dx-brandname` + the sidebar `.brand-logo`
+  rules (incl. the collapsed hide); removed the S30-interim `.dx-workspace*` classes and the dead `.dx-acct*`. Base
+  `.brand-logo` kept (also used by the Driver `app-header.tsx`); `.dx-link` kept (still used elsewhere). Chip name
+  hides < 560px (logo + chevron remain).
+
+**Verified:** `tsc` clean. Drove it live on `localhost:3000` (dev-login as the demo Business, seeded): top-left shows
+"PickUp Dispatch" as before; top-right chip = "LG" monogram + "Le Grand Hôtel (demo)" + chevron; the menu opens
+(header + Sign out), closes on outside-click; collapse still works (chip stays put, sidebar → icons); no console errors.
+
+**Next:** unchanged queue — mission-form guidance (BACKLOG §L), the saved-addresses address book, Driver app redesign.
+**Not yet pushed** — awaiting founder's go to deploy.
+
+---
+
 ## 2026-06-28 — Session 29 — Saved address generalized ("Your address", either end) + pickup pre-fill toggle + route swap
 **Branch:** `main`. **Migration (founder runs):** `docs/migrations/2026-06-28_business_address_and_prefill.sql` —
 renames `default_pickup_*` → `business_address_*` (idempotent DO block, keeps values) + adds `prefill_pickup boolean

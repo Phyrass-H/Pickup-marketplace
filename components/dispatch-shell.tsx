@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -12,6 +12,8 @@ import {
   FileText,
   History as HistoryIcon,
   Settings as SettingsIcon,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -48,11 +50,37 @@ export function DispatchShell({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Restore the persisted collapsed state after mount (avoids hydration mismatch).
   useEffect(() => {
     setCollapsed(localStorage.getItem(STORAGE_KEY) === "1");
   }, []);
+
+  // Close the account menu on navigation.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // Dismiss the account menu on outside-click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   function toggle() {
     setCollapsed((c) => {
@@ -79,6 +107,16 @@ export function DispatchShell({
     pathname === "/dispatch" ||
     pathname === "/dispatch/calendar" ||
     pathname === "/dispatch/history";
+
+  // Up-to-two-letter monogram for the workspace tile when there's no logo.
+  const initials =
+    businessName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w.charAt(0))
+      .join("")
+      .toUpperCase() || "•";
 
   return (
     <div className="dx-shell">
@@ -142,44 +180,55 @@ export function DispatchShell({
             <SettingsIcon />
             <span className="dx-label">Settings</span>
           </Link>
-          <div className="dx-acct">
-            {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="dx-acct__avatar" src={logoUrl} alt="" />
-            ) : (
-              <span className="dx-acct__avatar" aria-hidden="true">
-                {businessName.charAt(0)}
-              </span>
-            )}
-            <span className="dx-label" style={{ minWidth: 0 }}>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {businessName}
-              </span>
-              <button
-                className="dx-link"
-                style={{ fontSize: 12 }}
-                onClick={signOut}
-                disabled={pending}
-              >
-                {pending ? "…" : "Sign out"}
-              </button>
-            </span>
-          </div>
         </div>
       </aside>
 
       <div className="dx-content">
         <div className="dx-topbar">
           <span className="dx-topbar__title">{title}</span>
+          <div className="dx-acctmenu" ref={menuRef}>
+            <button
+              type="button"
+              className={`dx-acctchip${menuOpen ? " is-open" : ""}`}
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              title={businessName}
+            >
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="dx-acctchip__logo" src={logoUrl} alt="" />
+              ) : (
+                <span
+                  className="dx-acctchip__logo dx-acctchip__logo--initials"
+                  aria-hidden="true"
+                >
+                  {initials}
+                </span>
+              )}
+              <span className="dx-acctchip__name">{businessName}</span>
+              <ChevronDown className="dx-acctchip__caret" />
+            </button>
+            {menuOpen && (
+              <div className="dx-acctpop" role="menu">
+                <div className="dx-acctpop__head">
+                  <span className="dx-acctpop__name">{businessName}</span>
+                  <span className="dx-acctpop__sub">Business account</span>
+                </div>
+                <div className="dx-acctpop__sep" />
+                <button
+                  type="button"
+                  className="dx-acctpop__item"
+                  role="menuitem"
+                  onClick={signOut}
+                  disabled={pending}
+                >
+                  <LogOut />
+                  <span>{pending ? "Signing out…" : "Sign out"}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <main className={`dx-main${wideMain ? " dx-main--wide" : ""}`}>{children}</main>
       </div>
