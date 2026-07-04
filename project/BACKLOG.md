@@ -219,11 +219,14 @@ full ML dynamic pricing · Amadeus GDS.
 > profession, so the form should teach the why/how inline and stop bad missions before they post. These are
 > features/polish — buildable now (no third-party APIs). The strategic / V2 ideas from the same dump live in
 > `IDEAS.md` (§ "Founder idea dump — 2026-06-23").
-- 🔨 **Input-driven guidance messages** — small contextual hints triggered by what the Dispatcher enters, e.g.
-  luggage count high → "Consider a Van"; nudges on long-distance / late-night. Calm, non-blocking (same style
-  as the existing too-low-fare warning).
-- 🔨 **Per-section "why/how" microcopy** — a short helper line on each mission-form section so a non-expert
-  Dispatcher knows what good input looks like (the "very guided page" the founder keeps asking for).
+- ✅ **Input-driven guidance messages** — **SHIPPED S31/D36** (2 nudges): luggage count high for the body → "Consider a
+  Van" (and, in a Van, "a dedicated luggage vehicle"); night pickup (≥22:00 / <06:00) → harder-to-fill nudge. Calm amber
+  `.notice.warn`, only-when-relevant, never block. The **long-distance** nudge was **dropped** — it told the Business to
+  price the empty return, contradicting the no-empty-return model (D37). More input-driven hints add the same way.
+- 🔨 **Per-section "why/how" microcopy** — **REVISED (D36):** NOT always-on (heavier / more confusing). The full
+  **guidance audit** (`project/GUIDANCE_AUDIT.md`) found the app already well-guided at point-of-use; concept teaching
+  is the founder's **standalone tutorial's** job. In-app **Tier 2** = a small **"?" glossary tooltip** (Ceiling / Pool /
+  SPEED WIN / Lock-in / status pills) + a **Dispatch status legend**, non-invasive.
 - 🔨 **Smart "most-used" defaults** — pre-select the Dispatcher's *most frequently used* tier + body, not just
   the last one. A one-off different choice must NOT move the default; only a repeated pattern shifts it.
   (Per-dispatcher frequency from their own mission history — derivable on read, no schema change.)

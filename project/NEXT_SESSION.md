@@ -13,20 +13,21 @@ START BY READING — **just these four**; they get you fully up to date without 
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 25–29, all 2026-06-28/29)** for recent technical
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 30–32, 2026-07-03/04)** for recent technical
   detail. Older sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
 - `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
 - `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
-  **D34**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+  **D38**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+- `project/GUIDANCE_AUDIT.md` — the full in-app guidance inventory + gaps + roadmap (for any guidance/microcopy work).
 - `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
   `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
-  `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`) — **ONLY** for schema/data work.
-  (All applied to the live DB.)
+  `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
+  `2026-07-04_luggage_run_phase1`) — **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -115,6 +116,22 @@ CURRENT STATE (live, deployed from `main`):
     (a Business can be the pickup OR the drop-off — or, for a concierge, neither). A **toggle** "pre-fill my address as
     the pickup" (default on) auto-fills it into a **new** mission's pickup (drafts keep their own; always editable), with a
     **pickup ⇄ drop-off swap** button. Groundwork for the saved-addresses book. Removed "Default Guest instructions".
+- **Shipped 2026-07-03/04 (Sessions 30–32) — all live (decisions [[d35]]–[[d38]]):**
+  - **S30 — Business identity → account chip in the topbar** (no schema): the Business logo + name moved OUT of the
+    cramped sidebar bottom-left into a **top-right account chip** in `.dx-topbar` (a dropdown → Sign out). "PickUp
+    Dispatch" stays top-left as before; Settings stays in the sidebar footer. Founder picked this (Option C) after
+    seeing the "workspace header" option (B) live and preferring the topbar chip. `components/dispatch-shell.tsx`.
+  - **S31 — Mission-form input-driven nudges** (no schema) + a **full guidance audit** (`project/GUIDANCE_AUDIT.md`):
+    2 calm amber `.notice.warn` nudges on `/dispatch/new` that appear ONLY when the input triggers them — **luggage >
+    vehicle capacity** ("consider a Van") and **night pickup** (≥22:00 or <06:00, "harder to fill; raise ceiling /
+    SPEED WIN"). Never block posting. Thresholds are tunable consts. The long-distance "cover the empty return" nudge
+    was **dropped** (contradicts the no-empty-return model — see [[d37]]).
+  - **S32 — Luggage-vehicle Phase 1 ("van for luggage")** (migration `2026-07-04_luggage_run_phase1`: `mission.luggage_only`
+    + `driver.accepts_luggage_runs`, both bool default false): a **Trip type: Passengers | Luggage only** toggle on the
+    new-mission form → luggage mode **forces Van + Business, hides passengers, keeps bags**; Van Drivers **opt in** at
+    enrollment/settings (off by default); the **Pool routes luggage runs only to opted-in Van Drivers** and labels them
+    **"Luggage run · no passengers · N bags"** (Pool card + Driver detail + Business schedule). Phase 2 (V2) = real
+    cargo/truck classes by volume + the grouped car+van booking. [[d38]]
 - **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
   couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
@@ -126,31 +143,33 @@ Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a l
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP (features/polish phase). With Sessions 25–29 shipped (schedule responsive · per-stop progress ·
-new-mission validation fix · the full **Business settings rebuild** · the business-neutral saved address + pre-fill +
-swap), the big remaining founder asks are **mission-form guidance + the saved-addresses address book + the Driver app
-redesign** — all buildable now, no third-party APIs; any NEW field needs a small founder-run additive migration:
-1. **Mission-form guidance (BACKLOG § L — NO schema change):** **per-section why/how microcopy**, **input-driven
-   guidance** (e.g. lots of luggage → "Consider a Van"; long-distance / late-night nudges), and **smart "most-used"
-   defaults** (pre-select the Dispatcher's most-frequent tier+body; a one-off doesn't move the default). This is the
-   "very guided page" the founder keeps asking for — and it's the highest-leverage in-app polish left. (Note: the
-   Business-level **default vehicle class** now exists in Settings → Booking defaults; the new-mission form does **not
-   read it yet** — wiring it is a quick win to fold in here.)
-2. **Saved-addresses address book** (§ L) — the Business's own address is now its **first saved place** (S29), and the
-   pre-fill + **swap** plumbing already exists. Next step: a small additive table for **multiple** saved addresses + a
-   one-tap insert/picker on both ends of the new-mission Route card. (Also still pending: **wire the saved default
-   pickup into the form** — done in S29 via `pickupPrefill`; multiple-address picker is the extension.)
-3. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use
-   the D25 preview loop (or a Claude Design phone mockup), then build. Small navy polish bundled here: Driver
-   **"Complete ride"** → green; re-export the **logo** to harmonise its sky-blue with navy.
-4. **Ultra-luxury "Exception" tier** (Rolls/Bentley, above First — IDEAS vehicle-taxonomy V2) — a deliberate
-   taxonomy decision; bundle with the Bus tier / First-van / cargo-vehicle / PRM expansion.
-(✅ shipped 2026-06-28/29, S25–S29 — see the "Shipped" block in CURRENT STATE above + [[d31]]–[[d34]]: schedule
-responsive shrink+min+side-scroll; per-stop Driver "Reached" progress + Business rail/pill; honest new-mission
-validation + drop-off-required-to-post; the **Business settings area** (Company/Contact/Branding/Booking defaults +
-Billing/Notifications stubs); business-neutral **"Your address"** + pre-fill toggle + pickup⇄drop-off swap. Earlier —
-S20: Reference field + Luggage/Flight line + Guest-phone Share gate. S19: the "Driver & service" card. ❌ the founder
-**declined** the sidebar-spacing tweak — leave it.)
+RECOMMENDED NEXT STEP (features/polish phase). Sessions 30–32 shipped the topbar account chip, the mission-form
+input-driven nudges (+ a full guidance audit), and **luggage-vehicle Phase 1**. **PRICING is IN PROGRESS — the founder
+is working on the model themselves** (how a Ceiling / base-fare is estimated; one-way vs round-trip). Key principle to
+respect: **[[d37]] — NO empty-return charge**; a smart trajectory-based Pool solves the deadhead instead. Don't build a
+pricing engine until the founder brings the rule; the **suggested Ceiling/base-fare range** on the form (highest-leverage
+guidance win) waits on it. Everything below is buildable now, no third-party APIs; any NEW field = a small founder-run
+additive migration:
+1. **Mission-form guidance — Tier 2** (see `project/GUIDANCE_AUDIT.md`; mostly NO schema): a small **"?" glossary
+   tooltip** for the core terms (Ceiling, Pool, SPEED WIN, Lock-in, the status pills — taught in fragments today,
+   defined nowhere), a **Dispatch status legend**, and **Lock-in/T-180 in plain words** both sides. Plus **smart
+   "most-used" defaults** + wiring the Business **default vehicle class** (Settings → Booking defaults) into the form
+   (saved but not read yet). Keep it **non-invasive** ([[d36]]); concept teaching is largely the **standalone tutorial's**
+   job (the founder is building it).
+2. **Saved-addresses address book** (BACKLOG § L) — the Business's own address is its **first saved place** (S29), and
+   the pre-fill + **swap** plumbing already exists. Next: a small additive table for **multiple** saved addresses + a
+   one-tap insert/picker on both ends of the new-mission Route card.
+3. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use the
+   D25 preview loop (or a Claude Design phone mockup), then build. Small navy polish bundled here: Driver **"Complete
+   ride"** → green; re-export the **logo** to harmonise its sky-blue with navy.
+4. **Luggage-vehicle Phase 2 (V2)** — real cargo/truck classes by **volume/m³ bands** (the "20 m³" idea, likely a
+   partly separate fleet) + the grouped **car + luggage van** booking (the CUT grouped-mission feature; the cargo leg
+   can "stop before the end" of the passenger trip). Bundle with the **Exception tier** (Rolls/Bentley above First) /
+   Bus tier / First-van / PRM taxonomy expansion.
+(✅ shipped 2026-07-03/04, S30–S32 — see the "Shipped" block in CURRENT STATE + [[d35]]–[[d38]]: the topbar account chip;
+the 2 input-driven nudges + guidance audit; luggage-vehicle Phase 1. Earlier S25–S29 ([[d31]]–[[d34]]): schedule
+responsive; per-stop progress; new-mission validation; Business settings area; business-neutral saved address. ❌ the
+founder **declined** the sidebar-spacing tweak — leave it.)
 
 DEFERRED until the founder okays the integration phase: **Notifications (Resend)** — the #1 functional gap
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);
@@ -162,8 +181,10 @@ OTHER OPEN ITEMS (pick what the founder asks):
   Use the D25 preview loop (or a Claude Design phone mockup), then build.
 - **Navy polish (small):** Driver **"Complete ride"** uses a `success-btn` class that falls through to navy
   `.btn` — make it intentionally **green**; re-export the **logo** to harmonise its sky-blue with navy.
-- **Pricing engine** (IDEAS, ❓): no objective base price by tier×body×distance×season — the Business sets the
-  ceiling, PickUp recommends. Seeding approach noted in IDEAS (taxi tariff floor + base+€/km+€/min grid).
+- **Pricing engine** (IDEAS, ❓) — **founder is working on this now.** No objective base price by tier×body×distance×season;
+  the Business sets the ceiling, PickUp recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
+  Pool handles the deadhead. Seeding approach in IDEAS (taxi tariff floor + base+€/km+€/min grid). Don't build until the
+  founder brings the rule; then the suggested Ceiling/base-fare range on the form follows.
 - **O7 cancellation** (driver re-pool + big red Dispatch card), **O2 guest phone to the Driver** (additive).
 - **Engineering hardening (BACKLOG H2):** automated tests (money/PDP/`accept_mission`/RLS first), CI on PRs,
   generated DB types (`supabase gen types`), error monitoring.

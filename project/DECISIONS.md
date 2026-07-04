@@ -359,6 +359,44 @@ missions only; drafts keep their own; always editable), plus a **pickup ⇄ drop
 uncontrolled `AddressAutocomplete`s via a `swapNonce` key). First entry toward the **saved-addresses address book**.
 Removed the case-by-case "Default Guest instructions". Migration `2026-06-28_business_address_and_prefill`. [[d25]]
 
+### D35 — Business identity → an account chip in the top-right topbar (2026-07-03)
+S30. The Business was a cramped avatar + name tucked under "Settings" at the bottom-left of the Dispatch sidebar —
+reading like a footnote. Showed 3 directions in a visualize mockup (D25): A = polished account card at the bottom · B
+= business identity at the TOP of the sidebar (workspace header) · C = account chip in the top-right of the topbar.
+Founder first picked B; on seeing it live, **corrected to C** — keep "PickUp Dispatch" top-left exactly as before, and
+put the business name **top-right** as a chip that opens a dropdown (Sign out). Settings stays in the sidebar footer.
+Uses the previously-empty right side of the topbar; standard SaaS account-menu pattern. [[d25]]
+
+### D36 — Mission-form guidance = non-invasive, only-when-relevant nudges; concept teaching lives in a separate tutorial (2026-07-04)
+S31–S32. The founder's recurring "very guided page" ask. A **4-way guidance audit** (`project/GUIDANCE_AUDIT.md`)
+found the app is already substantially guided; the gap is **input-driven** reactive guidance. Decision: guidance
+**surfaces only when the Dispatcher's own input triggers it** (never always-on — that's heavier/more confusing), in the
+existing amber `.notice.warn` style, and **never blocks posting**. The founder is building a **standalone tutorial** in
+parallel, so in-app we don't stuff concept definitions onto the page (a small glossary tooltip comes later, Tier 2).
+Shipped 2 nudges (luggage-vs-vehicle, night pickup). The suggested Ceiling/base-fare range (highest-leverage) is
+**deferred to the pricing work**. See D37. [[d25]]
+
+### D37 — No empty-return charge; a smart trajectory-based Pool solves the deadhead instead (2026-07-04)
+Founder decision. A long one-way transfer means the Driver drives back empty (*retour à vide*) — but the Business is
+**never charged for it**. Instead of pricing the deadhead into the fare, PickUp will solve it **structurally** with a
+**smart Pool** that prioritises Drivers by **trajectory**: a Driver finishing Cannes→Saint-Tropez is bumped up the Pool
+for missions *departing* Saint-Tropez when the timing matches (backhaul / deadhead reduction). This is why the S31
+long-distance "cover the return" nudge was **dropped before building** — it contradicted the model. The smart Pool is a
+**V2 matching upgrade** (captured in `project/IDEAS.md`, not built); it feeds the pricing model (one-way transfers get
+no return-leg surcharge).
+
+### D38 — Luggage-vehicle Phase 1 = a standalone "van for luggage" run (2026-07-04)
+S32 (Sujet B). "Sometimes we just hire an additional Van for luggages and it's enough." Decision: Phase 1 models a
+**van USED for luggage**, not a new vehicle *class* and not a grouped booking. A Business posts a `luggage_only`
+mission (forced **Van + Business** class — catalog vans are business-tier, so that's how it matches Van Drivers — no
+passengers, bags via `luggage_count`); Van Drivers **opt in** at enrollment (`driver.accepts_luggage_runs`, **off by
+default** — a Driver who won't risk bags in their van is never offered one); the Pool routes luggage runs only to
+opted-in Van Drivers and labels them "Luggage run". **Boundary:** a standalone luggage run is its own mission — the
+grouped **car + luggage van** on one booking is the **CUT grouped-mission** feature (Phase 2), and the cargo leg can
+"stop before the end" of the passenger trip. **Phase 2 (still V2):** real cargo/truck classes by **volume/m³ bands**
+(the "20 m³" idea, likely a partly separate fleet). Migration `2026-07-04_luggage_run_phase1` (additive; founder ran
+it live). Preview signed off (D25).
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
