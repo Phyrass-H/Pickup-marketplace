@@ -132,6 +132,13 @@ interface PreviewData {
   roadMin: number | null;
 }
 
+// Thresholds for the input-driven guidance nudges (S31) — calm, non-blocking hints
+// that only appear when the Dispatcher's own input triggers them. Tunable.
+const LUGGAGE_SEDAN_HINT = 4; // bags with a sedan / "Any" body → suggest a Van
+const LUGGAGE_VAN_HINT = 8; // bags with a van → suggest a dedicated luggage vehicle
+const NIGHT_START_HOUR = 22; // pickup at/after 22:00 …
+const NIGHT_END_HOUR = 6; //  … or before 06:00 (Paris wall-clock) → night pickup
+
 // Client form (Direction B). The fields live in a two-pane layout: section cards
 // on the left, a sticky live Summary rail on the right (mini-route, ETA, ceiling,
 // live starting fare, SPEED WIN, actions). Everything is inside ONE <form> so the
@@ -162,6 +169,10 @@ export function MissionForm({
   const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
   const [baseFare, setBaseFare] = useState(draft?.base_fare != null ? String(draft.base_fare) : "");
   const [speedWin, setSpeedWin] = useState(draft?.speed_win ?? false);
+  // Controlled so the luggage-vs-vehicle nudge (S31) reacts live; still submits via name.
+  const [luggage, setLuggage] = useState(
+    draft?.luggage_count != null ? String(draft.luggage_count) : "",
+  );
 
   // Body type is chosen in the Vehicle & class card, but the passenger cap lives
   // in the Trip-details PassengerList — lift it so the cap reacts to it.
@@ -231,6 +242,30 @@ export function MissionForm({
     Number.isFinite(ceilingNum) &&
     Number.isFinite(baseNum) &&
     ceilingNum < baseNum;
+
+  // Input-driven guidance nudges (S31) — calm, only-when-relevant hints in the
+  // existing soft-warn style. Display-only; they never gate posting.
+  const luggageNum = Number(luggage);
+  const luggageHint =
+    Number.isFinite(luggageNum) && luggageNum > 0
+      ? body === "van"
+        ? luggageNum >= LUGGAGE_VAN_HINT
+          ? `${luggageNum} bags is a lot even for a Van — you may want a dedicated luggage vehicle.`
+          : null
+        : luggageNum >= LUGGAGE_SEDAN_HINT
+          ? body === "sedan"
+            ? `${luggageNum} bags is a lot for a Sedan's boot — consider a Van so it all fits.`
+            : `${luggageNum} bags is a lot — a Van will fit them more comfortably than a Sedan.`
+          : null
+      : null;
+
+  // pickupAt is Paris wall-clock ("YYYY-MM-DDTHH:mm"), so the hour is already local.
+  const pickupHour = /^\d{4}-\d{2}-\d{2}T(\d{2}):/.exec(pickupAt)?.[1];
+  const nightHint =
+    pickupHour != null &&
+    (Number(pickupHour) >= NIGHT_START_HOUR || Number(pickupHour) < NIGHT_END_HOUR)
+      ? `Night pickup (${pickupAt.slice(11, 16)}) — late trips can be harder to fill. A higher ceiling or SPEED WIN helps a Driver grab it.`
+      : null;
 
   // Prefill addresses: a resumed draft keeps its own pickup; a NEW mission starts
   // with the Business's saved address (when "pre-fill as pickup" is on) so a
@@ -462,6 +497,11 @@ export function MissionForm({
                   {prettyParisLocal(pickupAt)} · Europe/Paris
                 </p>
               )}
+              {nightHint && (
+                <div className="notice warn" style={{ margin: "10px 0 0" }}>
+                  {nightHint}
+                </div>
+              )}
             </div>
 
             {/* Trip details */}
@@ -497,7 +537,8 @@ export function MissionForm({
                     name="luggage_count"
                     min={0}
                     inputMode="numeric"
-                    defaultValue={draft?.luggage_count ?? ""}
+                    value={luggage}
+                    onChange={(e) => setLuggage(e.target.value)}
                   />
                 </label>
 
@@ -514,6 +555,12 @@ export function MissionForm({
                   />
                 </label>
               </div>
+
+              {luggageHint && (
+                <div className="notice warn" style={{ margin: "0 0 14px" }}>
+                  {luggageHint}
+                </div>
+              )}
 
               <ReferenceField defaultValue={draft?.reference} />
             </div>

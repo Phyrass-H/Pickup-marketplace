@@ -5,6 +5,14 @@
 
 ---
 
+## 4 July 2026
+- **The new-mission form now gently flags things as you type — only when there's something to flag.** Two small,
+  calm hints (same amber style as the existing "this fare looks low" note) appear while you fill the form and
+  vanish once you fix them: (1) if you've entered more luggage than the chosen car comfortably holds, it suggests
+  a Van (and, for a lot of bags, a dedicated luggage vehicle — coming later); (2) if the pickup is in the middle
+  of the night, it notes that late trips can be harder to fill and that a higher ceiling or SPEED WIN helps a
+  Driver grab it. Nothing blocks you — you can always post anyway. First step of the "guided form"; more to come.
+
 ## 3 July 2026
 - **Your business name now sits in the top-right of the Dispatch screen, not squeezed into the bottom-left corner.**
   Before, your company showed as a small avatar and name tucked under "Settings" at the bottom of the sidebar — easy

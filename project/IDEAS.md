@@ -94,6 +94,23 @@
     empirically from our own accepted-fare data. PickUp stays the **recommender, never the price-setter**
     (Doc 01 — the Business sets the Ceiling). Connects to the Doc 05 "hard-floor" + "fare extras" open items.
 
+### Smart Pool — trajectory-based Driver prioritisation · no empty-return charge (V2) 🅥
+> Founder decision, 2026-07-04.
+- **The Business is NEVER charged for the Driver's empty return leg (*retour à vide*).** Instead of pricing the
+  deadhead into the fare, PickUp solves it **structurally** with a **smart Pool** that prioritises Drivers by
+  **trajectory**: a Driver finishing a trip is bumped up the Pool for missions whose **pickup is near their
+  current drop-off**, within a **time window**, so the return isn't empty. Example: a Driver on
+  **Cannes → Saint-Tropez** is prioritised for missions *departing* Saint-Tropez when the timing matches
+  (backhaul / deadhead reduction — a natural fit for the Riviera corridor).
+- **Blast radius (when built):** the Pool is a query today — `status='pooled' AND category=…` + base+radius
+  (`app/(app)/pool/page.tsx`). This adds a **prioritisation/ordering layer** on top: rank a Driver's Pool by the
+  proximity of each mission's pickup to that Driver's *in-progress / most-recent* mission drop-off, plus a timing
+  overlap (their trip's ETA-end vs the candidate's pickup time). Needs the Driver's next-free position + time
+  (derivable from their accepted missions). **Not a hard filter — a prioritisation**, so Drivers still see the full Pool.
+- **Why it matters:** this is the *reason* there's no empty-return charge, so it feeds the pricing model directly —
+  one-way long transfers get **no return-leg surcharge**. Connects to the Pricing-engine note above and the Doc 05
+  "fare extras" open item. Status: **V2** (a matching upgrade beyond the MVP base+radius Pool) — capture now, build later.
+
 ### Business vets the Driver before confirm (optional) ❓
 - ❓ Optional **Settings toggle**: a Business may require **reviewing/approving the assigned Driver** (photo,
   car, rating/docs) before the mission locks. Off by default (most won't want the extra step / it slows the

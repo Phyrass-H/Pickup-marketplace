@@ -5,6 +5,49 @@
 
 ---
 
+## 2026-07-04 — Session 31 — Mission-form guidance: input-driven nudges (luggage / night) + a full guidance audit
+**Branch:** `main`. No migration. Files: `app/(dispatch)/dispatch/new/mission-form.tsx`. New reference doc:
+`project/GUIDANCE_AUDIT.md`. Idea captured: `project/IDEAS.md` (smart Pool / no empty-return charge).
+
+**Why (founder):** the recurring "very guided page" ask. Ran a **full guidance audit** (4-way parallel workflow:
+new-mission form · rest of Dispatch · Driver app · whole-app grep) → `project/GUIDANCE_AUDIT.md` (inventory +
+gaps + roadmap). Finding: the app is **already substantially guided** (~50+ point-of-use items; the amber
+`.notice.warn` soft-warn style already matches Doc 02); the real missing piece is **input-driven** reactive
+guidance + pricing help. Founder felt the roadmap was a lot → chose to start with the smallest non-invasive win.
+
+**Shipped — 2 input-driven nudges on `/dispatch/new`,** same calm amber `.notice.warn` style as the existing
+below-recommended-fare warning; **display-only, never gate posting; appear only when their trigger fires:**
+- **Luggage vs vehicle** (Trip details, under Luggage): Sedan/"Any" ≥ 4 bags → "consider a Van"; Van ≥ 8 →
+  "consider a dedicated luggage vehicle" (the on-ramp to the future luggage-vehicle class / Sujet B). The luggage
+  input is now **controlled** (`luggage` state) so it reacts live; still submits via `name="luggage_count"`
+  (server reads FormData — `review()`/`createMission` unchanged).
+- **Night pickup** (Schedule, under the pretty-time line): Paris-local pickup hour ≥ 22:00 or < 06:00 →
+  "late trips can be harder to fill; a higher ceiling or SPEED WIN helps."
+- Thresholds are tunable module consts (`LUGGAGE_SEDAN_HINT=4`, `LUGGAGE_VAN_HINT=8`, `NIGHT_START_HOUR=22`,
+  `NIGHT_END_HOUR=6`).
+- **Dropped before building:** the originally-proposed long-distance nudge — it told the Business to price in the
+  "empty return leg", which contradicts the founder's no-empty-return model (below).
+
+**Founder decisions captured (`project/IDEAS.md`):**
+- **No empty-return charge** — the Business is never charged for the Driver's *retour à vide*. Instead a **smart
+  Pool** prioritises Drivers by **trajectory** (a Driver finishing Cannes→Saint-Tropez is bumped up for missions
+  departing Saint-Tropez when timing matches). A V2 matching upgrade; captured, not built.
+- **Deferred:** the suggested Ceiling/base-fare range (highest-leverage form win) — waits on the pricing rule
+  ("we'll talk about pricing" next). Concept teaching (Ceiling/Pool/SPEED WIN/Lock-in) is the standalone
+  **tutorial's** job + a future small in-app glossary tooltip.
+
+**Verified:** `tsc` clean. Drove the live form (localhost, dev-login Business): luggage 6 + body "Any" →
+"…a Van will fit them more comfortably"; body Sedan → "…for a Sedan's boot — consider a Van" (live switch on body
+change); pickup 09:00 → no night hint; 01:30 → night hint. `.notice.warn` computed style = `rgb(255,251,235)` /
+`rgb(217,119,6)` (exact `#fffbeb`/`#d97706` amber), matching the approved D25 preview. No console errors.
+(Browser screenshots glitched blank this session — verified via `preview_inspect` + DOM reads instead.)
+
+**Next:** the **pricing** discussion (suggested Ceiling/base-fare range; how one-way vs round-trip + the
+no-empty-return principle feed it). Then Tier 2 guidance (the "?" glossary tooltip + status legend) and Sujet B
+(the luggage-vehicle class). **Not pushed** — awaiting founder's go to deploy.
+
+---
+
 ## 2026-07-03 — Session 30 — Dispatch: business identity → account chip in the top-right topbar
 **Branch:** `main`. No migration (CSS + client component only). Files: `components/dispatch-shell.tsx`, `app/globals.css`.
 
