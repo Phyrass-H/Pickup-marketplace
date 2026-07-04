@@ -43,6 +43,8 @@ export async function createDriverProfile(formData: FormData) {
   const seats = Number.isFinite(seatsNum) ? seatsNum : null;
   // Tier is DERIVED from make+model (two-step fallback), never self-selected.
   const category = categorize(make ?? "", model ?? "");
+  // Van Drivers can opt in to bags-only luggage runs (Sujet B, Phase 1).
+  const acceptsLuggage = bodyType === "van" && formData.get("accepts_luggage_runs") === "on";
 
   const baseLabel = String(formData.get("base_label") ?? "").trim();
   const baseLat = Number.parseFloat(String(formData.get("base_lat") ?? ""));
@@ -92,6 +94,7 @@ export async function createDriverProfile(formData: FormData) {
     base_lat: baseLat,
     base_lng: baseLng,
     service_radius_km: radius,
+    accepts_luggage_runs: acceptsLuggage,
   };
 
   let driverId = existing?.id;

@@ -77,6 +77,12 @@
   cubic-metre vans used for moving) so the **luxury** range is complete (e.g. lead S-Class + a following
   luggage van). NOTE: "lead car + luggage van" is a **multi-vehicle / grouped mission**, already **CUT→V2**
   (Doc 02). Capture both: the cargo vehicle type AND the grouped mission that uses it.
+  - ✅ **Phase 1 SHIPPED (Session 32, 2026-07-04)** — a **standalone "van for luggage" run**: a Business posts a
+    `luggage_only` mission (forced Van + Business, no passengers, bags via `luggage_count`); Van Drivers **opt in**
+    (`driver.accepts_luggage_runs`, off by default) to receive them; the Pool filters to opted-in Van Drivers and
+    labels it "Luggage run". **Phase 2 (still V2):** real cargo/truck classes by **volume/m³ bands** (the "20 m³"
+    idea) — likely a partly separate fleet — AND the grouped **car + luggage van** on one booking (the CUT
+    grouped-mission feature; note the cargo leg can "stop before the end" of the passenger trip — a founder point).
 - ❓ Body axis beyond sedan/van (SUV? coupé?) — likely unnecessary for VTC; revisit only if Guests ask.
 
 ### Driver specialisation / skills (V2)

@@ -6,6 +6,11 @@
 ---
 
 ## 4 July 2026
+- **You can now book a van just for luggage.** On a new mission there's a "Trip type" switch — pick "Luggage only" and
+  the form sets it to a Van, drops the passenger names, and just asks how many bags. Drivers with a van choose in their
+  settings whether they're up for bags-only jobs (off by default, so nobody's surprised), and those runs show up
+  clearly labelled "Luggage run · no passengers · N bags" in the Pool and on your schedule. (A dedicated luggage truck
+  by size, and attaching a luggage van to a passenger trip, come later. Needs the one-line database change — done.)
 - **The new-mission form now gently flags things as you type — only when there's something to flag.** Two small,
   calm hints (same amber style as the existing "this fare looks low" note) appear while you fill the form and
   vanish once you fix them: (1) if you've entered more luggage than the chosen car comfortably holds, it suggests

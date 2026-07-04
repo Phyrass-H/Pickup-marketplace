@@ -53,6 +53,12 @@ export async function updateDriverSettings(formData: FormData) {
     redirect("/settings?error=nobase");
   }
 
+  // Van Drivers can opt in to bags-only luggage runs (Sujet B, Phase 1). The
+  // checkbox only renders for a Van, so a Sedan Driver never submits it.
+  const acceptsLuggage =
+    String(formData.get("body_type") ?? "") === "van" &&
+    formData.get("accepts_luggage_runs") === "on";
+
   const { error: driverErr } = await admin
     .from("driver")
     .update({
@@ -65,6 +71,7 @@ export async function updateDriverSettings(formData: FormData) {
       base_lat: baseLat,
       base_lng: baseLng,
       service_radius_km: radius,
+      accepts_luggage_runs: acceptsLuggage,
     })
     .eq("id", driver.id);
   if (driverErr) redirect("/settings?error=db");

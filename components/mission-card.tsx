@@ -40,6 +40,7 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
         <span className="fare">{formatMoney(fare)}</span>
         <span style={{ display: "flex", gap: 6 }}>
           {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
+          {mission.luggage_only && <span className="badge luggage">Luggage run</span>}
           <span className="badge">
             {serviceClassLabel(mission.category, mission.required_body_type)}
           </span>
@@ -49,6 +50,9 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
       <div className="muted small" style={{ marginTop: 4 }}>
         {formatDateTime(mission.pickup_at)}
         {meta ? ` · ${meta}` : ""}
+        {mission.luggage_only
+          ? ` · no passengers${mission.luggage_count ? ` · ${mission.luggage_count} bags` : ""}`
+          : ""}
         {mission.zone ? ` · ${mission.zone}` : ""}
       </div>
 

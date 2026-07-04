@@ -5,6 +5,44 @@
 
 ---
 
+## 2026-07-04 — Session 32 — Luggage-vehicle Phase 1 ("van for luggage": trip-type toggle · Driver opt-in · Pool label)
+**Branch:** `main`. **Migration (founder RAN it live 2026-07-04):** `docs/migrations/2026-07-04_luggage_run_phase1.sql`
+— 2 additive columns: `mission.luggage_only boolean default false`, `driver.accepts_luggage_runs boolean default false`.
+Files: `lib/database.types.ts`, `app/(dispatch)/dispatch/new/{mission-form.tsx,actions.ts}`,
+`components/{driver-vehicle-fields,mission-card,trip-row}.tsx`, `app/(app)/pool/page.tsx`, `app/onboarding/actions.ts`,
+`app/(app)/settings/{page.tsx,actions.ts}`, `app/(app)/missions/[id]/page.tsx`, `app/globals.css`. Preview (D25) signed
+off (founder ran the migration = go).
+
+**Why (founder, Sujet B):** "sometimes we just hire an additional Van for luggages and it's enough." Phase 1 models a
+**van used for luggage** — NOT a new truck class (that + volume/m³ bands = Phase 2), and NOT a grouped car+van mission
+(that's the CUT grouped-mission feature). Boundary: a **standalone luggage run is its own mission**; grouping comes later.
+
+**Shipped:**
+- **Data:** `mission.luggage_only` + `driver.accepts_luggage_runs` (both default false).
+- **Business new-mission:** a **"Trip type: Passengers | Luggage only"** segmented toggle atop Vehicle & class. "Luggage
+  only" → **forces Van + category Business** (catalog vans are business-tier, so this is how it matches Van Drivers),
+  **hides passengers**, keeps the bags field, submits `luggage_only=1`. `actions.ts` re-forces category=business /
+  body=van / pax=null / no passenger_names when luggage_only (tamper-proof). The S31 luggage nudge is suppressed here.
+- **Driver enrollment/settings:** an **"Available for luggage-only runs"** checkbox in `DriverVehicleFields`, shown
+  **only for Van** drivers, **off by default** (explicit consent → a Driver who won't carry bags in their van is never
+  offered one). Persisted by `onboarding/actions.ts` and driver `settings/actions.ts` (both gated to van).
+- **Pool matching:** `if (m.luggage_only && !driver.accepts_luggage_runs) return false;` — luggage runs reach only
+  opted-in Van Drivers (body=van + category=business already scope to Van Drivers; this is the willingness gate).
+- **Labels:** a navy **"Luggage run"** badge (new `.badge.luggage`) on the Pool card + Driver mission detail; both show
+  **"no passengers · N bags"**; the Business schedule row shows **"Luggage"** in the guest cell and **"No passengers ·
+  N bags"** + "· Luggage run" in the expanded detail.
+
+**Verified:** `tsc` clean (12 files). Drove it live (localhost, dev-login): Business form — toggle → van/business forced,
+passengers hidden, bags kept, `luggage_only=1`, S31 nudge suppressed, toggle-back fully restores passenger mode. Driver
+settings — opt-in **hidden for the Sedan** demo driver, **appears when body=Van**, off by default, correct copy. Pool
+still loads cleanly with the new filter (regression). No console errors. **Not fully e2e** (creating a geocoded luggage
+mission + a van-driver accept needs the Mapbox flow) — founder to click the full create→pool→accept loop on real data.
+
+**Next:** pricing (in progress, founder). Then Phase 2 (volume/m³ bands + real cargo/truck classes; grouped car+van),
+Tier-2 guidance (glossary tooltip + status legend), Driver app redesign. **Not pushed** — awaiting founder's go.
+
+---
+
 ## 2026-07-04 — Session 31 — Mission-form guidance: input-driven nudges (luggage / night) + a full guidance audit
 **Branch:** `main`. No migration. Files: `app/(dispatch)/dispatch/new/mission-form.tsx`. New reference doc:
 `project/GUIDANCE_AUDIT.md`. Idea captured: `project/IDEAS.md` (smart Pool / no empty-return charge).

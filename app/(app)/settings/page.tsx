@@ -119,6 +119,7 @@ export default async function DriverSettingsPage({
             colour: vehicle?.colour,
             plate: vehicle?.plate,
             seats: vehicle?.seats,
+            accepts_luggage_runs: driver.accepts_luggage_runs,
           }}
         />
 

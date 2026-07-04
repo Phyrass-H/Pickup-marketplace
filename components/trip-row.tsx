@@ -148,7 +148,13 @@ export function TripRow({
           )}
         </span>
 
-        <span className="dx-trip__guest">{mission.passenger_name ?? "—"}</span>
+        <span className="dx-trip__guest">
+          {mission.luggage_only ? (
+            <span className="muted">Luggage</span>
+          ) : (
+            mission.passenger_name ?? "—"
+          )}
+        </span>
 
         <span className="dx-trip__ref">
           {reference ? (
@@ -218,6 +224,7 @@ export function TripRow({
           <dt>Vehicle</dt>
           <dd>
             {serviceClassLabel(mission.category, mission.required_body_type)}
+            {mission.luggage_only ? " · Luggage run" : ""}
             {mission.zone ? ` · ${mission.zone}` : ""}
           </dd>
           {mission.required_make && mission.required_model && (
@@ -282,7 +289,9 @@ export function TripRow({
           )}
           <dt>Pax / luggage</dt>
           <dd>
-            {mission.pax_count ?? "—"} pax · {mission.luggage_count ?? "—"} bags
+            {mission.luggage_only
+              ? `No passengers · ${mission.luggage_count ?? 0} bags`
+              : `${mission.pax_count ?? "—"} pax · ${mission.luggage_count ?? "—"} bags`}
           </dd>
           {mission.flight_number && (
             <>

@@ -24,6 +24,7 @@ export function DriverVehicleFields({
     colour?: string | null;
     plate?: string | null;
     seats?: number | null;
+    accepts_luggage_runs?: boolean | null;
   };
 }) {
   const [make, setMake] = useState(defaults?.make ?? "");
@@ -31,6 +32,8 @@ export function DriverVehicleFields({
   const [body, setBody] = useState<BodyType>(defaults?.body_type === "van" ? "van" : "sedan");
   // Whether the Driver has manually set the body (so we stop auto-suggesting).
   const [bodyTouched, setBodyTouched] = useState(!!defaults?.body_type);
+  // Opt-in to bags-only Van runs (Sujet B, Phase 1). Off by default.
+  const [acceptsLuggage, setAcceptsLuggage] = useState(defaults?.accepts_luggage_runs ?? false);
 
   const tier = categorize(make, model);
   // Pre-fill body from a recognised model until the Driver overrides it.
@@ -93,6 +96,36 @@ export function DriverVehicleFields({
           ))}
         </div>
       </div>
+
+      {/* Van Drivers can opt in to bags-only luggage runs (Sujet B, Phase 1). */}
+      {effectiveBody === "van" && (
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            cursor: "pointer",
+            margin: "-4px 0 18px",
+          }}
+        >
+          <input
+            type="checkbox"
+            name="accepts_luggage_runs"
+            checked={acceptsLuggage}
+            onChange={(e) => setAcceptsLuggage(e.target.checked)}
+            style={{ marginTop: 3, flexShrink: 0 }}
+          />
+          <span>
+            <span style={{ fontWeight: 600, fontSize: 14, display: "block" }}>
+              Available for luggage-only runs
+            </span>
+            <span className="muted small">
+              Get bags-only jobs (no passengers) in your Van. Off by default — turn it on if
+              you&apos;re happy to carry luggage.
+            </span>
+          </span>
+        </label>
+      )}
 
       <div className="grid-2">
         <label className="field">

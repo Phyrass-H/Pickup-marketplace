@@ -50,6 +50,11 @@ export default async function PoolPage() {
       withinRadius(driver.base_lat!, driver.base_lng!, radius, m.pickup_lat, m.pickup_lng) ||
       withinRadius(driver.base_lat!, driver.base_lng!, radius, m.dropoff_lat, m.dropoff_lng);
     if (!inRange) return false;
+    // Luggage-only run (Sujet B, Phase 1): a bags-only Van job. Only Drivers who
+    // opted in at enrollment see these — so a Driver unwilling to carry luggage in
+    // their Van is never offered one. (Body=van + category=business already scope
+    // it to Van Drivers; this is the willingness gate on top.)
+    if (m.luggage_only && !driver.accepts_luggage_runs) return false;
     // Body: a mission that demands a body type must match the Driver's vehicle.
     if (m.required_body_type && m.required_body_type !== vehicle.body_type) return false;
     // Specific car: when required, the Driver's car must satisfy it (tolerant

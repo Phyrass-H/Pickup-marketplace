@@ -160,6 +160,7 @@ export interface Database {
           base_lat: number | null;
           base_lng: number | null;
           service_radius_km: number;
+          accepts_luggage_runs: boolean; // opted in to bags-only Van runs (Sujet B, Phase 1)
           preferred_gps: PreferredGps | null;
           stripe_account_id: string | null;
           verified: boolean;
@@ -179,6 +180,7 @@ export interface Database {
           base_lat?: number | null;
           base_lng?: number | null;
           service_radius_km?: number;
+          accepts_luggage_runs?: boolean;
           preferred_gps?: PreferredGps | null;
           stripe_account_id?: string | null;
           verified?: boolean;
@@ -267,6 +269,7 @@ export interface Database {
           passenger_names: Json | null;
           pax_count: number | null;
           luggage_count: number | null;
+          luggage_only: boolean; // bags-only run, no passengers, carried in a Van (Sujet B, Phase 1)
           comment: string | null;
           reference: string | null;
           base_fare: number | null;
@@ -319,6 +322,7 @@ export interface Database {
           passenger_names?: Json | null;
           pax_count?: number | null;
           luggage_count?: number | null;
+          luggage_only?: boolean;
           comment?: string | null;
           reference?: string | null;
           base_fare?: number | null;

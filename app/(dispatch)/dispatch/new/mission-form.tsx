@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle, UserRound } from "lucide-react";
+import { Car, MapPin, CalendarClock, ClipboardList, Route, Wallet, AlertTriangle, UserRound, Luggage } from "lucide-react";
 import { createMission } from "./actions";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { RouteStops, type RouteSummary } from "@/components/route-stops";
@@ -173,6 +173,8 @@ export function MissionForm({
   const [luggage, setLuggage] = useState(
     draft?.luggage_count != null ? String(draft.luggage_count) : "",
   );
+  // Luggage-only run (Sujet B, Phase 1): a bags-only trip in a Van, no passengers.
+  const [luggageOnly, setLuggageOnly] = useState(draft?.luggage_only ?? false);
 
   // Body type is chosen in the Vehicle & class card, but the passenger cap lives
   // in the Trip-details PassengerList — lift it so the cap reacts to it.
@@ -247,7 +249,7 @@ export function MissionForm({
   // existing soft-warn style. Display-only; they never gate posting.
   const luggageNum = Number(luggage);
   const luggageHint =
-    Number.isFinite(luggageNum) && luggageNum > 0
+    !luggageOnly && Number.isFinite(luggageNum) && luggageNum > 0
       ? body === "van"
         ? luggageNum >= LUGGAGE_VAN_HINT
           ? `${luggageNum} bags is a lot even for a Van — you may want a dedicated luggage vehicle.`
@@ -450,16 +452,55 @@ export function MissionForm({
                 </span>
                 <h3 className="mx-card__title">Vehicle &amp; class</h3>
               </div>
-              <ServiceClassFields
-                defaults={{
-                  category: draft?.category,
-                  body: draft?.required_body_type,
-                  make: draft?.required_make,
-                  model: draft?.required_model,
-                }}
-                onBodyChange={setBody}
-                onTierChange={setTier}
-              />
+
+              {/* Trip type — passengers, or a bags-only Van run (Sujet B, Phase 1) */}
+              <div
+                className="seg seg--full"
+                role="group"
+                aria-label="Trip type"
+                style={{ marginBottom: 14 }}
+              >
+                <button
+                  type="button"
+                  className={`seg-btn${!luggageOnly ? " is-on" : ""}`}
+                  aria-pressed={!luggageOnly}
+                  onClick={() => setLuggageOnly(false)}
+                >
+                  Passengers
+                </button>
+                <button
+                  type="button"
+                  className={`seg-btn${luggageOnly ? " is-on" : ""}`}
+                  aria-pressed={luggageOnly}
+                  onClick={() => setLuggageOnly(true)}
+                >
+                  Luggage only
+                </button>
+              </div>
+
+              {luggageOnly ? (
+                <>
+                  <div className="tier-empty">
+                    <Luggage size={14} aria-hidden />
+                    A Van, no passengers — service class Business. Add the number of bags
+                    under Trip details.
+                  </div>
+                  <input type="hidden" name="category" value="business" />
+                  <input type="hidden" name="required_body_type" value="van" />
+                </>
+              ) : (
+                <ServiceClassFields
+                  defaults={{
+                    category: draft?.category,
+                    body: draft?.required_body_type,
+                    make: draft?.required_make,
+                    model: draft?.required_model,
+                  }}
+                  onBodyChange={setBody}
+                  onTierChange={setTier}
+                />
+              )}
+              <input type="hidden" name="luggage_only" value={luggageOnly ? "1" : ""} />
             </div>
 
             {/* Route */}
@@ -512,11 +553,17 @@ export function MissionForm({
                 </span>
                 <h3 className="mx-card__title">Trip details</h3>
               </div>
-              <PassengerList
-                body={body}
-                defaultPassengers={seededPassengers}
-                onPrimaryNameChange={setPrimaryName}
-              />
+              {luggageOnly ? (
+                <p className="muted small" style={{ margin: "0 0 4px" }}>
+                  Luggage-only run — no passengers. Enter the number of bags below.
+                </p>
+              ) : (
+                <PassengerList
+                  body={body}
+                  defaultPassengers={seededPassengers}
+                  onPrimaryNameChange={setPrimaryName}
+                />
+              )}
 
               <div
                 style={{

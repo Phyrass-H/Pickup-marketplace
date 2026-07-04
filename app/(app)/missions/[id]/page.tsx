@@ -62,6 +62,7 @@ export default async function MissionDetailPage({
         </span>
         <span style={{ display: "flex", gap: 6 }}>
           {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
+          {mission.luggage_only && <span className="badge luggage">Luggage run</span>}
           <span className="badge">
             {serviceClassLabel(mission.category, mission.required_body_type)}
           </span>
@@ -99,7 +100,7 @@ export default async function MissionDetailPage({
         <h2>Details</h2>
         <dl className="kv">
           <dt>Passengers</dt>
-          <dd>{mission.pax_count ?? "—"}</dd>
+          <dd>{mission.luggage_only ? "None (luggage run)" : (mission.pax_count ?? "—")}</dd>
           <dt>Luggage</dt>
           <dd>{mission.luggage_count ?? "—"}</dd>
           {mission.flight_number && (

@@ -116,6 +116,10 @@ export async function createMission(formData: FormData) {
   // (the input's maxLength is a convenience; this is the real guard).
   const reference = String(formData.get("reference") ?? "").trim().slice(0, 20);
   const luggageCount = num(formData.get("luggage_count"));
+  // Luggage-only run (Sujet B, Phase 1): a bags-only trip carried in a Van, no
+  // passengers. Forced to category=business + body=van server-side so it matches
+  // Van Drivers (catalog vans are business-tier) regardless of the submitted fields.
+  const luggageOnly = formData.get("luggage_only") === "1";
 
   // Service class: category is the TIER; body + an optional specific car narrow
   // which Drivers match (O5).
@@ -229,7 +233,7 @@ export async function createMission(formData: FormData) {
     business_id: ctx.business.id,
     dispatcher_id: ctx.dispatcher.id,
     status,
-    category: category!,
+    category: luggageOnly ? "business" : category!,
     zone,
     pickup_address: pickupAddress,
     pickup_lat: pickupLat,
@@ -239,12 +243,14 @@ export async function createMission(formData: FormData) {
     dropoff_lng: dropoffValid ? dropoffLng : null,
     waypoints: waypoints.length > 0 ? waypoints : null,
     pickup_at: pickupAt!.toISOString(),
-    passenger_name: passengerName || null,
+    passenger_name: luggageOnly ? null : passengerName || null,
     // Names + main flag only (no phone) — this row is Pool-readable. Stored when
-    // any Guest has a name or phone; pax_count preserves the headcount.
-    passenger_names: hasGuestData ? passengerRowData(passengers) : null,
-    pax_count: paxCount,
+    // any Guest has a name or phone; pax_count preserves the headcount. A luggage
+    // run carries no passengers.
+    passenger_names: luggageOnly ? null : hasGuestData ? passengerRowData(passengers) : null,
+    pax_count: luggageOnly ? null : paxCount,
     luggage_count: luggageCount,
+    luggage_only: luggageOnly,
     flight_number: flightNumber || null,
     reference: reference || null,
     base_fare: baseFare,
@@ -253,9 +259,9 @@ export async function createMission(formData: FormData) {
     pdp_step: pdpStep,
     pdp_interval: pdpInterval,
     speed_win: speedWin,
-    required_body_type: requiredBody,
-    required_make: requiredMake,
-    required_model: requiredModel,
+    required_body_type: luggageOnly ? "van" : requiredBody,
+    required_make: luggageOnly ? null : requiredMake,
+    required_model: luggageOnly ? null : requiredModel,
     required_languages: requiredLanguages.length > 0 ? requiredLanguages : null,
     dress_code: dressCode,
     driver_flags: Object.keys(driverFlags).length > 0 ? driverFlags : null,
