@@ -5,6 +5,7 @@ import { getAppContext } from "@/lib/app-context";
 import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 import { LiveRefresh } from "@/components/live-refresh";
+import { ScrollToTrip } from "@/components/scroll-to-trip";
 import { TripRow, type DriverContact } from "@/components/trip-row";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
 import type { MissionRow } from "@/lib/database.types";
@@ -39,7 +40,8 @@ function DayGroup({
   today?: boolean;
 }) {
   return (
-    <section>
+    // The id lets the calendar's "Open day in Schedule" land on this band.
+    <section id={`day-${dayKey}`}>
       <div className={`dx-day${today ? " dx-day--today" : ""}`}>
         <h2>{today ? "Today · " : ""}{formatDate(`${dayKey}T12:00:00`)}</h2>
         <span className="dx-count">
@@ -58,9 +60,14 @@ function DayGroup({
   );
 }
 
-export default async function DispatchSchedule() {
+export default async function DispatchSchedule({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string; day?: string }>;
+}) {
   const ctx = await getAppContext();
   if (!ctx.business) return null;
+  const { open, day } = await searchParams;
 
   const supabase = await createClient();
   const { data: missions, error } = await supabase
@@ -124,6 +131,7 @@ export default async function DispatchSchedule() {
   return (
     <>
       <LiveRefresh />
+      {(open || day) && <ScrollToTrip missionId={open} dayKey={day} />}
 
       {error && (
         <div className="notice error">Couldn’t load your schedule: {error.message}</div>

@@ -1105,33 +1105,52 @@ textarea::placeholder {
 .dx-celladd:focus-visible { display: inline-flex; }
 .dx-celladd:hover { background: var(--accent); color: #fff; }
 .dx-entries { display: flex; flex-direction: column; gap: 3px; min-height: 0; }
-.dx-entry { display: flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: var(--radius-sm); border-left: 3px solid var(--etone, var(--border)); font-size: 12px; cursor: pointer; overflow: hidden; }
-.dx-entry:hover { filter: brightness(0.97); }
-.dx-entry__time { font-weight: 600; flex: none; color: var(--text); font-size: 11px; }
-.dx-entry__to { color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dx-more { font-size: 11px; font-weight: 600; color: var(--text-muted); padding: 2px 7px; }
-.dx-more:hover { color: var(--accent); cursor: pointer; }
+/* Month chip: white-ish surface + a status rail on the left (the Schedule's row
+   rail, miniaturised) — replaces the old pastel tint that was unreadable at 12px. */
+.dx-entry { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; text-align: left; font-family: inherit; padding: 3px 7px; background: var(--surface-2); border: 1px solid var(--border-light, #eef1f5); border-left: 3px solid var(--etone, var(--border)); border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; overflow: hidden; }
+.dx-entry:hover { background: #f0f3f8; }
+.dx-entry--past { opacity: 0.62; }
+.dx-entry__time { font-weight: 700; flex: none; color: var(--text); font-size: 11px; }
+.dx-entry__to { color: var(--slate-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dx-more { border: none; background: none; text-align: left; font-family: inherit; font-size: 11px; font-weight: 600; color: var(--accent); padding: 2px 7px; cursor: pointer; }
+.dx-more:hover { text-decoration: underline; }
 
-/* ---- Calendar week view ---- */
-.dx-calgrid--week .dx-dow { display: none; }
-.dx-wcell { background: var(--surface); min-height: 460px; display: flex; flex-direction: column; }
-.dx-wcell--we { background: #fcfdfe; }
-.dx-wcell--today { background: var(--accent-soft); }
-.dx-wcell__head { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 6px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.dx-wcell__body { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 10px; }
-.dx-wcell__empty { color: var(--text-faint); font-size: 13px; text-align: center; padding-top: 20px; }
-.dx-wsection { display: flex; flex-direction: column; gap: 6px; }
-.dx-wsec { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding-left: 2px; border-bottom: 1px dashed var(--border); padding-bottom: 4px; }
-.dx-wk { text-align: left; width: 100%; font-family: inherit; cursor: pointer; background: var(--ebg, var(--surface-2)); border: 1px solid var(--border); border-left: 3px solid var(--etone, var(--border)); border-radius: var(--radius-md); padding: 8px 9px; transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease); }
-.dx-wk:hover { box-shadow: var(--shadow-md); }
-.dx-wk__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.dx-wk__time { font-size: 13px; font-weight: 700; }
-.dx-wk__top .status-pill { font-size: 10px; padding: 2px 7px; }
-.dx-wk__guest { font-weight: 600; font-size: 13px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dx-wk__route { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dx-wk__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--slate-900); flex: none; }
-.dx-wk__foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; }
-.dx-wk__driver { font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* While a month/week server navigation is in flight (useTransition) dim the grid
+   and block input — a route loading.tsx never fires for same-segment param nav. */
+.dx-calwrap--busy { opacity: 0.55; pointer-events: none; transition: opacity var(--dur) var(--ease); }
+
+/* ---- Status legend (under the calendar controls) ---- */
+.dx-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 10px; font-size: 11px; color: var(--text-muted); }
+.dx-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.dx-legend i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+/* ---- Calendar week view: a vertical time grid (uniform cards anchored at
+   pickup time — a trip is a pickup moment, height does not encode duration) ---- */
+.dx-tg { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.dx-tg__head { display: grid; grid-template-columns: 48px repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+.dx-tg__dayhead { padding: 8px 4px 10px; text-align: center; cursor: pointer; border-left: 1px solid var(--border-light, #eef1f5); }
+.dx-tg__dayhead--muted { cursor: default; background: var(--surface-2); }
+.dx-tg__dow { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.dx-tg__num { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; margin-top: 2px; font-size: 15px; font-weight: 700; color: var(--slate-700); }
+.dx-tg__dayhead--muted .dx-tg__num { color: var(--text-faint); }
+.dx-tg__dayhead--today .dx-tg__dow { color: var(--accent); }
+.dx-tg__dayhead--today .dx-tg__num { background: var(--accent); color: #fff; border-radius: 50%; }
+.dx-tg__body { display: grid; grid-template-columns: 48px repeat(7, 1fr); padding-top: 8px; }
+.dx-tg__gutter { position: relative; }
+.dx-tg__hour { position: absolute; right: 6px; transform: translateY(-6px); font-family: var(--font-mono); font-size: 11px; color: var(--text-faint); }
+.dx-tg__col { position: relative; border-left: 1px solid var(--border-light, #eef1f5); background-image: repeating-linear-gradient(to bottom, transparent 0 47px, var(--border-light, #eef1f5) 47px 48px); }
+.dx-tg__col--we { background-color: #fcfdfe; }
+.dx-tg__col--today { background-color: #f6f8fc; }
+.dx-tg__col--muted { background-color: var(--surface-2); background-image: none; }
+.dx-tgcard { position: absolute; height: 42px; text-align: left; font-family: inherit; background: var(--ebg, var(--surface-2)); border: none; border-left: 3px solid var(--etone, var(--border)); border-radius: 5px; padding: 4px 7px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; gap: 1px; min-width: 0; z-index: 1; transition: box-shadow var(--dur) var(--ease); }
+.dx-tgcard:hover { box-shadow: var(--shadow-md); z-index: 2; }
+.dx-tgcard--past { opacity: 0.55; }
+.dx-tgcard__top { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.dx-tgcard__time { font-size: 11px; font-weight: 700; color: var(--etone, var(--text)); flex: none; }
+.dx-tgcard__guest { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dx-tgcard__route { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dx-tg__now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--accent); z-index: 3; pointer-events: none; }
+.dx-tg__now span { position: absolute; left: -3px; top: -4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
 /* ---- Day peek drawer ---- */
 .dx-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
@@ -1140,12 +1159,31 @@ textarea::placeholder {
 .dx-drawer__head { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--border); }
 .dx-drawer__body { flex: 1; overflow-y: auto; padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
 .dx-drawer__foot { padding: 14px 20px; border-top: 1px solid var(--border); }
-.dx-peektrip { text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--etone, var(--border)); border-radius: var(--radius-lg); padding: 12px 14px; cursor: pointer; font-family: inherit; transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.dx-peektrip:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
-.dx-peektrip__top { display: flex; align-items: center; justify-content: space-between; }
-.dx-peektrip__guest { font-weight: 600; margin-top: 6px; }
-.dx-peektrip__foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-.dx-peektrip__driver { margin-left: auto; font-size: 13px; color: var(--text); }
+/* Day-panel rows: mini Schedule-style lines (rail · time · route · pill) that
+   expand in place; the calendar opens the panel focused on the clicked trip. */
+.dx-pkrow { border: 1px solid var(--border); border-left: 3px solid var(--etone, var(--border)); border-radius: var(--radius-md); background: var(--surface); }
+.dx-pkrow--open { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.dx-pkrow__sum { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; width: 100%; text-align: left; font-family: inherit; background: none; border: none; padding: 10px 12px; cursor: pointer; border-radius: var(--radius-md); }
+.dx-pkrow__sum:hover { background: var(--surface-2); }
+.dx-pkrow__time { font-size: 12px; font-weight: 700; }
+.dx-pkrow__mid { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dx-pkrow__guest { font-size: 13px; font-weight: 600; }
+.dx-pkrow__leg { display: flex; align-items: center; font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; min-width: 0; }
+.dx-pkrow__leg > i { flex: none; }
+.dx-pkrow__dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 7px; }
+.dx-pkrow__dot--pk { background: var(--text); }
+.dx-pkrow__dot--via { background: #cbd2dd; }
+.dx-pkrow__dot--dp { background: transparent; border: 1.5px solid #98a2b3; }
+.dx-pkrow__detail { border-top: 1px solid var(--border-light, #eef1f5); padding: 10px 12px 12px; }
+.dx-pkrow__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dx-pkrow__link { display: inline-flex; align-items: center; gap: 6px; border: none; background: none; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--accent); cursor: pointer; padding: 0; margin-top: 12px; }
+.dx-pkrow__link:hover { text-decoration: underline; }
+
+/* Calendar loading skeleton (route-level loading.tsx) */
+.dx-calskel__bar { height: 34px; border-radius: var(--radius-md); background: var(--slate-100); animation: dx-pulse 1.2s ease-in-out infinite; margin-bottom: 12px; }
+.dx-calskel__grid { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; overflow: hidden; }
+.dx-calskel__cell { min-height: 110px; background: var(--surface-2); animation: dx-pulse 1.2s ease-in-out infinite; }
+@keyframes dx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 
 /* ---- Narrow screens: let the sidebar collapse to the icon rail ---- */
 @media (max-width: 720px) {
@@ -1166,6 +1204,15 @@ textarea::placeholder {
      scroll instead of pinning under the topbar — drop the sticky 57px offset that
      would otherwise float it down and leave a gap. */
   .dx-colhead { position: static; }
+  /* Same rule for the calendar: below the point where 7 columns stay readable,
+     the grid holds a minimum width and side-scrolls as one piece. */
+  .dx-calwrap { overflow-x: auto; }
+  .dx-calgrid, .dx-tg { min-width: 640px; }
+}
+
+/* Touch screens have no hover: keep the per-day quick-add visible. */
+@media (hover: none) {
+  .dx-celladd { display: inline-flex; }
 }
 
 /* ===================================================================

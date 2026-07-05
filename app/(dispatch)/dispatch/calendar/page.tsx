@@ -4,6 +4,7 @@ import { getAppContext } from "@/lib/app-context";
 import { serviceClassLabel, formatTime } from "@/lib/format";
 import { currentFare } from "@/lib/pdp";
 import { missionTone, parisDayKey } from "@/lib/dispatch-status";
+import { parseWaypoints } from "@/lib/waypoints";
 import { DispatchCalendar, type CalEntry, type CalendarData } from "@/components/dispatch-calendar";
 
 export const dynamic = "force-dynamic";
@@ -17,13 +18,16 @@ function shiftMonth(ym: string, delta: number): string {
 export default async function DispatchCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; week?: string }>;
+  searchParams: Promise<{ month?: string; week?: string; view?: string; wk?: string }>;
 }) {
   const ctx = await getAppContext();
   if (!ctx.business) return null;
 
-  const { month, week } = await searchParams;
+  const { month, week, view, wk } = await searchParams;
   const landWeek = week === "last" ? "last" : week === "first" ? "first" : null;
+  // View + week index survive a reload (the client keeps them fresh in the URL).
+  const initialView = landWeek || view === "week" ? ("week" as const) : ("month" as const);
+  const initialWeek = wk != null && /^\d+$/.test(wk) ? Number(wk) : null;
   const todayKey = parisDayKey(new Date());
   const currentYm = todayKey.slice(0, 7);
   const ym = month && /^\d{4}-\d{2}$/.test(month) ? month : currentYm;
@@ -64,6 +68,7 @@ export default async function DispatchCalendarPage({
     const key = parisDayKey(m.pickup_at);
     if (!key.startsWith(`${ym}-`)) continue;
     const t = missionTone(m);
+    const flightEta = m.flight_eta ? formatTime(m.flight_eta) : null;
     entries.push({
       id: m.id,
       day: Number(key.slice(8, 10)),
@@ -71,12 +76,20 @@ export default async function DispatchCalendarPage({
       guest: m.passenger_name ?? "—",
       driver: (m.driver_id && driverName.get(m.driver_id)) || null,
       cat: serviceClassLabel(m.category, m.required_body_type),
+      catKey: m.category,
+      body: m.required_body_type ?? null,
       tone: t.tone,
       label: t.label,
       fare: currentFare(m),
       ceiling: Number(m.ceiling ?? 0),
       from: m.pickup_address,
       to: m.dropoff_address ?? "—",
+      stops: parseWaypoints(m.waypoints).map((w) => w.address),
+      flight: m.flight_number ? `${m.flight_number}${flightEta ? ` · ${flightEta}` : ""}` : null,
+      ref: m.reference?.trim() || null,
+      luggageOnly: !!m.luggage_only,
+      bags: m.luggage_count,
+      pax: m.pax_count,
     });
   }
 
@@ -105,12 +118,15 @@ export default async function DispatchCalendarPage({
     daysInMonth,
     firstDow,
     todayDate,
+    todayKey,
     isCurrentMonth,
     prevYm: shiftMonth(ym, -1),
     nextYm: shiftMonth(ym, 1),
     currentYm,
     todayWeekIdx,
     landWeek,
+    initialView,
+    initialWeek,
     entries,
   };
 

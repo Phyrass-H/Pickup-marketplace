@@ -5,6 +5,20 @@
 
 ---
 
+## 5 July 2026
+- **The Calendar has been redesigned.** Two clearer views:
+  - **Month** now reads as a *load map* — each trip is a proper little row (time + guest) with a colour bar down
+    its left showing status, instead of the old faint tinted chips you couldn't tell apart. Past days are gently
+    dimmed, there's a **colour legend** on the page so you never have to guess what red or amber means, and busy
+    days show as many trips as fit then a "+N more" that opens the day.
+  - **Week** is now a real **time grid** — hours down the side, weekday names across the top, and every trip sits
+    at its actual pickup time, so you can see your day fill up and spot the gaps. A line marks "now" on today.
+  - **Click any trip, anywhere**, and a panel slides in from the right showing *that* trip — route, driver, fare
+    and ceiling, flight — with the rest of the day underneath. One button jumps straight to it in the Schedule
+    (it even opens the "earlier trips" fold for past days). No more hunting.
+  - Smaller wins: the view you're on is remembered if you reload or hit back; the vehicle filter no longer hides
+    "Business · Van" trips; and on a phone the grid scrolls sideways instead of squashing.
+
 ## 4 July 2026
 - **You can now book a van just for luggage.** On a new mission there's a "Trip type" switch — pick "Luggage only" and
   the form sets it to a Van, drops the passenger names, and just asks how many bags. Drivers with a van choose in their

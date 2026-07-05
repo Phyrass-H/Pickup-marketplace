@@ -94,6 +94,8 @@ export function TripRow({
 
   return (
     <details
+      // Anchor for the calendar's "Open in Schedule" deep link (?open=<missionId>).
+      id={`trip-${mission.id}`}
       className={`dx-trip${alert ? " dx-trip--alert" : ""}`}
       style={{ "--edge": TONE_COLOR[t.tone] } as React.CSSProperties}
     >

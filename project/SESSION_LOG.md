@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-07-05 — Session 33 — Calendar redesign (month load-map + week time-grid + trip-focused day panel)
+**Branch:** `main`. **No schema change.** Files: `components/dispatch-calendar.tsx` (full rewrite),
+`app/(dispatch)/dispatch/calendar/page.tsx`, `app/(dispatch)/dispatch/calendar/loading.tsx` (new),
+`components/scroll-to-trip.tsx` (new), `app/(dispatch)/dispatch/page.tsx`, `components/trip-row.tsx`,
+`app/globals.css`. **D25 loop:** 4 inline mockups → founder picked **month Option A (chips, no summary bar)**,
+**week = vertical time-grid** (rejected the hotel-style horizontal tape chart — "trips aren't about how long they
+run like hotel rooms"), **uniform card heights** (not duration-scaled — "it's about the pickup moment"). Founder
+also ruled OUT any luggage/night labelling in the overview (neutral: time · guest · status only).
+
+**Shipped:**
+- **Month = a load-map.** Chips are readable (mono time + guest, a status rail on the left instead of the old
+  near-white pastel tints); past days dimmed; a compact **status legend** on the page; chips capped (~5) then a
+  "+N more" that opens the day panel. KPI chips are now honest **month totals** (label "Assigned", not the old
+  filtered "Confirmed") and stay as click-filters.
+- **Week = a real time grid.** Hours down the left (06:00–22:00, auto-stretched to fit early/late pickups + the
+  last card's full height), proper "lun 29" day headers, each trip a **uniform card at its pickup time**,
+  overlapping pickups split into side-by-side lanes (`layoutDay`), a navy **"now" line** on today (client-only,
+  re-ticks each minute). No day/duration or night shading — neutral overview.
+- **Trip-focused day panel.** Clicking any chip/card **anywhere** opens the panel with **that trip expanded**
+  (mini Schedule-style rows: rail · time · route · pill; fare · ceiling · driver · pax/bags · flight · ref).
+  **"Open in Schedule"** deep-links `/dispatch?open=<id>` → the row expands + scrolls into view (opens the
+  "Earlier trips" fold for past days); **"Open day in Schedule"** → `/dispatch?day=<key>` scrolls to the day band.
+- **Polish/fixes:** view + week persist in the URL (reload/Back-Forward land where you were); a `useTransition`
+  busy-dim on month/week nav (route `loading.tsx` never fires for same-segment param nav); vehicle filter fixed
+  (matches raw category/body — `Business · Van` no longer vanishes); side-scroll < 880px; "+" quick-add visible on
+  touch; a11y (`aria-pressed` on view/KPI toggles, focus-trap in the panel).
+
+**Review (13-agent adversarial workflow) → 7 confirmed findings, ALL fixed + re-verified live:** (1) week-view
+late cards stacked because the bottom clamp ran AFTER lane layout → moved the clamp into `layoutDay` + grow the
+hour range to fit the last card; (2) Back/Forward showed the wrong week + the persist effect overwrote it → resync
+view/week from the server payload in a `useLayoutEffect` (deps `[data.ym, data.landWeek]`); (3) transient stale
+`?wk=` on cross-month hops — same fix; (4) Enter/Space on a nested chip ran the cell's action → `onActivate`
+ignores bubbled events; (5) "Open day" dead-ended in the collapsed fold → deep link opens ancestor `<details>`;
+(6) no focus trap in the aria-modal panel → added; (7) no `aria-pressed` on the toggles → added. **Plus a real
+hydration mismatch** the review surfaced live: the now-line's `top` came from `new Date()` at render → gated it
+client-only (SSR emits no now-line; confirmed `ssrHasNow:false`).
+
+**Verified live** (localhost, real Supabase DB): month + week render; day panel opens focused on the clicked trip;
+both deep links land correctly (incl. past-day fold); Back/Forward restores the right week both directions; now-line
+renders in today's column at the correct minute; `tsc` clean. **Next:** founder to click the full loop on real data;
+Driver-app redesign + saved-addresses book still queued.
+
 ## 2026-07-04 — Session 32 — Luggage-vehicle Phase 1 ("van for luggage": trip-type toggle · Driver opt-in · Pool label)
 **Branch:** `main`. **Migration (founder RAN it live 2026-07-04):** `docs/migrations/2026-07-04_luggage_run_phase1.sql`
 — 2 additive columns: `mission.luggage_only boolean default false`, `driver.accepts_luggage_runs boolean default false`.
