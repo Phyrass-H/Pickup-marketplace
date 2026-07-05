@@ -191,6 +191,17 @@ export function TripRow({
       </summary>
 
       <div className="dx-trip__detail">
+        {/* Edit the trip's info (guests, flight, reference, Driver & service) — no
+            price/route change. At the top of the detail so it's the first thing you
+            see. Only while pre-departure; frozen once executing/done. */}
+        {editable && (
+          <div className="dx-trip__edit">
+            <Link href={`/dispatch/${mission.id}/edit`} className="dx-trip__editbtn">
+              <Pencil size={14} aria-hidden /> Edit details
+            </Link>
+          </div>
+        )}
+
         {t.hint && <div className="notice warn" style={{ marginTop: 12 }}>{t.hint}</div>}
 
         <div className="route" style={{ marginTop: 12 }}>
@@ -364,15 +375,6 @@ export function TripRow({
           </div>
         )}
 
-        {/* Edit the trip's info (guests, flight, reference, Driver & service) — no
-            price/route change. Only while pre-departure; frozen once executing/done. */}
-        {editable && (
-          <div className="dx-trip__actions">
-            <Link href={`/dispatch/${mission.id}/edit`} className="dx-editlink">
-              <Pencil size={14} aria-hidden /> Edit details
-            </Link>
-          </div>
-        )}
       </div>
     </details>
   );

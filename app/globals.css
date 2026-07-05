@@ -1163,10 +1163,12 @@ textarea::placeholder {
 .ex-locknote { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 9px 11px; background: var(--tone-neutral-bg); border-radius: var(--radius-md); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 .ex-form .card { margin-bottom: 14px; }
 .ex-actions { display: flex; gap: 10px; align-items: center; }
-/* "Edit details" entry link in the expanded schedule trip detail */
-.dx-trip__actions { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-light, #eef1f5); }
-.dx-editlink { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
-.dx-editlink:hover { text-decoration: underline; }
+/* "Edit details" action at the TOP of the expanded schedule trip detail (+ an
+   "Edited · time" stamp to its left once the trip's info has been edited). */
+.dx-trip__edit { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 10px 0 2px; }
+.dx-trip__edited { margin-right: auto; font-size: 11px; color: var(--text-faint); }
+.dx-trip__editbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border-radius: var(--radius-md); padding: 7px 13px; text-decoration: none; }
+.dx-trip__editbtn:hover { background: var(--accent-hover); }
 
 /* ---- Day peek drawer ---- */
 .dx-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
