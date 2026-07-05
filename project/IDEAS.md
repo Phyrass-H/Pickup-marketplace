@@ -39,6 +39,26 @@
   build (later milestone): Stripe capture + `ledger_transaction` + `booking_voucher` generation.
 - **Dispatcher mission detail + limited edit** — KEEP per Doc 02 (free edits while pooled; material
   edits after acceptance need re-consent). Not built yet; list view only.
+  - **Founder ask 2026-07-05: "edit a trip's info without impacting prices."** The concrete first slice of
+    this KEEP feature: let a Business edit the **pure-info** fields of a posted mission — Guest name(s) +
+    phones, flight number/ETA, reference, Driver & service card (languages, dress, request flags, name board,
+    private message), luggage/pax counts — **without recomputing the fare** (base/ceiling/SPEED WIN and the
+    geocoded distance stay untouched). **Hazard:** editing the **pickup/drop-off/stops** re-geocodes → changes
+    distance → *would* change price, so address edits are "material" (either blocked here, or a separate flow
+    that warns + needs re-consent when a Driver has accepted). Post-accept, an info edit should notify the
+    assigned Driver (deferred until notifications). Build behind the mission detail view.
+
+### Guard against midnight-edge date ambiguity (safety notification) ❓
+> Founder concern, 2026-07-05.
+- A pickup at **00h15 on Monday** is technically the very start of Monday (the Sunday→Monday midnight), but a
+  Driver reading "**Monday 00h15**" may assume **Monday *night*** (i.e. Monday→Tuesday, ~24h later) — a
+  potentially serious miss on a real transfer (e.g. Cannes → Monaco). We want a **"secure" confirmation** around
+  these edge-of-midnight / very-late / very-early hours so both sides read the same instant.
+- Ideas to explore (not decided): show the **weekday of BOTH the evening and the morning** for 00:00–~04:00
+  pickups ("**nuit de dimanche à lundi**, 00h15" / "night of Sun→Mon"); a small **inline confirm** on the form
+  when the time lands in the ambiguous band; and the same disambiguated label on the **Driver** Pool/detail +
+  the Business schedule. Pairs with the existing night-pickup nudge and the S31 guidance work. **Locale:** the
+  French "nuit de X à Y" phrasing is the natural fix. Capture now; design + build later.
 
 ## Navy / redesign follow-ups (parked Session 14)
 - **Driver "Complete ride" button colour** — `app/(app)/rides/status-control.tsx` uses a `success-btn`

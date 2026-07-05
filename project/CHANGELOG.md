@@ -6,6 +6,12 @@
 ---
 
 ## 5 July 2026
+- **The "late-night trip" hint moved to the Pricing box.** That amber note about night pickups being harder to fill
+  is really pricing advice ("raise your ceiling or use SPEED WIN"), so it now appears next to the ceiling and SPEED
+  WIN controls instead of under the date — where you can act on it right away.
+- **Testing: a driver can now preview the whole Pool.** For testing only (never on the live site), adding `?all=1`
+  to the Pool page shows *every* posted trip regardless of the driver's car or zone — so with one demo driver you can
+  see the luggage runs, vans, and luxury trips a single Class-E sedan would normally never be shown.
 - **The Calendar has been redesigned.** Two clearer views:
   - **Month** now reads as a *load map* — each trip is a proper little row (time + guest) with a colour bar down
     its left showing status, instead of the old faint tinted chips you couldn't tell apart. Past days are gently

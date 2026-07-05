@@ -47,6 +47,20 @@ both deep links land correctly (incl. past-day fold); Back/Forward restores the 
 renders in today's column at the correct minute; `tsc` clean. **Next:** founder to click the full loop on real data;
 Driver-app redesign + saved-addresses book still queued.
 
+**Post-review follow-ups (same session, founder feedback 2026-07-05):** calendar approved ("works fine"). Shipped:
+(1) **moved the night-pickup nudge from the Schedule card to the Pricing card** on `/dispatch/new` — it's pricing
+advice ("raise ceiling / SPEED WIN"), so it now sits under the SPEED WIN control it references; pure JSX relocation,
+logic unchanged (`components`… `mission-form.tsx`). Verified live: nudge renders in the Pricing card, Schedule card
+cleared. (2) **Dev-only Pool "see all"** — `app/(app)/pool/page.tsx` now takes `?all=1` (gated by the existing
+`NODE_ENV/VERCEL` hosted-check, same idiom as dev-login/seed, so it NEVER ships to real drivers): bypasses the
+tier/zone/body/luggage/specific-car filters so one demo Driver can test the whole Pool. The Class-E sedan demo driver
+now sees van/luxury/eco **and the luggage run** — unblocks pool testing. A dev-only banner links between "my matches"
+and "show all". Captured to IDEAS: (a) **edit a posted mission's INFO without touching price** (the founder's ask —
+first slice of the KEEP "limited edit" feature; info fields only, addresses/waypoints are the price-hazard to gate;
+note `currentFare` doesn't read distance today so info edits are price-safe now, but gate for future distance pricing);
+(b) **midnight-edge date ambiguity** ("Monday 00h15" = the Sun→Mon night — a Driver could misread it) → a "nuit de X à
+Y" disambiguation safeguard. Neither built yet.
+
 ## 2026-07-04 — Session 32 — Luggage-vehicle Phase 1 ("van for luggage": trip-type toggle · Driver opt-in · Pool label)
 **Branch:** `main`. **Migration (founder RAN it live 2026-07-04):** `docs/migrations/2026-07-04_luggage_run_phase1.sql`
 — 2 additive columns: `mission.luggage_only boolean default false`, `driver.accepts_luggage_runs boolean default false`.

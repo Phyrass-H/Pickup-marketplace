@@ -538,11 +538,6 @@ export function MissionForm({
                   {prettyParisLocal(pickupAt)} · Europe/Paris
                 </p>
               )}
-              {nightHint && (
-                <div className="notice warn" style={{ margin: "10px 0 0" }}>
-                  {nightHint}
-                </div>
-              )}
             </div>
 
             {/* Trip details */}
@@ -692,6 +687,11 @@ export function MissionForm({
                   fast for near-instant pickup
                 </span>
               </label>
+              {nightHint && (
+                <div className="notice warn" style={{ margin: "12px 0 0" }}>
+                  {nightHint}
+                </div>
+              )}
             </div>
           </div>
 
