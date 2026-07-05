@@ -294,6 +294,7 @@ export interface Database {
           created_at: string;
           accepted_at: string | null;
           confirmed_at: string | null;
+          info_edited_at: string | null; // set by updateMissionInfo on an info-only edit (2026-07-05 migration)
         };
         Insert: {
           id?: string;
@@ -347,6 +348,7 @@ export interface Database {
           created_at?: string;
           accepted_at?: string | null;
           confirmed_at?: string | null;
+          info_edited_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mission"]["Insert"]>;
         Relationships: [];

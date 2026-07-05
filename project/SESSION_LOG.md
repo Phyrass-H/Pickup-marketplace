@@ -39,6 +39,19 @@ the row expanded; **reference + message persisted, and Fare 67,50 € · ceiling
 "In the Pool" ALL UNCHANGED.** `tsc` clean; no console errors. **Adversarial 2-lens review (security + parity, Opus,
 51 tool calls) → 0 findings** (price-safety invariant + createMission parity both hold).
 
+**Follow-up (founder feedback, same day):** two polish asks on the edit feature.
+- **Edit button placement** — it was at the BOTTOM of the expanded trip detail (expand + scroll = unintuitive). Moved
+  it to the **TOP-right of the detail** as a filled navy button (first thing you see on expand). D25 mockup: founder
+  picked "top of detail only" (declined a row-level pencil). No schema — shipped first (`5e6a0cb`).
+- **"Edited" mention** — founder wanted a simple edited indicator **in the trip detail only, NOT on the collapsed row**
+  (declined per-item "what changed" — that's really a Driver-notification feature, deferred to the edit Phase 3).
+  Migration `docs/migrations/2026-07-05_mission_info_edited_at.sql` (`mission.info_edited_at timestamptz`, founder RAN
+  it live). `updateMissionInfo` stamps `info_edited_at = now()` on every info edit (never on price/route/status).
+  `trip-row.tsx` shows **"Edited · <time>"** (via `formatDateTime`) at the top-left of the detail edit bar, kept even
+  after the trip is frozen; **never rendered on the collapsed `<summary>` row.** `lib/database.types.ts` updated (Row +
+  Insert). Verified live: edit → "Edited · dim. 05 juil., 18:51" shows in the detail, absent from the row, ceiling
+  unchanged. `tsc` clean.
+
 ## 2026-07-05 — Session 33 — Calendar redesign (month load-map + week time-grid + trip-focused day panel)
 **Branch:** `main`. **No schema change.** Files: `components/dispatch-calendar.tsx` (full rewrite),
 `app/(dispatch)/dispatch/calendar/page.tsx`, `app/(dispatch)/dispatch/calendar/loading.tsx` (new),

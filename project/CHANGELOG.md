@@ -6,6 +6,10 @@
 ---
 
 ## 5 July 2026
+- **Edit polish:** the **"Edit details"** button now sits at the **top** of an expanded trip (it was at the bottom,
+  easy to miss). And once a trip's info has been edited, the detail shows a quiet **"Edited · ⟨time⟩"** stamp so you
+  can see it was changed and when — shown only inside the trip detail, never on the schedule row. (Needed a one-line
+  database change — done.)
 - **You can now edit a posted trip's details — without changing the price.** Expand a trip on the schedule and click
   **"Edit details"** to update the info a Driver sees: the guest names and phone numbers, flight number, luggage,
   your reference tag, and the whole Driver-and-service card (languages, dress code, requests, name board, private

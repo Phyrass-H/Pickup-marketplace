@@ -108,6 +108,9 @@ export async function updateMissionInfo(missionId: string, formData: FormData) {
     driver_flags: Object.keys(driverFlags).length > 0 ? driverFlags : null,
     board_name: boardName || null,
     driver_message: driverMessage || null,
+    // Stamp the info-edit time — shown as "Edited · <time>" in the trip detail.
+    // Set ONLY here (an info edit), never by a price/route/status change.
+    info_edited_at: new Date().toISOString(),
   };
 
   const supabase = await createClient();

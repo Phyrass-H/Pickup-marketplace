@@ -75,6 +75,8 @@ export function TripRow({
     (mission.status === "pooled" ||
       mission.status === "accepted" ||
       mission.status === "confirmed");
+  // "Edited · time" stamp — when the info was last edited (null = never).
+  const editedAt = mission.info_edited_at;
   const languages = parseLanguages(mission.required_languages);
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);
@@ -193,12 +195,19 @@ export function TripRow({
       <div className="dx-trip__detail">
         {/* Edit the trip's info (guests, flight, reference, Driver & service) — no
             price/route change. At the top of the detail so it's the first thing you
-            see. Only while pre-departure; frozen once executing/done. */}
-        {editable && (
+            see; only while pre-departure. The "Edited · time" stamp shows in the
+            detail (never the row) once the info has been edited — kept even after the
+            trip is frozen, so the record stays visible. */}
+        {(editable || editedAt) && (
           <div className="dx-trip__edit">
-            <Link href={`/dispatch/${mission.id}/edit`} className="dx-trip__editbtn">
-              <Pencil size={14} aria-hidden /> Edit details
-            </Link>
+            {editedAt && (
+              <span className="dx-trip__edited">Edited · {formatDateTime(editedAt)}</span>
+            )}
+            {editable && (
+              <Link href={`/dispatch/${mission.id}/edit`} className="dx-trip__editbtn">
+                <Pencil size={14} aria-hidden /> Edit details
+              </Link>
+            )}
           </div>
         )}
 
