@@ -1152,6 +1152,22 @@ textarea::placeholder {
 .dx-tg__now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--accent); z-index: 3; pointer-events: none; }
 .dx-tg__now span { position: absolute; left: -3px; top: -4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 
+/* ---- Edit trip info page (/dispatch/[id]/edit) ---- */
+.ex-wrap { max-width: 720px; }
+.ex-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ex-back { font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.ex-back:hover { text-decoration: underline; }
+.ex-lock { background: var(--surface-2); margin-bottom: 16px; }
+.ex-meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--text-muted); }
+.ex-meta b { color: var(--text); font-weight: 600; }
+.ex-locknote { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 9px 11px; background: var(--tone-neutral-bg); border-radius: var(--radius-md); font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.ex-form .card { margin-bottom: 14px; }
+.ex-actions { display: flex; gap: 10px; align-items: center; }
+/* "Edit details" entry link in the expanded schedule trip detail */
+.dx-trip__actions { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-light, #eef1f5); }
+.dx-editlink { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.dx-editlink:hover { text-decoration: underline; }
+
 /* ---- Day peek drawer ---- */
 .dx-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
 .dx-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 92vw; background: var(--surface); z-index: 41; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: dx-slide 0.18s var(--ease); }

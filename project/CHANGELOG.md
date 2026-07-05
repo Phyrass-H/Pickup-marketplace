@@ -6,6 +6,13 @@
 ---
 
 ## 5 July 2026
+- **You can now edit a posted trip's details — without changing the price.** Expand a trip on the schedule and click
+  **"Edit details"** to update the info a Driver sees: the guest names and phone numbers, flight number, luggage,
+  your reference tag, and the whole Driver-and-service card (languages, dress code, requests, name board, private
+  message). The trip's **price, route and time stay locked** — those are shown at the top for context but can't be
+  changed here (changing the destination or adding a stop is a separate step the Driver has to approve, coming later).
+  Editing is only offered while a trip is still upcoming — once a Driver starts the run, or the trip is finished, the
+  details are frozen. Saving drops you back on the schedule with that trip open.
 - **The "late-night trip" hint moved to the Pricing box.** That amber note about night pickups being harder to fill
   is really pricing advice ("raise your ceiling or use SPEED WIN"), so it now appears next to the ceiling and SPEED
   WIN controls instead of under the date — where you can act on it right away.

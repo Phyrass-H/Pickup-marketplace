@@ -1,0 +1,148 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { getAppContext } from "@/lib/app-context";
+import {
+  parsePassengers,
+  primaryPassengerName,
+  passengerRowData,
+  guestContacts,
+} from "@/lib/passengers";
+import { parseLanguages, parseDriverFlags, DRESS_CODES } from "@/lib/driver-service";
+import {
+  DOCS_BUCKET,
+  ensureBucket,
+  uploadFile,
+  fileExt,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/supabase/storage";
+import type { MissionStatus } from "@/lib/database.types";
+
+const BOARD_MIME = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+
+// Info edits are allowed only while the trip is still pre-departure. Once a
+// Driver is executing (en_route+) or the trip is terminal, its details are frozen.
+// A material change after acceptance (route / price / time) is a separate,
+// consented "amendment" flow — NOT this action (see IDEAS.md, Phase 2).
+const EDITABLE_STATUSES: MissionStatus[] = ["pooled", "accepted", "confirmed"];
+
+function num(v: FormDataEntryValue | null): number | null {
+  if (v == null || String(v).trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Update ONLY the info a Driver sees on a posted mission — no price, no route,
+// no timing. The fare (PDP curve), Pool matching and status are untouched, so the
+// deal a Driver accepted can't move underneath them. Written via the USER session
+// so RLS (p_mission_business_update) authorises it; the app additionally whitelists
+// the columns (there is no column-level RLS) and guards the status atomically.
+export async function updateMissionInfo(missionId: string, formData: FormData) {
+  const ctx = await getAppContext();
+  if (!ctx.user) redirect("/login");
+  if (!ctx.dispatcher || !ctx.business) redirect("/onboarding-business");
+
+  const id = String(missionId ?? "").trim();
+  if (!id) redirect("/dispatch");
+  const backTo = (err: string) => `/dispatch/${id}/edit?error=${err}`;
+
+  // Read-only context passed from the form (mirrors createMission's gating): a
+  // luggage-only run carries no passengers, so its passenger fields stay null.
+  // Never WRITTEN — only read to decide how to null the passenger columns.
+  const luggageOnly = formData.get("luggage_only") === "1";
+
+  const passengers = parsePassengers(formData.get("passenger_names"));
+  const hasGuestData = passengers.some((p) => p.first || p.last || p.phone);
+  const passengerName = primaryPassengerName(passengers);
+  const paxCount = passengers.length > 0 ? passengers.length : null;
+
+  const flightNumber = String(formData.get("flight_number") ?? "").trim();
+  const reference = String(formData.get("reference") ?? "").trim().slice(0, 20);
+  const luggageCount = num(formData.get("luggage_count"));
+  const requiredLanguages = parseLanguages(formData.get("required_languages"));
+  const dressRaw = String(formData.get("dress_code") ?? "").trim();
+  const dressCode = (DRESS_CODES as readonly string[]).includes(dressRaw) ? dressRaw : null;
+  const driverFlags = parseDriverFlags(formData.get("driver_flags"));
+  const boardName = String(formData.get("board_name") ?? "").trim();
+  const driverMessage = String(formData.get("driver_message") ?? "").trim();
+
+  // Meet & greet board file → private "documents" bucket. Same as createMission:
+  // only WRITE board_file_path when a new file was uploaded (conditional spread),
+  // so saving without a new file/clear leaves the existing board untouched. A
+  // failed upload is non-fatal.
+  let boardUpload: { board_file_path: string | null } | Record<string, never> = {};
+  const boardFile = formData.get("board_file");
+  if (
+    boardFile instanceof File &&
+    boardFile.size > 0 &&
+    boardFile.size <= MAX_UPLOAD_BYTES &&
+    BOARD_MIME.includes(boardFile.type)
+  ) {
+    try {
+      await ensureBucket(DOCS_BUCKET, false);
+      const path = `mission/${ctx.business.id}/board-${crypto.randomUUID()}.${fileExt(boardFile)}`;
+      await uploadFile(DOCS_BUCKET, path, boardFile);
+      boardUpload = { board_file_path: path };
+    } catch {
+      boardUpload = {};
+    }
+  }
+  if (Object.keys(boardUpload).length === 0 && formData.get("board_file_clear") === "1") {
+    boardUpload = { board_file_path: null };
+  }
+
+  // INFO-ONLY whitelist. Deliberately EXCLUDES everything price/route/matching:
+  // base_fare, ceiling, pdp_*, speed_win, created_at, category, pickup*/dropoff*,
+  // waypoints, distance_km, duration_min, zone, status, luggage_only, required_*.
+  const infoRow = {
+    passenger_name: luggageOnly ? null : passengerName || null,
+    passenger_names: luggageOnly ? null : hasGuestData ? passengerRowData(passengers) : null,
+    pax_count: luggageOnly ? null : paxCount,
+    luggage_count: luggageCount,
+    flight_number: flightNumber || null,
+    reference: reference || null,
+    required_languages: requiredLanguages.length > 0 ? requiredLanguages : null,
+    dress_code: dressCode,
+    driver_flags: Object.keys(driverFlags).length > 0 ? driverFlags : null,
+    board_name: boardName || null,
+    driver_message: driverMessage || null,
+  };
+
+  const supabase = await createClient();
+  // Atomic guard: the .in(status) both enforces "still editable" AND avoids a
+  // TOCTOU race with an accept/status change landing mid-edit. 0 rows → wrong
+  // owner (RLS), or the trip is now locked/gone.
+  const { data: updated, error } = await supabase
+    .from("mission")
+    .update({ ...infoRow, ...boardUpload })
+    .eq("id", id)
+    .eq("business_id", ctx.business.id)
+    .in("status", EDITABLE_STATUSES)
+    .select("id");
+  if (error) redirect(backTo("db"));
+  if (!updated || updated.length === 0) redirect(backTo("locked"));
+
+  // Guest phones (Driver-unreadable side table), aligned by index — same
+  // upsert-else-delete as createMission. Only after the mission update matched a
+  // row, so a rejected edit never leaves an orphan contacts row.
+  const contacts = guestContacts(passengers);
+  const { error: contactErr } = contacts.some((c) => c.phone)
+    ? await supabase.from("mission_guest_contact").upsert({
+        mission_id: id,
+        contacts,
+        updated_at: new Date().toISOString(),
+      })
+    : await supabase.from("mission_guest_contact").delete().eq("mission_id", id);
+  if (contactErr) {
+    console.error("mission_guest_contact write failed:", contactErr.message);
+  }
+
+  // Refresh every Dispatch surface that shows mission info, then land back on the
+  // schedule with the edited trip expanded (reuses the ?open= deep link).
+  revalidatePath("/dispatch", "layout");
+  revalidatePath("/dispatch/calendar");
+  revalidatePath("/dispatch/history");
+  redirect(`/dispatch?open=${id}`);
+}

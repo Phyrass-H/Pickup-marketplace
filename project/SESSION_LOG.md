@@ -5,6 +5,40 @@
 
 ---
 
+## 2026-07-05 — Session 34 — Edit a posted trip's INFO without touching price (mission edit, Phase 1)
+**Branch:** `main`. **No schema change.** New: `app/(dispatch)/dispatch/[id]/edit/{page.tsx,edit-form.tsx,actions.ts}`.
+Touched: `components/trip-row.tsx` ("Edit details" link + `editable` flag), `app/globals.css` (`.ex-*` / `.dx-editlink`).
+**D25 preview** signed off ("ok"). First slice of the KEEP "limited edit" feature (Doc 02); design phased with the
+founder — Phase 2 (amendment/consent for material changes) + Phase 3 (auto-delta + notifications) are in IDEAS.
+
+**Shipped:** a Business can edit the **info a Driver sees** on a posted mission — Guest names + phones (+ share),
+flight number, luggage, reference, and the whole Driver & service card (languages, dress, request flags, meet &
+greet board + file, private message) — **without changing the price, route, or time.**
+- **New route `/dispatch/[id]/edit`** (server `page.tsx`): loads the one mission + its `mission_guest_contact` phones
+  (RLS-scoped), renders a **read-only "locked" header** (route rail · time · `Fare (now)` · ceiling · status pill,
+  via `missionTone`) with a note that route/price changes are the Phase-2 amendment flow, then the editable form. If
+  the trip isn't editable it shows a "frozen" notice instead of the form.
+- **`edit-form.tsx`** (client) **reuses the exact new-mission components** — `PassengerList`, `ReferenceField`,
+  `DriverServiceFields` — pre-filled the SAME way the form seeds a resumed draft (`mergeContacts` + `splitFullName`
+  fallback + pad to `pax_count` bounded `VAN_SEATS`; `parseLanguages`/`parseDriverFlags`/`hasBoardFile`). Tier for the
+  dress-code default derives from `mission.category` (SERVICE_TIERS, legacy `van`→business fallback). A luggage-only
+  run hides the Guests card. `useFormStatus` Save button ("Saving…"), multipart for the board file.
+- **`actions.ts` `updateMissionInfo(id, formData)`** — the safety core. **Whitelists ONLY info columns**; the UPDATE
+  object literal can't receive price/route fields, so `base_fare/ceiling/pdp_*/speed_win/created_at/category/pickup*/
+  dropoff*/waypoints/distance_km/duration_min/zone/status/luggage_only/required_*` are all untouched → the PDP curve
+  and Pool matching can't move. **Atomic status guard** via `.in("status",["pooled","accepted","confirmed"])` on the
+  update (+ `business_id` eq + RLS) — no TOCTOU with a mid-edit accept; 0 rows → `?error=locked`. Mirrors createMission
+  for passenger parsing, the board-file upload/clear conditional-spread (keeps an existing board when no new file), and
+  the `mission_guest_contact` upsert-else-delete (only after the row update matched — no orphan). Redirects to
+  `/dispatch?open=<id>` (reuses the Session-33 deep link → row expands + scrolls). `revalidatePath` schedule/calendar/history.
+- **Entry point:** an "Edit details" link in the expanded schedule trip detail, shown only while `pooled/accepted/confirmed`.
+
+**Verified live** (localhost, real Supabase DB): edit link appears on an editable trip → edit page renders (locked
+header Eco·Van €67.50/ceiling €90, all 3 cards) → set reference + driver message → save → redirected to `?open=` with
+the row expanded; **reference + message persisted, and Fare 67,50 € · ceiling 90,00 € · route 9.7 km/18 min · status
+"In the Pool" ALL UNCHANGED.** `tsc` clean; no console errors. **Adversarial 2-lens review (security + parity, Opus,
+51 tool calls) → 0 findings** (price-safety invariant + createMission parity both hold).
+
 ## 2026-07-05 — Session 33 — Calendar redesign (month load-map + week time-grid + trip-focused day panel)
 **Branch:** `main`. **No schema change.** Files: `components/dispatch-calendar.tsx` (full rewrite),
 `app/(dispatch)/dispatch/calendar/page.tsx`, `app/(dispatch)/dispatch/calendar/loading.tsx` (new),

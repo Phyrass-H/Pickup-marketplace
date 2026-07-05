@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Pencil } from "lucide-react";
 import type { MissionRow } from "@/lib/database.types";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
@@ -66,6 +68,13 @@ export function TripRow({
     mission.status === "completed" ||
     mission.status === "cancelled" ||
     mission.status === "expired";
+  // Info edits allowed only while the trip is pre-departure (matches the edit
+  // page + action guard). Hidden on history rows.
+  const editable =
+    !archived &&
+    (mission.status === "pooled" ||
+      mission.status === "accepted" ||
+      mission.status === "confirmed");
   const languages = parseLanguages(mission.required_languages);
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);
@@ -352,6 +361,16 @@ export function TripRow({
                 />
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Edit the trip's info (guests, flight, reference, Driver & service) — no
+            price/route change. Only while pre-departure; frozen once executing/done. */}
+        {editable && (
+          <div className="dx-trip__actions">
+            <Link href={`/dispatch/${mission.id}/edit`} className="dx-editlink">
+              <Pencil size={14} aria-hidden /> Edit details
+            </Link>
           </div>
         )}
       </div>

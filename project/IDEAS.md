@@ -37,16 +37,36 @@
   `supabase_realtime` publication and swap `LiveRefresh` for a channel subscription.
 - **Completion side effects** — when a Driver marks `completed`, we only set the status. Still to
   build (later milestone): Stripe capture + `ledger_transaction` + `booking_voucher` generation.
-- **Dispatcher mission detail + limited edit** — KEEP per Doc 02 (free edits while pooled; material
-  edits after acceptance need re-consent). Not built yet; list view only.
-  - **Founder ask 2026-07-05: "edit a trip's info without impacting prices."** The concrete first slice of
-    this KEEP feature: let a Business edit the **pure-info** fields of a posted mission — Guest name(s) +
-    phones, flight number/ETA, reference, Driver & service card (languages, dress, request flags, name board,
-    private message), luggage/pax counts — **without recomputing the fare** (base/ceiling/SPEED WIN and the
-    geocoded distance stay untouched). **Hazard:** editing the **pickup/drop-off/stops** re-geocodes → changes
-    distance → *would* change price, so address edits are "material" (either blocked here, or a separate flow
-    that warns + needs re-consent when a Driver has accepted). Post-accept, an info edit should notify the
-    assigned Driver (deferred until notifications). Build behind the mission detail view.
+- **Dispatcher mission edit — KEEP per Doc 02** (free edits while pooled; material edits after acceptance need
+  re-consent). Design agreed with the founder 2026-07-05, phased. The **line that decides everything: has a Driver
+  accepted yet?** Pooled = the mission is nobody's → edit anything freely (no consent). Accepted+ = two parties in
+  a deal and **PickUp is the AGENT between them, not the boss** → a material change is a *proposed amendment the
+  Driver accepts or declines* (this is what keeps us an intermediary AND keeps the deal honest — the Driver
+  consents to the new price + time).
+  - **Phase 1 — info-only edit (BUILDING NOW, Session 34).** Let a Business edit the **pure-info** fields of a
+    posted mission — Guest name(s) + phones, flight number/ETA, reference, Driver & service (languages, dress,
+    request flags, name board, private message), luggage/pax counts — **without recomputing the fare**
+    (base/ceiling/SPEED WIN + geocoded distance untouched). No consent needed (info doesn't change the deal).
+    **Excludes** pickup/drop-off/stops (re-geocode → distance → material) and the required vehicle (matching).
+    RLS already allows a Business to UPDATE its own non-draft mission; the app **whitelists** the info columns
+    (no column-level RLS). Allowed on pooled/accepted/confirmed; blocked once en_route+ / terminal.
+  - **Phase 2 — the amendment model (BACKLOG).** A material change (new destination / add a stop) after a Driver
+    accepted, as a **propose → accept/decline** on the mission (a mini `accept_mission`: atomic, consented, with
+    an audit trail). Flow: Business proposes → app shows the **delta** (new route + ETA + a price change) → Driver
+    sees "add a stop at X · +12 min · +€15 — accept?" and taps **accept/decline** → on accept the terms swap
+    atomically, on decline nothing changes. The **app is the system of record even if they talk by phone** (beta:
+    dispatch calls, they agree, dispatch proposes in-app, the Driver's **tap is the binding step**). **Price:** the
+    app *suggests* the delta and the Driver *consents* — never silently applied. ⚠️ today's fare isn't
+    distance-based (PDP climb), so **no auto "+€X for N km" yet** — the Dispatcher types the delta and the app shows
+    the new km/ETA to justify it (auto-fills once the pricing engine lands — [[d37]]). **Timing:** reuse the
+    `accept_mission` **slot-conflict** check to warn the Driver "this ends 16:40 — you have a pickup 16:30" before
+    he accepts. **Decline path:** trip stays as agreed, or the Business cancels (needs the O7 cancel/re-pool flow,
+    also not built). Accept/decline only in v1 — no counter-offer haggle loop (a decline just prompts a phone call
+    + re-proposal).
+  - **Phase 3 — polish (BACKLOG).** Auto-computed price delta (the founder's **pricing engine**) + real
+    **notifications** (Resend / push — deferred) so the Driver is alerted to a pending amendment without watching
+    the app + an optional lightweight in-app note attached to the proposal ("could we add a stop please? +€15").
+    Depends on both the pricing model and notifications (both deferred integrations).
 
 ### Guard against midnight-edge date ambiguity (safety notification) ❓
 > Founder concern, 2026-07-05.
