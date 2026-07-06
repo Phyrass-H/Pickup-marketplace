@@ -13,21 +13,22 @@ START BY READING — **just these four**; they get you fully up to date without 
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 30–32, 2026-07-03/04)** for recent technical
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 33–34, 2026-07-05)** for recent technical
   detail. Older sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
 - `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
 - `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
-  **D38**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+  **D39**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
 - `project/GUIDANCE_AUDIT.md` — the full in-app guidance inventory + gaps + roadmap (for any guidance/microcopy work).
 - `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
   `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
-  `2026-07-04_luggage_run_phase1`) — **ONLY** for schema/data work. (All applied to the live DB.)
+  `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`) — **ONLY** for schema/data work.
+  (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -132,6 +133,28 @@ CURRENT STATE (live, deployed from `main`):
     enrollment/settings (off by default); the **Pool routes luggage runs only to opted-in Van Drivers** and labels them
     **"Luggage run · no passengers · N bags"** (Pool card + Driver detail + Business schedule). Phase 2 (V2) = real
     cargo/truck classes by volume + the grouped car+van booking. [[d38]]
+- **Shipped 2026-07-05 (Sessions 33–34) — all live ([[d39]]):**
+  - **S33 — Calendar redesign** (no schema): the Dispatch calendar rebuilt into a **month "load-map"** (readable
+    status-railed chips instead of near-white pastel tints, past-day dimming, a **status legend**, honest month-total
+    KPIs) + a **week vertical time-grid** (hour axis, day headers, uniform cards at pickup time, overlap lane-splitting,
+    a client-only navy "now" line) + a **trip-focused day panel** (click any chip/card → panel opens with THAT trip
+    expanded). **Deep links** `/dispatch?open=<id>` (row expands + scrolls, opens the past-day fold) and
+    `/dispatch?day=<key>` (`components/scroll-to-trip.tsx`). View+week persist in the URL (reload/Back-Forward safe).
+    Founder rejected a horizontal hotel-tape-chart + duration-scaled cards ("a trip is a pickup moment"). Files:
+    `components/dispatch-calendar.tsx` (rewrite), `app/(dispatch)/dispatch/calendar/{page,loading}.tsx`. 13-agent
+    adversarial review → 7 findings fixed (incl. a real hydration mismatch on the now-line → gated client-only).
+  - **S33 follow-ups (no schema):** the **night-pickup nudge moved from the Schedule card to the Pricing card** on
+    `/dispatch/new` (it's pricing advice). **Dev-only Pool `?all=1`** (gated by the `NODE_ENV/VERCEL` hosted-check, like
+    dev-login) bypasses the tier/zone/body/luggage filters so ONE demo Driver can test the whole Pool (a Class-E sedan
+    now sees van/luxury/luggage runs). `app/(app)/pool/page.tsx`.
+  - **S34 — Edit a posted trip's INFO without changing price** (migration `2026-07-05_mission_info_edited_at`): new
+    route **`/dispatch/[id]/edit`** — a Business edits the info a Driver sees (guests+phones, flight, luggage, reference,
+    Driver & service) with **price/route/time locked**. `updateMissionInfo` **whitelists only info columns** (never
+    `base_fare/ceiling/pdp_*/created_at/category/pickup*/dropoff*/waypoints/distance/duration/zone/status`), atomic
+    status guard (`.in pooled/accepted/confirmed`), mirrors createMission for parsing + board-file + guest-contact
+    upsert. Reuses the exact new-mission info sub-components (`PassengerList`/`ReferenceField`/`DriverServiceFields`).
+    Entry = **"Edit details" at the TOP of the expanded trip detail**; an **"Edited · <time>"** stamp shows in the
+    detail ONLY (never the collapsed row), stamped by `info_edited_at`. Security+parity review → 0 findings. [[d39]]
 - **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
   couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
@@ -143,19 +166,37 @@ Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a l
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP (features/polish phase). Sessions 30–32 shipped the topbar account chip, the mission-form
-input-driven nudges (+ a full guidance audit), and **luggage-vehicle Phase 1**. **PRICING is IN PROGRESS — the founder
-is working on the model themselves** (how a Ceiling / base-fare is estimated; one-way vs round-trip). Key principle to
-respect: **[[d37]] — NO empty-return charge**; a smart trajectory-based Pool solves the deadhead instead. Don't build a
-pricing engine until the founder brings the rule; the **suggested Ceiling/base-fare range** on the form (highest-leverage
-guidance win) waits on it. Everything below is buildable now, no third-party APIs; any NEW field = a small founder-run
-additive migration:
+RECOMMENDED NEXT STEP — **the founder named TWO things for the next session (do these first):**
+
+**A. Mission-edit Phase 2 — the amendment / consent flow** (the founder will drive this). Design agreed 2026-07-05 and
+   captured in **`project/IDEAS.md`** ("Dispatcher mission edit" entry) + **[[d39]]**. Read that first. The gist: Phase 1
+   (info-only edit, no consent) is DONE; Phase 2 handles a **material change after a Driver accepted** — change
+   destination / add a stop — as a **propose → accept/decline** on the mission (a mini `accept_mission`: atomic,
+   consented, audit trail). Business proposes → app shows the **delta** (new route + ETA + a price change) → the Driver
+   accepts/declines → on accept the terms swap atomically. The **app is the system of record even if they talk by phone**
+   (beta: dispatch calls, agrees, proposes in-app, the Driver's tap is binding). ⚠️ **Dependencies:** the price delta is
+   **manual for now** (today's fare isn't distance-based — it's the PDP climb; auto-delta waits on the founder's pricing
+   engine); full real-time push waits on **notifications** (deferred). Reuse the `accept_mission` **slot-conflict** check
+   to warn the Driver ("this ends 16:40 — you have a pickup 16:30"). Decline path → trip stays as agreed or the Business
+   cancels (needs O7 cancel/re-pool, not built). **Accept/decline only** in v1 (no counter-offer haggle). Do the D25
+   preview of the Driver's "accept this change" card first — that card IS the UX.
+**B. Improve the visual of the UNFOLDED (expanded) trip row.** The founder wants the expanded `.dx-trip__detail` (in
+   `components/trip-row.tsx`, styled in `app/globals.css`) redesigned — it's currently a plain `.route` leg list + a
+   flat `.kv` definition grid + the guests block + the new top edit-bar ("Edit details" button + "Edited · time" stamp).
+   Make it read better / more scannable / more polished. **UI job → D25 preview loop first** (inline mockup from the real
+   navy tokens + a real mission's data), founder sign-off, then build. No schema. (Pairs naturally with the calendar's
+   day-panel styling from S33 — keep the two coherent.)
+
+**PRICING is IN PROGRESS — the founder is working on the model themselves** (how a Ceiling / base-fare is estimated;
+one-way vs round-trip). Respect **[[d37]] — NO empty-return charge** (a smart trajectory Pool solves the deadhead). Don't
+build a pricing engine until the founder brings the rule; the **suggested Ceiling/base-fare range** on the form + the
+Phase-2 **auto price-delta** both wait on it. Everything below is buildable now, no third-party APIs; any NEW field = a
+small founder-run additive migration:
 1. **Mission-form guidance — Tier 2** (see `project/GUIDANCE_AUDIT.md`; mostly NO schema): a small **"?" glossary
    tooltip** for the core terms (Ceiling, Pool, SPEED WIN, Lock-in, the status pills — taught in fragments today,
-   defined nowhere), a **Dispatch status legend**, and **Lock-in/T-180 in plain words** both sides. Plus **smart
-   "most-used" defaults** + wiring the Business **default vehicle class** (Settings → Booking defaults) into the form
-   (saved but not read yet). Keep it **non-invasive** ([[d36]]); concept teaching is largely the **standalone tutorial's**
-   job (the founder is building it).
+   defined nowhere), a **Dispatch status legend** (the S33 calendar already has one — reuse), and **Lock-in/T-180 in
+   plain words** both sides. Plus **smart "most-used" defaults** + wiring the Business **default vehicle class** (Settings
+   → Booking defaults) into the form (saved but not read yet). Keep it **non-invasive** ([[d36]]).
 2. **Saved-addresses address book** (BACKLOG § L) — the Business's own address is its **first saved place** (S29), and
    the pre-fill + **swap** plumbing already exists. Next: a small additive table for **multiple** saved addresses + a
    one-tap insert/picker on both ends of the new-mission Route card.
@@ -166,10 +207,11 @@ additive migration:
    partly separate fleet) + the grouped **car + luggage van** booking (the CUT grouped-mission feature; the cargo leg
    can "stop before the end" of the passenger trip). Bundle with the **Exception tier** (Rolls/Bentley above First) /
    Bus tier / First-van / PRM taxonomy expansion.
-(✅ shipped 2026-07-03/04, S30–S32 — see the "Shipped" block in CURRENT STATE + [[d35]]–[[d38]]: the topbar account chip;
-the 2 input-driven nudges + guidance audit; luggage-vehicle Phase 1. Earlier S25–S29 ([[d31]]–[[d34]]): schedule
-responsive; per-stop progress; new-mission validation; Business settings area; business-neutral saved address. ❌ the
-founder **declined** the sidebar-spacing tweak — leave it.)
+(✅ shipped 2026-07-05, S33–S34 — see the "Shipped" block + [[d39]]: calendar redesign; night-nudge→Pricing; dev Pool
+see-all; mission-edit Phase 1 + placement + "Edited" stamp. Earlier S30–S32 ([[d35]]–[[d38]]): topbar account chip;
+input-driven nudges + guidance audit; luggage-vehicle Phase 1. ❌ the founder **declined**: the sidebar-spacing tweak
+(S-earlier); per-item "what changed" on edits (→ it's a Driver-notification feature, Phase 3); a row-level edit pencil
+(edit entry is top-of-detail only); horizontal calendar tape-chart + duration-scaled week cards.)
 
 DEFERRED until the founder okays the integration phase: **Notifications (Resend)** — the #1 functional gap
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);

@@ -397,6 +397,29 @@ grouped **car + luggage van** on one booking is the **CUT grouped-mission** feat
 (the "20 m³" idea, likely a partly separate fleet). Migration `2026-07-04_luggage_run_phase1` (additive; founder ran
 it live). Preview signed off (D25).
 
+### D39 — Mission edit is PHASED; the line is "has a Driver accepted yet?"; Phase 1 = info-only, no consent (2026-07-05)
+S34. The KEEP "limited edit" (Doc 02) is built in phases, and the deciding principle is **whether a Driver has
+accepted**. **Pooled** = the mission is nobody's → the Business edits anything freely (no consent). **Accepted+** =
+two parties in a deal and **PickUp is the AGENT between them, not the boss** → a *material* change (route/price/time)
+must be a **proposed amendment the Driver accepts or declines** (this is what keeps us an intermediary AND keeps the
+deal honest — the Driver consents to the new price/time).
+- **Phase 1 (SHIPPED):** info-only edit of a posted mission (guests+phones, flight, luggage, reference, Driver &
+  service) with **no consent** (info doesn't change the deal) and **no price movement** — `updateMissionInfo`
+  whitelists only info columns (never `base_fare/ceiling/pdp_*/created_at/category/pickup*/dropoff*/waypoints/distance/
+  duration/zone/status`), atomic status guard (`pooled/accepted/confirmed`), RLS + `business_id` ownership. Migration
+  `2026-07-05_mission_info_edited_at` stamps `info_edited_at`. **UX decisions:** edit entry = **"Edit details" at the
+  TOP of the expanded trip detail** (founder rejected a row-level pencil); an **"Edited · time"** stamp shows in the
+  **detail only, never the collapsed row** (founder's call); **per-item "what changed" was DECLINED** here — it's
+  really a *Driver-notification* feature, so it's deferred to Phase 3.
+- **Phase 2 (BACKLOG, founder to drive next):** the amendment model — change destination / add a stop after acceptance,
+  as **propose → accept/decline** (atomic + audited, like `accept_mission`). App shows the delta (route + ETA + a price
+  change), Driver taps accept/decline, terms swap atomically. **App is the system of record even if they agree by
+  phone.** Price delta is **manual for now** (fare isn't distance-based yet — the PDP climb; auto-delta waits on the
+  founder's pricing engine). Reuse `accept_mission`'s slot-conflict check to warn the Driver. Accept/decline only (no
+  counter-offer). Decline → trip unchanged or Business cancels (needs O7).
+- **Phase 3 (BACKLOG):** auto-computed delta (pricing engine) + notifications + an in-app "could we add a stop? +€X"
+  note. Full design in `project/IDEAS.md` ("Dispatcher mission edit"). Previews signed off (D25).
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
