@@ -20,8 +20,8 @@
     Driver's optional one-word reason, and buttons to **call them** or **adjust and re-send**. The trip stays as agreed.
   - Your tap (theirs, really) is the record — the app is the source of truth even if you sorted it out by phone first.
   - (The price change is one you type for now; automatic pricing comes with the pricing engine. Being alerted the
-    instant a change is proposed/answered — rather than seeing it on refresh — comes with notifications, later. Needs a
-    one-line database change — the SQL is ready for you to run.)
+    instant a change is proposed/answered — rather than seeing it on refresh — comes with notifications, later.) **Now
+    live** — the whole loop was tested against the real database (propose → accept, propose → decline, and adding a stop).
 
 ## 5 July 2026
 - **Edit polish:** the **"Edit details"** button now sits at the **top** of an expanded trip (it was at the bottom,

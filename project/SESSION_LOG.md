@@ -79,12 +79,16 @@ crash). **Propose screen renders end-to-end** for a real Confirmed trip (locked 
 € · +15,00 €" green, and the preview rail "130,00 € → 145,00 € +15,00 €"); the empty-route-diff path shows "Fare change
 only" (exercises `routeDiff`/`changeSummaryParts`). Driver rides page renders. **No console errors on any surface.** The
 two-pane collapses to stacked under the narrow preview panel (correct; side-by-side ≥ ~600px content).
-**NOT yet verifiable live** (needs the migration): the actual propose→insert, the Driver card with real data, the
-schedule pending/declined/accepted states, and the RPC apply. **Not pushed** — held until the founder runs the migration.
+**Then the founder RAN the migration** (2026-07-07) and the FULL loop was **verified live vs the real DB**: (1) a
+fare-only **propose → decline** (RPC decline branch; trip fare untouched; Business sees the reason + reassurance state);
+(2) a fare-only **propose → accept** (RPC accept branch; fare swapped 55→70 €, frozen; "Change accepted"); (3) a real
+**add-a-stop route change** — Business added "3 Bd de la Ferrage" (ETA recomputed 57 km · 1h13, fare 120→140 €) → the
+Driver card rendered the **highlighted new stop + badge** with the deltas → accept → the **mission genuinely swapped**
+(route now pickup → 3 Bd de la Ferrage → Pl. du Casino Monaco, Trip 57 km · 1h13, Fare 140 €). RLS (business insert +
+driver read), the atomic RPC (both branches), and the fare-freeze all confirmed. No console errors. **Pushed + deployed**
+(`fc63a37`; Vercel deployment SHA verified).
 
-**Next:** founder RUNS `docs/migrations/2026-07-07_mission_amendment.sql` in the Supabase SQL editor → then verify the
-full loop live (propose as Business → accept/decline as the assigned Driver → terms swap / trip unchanged) → push `main`.
-Then **Phase 3** (auto price-delta via the pricing engine + notifications so the Driver is alerted without watching the
+**Next:** **Phase 3** (auto price-delta via the pricing engine + notifications so the Driver is alerted without watching the
 app + an in-app "could we add a stop? +€X" note) — both wait on deferred integrations. Also queued: O7 cancel/re-pool
 (the decline "or Business cancels" path), the unfolded-trip-row redesign (founder's other named item), Driver app redesign.
 

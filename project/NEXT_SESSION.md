@@ -28,8 +28,7 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
   `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`,
-  `2026-07-07_mission_amendment`) — **ONLY** for schema/data work. (All applied to the live DB **except
-  `2026-07-07_mission_amendment` — ⚠️ the founder still needs to RUN this one** for Phase-2 mission-edit to work.)
+  `2026-07-07_mission_amendment`) — **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -169,16 +168,15 @@ the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate
 
 RECOMMENDED NEXT STEP:
 
-**A. ✅ Mission-edit Phase 2 — BUILT (S35, [[d40]]), awaiting the founder's migration + live verify + push.** The
-   amendment/consent flow shipped: a Business **Propose a change** screen (`/dispatch/[id]/amend` — route incl. pickup +
-   fare, live preview), a Driver **accept/decline card** with an optional decline reason + slot heads-up, the schedule
-   **pending / declined (with a calm reassurance) / accepted** states, and an atomic **`respond_to_amendment` RPC**
-   mirroring `accept_mission`. **⚠️ FIRST STEP NEXT SESSION:** the founder RUNS
-   `docs/migrations/2026-07-07_mission_amendment.sql` in the Supabase SQL editor (it's held — the code degrades
-   gracefully without it, but the feature is inert). Then verify the full loop live (propose as Business → accept/decline
-   as the assigned Driver → terms swap / trip stays) and **push `main`**. **Phase 3** (auto price-delta via the pricing
-   engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop? +€X" note)
-   stays deferred on those integrations. The **decline "or Business cancels" path needs O7** (cancel/re-pool, not built).
+**A. ✅ Mission-edit Phase 2 — SHIPPED + DEPLOYED (S35, 2026-07-07, [[d40]]; migration applied, full loop verified live).**
+   The amendment/consent flow is live: a Business **Propose a change** screen (`/dispatch/[id]/amend` — route incl. pickup
+   + fare, live preview), a Driver **accept/decline card** (in-context route diff + optional decline reason + slot
+   heads-up), the schedule **pending / declined (calm reassurance) / accepted** states, and the atomic
+   **`respond_to_amendment` RPC** mirroring `accept_mission`. Verified end-to-end on the real DB (fare accept + decline +
+   a real add-a-stop route change → the mission genuinely swapped). **Phase 3 is the future here** (auto price-delta via
+   the pricing engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop?
+   +€X" note) — deferred on those integrations. The **decline "or Business cancels" path needs O7** (cancel/re-pool, not
+   built). So the freshest open items are now **B (unfolded trip-row redesign)** + the pricing/guidance/address-book queue.
 
 **B. Improve the visual of the UNFOLDED (expanded) trip row.** The founder wants the expanded `.dx-trip__detail` (in
    `components/trip-row.tsx`, styled in `app/globals.css`) redesigned — it's currently a plain `.route` leg list + a
