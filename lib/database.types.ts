@@ -51,6 +51,10 @@ export type DocumentType =
 export type DocumentStatus = "pending" | "verified" | "rejected";
 export type PaymentStatus = "requires_capture" | "captured" | "refunded" | "failed";
 
+// mission_amendment.status is a text CHECK (Phase-2 edit / consent flow, D39):
+// proposed → accepted | declined, or superseded when the Business replaces it.
+export type AmendmentStatus = "proposed" | "accepted" | "declined" | "superseded";
+
 // status_event.status is a text CHECK, not the mission_status enum.
 export type StatusEventStatus = "en_route" | "arrived" | "on_board" | "completed";
 export type PreferredGps = "waze" | "google" | "apple";
@@ -369,6 +373,61 @@ export interface Database {
         >;
         Relationships: [];
       };
+      // Phase-2 mission edit (D39): a proposed change to an ACCEPTED mission's
+      // route + fare, awaiting the assigned Driver's consent. The audit trail; the
+      // atomic apply is the respond_to_amendment RPC. (2026-07-07 migration.)
+      mission_amendment: {
+        Row: {
+          id: string;
+          mission_id: string;
+          business_id: string;
+          proposed_by: string | null;
+          status: AmendmentStatus;
+          new_pickup_address: string;
+          new_pickup_lat: number | null;
+          new_pickup_lng: number | null;
+          new_pickup_label: string | null;
+          new_dropoff_address: string | null;
+          new_dropoff_lat: number | null;
+          new_dropoff_lng: number | null;
+          new_dropoff_label: string | null;
+          new_waypoints: Json | null;
+          new_distance_km: number | null;
+          new_duration_min: number | null;
+          new_fare: number;
+          from_snapshot: Json;
+          note: string | null;
+          decline_reason: string | null;
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          business_id: string;
+          proposed_by?: string | null;
+          status?: AmendmentStatus;
+          new_pickup_address: string;
+          new_pickup_lat?: number | null;
+          new_pickup_lng?: number | null;
+          new_pickup_label?: string | null;
+          new_dropoff_address?: string | null;
+          new_dropoff_lat?: number | null;
+          new_dropoff_lng?: number | null;
+          new_dropoff_label?: string | null;
+          new_waypoints?: Json | null;
+          new_distance_km?: number | null;
+          new_duration_min?: number | null;
+          new_fare: number;
+          from_snapshot: Json;
+          note?: string | null;
+          decline_reason?: string | null;
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["mission_amendment"]["Insert"]>;
+        Relationships: [];
+      };
       status_event: {
         Row: {
           id: string;
@@ -480,6 +539,13 @@ export interface Database {
         Args: { p_mission_id: string };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
+      // Driver's consent to a proposed amendment (Phase-2 edit, D39). Atomic +
+      // SECURITY DEFINER, like accept_mission. Accept applies the new route+fare;
+      // decline leaves the mission untouched. rpc('respond_to_amendment', {...}).
+      respond_to_amendment: {
+        Args: { p_amendment_id: string; p_accept: boolean; p_reason?: string | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
       app_role: { Args: Record<PropertyKey, never>; Returns: UserRole };
       current_driver_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_business_id: { Args: Record<PropertyKey, never>; Returns: string };
@@ -501,6 +567,7 @@ export interface Database {
 
 // ---------- Convenience row aliases ----------
 export type MissionRow = Database["public"]["Tables"]["mission"]["Row"];
+export type MissionAmendmentRow = Database["public"]["Tables"]["mission_amendment"]["Row"];
 export type DriverRow = Database["public"]["Tables"]["driver"]["Row"];
 export type VehicleRow = Database["public"]["Tables"]["vehicle"]["Row"];
 export type DispatcherRow = Database["public"]["Tables"]["dispatcher"]["Row"];

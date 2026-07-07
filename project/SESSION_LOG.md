@@ -5,6 +5,89 @@
 
 ---
 
+## 2026-07-07 — Session 35 — Mission edit PHASE 2: the amendment / consent flow (propose → accept/decline)
+**Branch:** `main`. **Migration (founder RUNS it):** `docs/migrations/2026-07-07_mission_amendment.sql` — a **new
+`mission_amendment` table** (+ RLS + 2 indexes) and the atomic **`respond_to_amendment` RPC**. Additive only; the base
+schema is untouched (hard-rule #4). **New files:** `lib/amendments.ts`, `app/(dispatch)/dispatch/[id]/amend/{page.tsx,
+amend-form.tsx,actions.ts}`, `components/amendment-card.tsx`. **Touched:** `lib/database.types.ts`,
+`components/{route-stops,trip-row}.tsx`, `app/(dispatch)/dispatch/{new/mission-form.tsx,page.tsx}`,
+`app/(app)/rides/{page.tsx,actions.ts}`, `app/globals.css`. **D25 previews** (4 driver-card iterations → the muted-ends
+route-diff card; the propose screen; the decline path) all signed off ("agreed go"). [[d40]]
+
+**Why (D39 Phase 2):** once a Driver has ACCEPTED, PickUp is the AGENT between two parties, so a **material change
+(route / fare)** can't be applied silently — it's a **proposed amendment the Driver accepts or declines**, recorded
+in-app even if they agreed by phone. Phase 1 (info-only edit, no consent) shipped S34; this is the consent flow.
+
+**Data model (greenfield — nothing existed):** `mission_amendment` = the audit trail. Columns: the proposed NEW route
+(`new_pickup_*`, `new_dropoff_*`, `new_waypoints`, `new_distance_km`, `new_duration_min`) + `new_fare` (the new agreed
+TOTAL), a `from_snapshot jsonb` (the trip AS AGREED at propose-time incl. the current fare, for the "was …" display +
+record), `note`, `decline_reason`, `status` (`proposed→accepted|declined|superseded`), timestamps, `business_id`
+(denormalised for RLS), `proposed_by`. RLS: Business select/insert/update on its own missions (INSERT also checks the
+mission is theirs); Driver select on missions assigned to them; **no Driver INSERT/UPDATE** — the response goes through
+the RPC. Supabase default privileges cover the new table (base schema has no explicit grants).
+
+**The atomic apply — `respond_to_amendment(p_amendment_id, p_accept, p_reason)` RPC** — a faithful **mirror of
+`accept_mission`**: `SECURITY DEFINER`, resolves `current_driver_id()`, row-locks the amendment + mission, verifies the
+mission is this Driver's and still `accepted/confirmed`, then in ONE transaction: **accept** → swaps the new route + fare
+onto the mission and marks the amendment accepted; **decline** → leaves the mission untouched, marks it declined (+
+reason). The fare is **frozen at `new_fare`** by collapsing the PDP curve (`ceiling = pdp_start = new_fare`, flat
+step/interval, `speed_win=false`) so `currentFare()` reads exactly the agreed total (there's no stored "agreed fare"
+today — the PDP climbs from `created_at`; this is the clean way to pin it). `stops_reached` resets. Conditional
+`where … status='proposed'` → atomic first-wins (concurrent double-accept / accept-vs-decline can't half-apply).
+
+**Business — propose screen (`/dispatch/[id]/amend`):** a locked "trip as agreed" header (route · time · assigned
+Driver + car · agreed fare) + a two-pane form mirroring the new-mission layout: left = the exact `RouteStops` editor
+(pickup + stops + destination **all editable** — founder asked to allow pickup) + a manual "New agreed fare" field
+(shows the live delta) + an optional note; right = a **live "what the Driver will see" preview** (change summary +
+fare/distance/drop-off deltas) + the send button. `proposeMissionAmendment` (USER session, RLS) verifies ownership +
+`accepted/confirmed`, recomputes the ETA server-side (traffic-aware), snapshots the from-state (incl. `currentFare`),
+**supersedes any still-pending proposal**, and inserts the new one. Redirects to `/dispatch?open=<id>` (the S33 deep
+link) — the trip now reads "Change pending". `closeAmendment` withdraws a pending / dismisses a declined one.
+
+**Driver — accept/decline card (`components/amendment-card.tsx`, in My Rides):** the approved v4 card — the change reads
+**inside the route** (unchanged legs muted grey, the changed leg highlighted with a "New stop / New destination / New
+pickup" badge; removed stops struck), a "was …" line, the Dispatcher's note, then **what it means for you** (fare
+old→new + delta, distance·time, **Drop-off** [finish-flag icon, not a plane — founder's call]), an amber **slot heads-up**
+(reuses the ±90-min idea: computes the trip's new end vs the Driver's next pickup — "tighter" or "overlaps"), and the
+binding **Accept the change / Decline**. Decline opens an **optional one-tap reason** (Schedule too tight / Too far /
+Timing / Other) — softens the rejection for the Business (founder ask). `respondToAmendment` calls the RPC via the USER
+session (must NOT be service role — the RPC reads `auth.uid()`, like `accept_mission`, D6). Slot warning computed in
+`rides/page.tsx` (`SLOT_TIGHT_MIN=30`).
+
+**Business — schedule states (`trip-row.tsx` + `dispatch/page.tsx`):** the expanded detail gains a **"Propose a change"**
+entry (accepted/confirmed only, next to "Edit details"), and renders the amendment state: **Change pending** (navy chip
++ summary + Withdraw), **declined** (a calm reassurance — "declines are normal in busy periods, not personal" — + the
+reason + trip-stays-as-agreed + **Call / Adjust and re-send / Dismiss**), or a subtle **Change accepted · <time>**. The
+dispatch page loads the latest non-superseded amendment per mission (RLS-scoped) → a compact `AmendmentBrief`.
+
+**Founder feedback folded in (from the preview loop):** (1) enable **pickup edit** (not just destination + stops); (2)
+the **decline reassurance** for the Business (busy-season scheduling, not personal) + the Driver's optional reason; (3)
+fixed the send-rail copy — after sending you **leave for the schedule**, so it now says the answer shows there as
+"Change pending" (was the wrong "you'll see his answer here"). Earlier: the driver card went through 4 iterations — the
+change must read **in-context inside the route** (not an abstract hero banner), with the two unchanged ends muted so the
+new stop stands out; and the drop-off row uses a **finish-flag**, not a landing-plane (a plane = a pickup to a Driver).
+
+**Reused `RouteStops` (the most-worked component) safely:** added 3 additive fields to its `RouteSummary`
+(`pickupText/dropoffText/stops`) so the amend preview can diff the live route; the new-mission rail ignores them (its
+initial literal was updated to satisfy the type). Pure diff/summary helpers live in `lib/amendments.ts` (`routeDiff`,
+`changeSummary`, `parseFromSnapshot`, `buildFromSnapshot`, `dropoffInstants`, `DECLINE_REASONS`), shared client + server.
+
+**Verified (localhost, real Supabase DB — the mission_amendment table NOT yet applied, so the flow degrades gracefully):**
+`tsc` clean. Dispatch schedule renders (27 real trips; the amendments query returns nothing without the table — no
+crash). **Propose screen renders end-to-end** for a real Confirmed trip (locked header "Marc Dubois · Mercedes Classe E
+· Agreed fare 130,00 €", RouteStops editor, live ETA, fare field) and the **live delta reacts** (145 € → "Current 130,00
+€ · +15,00 €" green, and the preview rail "130,00 € → 145,00 € +15,00 €"); the empty-route-diff path shows "Fare change
+only" (exercises `routeDiff`/`changeSummaryParts`). Driver rides page renders. **No console errors on any surface.** The
+two-pane collapses to stacked under the narrow preview panel (correct; side-by-side ≥ ~600px content).
+**NOT yet verifiable live** (needs the migration): the actual propose→insert, the Driver card with real data, the
+schedule pending/declined/accepted states, and the RPC apply. **Not pushed** — held until the founder runs the migration.
+
+**Next:** founder RUNS `docs/migrations/2026-07-07_mission_amendment.sql` in the Supabase SQL editor → then verify the
+full loop live (propose as Business → accept/decline as the assigned Driver → terms swap / trip unchanged) → push `main`.
+Then **Phase 3** (auto price-delta via the pricing engine + notifications so the Driver is alerted without watching the
+app + an in-app "could we add a stop? +€X" note) — both wait on deferred integrations. Also queued: O7 cancel/re-pool
+(the decline "or Business cancels" path), the unfolded-trip-row redesign (founder's other named item), Driver app redesign.
+
 ## 2026-07-05 — Session 34 — Edit a posted trip's INFO without touching price (mission edit, Phase 1)
 **Branch:** `main`. **No schema change.** New: `app/(dispatch)/dispatch/[id]/edit/{page.tsx,edit-form.tsx,actions.ts}`.
 Touched: `components/trip-row.tsx` ("Edit details" link + `editable` flag), `app/globals.css` (`.ex-*` / `.dx-editlink`).

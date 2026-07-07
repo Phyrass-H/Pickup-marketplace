@@ -8,14 +8,21 @@ import {
   formatDateTime,
   formatMoney,
   missionStatusLabel,
+  shortPlaceLabel,
 } from "@/lib/format";
-import type { MissionStatus } from "@/lib/database.types";
+import type { MissionStatus, MissionRow, MissionAmendmentRow } from "@/lib/database.types";
 import { isExecutable } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
+import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
+import { AmendmentCard, type AmendmentLeg } from "@/components/amendment-card";
 import { StatusControl } from "./status-control";
+
+// Minutes of gap below which the trip's new end crowds the Driver's next pickup —
+// surfaces the amber "it's tighter" heads-up on the change card.
+const SLOT_TIGHT_MIN = 30;
 import {
   parsePassengers,
   parseGuestContacts,
@@ -40,6 +47,61 @@ interface Contact {
   dispatcherName: string | null;
   dispatcherPhone: string | null;
   businessName: string | null;
+}
+
+// Precompute the "accept this change" card's props for a pending amendment: the
+// route diff (was → now), the fare/time deltas, and a slot heads-up if the trip's
+// new end crowds the Driver's next pickup.
+function buildAmendmentData(
+  a: MissionAmendmentRow,
+  m: MissionRow,
+  missions: MissionRow[],
+  businessName: string | null,
+) {
+  const from = parseFromSnapshot(a.from_snapshot);
+  const diff = routeDiff(
+    { pickup: from.pickup_address, dropoff: from.dropoff_address, waypoints: from.waypoints },
+    {
+      pickup: a.new_pickup_address,
+      dropoff: a.new_dropoff_address,
+      waypoints: parseWaypoints(a.new_waypoints),
+    },
+  );
+  const stops = from.waypoints.length;
+  const wasLabel = `${shortPlaceLabel(from.pickup_address)} → ${
+    from.dropoff_address ? shortPlaceLabel(from.dropoff_address) : "—"
+  }${stops ? ` · ${stops} stop${stops === 1 ? "" : "s"}` : ", direct"}`;
+
+  const durNew = a.new_duration_min;
+  const pickupMs = new Date(m.pickup_at).getTime();
+  const newEnd = durNew != null ? pickupMs + durNew * 60_000 : null;
+  // The Driver's next mission after this one (missions are sorted by pickup_at).
+  const next = missions.find(
+    (x) => x.id !== m.id && new Date(x.pickup_at).getTime() > pickupMs,
+  );
+  let slot: { nextPickupIso: string; overlap: boolean } | null = null;
+  if (newEnd != null && next) {
+    const gapMin = (new Date(next.pickup_at).getTime() - newEnd) / 60_000;
+    if (gapMin < SLOT_TIGHT_MIN) slot = { nextPickupIso: next.pickup_at, overlap: gapMin < 0 };
+  }
+
+  return {
+    amendmentId: a.id,
+    proposedBy: businessName ?? "The Business",
+    createdAtLabel: formatDateTime(a.created_at),
+    legs: diff.legs as AmendmentLeg[],
+    removedStops: diff.removedStops,
+    wasLabel,
+    note: a.note,
+    fareOld: from.fare ?? currentFare(m),
+    fareNew: Number(a.new_fare),
+    distOld: from.distance_km,
+    durOld: from.duration_min,
+    distNew: a.new_distance_km != null ? Number(a.new_distance_km) : null,
+    durNew,
+    pickupAtIso: m.pickup_at,
+    slot,
+  };
 }
 
 export default async function RidesPage() {
@@ -104,6 +166,30 @@ export default async function RidesPage() {
     }
   }
 
+  // Pending amendments (D39 Phase 2) — the "accept this change" card. RLS scopes
+  // these to the Driver's own missions; one pending proposal per mission (the
+  // Business supersedes on re-send).
+  const amendmentData = new Map<string, ReturnType<typeof buildAmendmentData>>();
+  if (missions && missions.length > 0) {
+    const { data: amendments } = await supabase
+      .from("mission_amendment")
+      .select("*")
+      .in(
+        "mission_id",
+        missions.map((m) => m.id),
+      )
+      .eq("status", "proposed");
+    for (const a of amendments ?? []) {
+      const m = missions.find((x) => x.id === a.mission_id);
+      if (m) {
+        amendmentData.set(
+          a.mission_id,
+          buildAmendmentData(a, m, missions, contacts.get(m.id)?.businessName ?? null),
+        );
+      }
+    }
+  }
+
   return (
     <>
       <div className="card-row" style={{ alignItems: "center" }}>
@@ -152,6 +238,8 @@ export default async function RidesPage() {
             <div className="muted small" style={{ marginTop: 4 }}>
               {formatDateTime(m.pickup_at)} · {categoryLabel(m.category)}
             </div>
+
+            {amendmentData.has(m.id) && <AmendmentCard {...amendmentData.get(m.id)!} />}
 
             <div className="route">
               <div className="leg">

@@ -27,8 +27,9 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
-  `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`) — **ONLY** for schema/data work.
-  (All applied to the live DB.)
+  `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`,
+  `2026-07-07_mission_amendment`) — **ONLY** for schema/data work. (All applied to the live DB **except
+  `2026-07-07_mission_amendment` — ⚠️ the founder still needs to RUN this one** for Phase-2 mission-edit to work.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -166,20 +167,19 @@ Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a l
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP — **the founder named TWO things for the next session (do these first):**
+RECOMMENDED NEXT STEP:
 
-**A. Mission-edit Phase 2 — the amendment / consent flow** (the founder will drive this). Design agreed 2026-07-05 and
-   captured in **`project/IDEAS.md`** ("Dispatcher mission edit" entry) + **[[d39]]**. Read that first. The gist: Phase 1
-   (info-only edit, no consent) is DONE; Phase 2 handles a **material change after a Driver accepted** — change
-   destination / add a stop — as a **propose → accept/decline** on the mission (a mini `accept_mission`: atomic,
-   consented, audit trail). Business proposes → app shows the **delta** (new route + ETA + a price change) → the Driver
-   accepts/declines → on accept the terms swap atomically. The **app is the system of record even if they talk by phone**
-   (beta: dispatch calls, agrees, proposes in-app, the Driver's tap is binding). ⚠️ **Dependencies:** the price delta is
-   **manual for now** (today's fare isn't distance-based — it's the PDP climb; auto-delta waits on the founder's pricing
-   engine); full real-time push waits on **notifications** (deferred). Reuse the `accept_mission` **slot-conflict** check
-   to warn the Driver ("this ends 16:40 — you have a pickup 16:30"). Decline path → trip stays as agreed or the Business
-   cancels (needs O7 cancel/re-pool, not built). **Accept/decline only** in v1 (no counter-offer haggle). Do the D25
-   preview of the Driver's "accept this change" card first — that card IS the UX.
+**A. ✅ Mission-edit Phase 2 — BUILT (S35, [[d40]]), awaiting the founder's migration + live verify + push.** The
+   amendment/consent flow shipped: a Business **Propose a change** screen (`/dispatch/[id]/amend` — route incl. pickup +
+   fare, live preview), a Driver **accept/decline card** with an optional decline reason + slot heads-up, the schedule
+   **pending / declined (with a calm reassurance) / accepted** states, and an atomic **`respond_to_amendment` RPC**
+   mirroring `accept_mission`. **⚠️ FIRST STEP NEXT SESSION:** the founder RUNS
+   `docs/migrations/2026-07-07_mission_amendment.sql` in the Supabase SQL editor (it's held — the code degrades
+   gracefully without it, but the feature is inert). Then verify the full loop live (propose as Business → accept/decline
+   as the assigned Driver → terms swap / trip stays) and **push `main`**. **Phase 3** (auto price-delta via the pricing
+   engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop? +€X" note)
+   stays deferred on those integrations. The **decline "or Business cancels" path needs O7** (cancel/re-pool, not built).
+
 **B. Improve the visual of the UNFOLDED (expanded) trip row.** The founder wants the expanded `.dx-trip__detail` (in
    `components/trip-row.tsx`, styled in `app/globals.css`) redesigned — it's currently a plain `.route` leg list + a
    flat `.kv` definition grid + the guests block + the new top edit-bar ("Edit details" button + "Edited · time" stamp).

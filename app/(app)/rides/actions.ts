@@ -10,6 +10,41 @@ import type { StatusEventStatus } from "@/lib/database.types";
 
 export type StatusResult = { ok: true } | { ok: false; message: string };
 
+// The Driver's answer to a proposed amendment (D39 Phase 2). Runs the atomic
+// respond_to_amendment RPC via the USER session (it's SECURITY DEFINER and
+// resolves current_driver_id() from auth.uid(), so it must NOT use the service
+// role — same rule as accept_mission, D6). Accept swaps the new route + fare onto
+// the mission in one transaction; decline leaves the trip exactly as agreed.
+export async function respondToAmendment(
+  amendmentId: string,
+  accept: boolean,
+  reason?: string | null,
+): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_amendment", {
+    p_amendment_id: amendmentId,
+    p_accept: accept,
+    p_reason: reason ?? null,
+  });
+  if (error) {
+    // The RPC's RAISE messages are already Driver-readable ("This change is no
+    // longer pending", "This trip can no longer be changed"); surface them, with a
+    // safe fallback for anything unexpected.
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message: msg && msg.length < 120 ? msg : "Couldn’t apply the change — please refresh and try again.",
+    };
+  }
+
+  revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
 // Advance a mission one execution step. Records a status_event (the thing the
 // Business watches) AND moves mission.status forward. A Driver can't UPDATE the
 // mission via RLS (no driver update policy), so the writes go through the

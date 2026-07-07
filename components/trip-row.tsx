@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
-import type { MissionRow } from "@/lib/database.types";
+import { Pencil, GitPullRequestArrow } from "lucide-react";
+import type { MissionRow, AmendmentStatus } from "@/lib/database.types";
+import { closeAmendment } from "@/app/(dispatch)/dispatch/[id]/amend/actions";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
@@ -39,6 +40,18 @@ export interface DriverContact {
   vehicle?: VehicleBrief | null;
 }
 
+// A proposed / resolved change to this trip (D39 Phase 2), for the schedule state.
+// Precomputed server-side so the row stays presentational.
+export interface AmendmentBrief {
+  id: string;
+  status: AmendmentStatus;
+  summary: string; // "Add a stop at X · New destination Y"
+  fareOld: number | null;
+  fareNew: number;
+  declineReason: string | null; // human label, or null
+  at: string; // responded_at ?? created_at
+}
+
 // One dense schedule line. Click to expand full detail. The coloured left edge +
 // status pill are the at-a-glance signal a hotel scans (red = needs a call). When
 // a Driver hasn't confirmed near pickup (danger tone) the whole row gets a gentle
@@ -47,11 +60,13 @@ export function TripRow({
   mission,
   driver,
   guestContacts,
+  amendment,
   archived = false,
 }: {
   mission: MissionRow;
   driver?: DriverContact | null;
   guestContacts?: GuestContact[] | null;
+  amendment?: AmendmentBrief | null;
   archived?: boolean;
 }) {
   const t = missionTone(mission, undefined, { archived });
@@ -75,6 +90,10 @@ export function TripRow({
     (mission.status === "pooled" ||
       mission.status === "accepted" ||
       mission.status === "confirmed");
+  // A change can be PROPOSED (route/fare, needs Driver consent) only once a Driver
+  // holds the trip but hasn't started it (D39 Phase 2).
+  const canAmend =
+    !archived && (mission.status === "accepted" || mission.status === "confirmed");
   // "Edited · time" stamp — when the info was last edited (null = never).
   const editedAt = mission.info_edited_at;
   const languages = parseLanguages(mission.required_languages);
@@ -198,16 +217,85 @@ export function TripRow({
             see; only while pre-departure. The "Edited · time" stamp shows in the
             detail (never the row) once the info has been edited — kept even after the
             trip is frozen, so the record stays visible. */}
-        {(editable || editedAt) && (
+        {(editable || editedAt || canAmend) && (
           <div className="dx-trip__edit">
             {editedAt && (
               <span className="dx-trip__edited">Edited · {formatDateTime(editedAt)}</span>
+            )}
+            {canAmend && (
+              <Link href={`/dispatch/${mission.id}/amend`} className="dx-trip__editbtn">
+                <GitPullRequestArrow size={14} aria-hidden /> Propose a change
+              </Link>
             )}
             {editable && (
               <Link href={`/dispatch/${mission.id}/edit`} className="dx-trip__editbtn">
                 <Pencil size={14} aria-hidden /> Edit details
               </Link>
             )}
+          </div>
+        )}
+
+        {/* Amendment state (D39 Phase 2): a proposed route/fare change awaiting the
+            Driver, a decline (with a calm explanation), or an accepted change. */}
+        {amendment && amendment.status === "proposed" && (
+          <div className="dx-amend dx-amend--pending">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag">Change pending</span>
+              <span className="muted small">Waiting for {driver ? driver.name : "the Driver"} to accept</span>
+            </div>
+            <div className="dx-amend__body">
+              {amendment.summary}
+              {" · fare "}
+              {amendment.fareOld != null && <s>{formatMoney(amendment.fareOld)}</s>} → {formatMoney(amendment.fareNew)}
+            </div>
+            {!archived && (
+              <form action={closeAmendment} className="dx-amend__actions">
+                <input type="hidden" name="amendment_id" value={amendment.id} />
+                <input type="hidden" name="mission_id" value={mission.id} />
+                <button type="submit" className="dx-amend__link">Withdraw request</button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {amendment && amendment.status === "declined" && (
+          <div className="dx-amend dx-amend--declined">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag dx-amend__tag--off">
+                {driver ? `${driver.name} couldn’t take this change` : "The Driver couldn’t take this change"}
+              </span>
+            </div>
+            {amendment.declineReason && (
+              <div className="dx-amend__reason">
+                <span className="muted">Reason:</span> {amendment.declineReason}
+              </div>
+            )}
+            <p className="dx-amend__reassure">
+              Declines are normal, especially in busy periods — a Driver already committed to nearby trips may
+              not be able to extend this one. It’s not a reflection on you. The trip stays exactly as agreed.
+            </p>
+            {!archived && (
+              <div className="dx-amend__actions">
+                {driver?.phone && (
+                  <a href={`tel:${driver.phone}`} className="dx-amend__btn">Call {driver.name}</a>
+                )}
+                <Link href={`/dispatch/${mission.id}/amend`} className="dx-amend__btn dx-amend__btn--primary">
+                  Adjust and re-send
+                </Link>
+                <form action={closeAmendment}>
+                  <input type="hidden" name="amendment_id" value={amendment.id} />
+                  <input type="hidden" name="mission_id" value={mission.id} />
+                  <button type="submit" className="dx-amend__link">Dismiss</button>
+                </form>
+              </div>
+            )}
+          </div>
+        )}
+
+        {amendment && amendment.status === "accepted" && (
+          <div className="dx-amend dx-amend--accepted">
+            <span className="dx-amend__tag dx-amend__tag--ok">Change accepted</span>
+            <span className="muted small"> · {formatDateTime(amendment.at)}</span>
           </div>
         )}
 

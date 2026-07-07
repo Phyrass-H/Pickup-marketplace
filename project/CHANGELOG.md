@@ -5,6 +5,24 @@
 
 ---
 
+## 7 July 2026
+- **You can now change a trip after a Driver has taken it — with their agreement.** This is the big one. Once a Driver
+  has accepted a trip, you can't just silently move the goalposts (they agreed to a specific job and price). So there's
+  now a proper **"propose a change"** flow: open an accepted trip, click **Propose a change**, edit the route (pickup,
+  stops, or destination) and set the new agreed fare, add a note, and **send it to the Driver**. Nothing on the trip
+  moves yet — it shows **"Change pending"** on your schedule.
+  - The **Driver gets a clear "Change requested" card** showing exactly what's changing *inside the trip* (the added
+    stop or new destination highlighted right where it sits), what it means for their fare, distance and drop-off time,
+    and a heads-up if it now clashes with their next pickup. They tap **Accept** (the trip's route + fare update on the
+    spot) or **Decline** (the trip stays exactly as you agreed — nothing changes).
+  - **If a Driver declines, you get a calm explanation, not a cold "no".** Especially in busy periods a Driver may be
+    too tight to extend a trip — so the decline comes with a short note that this is normal and not personal, the
+    Driver's optional one-word reason, and buttons to **call them** or **adjust and re-send**. The trip stays as agreed.
+  - Your tap (theirs, really) is the record — the app is the source of truth even if you sorted it out by phone first.
+  - (The price change is one you type for now; automatic pricing comes with the pricing engine. Being alerted the
+    instant a change is proposed/answered — rather than seeing it on refresh — comes with notifications, later. Needs a
+    one-line database change — the SQL is ready for you to run.)
+
 ## 5 July 2026
 - **Edit polish:** the **"Edit details"** button now sits at the **top** of an expanded trip (it was at the bottom,
   easy to miss). And once a trip's info has been edited, the detail shows a quiet **"Edited · ⟨time⟩"** stamp so you

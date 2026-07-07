@@ -50,7 +50,8 @@
     **Excludes** pickup/drop-off/stops (re-geocode → distance → material) and the required vehicle (matching).
     RLS already allows a Business to UPDATE its own non-draft mission; the app **whitelists** the info columns
     (no column-level RLS). Allowed on pooled/accepted/confirmed; blocked once en_route+ / terminal.
-  - **Phase 2 — the amendment model (BACKLOG).** A material change (new destination / add a stop) after a Driver
+  - **Phase 2 — the amendment model (✅ SHIPPED S35, 2026-07-07 — [[d40]]; awaiting the founder's migration run + live
+    verify + push).** A material change (new destination / add a stop / **now also pickup**) after a Driver
     accepted, as a **propose → accept/decline** on the mission (a mini `accept_mission`: atomic, consented, with
     an audit trail). Flow: Business proposes → app shows the **delta** (new route + ETA + a price change) → Driver
     sees "add a stop at X · +12 min · +€15 — accept?" and taps **accept/decline** → on accept the terms swap

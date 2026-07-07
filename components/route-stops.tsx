@@ -51,6 +51,11 @@ export interface RouteSummary {
   stopCount: number;
   eta: Metrics | null;
   etaLoading: boolean;
+  // Raw route text (for the amend screen's live "what changed" preview). The
+  // new-mission rail ignores these; they're additive.
+  pickupText: string;
+  dropoffText: string;
+  stops: string[];
 }
 
 export function RouteStops({
@@ -180,10 +185,20 @@ export function RouteStops({
 
   // Publish a display snapshot upward (for the live Summary rail). Effect, not
   // render, so it never warns; onSummaryChange is expected to be a stable setter.
+  const stopTexts = stops.map((s) => s.text.trim()).filter(Boolean);
   useEffect(() => {
-    onSummaryChange?.({ pickup: pk, dropoff: dp, stopCount: viaCount, eta, etaLoading });
+    onSummaryChange?.({
+      pickup: pk,
+      dropoff: dp,
+      stopCount: viaCount,
+      eta,
+      etaLoading,
+      pickupText: pickup.text,
+      dropoffText: dropoff.text,
+      stops: stopTexts,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pk, dp, viaCount, eta, etaLoading]);
+  }, [pk, dp, viaCount, eta, etaLoading, pickup.text, dropoff.text, stopTexts.join("|")]);
 
   return (
     <div className="field" style={{ marginBottom: 0 }}>

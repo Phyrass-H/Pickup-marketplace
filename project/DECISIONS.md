@@ -420,6 +420,31 @@ deal honest — the Driver consents to the new price/time).
 - **Phase 3 (BACKLOG):** auto-computed delta (pricing engine) + notifications + an in-app "could we add a stop? +€X"
   note. Full design in `project/IDEAS.md` ("Dispatcher mission edit"). Previews signed off (D25).
 
+### D40 — Mission edit PHASE 2 = amendment table + an atomic `respond_to_amendment` RPC mirroring `accept_mission` (2026-07-07)
+S35, implementing the D39 Phase-2 design. The consent flow is **propose → accept/decline**, built as:
+- **A new `mission_amendment` table** (the audit trail; greenfield — no amendment infra existed), holding the proposed
+  new route + `new_fare` + a `from_snapshot` of the trip as agreed + `note` / `decline_reason` / `status`
+  (`proposed→accepted|declined|superseded`). Additive migration `2026-07-07_mission_amendment.sql` (founder runs it);
+  the base schema is untouched. RLS: Business r/w its own missions' amendments, Driver read-only on missions assigned
+  to them, **no Driver write** (the RPC handles it).
+- **`respond_to_amendment(id, accept, reason)` RPC** — chosen over a plain server action because the consented swap
+  must be **atomic across two rows** (amendment + mission), which a server action can't transact. It's a faithful
+  clone of `accept_mission`: `SECURITY DEFINER`, `current_driver_id()`, row-lock + verify (`accepted/confirmed`),
+  first-wins conditional update. Called via the **USER session** (reads `auth.uid()`), never the service role (D6).
+- **Fare is pinned, not stored separately:** there's no "agreed fare" column (the PDP fare computes from
+  `ceiling`/`created_at`), so on accept the RPC **freezes** it by setting `ceiling = pdp_start = new_fare` + a flat
+  curve + `speed_win=false`, so `currentFare()` returns exactly the agreed total. Clean, uses existing columns.
+- **Scope (v1):** the amendable route = **pickup + stops + destination** (founder asked to allow pickup, beyond the
+  D39 "destination + stops"); the **pickup TIME is not amended** in v1. Price delta is **manual** (typed) — auto-delta
+  waits on the pricing engine ([[d37]]). **Accept/decline only** (no counter-offer); "adjust and re-send" supersedes.
+- **Decline UX (founder ask):** the Driver gives an **optional one-tap reason**, and the Business sees the decline
+  wrapped in a **calm reassurance** ("declines are normal in busy periods, not personal; the trip stays as agreed") —
+  so a rejection never reads as cold. The **app is the system of record** even if they agreed by phone.
+- **Driver card design (D25, 4 iterations):** the change must read **in-context inside the route** — unchanged legs
+  muted, the changed leg highlighted with a badge (rejected an abstract "hero" restatement that lost the where) — and
+  the drop-off row uses a **finish-flag**, not a landing-plane (to a Driver a plane = a pickup). **Phase 3** (auto
+  price-delta + notifications + an in-app note) stays deferred on those integrations. [[d39]] [[d37]] [[d6]] [[d25]]
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

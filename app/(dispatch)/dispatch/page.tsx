@@ -6,9 +6,38 @@ import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
-import { TripRow, type DriverContact } from "@/components/trip-row";
+import { TripRow, type DriverContact, type AmendmentBrief } from "@/components/trip-row";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
-import type { MissionRow } from "@/lib/database.types";
+import { parseWaypoints } from "@/lib/waypoints";
+import {
+  parseFromSnapshot,
+  routeDiff,
+  changeSummary,
+  declineReasonLabel,
+} from "@/lib/amendments";
+import type { MissionRow, MissionAmendmentRow } from "@/lib/database.types";
+
+// Reduce a stored amendment to the compact brief the schedule row renders.
+function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
+  const from = parseFromSnapshot(a.from_snapshot);
+  const diff = routeDiff(
+    { pickup: from.pickup_address, dropoff: from.dropoff_address, waypoints: from.waypoints },
+    {
+      pickup: a.new_pickup_address,
+      dropoff: a.new_dropoff_address,
+      waypoints: parseWaypoints(a.new_waypoints),
+    },
+  );
+  return {
+    id: a.id,
+    status: a.status,
+    summary: changeSummary(diff),
+    fareOld: from.fare,
+    fareNew: Number(a.new_fare),
+    declineReason: declineReasonLabel(a.decline_reason),
+    at: a.responded_at ?? a.created_at,
+  };
+}
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +60,14 @@ function DayGroup({
   missions,
   contacts,
   guestContacts,
+  amendments,
   today,
 }: {
   dayKey: string;
   missions: MissionRow[];
   contacts: Map<string, DriverContact>;
   guestContacts: Map<string, GuestContact[]>;
+  amendments: Map<string, AmendmentBrief>;
   today?: boolean;
 }) {
   return (
@@ -54,6 +85,7 @@ function DayGroup({
           mission={m}
           driver={contacts.get(m.id) ?? null}
           guestContacts={guestContacts.get(m.id) ?? null}
+          amendment={amendments.get(m.id) ?? null}
         />
       ))}
     </section>
@@ -114,6 +146,25 @@ export default async function DispatchSchedule({
     }
   }
 
+  // Amendments (D39 Phase 2): the latest live proposal / decline / accept per
+  // mission, for the schedule's "Change pending / declined / accepted" states.
+  // RLS scopes to this Business's own missions.
+  const amendments = new Map<string, AmendmentBrief>();
+  if (missionIds.length > 0) {
+    const { data: ams } = await supabase
+      .from("mission_amendment")
+      .select("*")
+      .in("mission_id", missionIds)
+      .neq("status", "superseded")
+      .order("created_at", { ascending: false });
+    const seen = new Set<string>();
+    for (const a of ams ?? []) {
+      if (seen.has(a.mission_id)) continue; // keep only the latest per mission
+      seen.add(a.mission_id);
+      amendments.set(a.mission_id, buildBrief(a));
+    }
+  }
+
   // Group by Paris day; split into today / future / past.
   const todayKey = parisDayKey(new Date());
   const groups = new Map<string, MissionRow[]>();
@@ -158,6 +209,7 @@ export default async function DispatchSchedule({
               missions={todayMissions}
               contacts={contacts}
               guestContacts={guestContacts}
+              amendments={amendments}
               today
             />
             {todayMissions.length === 0 && (
@@ -173,6 +225,7 @@ export default async function DispatchSchedule({
                 missions={groups.get(k)!}
                 contacts={contacts}
                 guestContacts={guestContacts}
+                amendments={amendments}
               />
             ))}
           </div>
@@ -191,6 +244,7 @@ export default async function DispatchSchedule({
                     missions={groups.get(k)!}
                     contacts={contacts}
                     guestContacts={guestContacts}
+                    amendments={amendments}
                   />
                 ))}
               </div>

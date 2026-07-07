@@ -304,6 +304,9 @@ export function MissionForm({
     stopCount: stopsDefault.filter((s) => s.lat != null && s.lng != null).length,
     eta: draftEta,
     etaLoading: false,
+    pickupText: pickupDefault?.label ?? "",
+    dropoffText: dropoffDefault?.label ?? "",
+    stops: stopsDefault.map((s) => s.label),
   }));
 
   function review() {
