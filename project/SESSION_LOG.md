@@ -86,7 +86,16 @@ fare-only **propose → decline** (RPC decline branch; trip fare untouched; Busi
 Driver card rendered the **highlighted new stop + badge** with the deltas → accept → the **mission genuinely swapped**
 (route now pickup → 3 Bd de la Ferrage → Pl. du Casino Monaco, Trip 57 km · 1h13, Fare 140 €). RLS (business insert +
 driver read), the atomic RPC (both branches), and the fare-freeze all confirmed. No console errors. **Pushed + deployed**
-(`fc63a37`; Vercel deployment SHA verified).
+(`fc63a37` — Vercel deployment SHA + build status verified `success`).
+
+**Deploy note:** the follow-up **docs-only** commit `51784d8` hit a **transient Vercel build flake** (`failure`), even
+though its app code is byte-identical to the successful `fc63a37`. Reproduced `next build` **locally → clean** (all
+routes compile, incl. `/dispatch/[id]/amend`), confirming it was infra, not code; production was never down (Vercel keeps
+the last successful deploy live). Re-triggered with an empty commit → **`ddeadf5` deployed `success`**. Lesson added to
+the WORKFLOW note in `NEXT_SESSION.md` (a transient BUILD FAILURE, not just a dropped commit, also happens — reproduce
+with `next build`, re-trigger if it passes). **Test artifacts left on the shared demo DB** (visible on prod too, all
+revertible): trip `00a5e67b` fare 55→70 € (accepted), `d6f7c70a` +stop "3 Bd de la Ferrage" & 120→140 € (accepted),
+`1b8a1444` a declined-change example.
 
 **Next:** **Phase 3** (auto price-delta via the pricing engine + notifications so the Driver is alerted without watching the
 app + an in-app "could we add a stop? +€X" note) — both wait on deferred integrations. Also queued: O7 cancel/re-pool

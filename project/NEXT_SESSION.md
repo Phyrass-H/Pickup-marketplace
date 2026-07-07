@@ -244,3 +244,9 @@ a plain-language line per shipped item.
   landed: `gh api repos/Phyrass-H/Pickup-marketplace/deployments --jq '.[0].sha'` should equal the pushed SHA. If
   it's dropped, push an **empty commit** (`git commit --allow-empty`) to re-trigger, or use the Vercel dashboard →
   Redeploy. (The deployments `?sha=` filter needs the FULL 40-char SHA.)
+- **⚠️ Vercel can also fail a build TRANSIENTLY** (happened 2026-07-07 — a **docs-only** commit `51784d8` got a
+  `failure` while its app code was byte-identical to the commit that had just deployed `success`). Don't panic: check
+  the per-deployment status (`gh api repos/Phyrass-H/Pickup-marketplace/deployments/<id>/statuses --jq '.[0]'`), then
+  **reproduce `next build` locally** — if it passes clean, it was an infra flake, not your code, and production is still
+  serving the last successful deploy (never down). Re-trigger with an empty commit. **Stop the `next dev` preview
+  before `rm -rf .next && next build`** (building while dev runs corrupts `.next`).
