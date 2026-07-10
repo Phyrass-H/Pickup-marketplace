@@ -6,6 +6,12 @@
 ---
 
 ## 10 July 2026 (later)
+- **Address search now puts local places first.** Typing something like "aéroport t2" was showing a Paris (Roissy)
+  shop, then Barcelona and Geneva, with the Nice result buried down the list. Now Côte d'Azur results (Nice, Cannes,
+  Monaco, Antibes…) float to the top, and far-flung countries you'd never drive to (Spain, Portugal, the UK…) no
+  longer clutter the suggestions. It's not perfect yet — the exact airport terminal can still be hard to pin down for
+  a very short query — and for that last bit of precision we're planning to move the search to Google later. For now
+  it's much cleaner and local-first.
 - **The "review before posting" card got a light tidy-up.** Same card you liked — it just now matches the redesigned
   trip detail: the route reads as a clean top-to-bottom line, and the languages, dress code and requests show as neat
   little tags instead of a run-on list. Nothing moved, nothing removed.

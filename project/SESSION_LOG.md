@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-07-10 — Session 38 — Address search: Riviera-first ranking + narrower countries (Mapbox cleanup, Google deferred)
+**Branch:** `main`. **No schema change.** **Touched:** `components/address-autocomplete.tsx` only. Founder flagged bad
+autocomplete: typing "aéroport t2" returned a Roissy CDG Fnac #1, Barcelona/Geneva/Lisbon, with the Nice result buried at
+#3. Asked whether to switch to Google.
+
+**Diagnosis (tested the live Mapbox Search Box API directly):** two problems. (1) The country allowlist was a broad 12-
+country EU list, so Spain/Portugal/etc. leaked in for vague queries. (2) Mapbox's POI ranking is genuinely weak for
+prominent places — `proximity=Nice` only *nudges*, so a literal "T2" name match (CDG Fnac, a Barcelona parking) outranks
+the local airport; `bbox`, `poi_category=airport`, tighter proximity all failed to float the real "Terminal 2, Aéroport
+Nice-Côte d'Azur (NCE)" (it exists in Mapbox but ranks below shops/kiss-and-fly/Airbnbs). **Google Places weights
+*prominence* and would genuinely rank major airports/hotels/stations first** — so the founder's instinct is sound.
+
+**Decision (founder):** *Mapbox cleanup now (free, no new integration), Google later.* Google needs a Google Cloud
+project + Places API key + billing the founder sets up (deferred to the integration phase, like the other third-party
+integrations). Logged as the future fix for true POI precision.
+
+**Shipped (Mapbox cleanup):** (1) `DEFAULT_COUNTRIES` narrowed `fr,mc,it,ch,de,es,be,lu,nl,gb,at,pt` → **`fr,mc,it,ch`**
+(France + the only neighbours a Riviera VTC actually DRIVES to: Monaco, Italy, Switzerland/Geneva). (2) A **Riviera-first
+re-rank** — `isRiviera()` tests each suggestion's formatted address for a Côte d'Azur marker (postcodes 06/83/98000 or the
+towns we serve) and a stable sort floats local hits to the top *without hiding* far destinations (they still show, below).
+Verified live vs the real Mapbox API + in the browser field: "aéroport t2" now returns **"Kiss and Fly - Terminal 2, 06200
+Nice" at #1** (Barcelona/Lisbon gone). Known limit: the exact NCE terminal still won't surface for that vague query — that's
+the Google-later fix. `tsc` clean, no console errors. Deployed.
+
 ## 2026-07-10 — Session 37 — Mission-form polish: review card, capitalised names, numeric-only fields, trail time, pricing vehicle chip
 **Branch:** `main`. **No schema change.** Five founder-requested tweaks; the two visual ones (review card + pricing chip)
 went through a D25 preview (signed off "go"). **Touched:** `app/(dispatch)/dispatch/new/mission-form.tsx`,

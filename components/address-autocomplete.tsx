@@ -4,13 +4,24 @@ import { useEffect, useId, useRef, useState } from "react";
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-// Country allowlist for suggestions (ISO 3166-1 alpha-2). The beta is run from
-// France, so France-first — but a VTC legitimately drives cross-border (Cannes →
-// Monaco / Geneva / Milano / Barcelona / Berlin), so we keep France's neighbours
-// and the common long-haul European destinations. `proximity` then ranks the
-// nearest hits first. This is what stops the old USA/Canada junk from leaking in
-// (proximity only *biases* ranking; country actually *filters*).
-const DEFAULT_COUNTRIES = "fr,mc,it,ch,de,es,be,lu,nl,gb,at,pt";
+// Country allowlist for suggestions (ISO 3166-1 alpha-2). The beta is a Côte
+// d'Azur VTC, so we keep France + only the neighbours it realistically DRIVES to:
+// Monaco, Italy (Ventimiglia / Sanremo / Genova / Milano), Switzerland (Genève /
+// Alps transfers). The old broad EU list let Barcelona / Lisbon / Berlin junk in
+// for vague queries. `proximity` biases ranking; `country` filters; and rivieraRank
+// (below) floats local hits to the top — Mapbox's proximity alone doesn't beat a
+// literal name match elsewhere (e.g. "aéroport t2" → a Roissy shop over Nice).
+const DEFAULT_COUNTRIES = "fr,mc,it,ch";
+
+// Côte d'Azur markers in a suggestion's formatted address (postcodes 06 Alpes-
+// Maritimes / 83 Var / 98000 Monaco, or the towns we actually serve). Used to
+// re-rank local suggestions first without hiding legitimate far destinations.
+const RIVIERA_RE =
+  /\b(?:06\d{3}|83\d{3}|980\d{2})\b|\b(?:nice|cannes|antibes|monaco|monte-?carlo|menton|grasse|mougins|valbonne|mandelieu|cagnes|villefranche|beaulieu|cap[\s-]?d['’]?ail|juan-les-pins|saint-jean-cap-ferrat|èze|eze|sophia)\b/i;
+
+function isRiviera(address: string): boolean {
+  return RIVIERA_RE.test(address);
+}
 
 export interface Place {
   label: string;
@@ -154,7 +165,7 @@ export function AddressAutocomplete({
             feature_type?: string;
           }[];
         };
-        const list: Suggestion[] = (data.suggestions ?? [])
+        const mapped: Suggestion[] = (data.suggestions ?? [])
           // Drop 'brand'/'category' suggestions: they're search categories
           // ("Fnac — Brand"), not a specific place you can be picked up from —
           // they waste the top slot and resolve to nothing on retrieve.
@@ -164,7 +175,14 @@ export function AddressAutocomplete({
             name: s.name ?? "",
             address: s.full_address || s.place_formatted || "",
           }))
-          .filter((s) => s.mapbox_id && s.name)
+          .filter((s) => s.mapbox_id && s.name);
+        // Riviera-first: float local hits to the top, stable within each group, so a
+        // vague query ("aéroport t2") surfaces the Nice result instead of a Roissy /
+        // Barcelona lookalike. Far destinations still show, just below the local ones.
+        const list = mapped
+          .map((s, i) => ({ s, i, local: isRiviera(s.address) }))
+          .sort((a, b) => (a.local === b.local ? a.i - b.i : a.local ? -1 : 1))
+          .map((x) => x.s)
           .slice(0, 8);
         setSuggestions(list);
         setActive(-1); // fresh results → no stale highlight
