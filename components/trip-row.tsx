@@ -267,7 +267,7 @@ export function TripRow({
                 <span className="dx-dt-ref__note"> · your team only</span>
               </span>
             )}
-            {editedAt && (
+            {editedAt && !(infoChange && infoChange.items.length > 0) && (
               <span className="dx-dt-edited">Edited · {formatDateTime(editedAt)}</span>
             )}
           </div>
@@ -302,7 +302,9 @@ export function TripRow({
         {infoChange && infoChange.items.length > 0 && (
           <div className="dx-trail">
             <Clock size={13} aria-hidden />
-            <span>{infoChange.items.join(" · ")}</span>
+            <span>
+              <strong>{formatDateTime(infoChange.at)}</strong> — {infoChange.items.join(" · ")}
+            </span>
           </div>
         )}
 

@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-07-10 — Session 37 — Mission-form polish: review card, capitalised names, numeric-only fields, trail time, pricing vehicle chip
+**Branch:** `main`. **No schema change.** Five founder-requested tweaks; the two visual ones (review card + pricing chip)
+went through a D25 preview (signed off "go"). **Touched:** `app/(dispatch)/dispatch/new/mission-form.tsx`,
+`components/passenger-list.tsx`, `components/trip-row.tsx`, `app/(dispatch)/dispatch/[id]/edit/edit-form.tsx`,
+`app/globals.css`.
+
+1. **Review-before-posting card — lightly polished** (`mission-form.tsx`): the flat `.kv` + old `.route` swapped for the
+   S36 detail vocabulary — the `.dx-rte` route rail (dot-to-dot connector), `.dx-srow` rows, and **chips** for Languages /
+   Dress / Requests (`.dx-chip`). Guest + pax + bags collapse to one line; reference marked "· your team only". Same card,
+   just coherent with the trip detail. Verified live (fare 65 €, connector route with a stop, all chips render).
+2. **Names auto-capitalise** (`passenger-list.tsx`, shared by new + edit): a `capitalizeFirst` on the Guest first/surname
+   `onChange` — first letter only (safe for "Al Souad"/"de la Croix") + `autoCapitalize="words"`. Verified: james→James.
+3. **Numeric-only fields** (`mission-form.tsx` + `edit-form.tsx`): `luggage_count` (integer), `base_fare` + `ceiling`
+   (money) switched from `type=number` to `type=text` + `inputMode` + a controlled sanitize (`digitsOnly` / `decimalOnly`
+   — strips letters, `e`, `+`/`-`, extra dots; comma→dot). Reliable vs `type=number`'s quirks. Verified: `12ab.3cd9`→
+   `12.39`, `9.9.9xx`→`9.99`, `3a4b`→`34`. Phone left flexible (needs `+`/spaces). (Amend-form fare left for later.)
+4. **Edit trail shows the time** (`trip-row.tsx`): the `.dx-trail` now leads with the bold edit time
+   (`formatDateTime(infoChange.at)`) then the changes; the separate top "Edited ·" stamp is suppressed when a trail is
+   present (no double time). Verified live on trip `d6f7c70a`.
+5. **Pricing card vehicle reminder** (`mission-form.tsx`, `.mx-vehiclechip`): a live accent-soft chip in the Pricing card
+   head showing the class·body you're pricing (`serviceClassLabel(tier, body)`; "Business · Van" in luggage-only mode). The
+   specific car isn't lifted from ServiceClassFields, so the chip is class·body only (the specific car is already in the
+   review card) — a small follow-up could add `onCarChange` to include it. Verified: renders "Business" + accent-soft bg.
+
+**Verified** on localhost vs the real Supabase DB: `tsc` clean, no console errors on the form or schedule. Deployed.
+
 ## 2026-07-10 — Session 36 — Expanded trip-row redesign + a "what changed" trail (detail-edit change-log)
 **Branch:** `main`. **Migration (founder RUNS it):** `docs/migrations/2026-07-10_mission_info_change.sql` — a **new
 `mission_info_change` table** (+ RLS, deny-by-default for Drivers). Additive only; base schema untouched (hard-rule #4).

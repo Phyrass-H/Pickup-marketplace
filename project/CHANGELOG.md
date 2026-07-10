@@ -5,6 +5,18 @@
 
 ---
 
+## 10 July 2026 (later)
+- **The "review before posting" card got a light tidy-up.** Same card you liked — it just now matches the redesigned
+  trip detail: the route reads as a clean top-to-bottom line, and the languages, dress code and requests show as neat
+  little tags instead of a run-on list. Nothing moved, nothing removed.
+- **The Pricing box now reminds you which vehicle you're pricing.** A small chip in the Pricing header shows the class
+  and car you picked (e.g. "Business · Van"), so while you set the ceiling you always see what it's for.
+- **Guest names capitalise themselves.** Type "james" and it becomes "James" (just the first letter, so names like
+  "Al Souad" stay right).
+- **Number boxes only take numbers now.** Luggage, base fare and ceiling reject letters and stray characters as you
+  type or paste (base fare and ceiling still allow a decimal point).
+- **The "what changed" note now shows the time of the edit**, in bold, before listing what changed.
+
 ## 10 July 2026
 - **The expanded trip is far easier to read.** When you open a trip on the schedule, its details used to be one long
   grey list where everything looked the same — and half of it just repeated the row you'd already read. It's now

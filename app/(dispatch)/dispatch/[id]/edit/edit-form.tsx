@@ -93,11 +93,13 @@ export function EditMissionForm({
           <label className="field" style={{ flex: 1, marginBottom: 0 }}>
             <span>Luggage (bags)</span>
             <input
-              type="number"
+              type="text"
               name="luggage_count"
-              min={0}
               inputMode="numeric"
               defaultValue={luggageCount ?? ""}
+              onInput={(e) => {
+                e.currentTarget.value = e.currentTarget.value.replace(/[^\d]/g, "");
+              }}
             />
           </label>
           <label className="field" style={{ flex: 1, marginBottom: 0 }}>

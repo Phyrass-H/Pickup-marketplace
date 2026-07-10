@@ -1062,6 +1062,7 @@ textarea::placeholder {
 /* "What changed" trail (D40) — the latest detail-edit diff. */
 .dx-trail { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 11px; margin-bottom: 12px; line-height: 1.5; }
 .dx-trail svg { flex: none; margin-top: 2px; color: var(--text-faint); }
+.dx-trail strong { color: var(--text); font-weight: 600; }
 
 /* Scan strip — the numbers a Dispatcher acts on. */
 .dx-scan { display: flex; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); margin: 0 0 10px; overflow: hidden; }
@@ -1747,6 +1748,13 @@ textarea::placeholder {
   margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
   text-transform: uppercase; color: var(--text-muted);
 }
+/* Live "what you're pricing" reminder chip in the Pricing card head. */
+.mx-vehiclechip {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border-radius: var(--radius-pill); padding: 3px 10px;
+}
+.mx-vehiclechip svg { flex: none; }
 
 /* sticky Summary rail */
 .mx-summary {

@@ -12,6 +12,12 @@ import {
   type Passenger,
 } from "@/lib/passengers";
 
+// Capitalise the first letter of a name field as it's typed (only the first —
+// safe for names like "Al Souad" or "de la Croix" where later words vary).
+function capitalizeFirst(v: string): string {
+  return v ? v.charAt(0).toUpperCase() + v.slice(1) : v;
+}
+
 // Named Guests on a mission (first + surname + optional phone). The number of
 // rows IS the headcount (createMission derives pax_count from it), capped by the
 // chosen Body type. One row is the MAIN contact (shows on the schedule line). A
@@ -136,15 +142,17 @@ export function PassengerList({
                 <input
                   type="text"
                   placeholder="First name"
+                  autoCapitalize="words"
                   value={p.first}
-                  onChange={(e) => update(i, { first: e.target.value })}
+                  onChange={(e) => update(i, { first: capitalizeFirst(e.target.value) })}
                   aria-label={`Guest ${i + 1} first name`}
                 />
                 <input
                   type="text"
                   placeholder="Surname"
+                  autoCapitalize="words"
                   value={p.last}
-                  onChange={(e) => update(i, { last: e.target.value })}
+                  onChange={(e) => update(i, { last: capitalizeFirst(e.target.value) })}
                   aria-label={`Guest ${i + 1} surname`}
                 />
                 <div className="pl-phone">

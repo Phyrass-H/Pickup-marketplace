@@ -109,6 +109,13 @@ function ConfirmCancelButton({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+// Keep the numeric fields numeric — strip anything that isn't a digit at input
+// time, so letters, "e", "+"/"-" and pasted junk can never land in them.
+const digitsOnly = (v: string) => v.replace(/[^\d]/g, "");
+// Money fields: digits + a single decimal point (a typed comma becomes the point).
+const decimalOnly = (v: string) =>
+  v.replace(/,/g, ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+
 interface PreviewData {
   category: string;
   body: string;
@@ -578,12 +585,11 @@ export function MissionForm({
                 >
                   <span>Luggage</span>
                   <input
-                    type="number"
+                    type="text"
                     name="luggage_count"
-                    min={0}
                     inputMode="numeric"
                     value={luggage}
-                    onChange={(e) => setLuggage(e.target.value)}
+                    onChange={(e) => setLuggage(digitsOnly(e.target.value))}
                   />
                 </label>
 
@@ -639,31 +645,34 @@ export function MissionForm({
                   <Wallet />
                 </span>
                 <h3 className="mx-card__title">Pricing</h3>
+                {/* Reminder of the vehicle you're pricing (live from the class card). */}
+                <span className="mx-vehiclechip">
+                  <Car size={13} aria-hidden />{" "}
+                  {luggageOnly
+                    ? "Business · Van"
+                    : serviceClassLabel(tier as VehicleCategory, (body || null) as BodyType | null)}
+                </span>
               </div>
               <div style={{ display: "flex", gap: 12 }}>
                 <label className="field" style={{ flex: 1, marginBottom: 0 }}>
                   <span>Estimated base fare € (optional)</span>
                   <input
-                    type="number"
+                    type="text"
                     name="base_fare"
-                    min={0}
-                    step="0.01"
                     inputMode="decimal"
                     value={baseFare}
-                    onChange={(e) => setBaseFare(e.target.value)}
+                    onChange={(e) => setBaseFare(decimalOnly(e.target.value))}
                   />
                 </label>
                 <label className="field" style={{ flex: 1, marginBottom: 0 }}>
                   <span>Ceiling € (your maximum)</span>
                   <input
-                    type="number"
+                    type="text"
                     name="ceiling"
                     required
-                    min={0}
-                    step="0.01"
                     inputMode="decimal"
                     value={ceiling}
-                    onChange={(e) => setCeiling(e.target.value)}
+                    onChange={(e) => setCeiling(decimalOnly(e.target.value))}
                   />
                 </label>
               </div>
@@ -729,79 +738,90 @@ export function MissionForm({
                   })()}
                 </div>
 
-                <div className="route">
-                  <div className="leg">
-                    <span className="dot" />
-                    <span>{preview.pickup}</span>
+                <div className="dx-rte" style={{ marginTop: 8 }}>
+                  <div className="dx-rte__leg">
+                    <span className="dx-rte__dot dx-rte__dot--pk" aria-hidden />
+                    <span className="dx-rte__addr">{preview.pickup}</span>
                   </div>
                   {preview.stops.map((s, i) => (
-                    <div className="leg" key={i}>
-                      <span className="dot" style={{ background: "#98a2b3" }} />
-                      <span className="muted">{s}</span>
+                    <div className="dx-rte__leg" key={i}>
+                      <span className="dx-rte__dot dx-rte__dot--via" aria-hidden />
+                      <span className="dx-rte__addr" style={{ color: "var(--text-muted)" }}>{s}</span>
                     </div>
                   ))}
-                  <div className="leg">
-                    <span className="dot end" />
-                    <span>{preview.dropoff || "—"}</span>
+                  <div className="dx-rte__leg">
+                    <span className="dx-rte__dot dx-rte__dot--dp" aria-hidden />
+                    <span className="dx-rte__addr">{preview.dropoff || "—"}</span>
                   </div>
                 </div>
 
-                <dl className="kv" style={{ marginTop: 12 }}>
-                  {preview.requiredCar && (
-                    <>
-                      <dt>Specific car</dt>
-                      <dd>{preview.requiredCar}</dd>
-                    </>
-                  )}
-                  <dt>Guest</dt>
-                  <dd>{preview.guest || "—"}</dd>
-                  <dt>Pax / luggage</dt>
-                  <dd>
-                    {preview.pax || "—"} pax · {preview.luggage || "—"} bags
-                  </dd>
-                  {preview.flight && (
-                    <>
-                      <dt>Flight</dt>
-                      <dd>{preview.flight}</dd>
-                    </>
-                  )}
-                  {preview.reference && (
-                    <>
-                      <dt>Reference</dt>
-                      <dd>{preview.reference}</dd>
-                    </>
-                  )}
-                  {preview.languages.length > 0 && (
-                    <>
-                      <dt>Languages</dt>
-                      <dd>{preview.languages.join(", ")}</dd>
-                    </>
-                  )}
-                  {preview.dressLabel && (
-                    <>
-                      <dt>Dress code</dt>
-                      <dd>{preview.dressLabel}</dd>
-                    </>
-                  )}
-                  {preview.flagLabels.length > 0 && (
-                    <>
-                      <dt>Requests</dt>
-                      <dd>{preview.flagLabels.join(" · ")}</dd>
-                    </>
-                  )}
-                  {preview.boardName && (
-                    <>
-                      <dt>Name board</dt>
-                      <dd>{preview.boardName}</dd>
-                    </>
-                  )}
-                  {preview.driverMessage && (
-                    <>
-                      <dt>Message to Driver</dt>
-                      <dd>{preview.driverMessage}</dd>
-                    </>
-                  )}
-                </dl>
+                <div className="mx-sumdiv" />
+
+                <div className="dx-srow">
+                  <span className="dx-slbl">Guest</span>
+                  <div className="dx-sval">
+                    {preview.guest || "—"} · {preview.pax || "—"} pax · {preview.luggage || "—"} bags
+                  </div>
+                </div>
+                {preview.requiredCar && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Specific car</span>
+                    <div className="dx-sval">{preview.requiredCar}</div>
+                  </div>
+                )}
+                {preview.flight && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Flight</span>
+                    <div className="dx-sval">{preview.flight}</div>
+                  </div>
+                )}
+                {preview.reference && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Reference</span>
+                    <div className="dx-sval">
+                      {preview.reference}{" "}
+                      <span className="muted" style={{ fontSize: 11 }}>· your team only</span>
+                    </div>
+                  </div>
+                )}
+                {preview.languages.length > 0 && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Languages</span>
+                    <div className="dx-chips">
+                      {preview.languages.map((l) => (
+                        <span className="dx-chip dx-chip--plain" key={l}>{l}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {preview.dressLabel && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Dress</span>
+                    <div className="dx-chips"><span className="dx-chip">{preview.dressLabel}</span></div>
+                  </div>
+                )}
+                {preview.flagLabels.length > 0 && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Requests</span>
+                    <div className="dx-chips">
+                      {preview.flagLabels.map((f) => (
+                        <span className="dx-chip" key={f}>{f}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {preview.boardName && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Name board</span>
+                    <div className="dx-sval">{preview.boardName}</div>
+                  </div>
+                )}
+                {preview.driverMessage && (
+                  <div className="dx-srow">
+                    <span className="dx-slbl">Message</span>
+                    <div className="dx-quote">{preview.driverMessage}</div>
+                  </div>
+                )}
               </div>
 
               {startsSoon && !speedWin && (
