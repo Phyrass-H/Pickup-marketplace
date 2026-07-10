@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil, GitPullRequestArrow } from "lucide-react";
+import { Pencil, GitPullRequestArrow, Lock, Phone, Car, Clock, Star } from "lucide-react";
 import type { MissionRow, AmendmentStatus } from "@/lib/database.types";
 import { closeAmendment } from "@/app/(dispatch)/dispatch/[id]/amend/actions";
 import { currentFare } from "@/lib/pdp";
@@ -21,7 +21,7 @@ import { BoardFileLink } from "@/components/board-file-link";
 import { PhoneShareToggle } from "@/components/phone-share-toggle";
 import {
   parsePassengers,
-  zipGuestContacts,
+  passengerName,
   type GuestContact,
 } from "@/lib/passengers";
 
@@ -52,6 +52,13 @@ export interface AmendmentBrief {
   at: string; // responded_at ?? created_at
 }
 
+// The latest detail-edit change-log for this trip (D40 follow-up) — the "what
+// changed" trail shown under the edit actions. Business-private (side table).
+export interface InfoChangeBrief {
+  at: string;
+  items: string[]; // human phrases: "Flight BA342 → BA118", "Added guest X"
+}
+
 // One dense schedule line. Click to expand full detail. The coloured left edge +
 // status pill are the at-a-glance signal a hotel scans (red = needs a call). When
 // a Driver hasn't confirmed near pickup (danger tone) the whole row gets a gentle
@@ -61,22 +68,31 @@ export function TripRow({
   driver,
   guestContacts,
   amendment,
+  infoChange,
   archived = false,
 }: {
   mission: MissionRow;
   driver?: DriverContact | null;
   guestContacts?: GuestContact[] | null;
   amendment?: AmendmentBrief | null;
+  infoChange?: InfoChangeBrief | null;
   archived?: boolean;
 }) {
   const t = missionTone(mission, undefined, { archived });
   const reference = mission.reference?.trim() || null;
-  // Guests with a phone (the Business owns these numbers). The Share switch flips
-  // whether the assigned Driver can see each one; archived/past trips are read-only.
-  const guests = zipGuestContacts(
-    parsePassengers(mission.passenger_names),
-    guestContacts ?? [],
-  );
+  // Every named Guest, aligned by index with its phone/share state from the side
+  // table (Drivers can't read those numbers). Phone-less guests still list; the
+  // Share switch flips reveal to the assigned Driver. Archived/past = read-only.
+  const gcs = guestContacts ?? [];
+  const guestRows = parsePassengers(mission.passenger_names)
+    .map((p, i) => ({
+      index: i,
+      name: passengerName(p),
+      main: Boolean(p.main),
+      phone: (gcs[i]?.phone ?? "").trim(),
+      shared: Boolean(gcs[i]?.shared),
+    }))
+    .filter((g) => g.name || g.phone);
   // Sharing is read-only once a trip is finished (and on archived/history rows).
   const shareLocked =
     archived ||
@@ -121,6 +137,34 @@ export function TripRow({
         .filter(Boolean)
         .join(" · ")
     : "";
+  const driverInitials = driver
+    ? driver.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? "")
+        .join("")
+    : "";
+  const serviceLabel = serviceClassLabel(mission.category, mission.required_body_type);
+  const specificCar =
+    mission.required_make && mission.required_model
+      ? `${mission.required_make} ${mission.required_model}`
+      : null;
+  const hasService =
+    languages.length > 0 ||
+    !!dressLabel ||
+    flagLabels.length > 0 ||
+    !!mission.board_name ||
+    !!mission.board_file_path ||
+    !!mission.driver_message;
+  const paxN = mission.pax_count ?? (guestRows.length || null);
+  const bagsN = mission.luggage_count ?? 0;
+  const guestsHeader = mission.luggage_only
+    ? `Luggage · ${bagsN} ${bagsN === 1 ? "bag" : "bags"}`
+    : `Guests · ${paxN ?? "—"} ${paxN === 1 ? "passenger" : "passengers"} · ${bagsN} ${bagsN === 1 ? "bag" : "bags"}`;
+  const acceptedFareChanged =
+    !!amendment && amendment.fareOld != null && amendment.fareOld !== amendment.fareNew;
+  const acceptedRouteChanged = !!amendment && !!amendment.summary && amendment.summary !== "Fare change";
 
   return (
     <details
@@ -212,26 +256,53 @@ export function TripRow({
       </summary>
 
       <div className="dx-trip__detail">
-        {/* Edit the trip's info (guests, flight, reference, Driver & service) — no
-            price/route change. At the top of the detail so it's the first thing you
-            see; only while pre-departure. The "Edited · time" stamp shows in the
-            detail (never the row) once the info has been edited — kept even after the
-            trip is frozen, so the record stays visible. */}
-        {(editable || editedAt || canAmend) && (
-          <div className="dx-trip__edit">
+        {/* Top meta line: the private Reference tag (Business-only) + the detail-only
+            "Edited · time" stamp. The stamp stays even after the trip is frozen so the
+            edit record remains visible. */}
+        {(reference || editedAt) && (
+          <div className="dx-dt-meta">
+            {reference && (
+              <span className="dx-dt-ref">
+                <Lock size={12} aria-hidden /> {reference}
+                <span className="dx-dt-ref__note"> · your team only</span>
+              </span>
+            )}
             {editedAt && (
-              <span className="dx-trip__edited">Edited · {formatDateTime(editedAt)}</span>
+              <span className="dx-dt-edited">Edited · {formatDateTime(editedAt)}</span>
+            )}
+          </div>
+        )}
+
+        {/* Edit actions — each spells out what it changes + whether the Driver must
+            agree, so the two aren't confused. "Edit details" applies immediately;
+            "Propose a change" (route/fare) needs the Driver's consent, so it only
+            appears once a Driver holds the trip (accepted / confirmed). */}
+        {(editable || canAmend) && (
+          <div className="dx-acts">
+            {editable && (
+              <Link href={`/dispatch/${mission.id}/edit`} className="dx-act">
+                <span className="dx-act__t">
+                  <Pencil size={14} aria-hidden /> Edit details
+                </span>
+                <span className="dx-act__s">Update guest, flight &amp; service info · applies now</span>
+              </Link>
             )}
             {canAmend && (
-              <Link href={`/dispatch/${mission.id}/amend`} className="dx-trip__editbtn">
-                <GitPullRequestArrow size={14} aria-hidden /> Propose a change
+              <Link href={`/dispatch/${mission.id}/amend`} className="dx-act">
+                <span className="dx-act__t">
+                  <GitPullRequestArrow size={14} aria-hidden /> Propose a change
+                </span>
+                <span className="dx-act__s">New route or fare · the Driver must agree</span>
               </Link>
             )}
-            {editable && (
-              <Link href={`/dispatch/${mission.id}/edit`} className="dx-trip__editbtn">
-                <Pencil size={14} aria-hidden /> Edit details
-              </Link>
-            )}
+          </div>
+        )}
+
+        {/* What the last detail edit changed (D40) — the "what changed" trail. */}
+        {infoChange && infoChange.items.length > 0 && (
+          <div className="dx-trail">
+            <Clock size={13} aria-hidden />
+            <span>{infoChange.items.join(" · ")}</span>
           </div>
         )}
 
@@ -294,184 +365,221 @@ export function TripRow({
 
         {amendment && amendment.status === "accepted" && (
           <div className="dx-amend dx-amend--accepted">
-            <span className="dx-amend__tag dx-amend__tag--ok">Change accepted</span>
-            <span className="muted small"> · {formatDateTime(amendment.at)}</span>
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag dx-amend__tag--ok">Change accepted</span>
+              <span className="muted small">· {formatDateTime(amendment.at)}</span>
+            </div>
+            {(acceptedFareChanged || acceptedRouteChanged) && (
+              <div className="dx-amend__body">
+                {acceptedFareChanged && (
+                  <>
+                    Fare <s>{formatMoney(amendment.fareOld)}</s> → {formatMoney(amendment.fareNew)}
+                  </>
+                )}
+                {acceptedFareChanged && acceptedRouteChanged && " · "}
+                {acceptedRouteChanged && amendment.summary}
+              </div>
+            )}
           </div>
         )}
 
         {t.hint && <div className="notice warn" style={{ marginTop: 12 }}>{t.hint}</div>}
 
-        <div className="route" style={{ marginTop: 12 }}>
-          <div className="leg">
-            <span className="dot" />
-            <span>{mission.pickup_address}</span>
+        {/* Scan strip — the numbers a Dispatcher acts on. Pickup on the left, fare
+            on the right; the Flight tile drops out when there's no flight. */}
+        <div className="dx-scan">
+          <div className="dx-scan__c">
+            <div className="dx-scan__cap">Pickup</div>
+            <div className="dx-scan__v">{formatDateTime(mission.pickup_at)}</div>
+            <div className="dx-scan__s">Paris time</div>
           </div>
-          {waypoints.map((w, i) => {
-            const reached = i < stopsReached;
-            const current = mission.status === "on_board" && i === stopsReached;
-            return (
-              <div
-                className={`leg leg--stop${reached ? " leg--done" : ""}${current ? " leg--now" : ""}`}
-                key={i}
-              >
-                <span className="dot mid" />
-                <span className="leg-addr muted">{w.address}</span>
-                {reached && <span className="leg-tag leg-tag--done">reached</span>}
-                {current && <span className="leg-tag leg-tag--now">next stop</span>}
-              </div>
-            );
-          })}
-          <div className="leg">
-            <span className="dot end" />
-            <span>{mission.dropoff_address ?? "—"}</span>
+          <div className="dx-scan__c">
+            <div className="dx-scan__cap">Vehicle</div>
+            <div className="dx-scan__v">{serviceLabel}</div>
+            <div className="dx-scan__s">
+              {specificCar ?? (mission.luggage_only ? "Luggage run" : mission.zone ?? "")}
+            </div>
+          </div>
+          {mission.flight_number && (
+            <div className="dx-scan__c">
+              <div className="dx-scan__cap">Flight</div>
+              <div className="dx-scan__v">{mission.flight_number}</div>
+              <div className="dx-scan__s">{flightEta ? `lands ${flightEta}` : ""}</div>
+            </div>
+          )}
+          <div className="dx-scan__c dx-scan__c--fare">
+            <div className="dx-scan__cap">Fare now</div>
+            <div className="dx-scan__v dx-scan__v--big">{formatMoney(currentFare(mission))}</div>
+            <div className="dx-scan__s">ceiling {formatMoney(mission.ceiling)}</div>
           </div>
         </div>
 
-        {(isExecutable(mission.status) || mission.status === "completed") && (
-          <StatusSteps
-            status={mission.status}
-            stopsCount={waypoints.length}
-            stopsReached={stopsReached}
-          />
-        )}
+        {/* Route — full addresses + trip distance/duration; the rail checks off live
+            as the Driver reaches each stop mid-trip. */}
+        <div className="dx-panel dx-panel--route">
+          <div className="dx-panel__h dx-panel__h--split">
+            <span>Route</span>
+            {tripMeta && <span className="dx-panel__meta">{tripMeta}</span>}
+          </div>
+          <div className="dx-rte">
+            <div className="dx-rte__leg">
+              <span className="dx-rte__dot dx-rte__dot--pk" aria-hidden />
+              <span className="dx-rte__addr" title={mission.pickup_address}>
+                {mission.pickup_address}
+              </span>
+            </div>
+            {waypoints.map((w, i) => {
+              const reached = i < stopsReached;
+              const current = mission.status === "on_board" && i === stopsReached;
+              return (
+                <div
+                  className={`dx-rte__leg${reached ? " dx-rte__leg--done" : ""}${current ? " dx-rte__leg--now" : ""}`}
+                  key={i}
+                >
+                  <span className="dx-rte__dot dx-rte__dot--via" aria-hidden />
+                  <span className="dx-rte__addr" title={w.address}>{w.address}</span>
+                  {reached && <span className="dx-rte__tag dx-rte__tag--done">reached</span>}
+                  {current && <span className="dx-rte__tag dx-rte__tag--now">next stop</span>}
+                </div>
+              );
+            })}
+            <div className="dx-rte__leg">
+              <span className="dx-rte__dot dx-rte__dot--dp" aria-hidden />
+              <span className="dx-rte__addr" title={mission.dropoff_address ?? undefined}>
+                {mission.dropoff_address ?? "—"}
+              </span>
+            </div>
+          </div>
+          {(isExecutable(mission.status) || mission.status === "completed") && (
+            <StatusSteps
+              status={mission.status}
+              stopsCount={waypoints.length}
+              stopsReached={stopsReached}
+            />
+          )}
+        </div>
 
-        <dl className="kv" style={{ marginTop: 14 }}>
-          <dt>When</dt>
-          <dd>{formatDateTime(mission.pickup_at)}</dd>
-          <dt>Fare (now)</dt>
-          <dd>{formatMoney(currentFare(mission))} · ceiling {formatMoney(mission.ceiling)}</dd>
-          <dt>Vehicle</dt>
-          <dd>
-            {serviceClassLabel(mission.category, mission.required_body_type)}
-            {mission.luggage_only ? " · Luggage run" : ""}
-            {mission.zone ? ` · ${mission.zone}` : ""}
-          </dd>
-          {mission.required_make && mission.required_model && (
-            <>
-              <dt>Specific car</dt>
-              <dd>
-                {mission.required_make} {mission.required_model}
-              </dd>
-            </>
-          )}
-          {tripMeta && (
-            <>
-              <dt>Trip</dt>
-              <dd>{tripMeta}</dd>
-            </>
-          )}
-          <dt>Guest</dt>
-          <dd>{mission.passenger_name ?? "—"}</dd>
-          {reference && (
-            <>
-              <dt>Reference</dt>
-              <dd>{reference}</dd>
-            </>
-          )}
-          {languages.length > 0 && (
-            <>
-              <dt>Languages</dt>
-              <dd>{languages.join(", ")}</dd>
-            </>
-          )}
-          {dressLabel && (
-            <>
-              <dt>Dress code</dt>
-              <dd>{dressLabel}</dd>
-            </>
-          )}
-          {flagLabels.length > 0 && (
-            <>
-              <dt>Requests</dt>
-              <dd>{flagLabels.join(" · ")}</dd>
-            </>
-          )}
-          {(mission.board_name || mission.board_file_path) && (
-            <>
-              <dt>Name board</dt>
-              <dd>
-                {mission.board_name || "—"}
-                {mission.board_file_path && (
-                  <>
-                    {" · "}
-                    <BoardFileLink missionId={mission.id} />
-                  </>
-                )}
-              </dd>
-            </>
-          )}
-          {mission.driver_message && (
-            <>
-              <dt>Message to Driver</dt>
-              <dd>{mission.driver_message}</dd>
-            </>
-          )}
-          <dt>Pax / luggage</dt>
-          <dd>
-            {mission.luggage_only
-              ? `No passengers · ${mission.luggage_count ?? 0} bags`
-              : `${mission.pax_count ?? "—"} pax · ${mission.luggage_count ?? "—"} bags`}
-          </dd>
-          {mission.flight_number && (
-            <>
-              <dt>Flight</dt>
-              <dd>
-                {mission.flight_number}
-                {flightEta ? ` · ETA ${flightEta}` : ""}
-              </dd>
-            </>
-          )}
-          <dt>Driver</dt>
-          <dd>
-            {driver ? (
-              <>
-                {driver.name}
-                {driver.phone && (
-                  <>
-                    {" · "}
-                    <a href={`tel:${driver.phone}`} className="dx-tel">
-                      {driver.phone}
-                    </a>
-                  </>
-                )}
-              </>
-            ) : (
-              "Not assigned yet"
-            )}
-          </dd>
-          {car && (carDesc || car.plate) && (
-            <>
-              <dt>Car</dt>
-              <dd>
-                {carDesc || "—"}
-                {car.plate && <span className="mono"> · {car.plate}</span>}
-              </dd>
-            </>
-          )}
-        </dl>
-
-        {guests.length > 0 && (
-          <div className="dx-guests">
-            {guests.map((g) => (
-              <div className="dx-guest" key={g.index}>
-                <span className="dx-guest__who">
-                  {g.main ? "Main contact" : "Guest"}
-                  {g.name ? ` · ${g.name}` : ""}
-                </span>
-                <a className="dx-guest__tel" href={`tel:${g.phone}`}>
-                  {g.phone}
-                </a>
-                <PhoneShareToggle
-                  missionId={mission.id}
-                  index={g.index}
-                  shared={g.shared}
-                  disabled={shareLocked}
-                />
+        {/* Driver — a slim bar (name · phone · car), or a quiet placeholder when the
+            trip is still in the Pool. */}
+        {driver ? (
+          <div className="dx-driverbar">
+            <span className="dx-av" aria-hidden>{driverInitials}</span>
+            <div className="dx-driverbar__id">
+              <div className="dx-driverbar__nm">
+                {driver.name} <span>· Driver</span>
               </div>
-            ))}
+              {driver.phone && (
+                <a href={`tel:${driver.phone}`} className="dx-tel">
+                  <Phone size={13} aria-hidden /> {driver.phone}
+                </a>
+              )}
+            </div>
+            {(carDesc || car?.plate) && (
+              <span className="dx-carinline">
+                <Car size={14} aria-hidden /> {carDesc || "Car"}
+                {car?.plate && <span className="mono dx-plate">{car.plate}</span>}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="dx-driverbar dx-driverbar--empty">
+            <Car size={15} aria-hidden />
+            {mission.status === "pooled" ? "No Driver yet · in the Pool" : "No Driver assigned"}
           </div>
         )}
 
+        {/* Service for the Driver + Guests, side by side. */}
+        <div className="dx-pgrid">
+          {hasService && (
+            <div className="dx-panel">
+              <div className="dx-panel__h">Service for the Driver</div>
+              {languages.length > 0 && (
+                <div className="dx-srow">
+                  <span className="dx-slbl">Languages</span>
+                  <div className="dx-chips">
+                    {languages.map((l) => (
+                      <span className="dx-chip dx-chip--plain" key={l}>{l}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {dressLabel && (
+                <div className="dx-srow">
+                  <span className="dx-slbl">Dress</span>
+                  <div className="dx-chips"><span className="dx-chip">{dressLabel}</span></div>
+                </div>
+              )}
+              {flagLabels.length > 0 && (
+                <div className="dx-srow">
+                  <span className="dx-slbl">Requests</span>
+                  <div className="dx-chips">
+                    {flagLabels.map((f) => (
+                      <span className="dx-chip" key={f}>{f}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(mission.board_name || mission.board_file_path) && (
+                <div className="dx-srow">
+                  <span className="dx-slbl">Name board</span>
+                  <div className="dx-sval">
+                    {mission.board_name || "—"}
+                    {mission.board_file_path && (
+                      <>
+                        {" "}
+                        <BoardFileLink missionId={mission.id} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              {mission.driver_message && (
+                <div className="dx-srow">
+                  <span className="dx-slbl">Message</span>
+                  <div className="dx-quote">{mission.driver_message}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="dx-panel">
+            <div className="dx-panel__h">{guestsHeader}</div>
+            {mission.luggage_only ? (
+              <p className="dx-note">No passengers — luggage only.</p>
+            ) : guestRows.length > 0 ? (
+              guestRows.map((g) => (
+                <div className="dx-guestrow" key={g.index}>
+                  <div className="dx-gwho">
+                    {g.main && <Star size={13} className="dx-gstar" aria-hidden />}
+                    {g.main ? "Main contact" : "Guest"}
+                    {g.name ? ` · ${g.name}` : ""}
+                  </div>
+                  {g.phone && (
+                    <div className="dx-grow">
+                      <a className="dx-tel" href={`tel:${g.phone}`}>
+                        <Phone size={13} aria-hidden /> {g.phone}
+                      </a>
+                      <PhoneShareToggle
+                        missionId={mission.id}
+                        index={g.index}
+                        shared={g.shared}
+                        disabled={shareLocked}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : mission.passenger_name ? (
+              <div className="dx-guestrow">
+                <div className="dx-gwho">
+                  <Star size={13} className="dx-gstar" aria-hidden /> Main contact · {mission.passenger_name}
+                </div>
+              </div>
+            ) : (
+              <p className="dx-note">No named guests.</p>
+            )}
+          </div>
+        </div>
       </div>
     </details>
   );

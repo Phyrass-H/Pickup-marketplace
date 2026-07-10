@@ -5,6 +5,24 @@
 
 ---
 
+## 10 July 2026
+- **The expanded trip is far easier to read.** When you open a trip on the schedule, its details used to be one long
+  grey list where everything looked the same — and half of it just repeated the row you'd already read. It's now
+  grouped into clean sections you can scan in a glance: a small strip of the numbers you actually act on (pickup
+  time, vehicle, flight, and the fare — fare on the right), the full route with distance and time beside it, a slim
+  one-line driver bar (name, tappable phone, car and plate), and the service requests and guests side by side, with
+  languages and requests shown as little tags. The route line now also stops cleanly at the destination instead of
+  trailing off past it. Nothing was lost — it's the same information, just organised so a busy schedule reads fast.
+- **The two "edit" buttons now explain themselves.** Under an open trip, "Edit details" and "Propose a change" each
+  carry a one-line note so you never have to guess which is which: *Edit details — update guest, flight and service
+  info, applies now*; *Propose a change — new route or fare, the Driver must agree*. (Short version: edit details =
+  fix the info, happens immediately; propose a change = ask the Driver to agree to a different route or price.)
+- **You can now see what was changed on a trip.** When a Driver accepts a route or fare change, the trip now spells
+  out exactly what changed — e.g. "Fare 120 € → 140 € · Add a stop at 3 Bd de la Ferrage" — instead of just saying
+  "change accepted". And when you edit a trip's details (guest, flight, service…), the trip keeps a short "what
+  changed" note (e.g. "Flight BA342 → BA118 · Added guest Eleanor Whitmore"), private to your team. (The detail
+  note needs a one-line database change — done.)
+
 ## 7 July 2026
 - **You can now change a trip after a Driver has taken it — with their agreement.** This is the big one. Once a Driver
   has accepted a trip, you can't just silently move the goalposts (they agreed to a specific job and price). So there's

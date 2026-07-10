@@ -6,8 +6,14 @@ import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
-import { TripRow, type DriverContact, type AmendmentBrief } from "@/components/trip-row";
+import {
+  TripRow,
+  type DriverContact,
+  type AmendmentBrief,
+  type InfoChangeBrief,
+} from "@/components/trip-row";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
+import { parseChangeItems } from "@/lib/info-changes";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
   parseFromSnapshot,
@@ -61,6 +67,7 @@ function DayGroup({
   contacts,
   guestContacts,
   amendments,
+  infoChanges,
   today,
 }: {
   dayKey: string;
@@ -68,6 +75,7 @@ function DayGroup({
   contacts: Map<string, DriverContact>;
   guestContacts: Map<string, GuestContact[]>;
   amendments: Map<string, AmendmentBrief>;
+  infoChanges: Map<string, InfoChangeBrief>;
   today?: boolean;
 }) {
   return (
@@ -86,6 +94,7 @@ function DayGroup({
           driver={contacts.get(m.id) ?? null}
           guestContacts={guestContacts.get(m.id) ?? null}
           amendment={amendments.get(m.id) ?? null}
+          infoChange={infoChanges.get(m.id) ?? null}
         />
       ))}
     </section>
@@ -165,6 +174,25 @@ export default async function DispatchSchedule({
     }
   }
 
+  // Detail-edit change-log (D40): the latest "what changed" trail per mission, for
+  // the trip detail. Business-private side table (RLS-scoped); degrades to empty if
+  // the 2026-07-10 migration hasn't been applied yet.
+  const infoChanges = new Map<string, InfoChangeBrief>();
+  if (missionIds.length > 0) {
+    const { data: ics } = await supabase
+      .from("mission_info_change")
+      .select("mission_id, items, created_at")
+      .in("mission_id", missionIds)
+      .order("created_at", { ascending: false });
+    const seen = new Set<string>();
+    for (const r of ics ?? []) {
+      if (seen.has(r.mission_id)) continue; // keep only the latest edit per mission
+      seen.add(r.mission_id);
+      const items = parseChangeItems(r.items);
+      if (items.length > 0) infoChanges.set(r.mission_id, { at: r.created_at, items });
+    }
+  }
+
   // Group by Paris day; split into today / future / past.
   const todayKey = parisDayKey(new Date());
   const groups = new Map<string, MissionRow[]>();
@@ -210,6 +238,7 @@ export default async function DispatchSchedule({
               contacts={contacts}
               guestContacts={guestContacts}
               amendments={amendments}
+              infoChanges={infoChanges}
               today
             />
             {todayMissions.length === 0 && (
@@ -226,6 +255,7 @@ export default async function DispatchSchedule({
                 contacts={contacts}
                 guestContacts={guestContacts}
                 amendments={amendments}
+                infoChanges={infoChanges}
               />
             ))}
           </div>
@@ -245,6 +275,7 @@ export default async function DispatchSchedule({
                     contacts={contacts}
                     guestContacts={guestContacts}
                     amendments={amendments}
+                    infoChanges={infoChanges}
                   />
                 ))}
               </div>

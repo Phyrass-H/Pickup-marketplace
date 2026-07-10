@@ -6,11 +6,18 @@ import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import {
   parsePassengers,
+  passengerName as guestFullName,
   primaryPassengerName,
   passengerRowData,
   guestContacts,
 } from "@/lib/passengers";
-import { parseLanguages, parseDriverFlags, DRESS_CODES } from "@/lib/driver-service";
+import {
+  parseLanguages,
+  parseDriverFlags,
+  activeFlagKeys,
+  DRESS_CODES,
+} from "@/lib/driver-service";
+import { diffMissionInfo, type InfoSnapshot } from "@/lib/info-changes";
 import {
   DOCS_BUCKET,
   ensureBucket,
@@ -114,6 +121,18 @@ export async function updateMissionInfo(missionId: string, formData: FormData) {
   };
 
   const supabase = await createClient();
+
+  // Snapshot the info BEFORE the write, so we can log WHAT changed (the "what
+  // changed" trail in the schedule detail). RLS scopes this read to the Business.
+  const { data: before } = await supabase
+    .from("mission")
+    .select(
+      "passenger_names, flight_number, luggage_count, reference, required_languages, dress_code, driver_flags, board_name, board_file_path, driver_message",
+    )
+    .eq("id", id)
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+
   // Atomic guard: the .in(status) both enforces "still editable" AND avoids a
   // TOCTOU race with an accept/status change landing mid-edit. 0 rows → wrong
   // owner (RLS), or the trip is now locked/gone.
@@ -126,6 +145,48 @@ export async function updateMissionInfo(missionId: string, formData: FormData) {
     .select("id");
   if (error) redirect(backTo("db"));
   if (!updated || updated.length === 0) redirect(backTo("locked"));
+
+  // Change-log (D40 follow-up): record the human-readable diff for the schedule's
+  // "what changed" trail. Business-private (mission_info_change, deny-by-default
+  // RLS). Non-fatal + degrades gracefully if the table isn't applied yet.
+  const boardChanged = "board_file_path" in boardUpload;
+  const hadBoardFile = (before?.board_file_path ?? null) != null;
+  const beforeSnap: InfoSnapshot = {
+    guests: parsePassengers(before?.passenger_names).map(guestFullName).filter(Boolean),
+    flight: before?.flight_number ?? null,
+    luggage: before?.luggage_count ?? null,
+    reference: before?.reference ?? null,
+    languages: parseLanguages(before?.required_languages),
+    dress: before?.dress_code ?? null,
+    flags: activeFlagKeys(parseDriverFlags(before?.driver_flags)),
+    boardName: before?.board_name ?? null,
+    message: before?.driver_message ?? null,
+    hasBoardFile: hadBoardFile,
+  };
+  const afterSnap: InfoSnapshot = {
+    guests: luggageOnly ? [] : passengers.map(guestFullName).filter(Boolean),
+    flight: flightNumber || null,
+    luggage: luggageCount,
+    reference: reference || null,
+    languages: requiredLanguages,
+    dress: dressCode,
+    flags: activeFlagKeys(driverFlags),
+    boardName: boardName || null,
+    message: driverMessage || null,
+    hasBoardFile: boardChanged
+      ? (boardUpload as { board_file_path: string | null }).board_file_path != null
+      : hadBoardFile,
+  };
+  const changeItems = diffMissionInfo(beforeSnap, afterSnap);
+  if (changeItems.length > 0) {
+    const { error: logErr } = await supabase.from("mission_info_change").insert({
+      mission_id: id,
+      business_id: ctx.business.id,
+      edited_by: ctx.dispatcher.id,
+      items: changeItems,
+    });
+    if (logErr) console.error("mission_info_change write failed:", logErr.message);
+  }
 
   // Guest phones (Driver-unreadable side table), aligned by index — same
   // upsert-else-delete as createMission. Only after the mission update matched a

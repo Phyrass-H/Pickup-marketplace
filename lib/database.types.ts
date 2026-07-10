@@ -428,6 +428,31 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["mission_amendment"]["Insert"]>;
         Relationships: [];
       };
+      // Detail-edit change-log (D40 follow-up): one row per "Edit details" save,
+      // recording WHAT info changed (human phrases). Business-private side table —
+      // Drivers have no RLS policy on it. (2026-07-10 migration.)
+      mission_info_change: {
+        Row: {
+          id: string;
+          mission_id: string;
+          business_id: string;
+          edited_by: string | null;
+          items: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          business_id: string;
+          edited_by?: string | null;
+          items?: Json;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["mission_info_change"]["Insert"]
+        >;
+        Relationships: [];
+      };
       status_event: {
         Row: {
           id: string;
@@ -568,6 +593,7 @@ export interface Database {
 // ---------- Convenience row aliases ----------
 export type MissionRow = Database["public"]["Tables"]["mission"]["Row"];
 export type MissionAmendmentRow = Database["public"]["Tables"]["mission_amendment"]["Row"];
+export type MissionInfoChangeRow = Database["public"]["Tables"]["mission_info_change"]["Row"];
 export type DriverRow = Database["public"]["Tables"]["driver"]["Row"];
 export type VehicleRow = Database["public"]["Tables"]["vehicle"]["Row"];
 export type DispatcherRow = Database["public"]["Tables"]["dispatcher"]["Row"];

@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-07-10 — Session 36 — Expanded trip-row redesign + a "what changed" trail (detail-edit change-log)
+**Branch:** `main`. **Migration (founder RUNS it):** `docs/migrations/2026-07-10_mission_info_change.sql` — a **new
+`mission_info_change` table** (+ RLS, deny-by-default for Drivers). Additive only; base schema untouched (hard-rule #4).
+**New files:** `lib/info-changes.ts`. **Touched:** `components/trip-row.tsx` (the detail rewrite), `app/globals.css`,
+`app/(dispatch)/dispatch/page.tsx`, `app/(dispatch)/dispatch/[id]/edit/actions.ts`, `lib/database.types.ts`.
+**D25 previews** (v1→v5 visualize mockups) all signed off ("that way better!!"). Founder decisions folded in below.
+
+**Why:** the expanded `.dx-trip__detail` was one flat 15-row `.kv` definition list (When/Fare/Vehicle/Specific car/
+Trip/Guest/Reference/Languages/Dress/Requests/Board/Message/Pax/Flight/Driver/Car) — equal weight, no grouping, and it
+re-showed the collapsed row (When/Guest/Ref/Flight + the route drawn twice). Hard to scan across many trips. Founder
+ask: "easy on the eyes, fast, efficient."
+
+**The redesign (`.dx-trip__detail`, `.dx-*` classes; the flat `.kv`/`.route` kept for other pages — rides, missions,
+new-mission form):** meta line (private **Reference lock-chip** "· your team only" + the detail-only "Edited ·" stamp)
+→ **two edit-action tiles, each with a one-line helper** (Edit details = "Update guest, flight & service info · applies
+now"; Propose a change = "New route or fare · the Driver must agree") so the two aren't confused (founder Q) → the
+**"what changed" trail** → amendment state → hint → **scan-strip** (Pickup left · Vehicle · Flight · **Fare now right**,
+per founder; the Flight tile drops out with no flight number) → **Route card** (full addresses + trip **distance·duration
+in the header** beside the route, per founder; a **dot-to-dot connector that STOPS at the drop-off dot** — the old rail
+overshot; live stop check-off preserved) → **slim single-line Driver bar** (avatar · name · tappable phone · car·plate;
+"No Driver yet · in the Pool" when unassigned — was a stretched half-empty panel, per founder) → **Service · Guests
+side-by-side** (`.dx-pgrid`; languages/dress/requests as **chips**; pax/bags shown **once**, in the Guests header, not
+duplicated in the scan-strip per founder). Every variant handled: no driver, luggage-only, in-progress, no flight/guests/
+service, and the amendment pending/declined/accepted states.
+
+**"Can we see what a Business changed?" (founder Q) — two levels, both built:**
+1. **Route/fare change (amendment) — no schema.** The "Change accepted" state now shows the **diff**: `Fare <s>120 €</s>
+   → 140 € · Add a stop at 3 Bd de la Ferrage` (data already in `AmendmentBrief` — fareOld/fareNew/summary).
+2. **Detail edit (guest/flight/service) — new migration.** `updateMissionInfo` now snapshots the info **before** the
+   write, computes a human-readable diff (`lib/info-changes.ts` `diffMissionInfo` → phrases like "Flight BA342 → BA118",
+   "Added guest X", "Dress Smart casual → Business formal"), and appends a row to **`mission_info_change`**. The schedule
+   loads the **latest** row per mission (RLS-scoped) → a `.dx-trail` line under the actions. **Privacy:** the diff can
+   contain the private reference tag / guest names, so it CAN'T sit on the mission row Drivers read — it's a **Business-
+   only side table, deny-by-default RLS** (mirrors `mission_guest_contact` / `mission_amendment`). Founder chose the
+   fuller "add the detail change-log too" option (vs amendment-diff-only). Both degrade gracefully pre-migration
+   (missing-table query → empty; the insert logs + is non-fatal).
+
+**Verified (localhost, real Supabase DB — `mission_info_change` NOT yet applied, so the trail degrades to empty):** `tsc`
+clean. Dispatch schedule renders (27 real trips). Expanded a real Confirmed trip w/ an accepted amendment
+(`d6f7c70a`, Jason Statham · Marc Dubois): the **whole redesign renders** — lock ref-chip, both action tiles w/ helpers,
+the **enriched "Change accepted — Fare 120 → 140 € · Add a stop"**, scan-strip in order (Pickup·Vehicle·Flight·Fare-right),
+route card w/ the connector **confirmed stopping at the drop-off dot** (`::before content:none` on the last leg), slim
+driver bar, Guests panel "2 passengers · 2 bags". **No console errors.** Screenshot matches the approved v5 mockup.
+
+**PENDING:** founder RUNS `2026-07-10_mission_info_change.sql` in Supabase → then deploy. (Redesign + amendment diff are
+migration-independent; only the detail-edit trail waits on the table.) **Next:** the detail-edit change-log field-level
+history is per-field human phrases stored at edit time (latest edit shown); a multi-edit visible history is a later
+extension. Founder's other named items remain: Driver app redesign, the pricing-engine-dependent items.
+
 ## 2026-07-07 — Session 35 — Mission edit PHASE 2: the amendment / consent flow (propose → accept/decline)
 **Branch:** `main`. **Migration (founder RUNS it):** `docs/migrations/2026-07-07_mission_amendment.sql` — a **new
 `mission_amendment` table** (+ RLS + 2 indexes) and the atomic **`respond_to_amendment` RPC**. Additive only; the base

@@ -920,7 +920,8 @@ textarea::placeholder {
   .set-nav { position: static; flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
   .set-nitem { white-space: nowrap; }
 }
-.dx-tel { color: var(--accent); font-weight: 600; cursor: pointer; }
+.dx-tel { color: var(--accent); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+.dx-tel svg { flex: none; }
 
 /* ---- Schedule / history: ONE framed table the eye can scan ---- */
 .dx-sched {
@@ -1039,7 +1040,94 @@ textarea::placeholder {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .dx-trip__driver { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dx-trip__detail { padding: 4px 16px 16px; border-top: 1px solid var(--border); }
+.dx-trip__detail { padding: 12px 16px 16px; border-top: 1px solid var(--border); }
+
+/* ===== Redesigned trip detail (S36): grouped, scannable sections =====
+   Order: meta (ref + edited) → edit actions → change trail → amendment state →
+   scan strip → route card → driver bar → service · guests. Rebuilt from the flat
+   .kv list so a dense schedule reads fast. */
+.dx-dt-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.dx-dt-ref { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-muted); background: var(--slate-100); border-radius: 6px; padding: 3px 8px; }
+.dx-dt-ref__note { color: var(--text-faint); }
+.dx-dt-edited { margin-left: auto; font-size: 11px; color: var(--text-faint); }
+
+/* Edit actions — a tile each, with a one-line helper spelling out what it changes
+   and whether the Driver must agree (so the two aren't confused). */
+.dx-acts { display: grid; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.dx-act { display: block; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 11px; text-decoration: none; background: var(--surface); }
+.dx-act:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.dx-act__t { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+.dx-act__s { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+
+/* "What changed" trail (D40) — the latest detail-edit diff. */
+.dx-trail { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 11px; margin-bottom: 12px; line-height: 1.5; }
+.dx-trail svg { flex: none; margin-top: 2px; color: var(--text-faint); }
+
+/* Scan strip — the numbers a Dispatcher acts on. */
+.dx-scan { display: flex; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-lg); margin: 0 0 10px; overflow: hidden; }
+.dx-scan__c { flex: 1 1 130px; min-width: 130px; padding: 9px 13px; border-left: 1px solid var(--border); }
+.dx-scan__c:first-child { border-left: none; }
+.dx-scan__c--fare { text-align: right; }
+.dx-scan__cap { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.dx-scan__v { font-size: 15px; font-weight: 600; margin-top: 3px; }
+.dx-scan__v--big { font-size: 18px; font-weight: 700; }
+.dx-scan__s { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+
+/* Section panels + the two-column people grid. */
+.dx-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 13px; }
+.dx-panel--route { margin-bottom: 10px; }
+.dx-panel__h { font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 9px; }
+.dx-panel__h--split { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dx-panel__meta { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.dx-pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 10px; }
+
+/* Route rail (detail): full addresses + a dot-to-dot connector that stops cleanly
+   at the drop-off dot (the last leg has no connector). Checks off live mid-trip. */
+.dx-rte { position: relative; padding: 2px 0; }
+.dx-rte__leg { display: flex; gap: 11px; padding: 4px 0; position: relative; }
+.dx-rte__leg:not(:last-child)::before { content: ""; position: absolute; left: 4px; top: 12.5px; bottom: -12.5px; width: 1.5px; background: var(--border-strong); }
+.dx-rte__dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 4px; flex: none; position: relative; z-index: 1; }
+.dx-rte__dot--pk { background: var(--text); }
+.dx-rte__dot--via { background: #cbd2dd; }
+.dx-rte__dot--dp { background: var(--surface); border: 1.5px solid #98a2b3; }
+.dx-rte__addr { font-size: 14px; font-weight: 500; min-width: 0; line-height: 1.35; }
+.dx-rte__leg--done .dx-rte__dot--via { background: var(--tone-success-fg); }
+.dx-rte__leg--done .dx-rte__addr { color: var(--text-muted); font-weight: 400; }
+.dx-rte__leg--now .dx-rte__dot--via { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.dx-rte__leg--now .dx-rte__addr { color: var(--accent); }
+.dx-rte__tag { flex: none; align-self: center; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: var(--radius-pill); white-space: nowrap; }
+.dx-rte__tag--done { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+.dx-rte__tag--now { background: var(--accent-soft); color: var(--accent); }
+
+/* Driver — a slim bar (or a quiet placeholder when unassigned). */
+.dx-driverbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 9px 13px; margin: 0 0 10px; }
+.dx-driverbar--empty { color: var(--text-muted); font-size: 13px; gap: 8px; }
+.dx-driverbar--empty svg { color: var(--text-faint); }
+.dx-av { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12.5px; flex: none; }
+.dx-driverbar__id { min-width: 0; }
+.dx-driverbar__nm { font-size: 14.5px; font-weight: 600; }
+.dx-driverbar__nm span { font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.dx-carinline { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.dx-carinline svg { color: var(--text-muted); flex: none; }
+.dx-plate { background: var(--slate-100); border-radius: 5px; padding: 1px 6px; font-size: 12px; color: var(--text-muted); }
+
+/* Service rows + chips. */
+.dx-srow { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; font-size: 13px; }
+.dx-srow + .dx-srow { border-top: 1px solid #f1f4f7; }
+.dx-slbl { width: 78px; flex: none; color: var(--text-muted); font-size: 12px; padding-top: 2px; }
+.dx-sval { min-width: 0; }
+.dx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.dx-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: var(--radius-pill); background: var(--accent-soft); color: var(--accent); }
+.dx-chip--plain { background: var(--slate-100); color: var(--text-muted); font-weight: 500; }
+.dx-quote { font-size: 12.5px; color: var(--slate-700); background: var(--surface-2); border-left: 3px solid var(--border-strong); border-radius: 0 6px 6px 0; padding: 7px 10px; line-height: 1.5; min-width: 0; }
+
+/* Guests. */
+.dx-guestrow { padding: 8px 0; }
+.dx-guestrow + .dx-guestrow { border-top: 1px solid #f1f4f7; }
+.dx-gwho { font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 5px; }
+.dx-gstar { color: #d19a00; flex: none; }
+.dx-grow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+.dx-note { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 0; }
 
 /* ---- Calendar head + view toggle ---- */
 .dx-calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
@@ -1165,10 +1253,8 @@ textarea::placeholder {
 .ex-actions { display: flex; gap: 10px; align-items: center; }
 /* "Edit details" action at the TOP of the expanded schedule trip detail (+ an
    "Edited · time" stamp to its left once the trip's info has been edited). */
-.dx-trip__edit { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 10px 0 2px; }
-.dx-trip__edited { margin-right: auto; font-size: 11px; color: var(--text-faint); }
-.dx-trip__editbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); border-radius: var(--radius-md); padding: 7px 13px; text-decoration: none; }
-.dx-trip__editbtn:hover { background: var(--accent-hover); }
+/* (Old .dx-trip__edit / __edited / __editbtn replaced by .dx-dt-meta + .dx-acts,
+   the S36 detail redesign.) */
 
 /* ---- Day peek drawer ---- */
 .dx-scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; }
@@ -1779,7 +1865,7 @@ textarea::placeholder {
 .dx-amend { margin-top: 12px; border-radius: var(--radius-md); padding: 11px 13px; font-size: 13px; }
 .dx-amend--pending { background: var(--accent-soft); border: 1px solid #cdd7e6; }
 .dx-amend--declined { background: #fff8f4; border: 1px solid #f3d9cc; }
-.dx-amend--accepted { background: var(--tone-neutral-bg, #eef2f7); border: 1px solid var(--border); display: flex; align-items: baseline; gap: 2px; }
+.dx-amend--accepted { background: var(--tone-neutral-bg, #eef2f7); border: 1px solid var(--border); }
 .dx-amend__head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .dx-amend__tag { font-size: 11.5px; font-weight: 600; color: var(--accent); background: #fff; border-radius: var(--radius-pill); padding: 2px 9px; }
 .dx-amend__tag--off { color: var(--danger); }
