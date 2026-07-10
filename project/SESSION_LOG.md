@@ -20,6 +20,13 @@ Nice-Côte d'Azur (NCE)" (it exists in Mapbox but ranks below shops/kiss-and-fly
 **Decision (founder):** *Mapbox cleanup now (free, no new integration), Google later.* Google needs a Google Cloud
 project + Places API key + billing the founder sets up (deferred to the integration phase, like the other third-party
 integrations). Logged as the future fix for true POI precision.
+**UPDATE (2026-07-10, later):** founder explicitly **deferred the Google swap until the final domain is registered** — so
+the browser API key gets restricted to the *right* domains ONCE (avoids redoing it after the rebrand DNS move). The brand
+name is now **RED Executive** (Riviera Executive Driver) and a Google Cloud project "RED Executive" exists, but the key/
+switch waits. **For now: stay on Mapbox** (the Riviera-first cleanup above is the current state). When the switch happens
+it's ~1 session, one file (`address-autocomplete.tsx`), Mapbox kept for routing. Related: the domain migration
+(pickupbedriven.com → a RED domain) is its own separate ~1-session task (DNS + Vercel + Supabase redirect allowlist +
+`lib/hosts.ts` + the key restriction), also waiting on the founder registering the name/domain.
 
 **Shipped (Mapbox cleanup):** (1) `DEFAULT_COUNTRIES` narrowed `fr,mc,it,ch,de,es,be,lu,nl,gb,at,pt` → **`fr,mc,it,ch`**
 (France + the only neighbours a Riviera VTC actually DRIVES to: Monaco, Italy, Switzerland/Geneva). (2) A **Riviera-first

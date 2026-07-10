@@ -445,6 +445,47 @@ S35, implementing the D39 Phase-2 design. The consent flow is **propose → acce
   the drop-off row uses a **finish-flag**, not a landing-plane (to a Driver a plane = a pickup). **Phase 3** (auto
   price-delta + notifications + an in-app note) stays deferred on those integrations. [[d39]] [[d37]] [[d6]] [[d25]]
 
+### D41 — Expanded trip-row redesign + a Business-private detail-edit change-log (2026-07-10)
+S36. The expanded `.dx-trip__detail` (a flat 15-row `.kv` list that half-repeated the collapsed row) rebuilt into grouped,
+scannable sections — a **scan-strip** (Pickup · Vehicle · Flight · Fare-right), a **route card** (full addresses + a
+dot-to-dot connector that stops at the drop-off dot + trip distance/duration in the header), a **slim one-line Driver
+bar**, and **Service · Guests side by side** with chips for languages/dress/requests. The flat `.kv`/`.route` classes
+stay for the other pages that use them (rides, missions, new-mission). Founder drove it via the D25 preview loop (v1→v5).
+**Plus "see what changed":** (a) the amendment **"Change accepted"** state now shows the fare/route diff from existing
+`AmendmentBrief` data (no schema); (b) a new **`mission_info_change`** table logs **detail-edit** diffs (human phrases via
+`lib/info-changes.ts`), rendered as a `.dx-trail` line. **Why a side table:** a detail-edit diff can contain the private
+reference tag / guest names, so it CANNOT sit on the Driver-readable mission row — deny-by-default RLS, Business-only,
+mirroring `mission_guest_contact` / `mission_amendment`. Migration `2026-07-10_mission_info_change.sql` (applied). Founder
+chose the fuller "add the detail change-log too" option. [[d40]] [[d25]]
+
+### D42 — Mission-form polish bundle (2026-07-10)
+S37, five founder-requested tweaks (the two visual ones via a D25 preview). (1) **Review-before-posting card** lightly
+polished to the S36 vocabulary (route rail + chips), staying recognisable. (2) **Guest names auto-capitalise** the first
+letter only (safe for "Al Souad"/"de la Croix"). (3) **Numeric fields** (luggage / base fare / ceiling) switched from
+`type=number` to `type=text` + `inputMode` + a controlled **sanitize** (`digitsOnly` / `decimalOnly`) — reliable vs
+`type=number`'s quirks; phone stays flexible (`+`/spaces). (4) **Edit trail leads with the bold edit time**; the separate
+"Edited ·" stamp is suppressed when a trail is present (no double time). (5) **Pricing card shows a live vehicle-reminder
+chip** (`serviceClassLabel(tier, body)`) — the specific car isn't lifted from ServiceClassFields, so it's class·body only.
+
+### D43 — Address search: tune Mapbox now (Riviera-first), Google Places later (2026-07-10)
+S38. Founder flagged bad autocomplete (typing "aéroport t2" ranked a Roissy CDG shop / Barcelona / Geneva above the Nice
+result) and asked about Google. **Tested the live Mapbox Search Box API:** the far-junk is a broad-country-list problem
+(fixable), but Mapbox's **POI ranking is genuinely weak** — `proximity` only nudges, so a literal "T2" name match beats
+the local airport; `bbox` / `poi_category` / tighter proximity all failed to surface the real NCE terminal. **Google
+Places weights *prominence*** and would rank major airports/hotels/stations first — the founder's instinct is right.
+**Decision:** ship a **free Mapbox cleanup now** (countries → `fr,mc,it,ch`; a client **Riviera-first re-rank** floats
+local hits to the top without hiding far destinations) and **defer the Google swap until the final domain is registered**
+(so the browser API key is restricted to the right domains ONCE, after the rebrand DNS move). Google = ~1 session, one
+file (`address-autocomplete.tsx`), keep Mapbox for routing. [[d44]]
+
+### D44 — Brand name = RED Executive (Riviera Executive Driver) (2026-07-10)
+The long-open rebrand away from "PickUp" (La Poste holds "Pickup" as an EU transport trademark) resolves to **RED
+Executive** — RED = **R**iviera **E**xecutive **D**river. The **repo/docs stay codenamed "PickUp" for now**; a code/copy
+rename is a later task (don't assume it's been done). The **domain migration** (`pickupbedriven.com` subdomains → a RED
+domain, e.g. `dispatch.redexecutive.com` / `driver.redexecutive.com`, or the on-brand `.red` TLD) is its own separate
+~1-session task (DNS + Vercel + Supabase redirect allowlist + `lib/hosts.ts` + the Google key restriction), waiting on the
+founder registering the name/domain. **Not to be confused with PickUp Go** (a separate product — hard rule).
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

@@ -13,7 +13,7 @@ START BY READING — **just these four**; they get you fully up to date without 
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 33–34, 2026-07-05)** for recent technical
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 36–38, 2026-07-10)** for recent technical
   detail. Older sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
@@ -28,7 +28,7 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
   `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`,
-  `2026-07-07_mission_amendment`) — **ONLY** for schema/data work. (All applied to the live DB.)
+  `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`) — **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -155,6 +155,27 @@ CURRENT STATE (live, deployed from `main`):
     upsert. Reuses the exact new-mission info sub-components (`PassengerList`/`ReferenceField`/`DriverServiceFields`).
     Entry = **"Edit details" at the TOP of the expanded trip detail**; an **"Edited · <time>"** stamp shows in the
     detail ONLY (never the collapsed row), stamped by `info_edited_at`. Security+parity review → 0 findings. [[d39]]
+- **Shipped 2026-07-10 (Sessions 36–38) — all live ([[d41]]–[[d44]]):**
+  - **S36 — Expanded trip-row redesign + a "what changed" trail** (migration `2026-07-10_mission_info_change`): the flat
+    15-row `.kv` detail rebuilt into grouped, scannable sections — a **scan-strip** (Pickup · Vehicle · Flight · **Fare
+    right**), a **route card** (full addresses + a dot-to-dot connector that STOPS at the drop-off dot + trip
+    distance/duration in the header), a **slim one-line Driver bar** ("No Driver yet" when unassigned), and **Service ·
+    Guests side by side** with **chips** for languages/dress/requests. New `.dx-*` classes; the flat `.kv`/`.route` stay
+    for other pages. **"See what changed"**: the amendment **"Change accepted"** state now shows the fare/route diff (no
+    schema, existing `AmendmentBrief`); and **detail edits** log a diff to the new **Business-only `mission_info_change`**
+    side table (deny-by-default RLS — the diff can hold the private reference/guest names) via `lib/info-changes.ts`,
+    rendered as a `.dx-trail` line. Files: `components/trip-row.tsx` (rewrite), `app/globals.css`, `dispatch/page.tsx`,
+    `dispatch/[id]/edit/actions.ts`, `lib/database.types.ts`. D25 previews v1→v5 signed off. [[d41]]
+  - **S37 — Mission-form polish** (no schema): (1) **review-before-posting card** lightly polished to the S36 vocabulary
+    (route rail + chips); (2) **Guest names auto-capitalise** the first letter; (3) **numeric fields** (luggage / base
+    fare / ceiling) reject letters/`e`/`+`/`-` via a controlled sanitize (`type=text`+`inputMode`; phone stays flexible);
+    (4) the **edit trail leads with the bold edit time**; (5) a live **vehicle-reminder chip** in the Pricing card head
+    (class·body). Files: `mission-form.tsx`, `passenger-list.tsx`, `trip-row.tsx`, `edit-form.tsx`, `globals.css`. [[d42]]
+  - **S38 — Address search: Riviera-first Mapbox cleanup** (no schema, `components/address-autocomplete.tsx` only):
+    countries narrowed `fr,mc,it,ch,de,es,…` → **`fr,mc,it,ch`** + a client **Riviera-first re-rank** (`isRiviera()` floats
+    Côte d'Azur hits to the top without hiding far destinations). "aéroport t2" now returns the Nice result at #1. **Mapbox
+    POI ranking is still weak for prominent places** → **Google Places is the planned fix, DEFERRED until the founder
+    registers the final domain** (so the API key is restricted once) — see BRAND/DOMAIN below + [[d43]].
 - **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
   couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
@@ -176,14 +197,22 @@ RECOMMENDED NEXT STEP:
    a real add-a-stop route change → the mission genuinely swapped). **Phase 3 is the future here** (auto price-delta via
    the pricing engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop?
    +€X" note) — deferred on those integrations. The **decline "or Business cancels" path needs O7** (cancel/re-pool, not
-   built). So the freshest open items are now **B (unfolded trip-row redesign)** + the pricing/guidance/address-book queue.
+   built).
 
-**B. Improve the visual of the UNFOLDED (expanded) trip row.** The founder wants the expanded `.dx-trip__detail` (in
-   `components/trip-row.tsx`, styled in `app/globals.css`) redesigned — it's currently a plain `.route` leg list + a
-   flat `.kv` definition grid + the guests block + the new top edit-bar ("Edit details" button + "Edited · time" stamp).
-   Make it read better / more scannable / more polished. **UI job → D25 preview loop first** (inline mockup from the real
-   navy tokens + a real mission's data), founder sign-off, then build. No schema. (Pairs naturally with the calendar's
-   day-panel styling from S33 — keep the two coherent.)
+**B. ✅ Unfolded (expanded) trip-row redesign — SHIPPED (S36, 2026-07-10, [[d41]]).** Plus the S37 mission-form polish
+   ([[d42]]) and the S38 Riviera-first address-search cleanup ([[d43]]). So the freshest open items are now the **Driver
+   app redesign**, the **guidance tooltips (Tier 2)**, the **saved-addresses book**, and the parked **Google Places switch
+   + domain migration** (below).
+
+**⚠️ BRAND / DOMAIN (new — [[d44]]):** the product's name is now **RED Executive** (RED = **R**iviera **E**xecutive
+   **D**river) — the rebrand away from "PickUp" (La Poste's EU transport trademark). **The repo/docs stay codenamed
+   "PickUp" for now** — DON'T assume a rename has happened; the topbar still says "PickUp Dispatch", the live domain is
+   still `*.pickupbedriven.com`. Three separate future tasks, all waiting on the founder registering the final name/domain:
+   (1) **Google Places** swap for address search (the real POI fix — key + billing the founder sets up; a "RED Executive"
+   Google Cloud project already exists); (2) **domain migration** `pickupbedriven.com` → a RED domain (DNS + Vercel +
+   Supabase redirect allowlist + `lib/hosts.ts` + the Google key restriction — that's why Google waits: restrict the key
+   ONCE, after the DNS move); (3) **code/copy rebrand** PickUp → RED Executive. ≠ **PickUp Go** (separate product, hard
+   rule). For now: **stay on Mapbox** for search. See [[d43]] [[d44]] + IDEAS.md.
 
 **PRICING is IN PROGRESS — the founder is working on the model themselves** (how a Ceiling / base-fare is estimated;
 one-way vs round-trip). Respect **[[d37]] — NO empty-return charge** (a smart trajectory Pool solves the deadhead). Don't

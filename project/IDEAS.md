@@ -14,6 +14,21 @@
   the query, not by RLS. Keep that filter in one place to avoid drift.
 
 ## Parked (not yet scoped)
+- **Address search → Google Places (New)** — the real fix for POI precision (Mapbox ranks a random shop over the Nice
+  airport terminal; Google weights prominence). Deferred until the founder registers the final RED domain, so the browser
+  API key is restricted to the right domains ONCE. ~1 session, one file (`address-autocomplete.tsx`), keep Mapbox for
+  routing. Founder has a Google Cloud project "RED Executive" ready. See [[d43]].
+- **Domain migration `pickupbedriven.com` → a RED domain** (`dispatch.redexecutive.com` / `driver.redexecutive.com`, or a
+  `.red` TLD). Separate ~1-session task: DNS + Vercel domains + Supabase redirect allowlist + `lib/hosts.ts` + the Google
+  key restriction. Waiting on the founder registering the name/domain. See [[d44]].
+- **Code/copy rebrand PickUp → RED Executive** — the repo is still codenamed PickUp; a later pass renames user-facing copy
+  ("PickUp Dispatch" topbar, emails, etc.). Keep the glossary (Business/Dispatcher/Driver/Guest/Pool/Ceiling/SPEED WIN).
+- **Detail-edit change-log: multi-edit visible history** — today `mission_info_change` stores every edit as a row but the
+  schedule shows only the LATEST. A small extension could show a "…and N earlier edits" expand. (S36 / D41.)
+- **Pricing vehicle chip: include the specific car** — the chip shows class·body only; wire an `onCarChange` up from
+  `ServiceClassFields` to add the picked model (e.g. "First · Sedan · Mercedes Classe S"). Minor. (S37 / D42.)
+- **Amend-form fare field: numeric sanitize** — the new-mission + edit forms now block non-numbers (D42); the amendment
+  "New agreed fare" field wasn't included — apply the same for consistency. Minor.
 - ~~Seed/fixtures script~~ — DONE as dev-only `GET /api/seed` (see D9).
 - Scheduled jobs the spine assumes (PDP climb, Lock-in/T-180, expiry, return-to-pool) —
   not in the first slice; plan where they run (Supabase cron / edge functions / Vercel cron).
