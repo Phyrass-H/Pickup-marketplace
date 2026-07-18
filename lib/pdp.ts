@@ -19,15 +19,16 @@ export interface PdpInputs {
   pdp_interval: number | null; // minutes between steps
   speed_win: boolean;
   created_at: string; // when the mission entered the Pool (proxy for climb start)
+  pooled_at?: string | null; // set when a mission is RE-POOLED (O7); restarts the climb
 }
 
 /**
  * Current PDP fare in euros, rounded to 2 decimals.
  * Deterministic: same inputs + same `now` → same output. No demand/ML inputs.
  *
- * Assumption (documented): the climb is measured from `created_at`. When a
- * dedicated "pooled_at" timestamp exists, switch to that. Clamped to the
- * ceiling so it can never exceed the Business's maximum.
+ * The climb is measured from `pooled_at` when set (a RE-POOLED mission, O7),
+ * else from `created_at`. Clamped to the ceiling so it can never exceed the
+ * Business's maximum.
  */
 export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   const ceiling = Number(m.ceiling);
@@ -40,8 +41,10 @@ export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   // No curve configured → just the (clamped) start price.
   if (step <= 0 || interval <= 0) return round2(Math.min(start, ceiling));
 
-  const elapsedMin =
-    (now.getTime() - new Date(m.created_at).getTime()) / 60_000;
+  // A RE-POOLED mission (O7 cancel / reclaim) restarts its climb from pooled_at;
+  // otherwise the climb is measured from when it first entered the Pool.
+  const climbFrom = m.pooled_at ? new Date(m.pooled_at) : new Date(m.created_at);
+  const elapsedMin = (now.getTime() - climbFrom.getTime()) / 60_000;
   const steps = Math.max(0, Math.floor(elapsedMin / interval));
   const fare = start + steps * step;
 

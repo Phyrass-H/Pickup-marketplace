@@ -6,7 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { nextStep } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
+import { currentFare } from "@/lib/pdp";
 import type { StatusEventStatus } from "@/lib/database.types";
+
+// The PDP columns needed to compute the fare snapshot recorded on a cancel / no-show.
+const FARE_COLS =
+  "id, driver_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at";
 
 export type StatusResult = { ok: true } | { ok: false; message: string };
 
@@ -140,6 +145,79 @@ export async function reachStop(
     .eq("id", missionId)
     .eq("driver_id", driver.id);
   if (error) return { ok: false, message: "Couldn’t record the stop." };
+
+  revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
+// Driver cancels a trip they hold (O7, D45). Always 100% — the trip re-pools as a SPEED
+// WIN and the Driver takes a reliability mark. Runs the atomic driver_cancel_mission RPC
+// via the USER session (SECURITY DEFINER resolves current_driver_id(), like accept). The
+// fare snapshot is computed server-side (authoritative) as the euro basis (MANUAL settle).
+export async function driverCancelMission(
+  missionId: string,
+  reason?: string | null,
+): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { data: mission } = await supabase
+    .from("mission")
+    .select(FARE_COLS)
+    .eq("id", missionId)
+    .maybeSingle();
+  if (!mission || mission.driver_id !== driver.id) {
+    return { ok: false, message: "This isn’t one of your missions." };
+  }
+
+  const { error } = await supabase.rpc("driver_cancel_mission", {
+    p_mission_id: missionId,
+    p_reason: reason?.trim() || null,
+    p_fare_snapshot: currentFare(mission),
+  });
+  if (error) {
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message: msg && msg.length < 120 ? msg : "Couldn’t cancel — please refresh and try again.",
+    };
+  }
+
+  revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
+// Report a Guest no-show (O7, D45). Only from 'arrived' once the wait window has elapsed
+// (the RPC enforces airport 60 / city 20 min). Business is charged the full fare; the
+// Driver is paid like a completed mission (status → completed, no_show = true).
+export async function markNoShow(missionId: string): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { data: mission } = await supabase
+    .from("mission")
+    .select(FARE_COLS)
+    .eq("id", missionId)
+    .maybeSingle();
+  if (!mission || mission.driver_id !== driver.id) {
+    return { ok: false, message: "This isn’t one of your missions." };
+  }
+
+  const { error } = await supabase.rpc("mark_no_show", {
+    p_mission_id: missionId,
+    p_fare_snapshot: currentFare(mission),
+  });
+  if (error) {
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message: msg && msg.length < 120 ? msg : "Couldn’t report the no-show — please refresh and try again.",
+    };
+  }
 
   revalidatePath("/rides");
   revalidatePath("/dispatch");

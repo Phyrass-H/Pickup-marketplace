@@ -32,10 +32,12 @@
 - **Financial dashboard** — monitor costs, payment status, wallet balance.
 - **Driver payouts** — weekly; a pay-week runs Mon 04:00 to the following Mon 03:59 (per original mockup). V1 = manual weekly batch; automate via Stripe Connect later.
 
-### Cancellation & conflict (V1 = cancel returns mission to pool; penalties MANUAL)
-- **Driver cancellation penalties (tiered):** >1 week before = €10; between 1 week and 48h = increases gradually each day; <48h = full ride amount. Driver encouraged to find a qualified replacement within the PickUp community.
-- **Business cancellation compensation (tiered):** free if >2 weeks before; then increases each week to a max of **50%** of the ride amount for <48h. Availability services: similar structure, peaking at **30%** for <48h. **PickUp's commission is non-refundable.**
-- **Mediation / conflict resolution:** report via email; PickUp reviews evidence (communications, proof of service) and mediates; corrective actions range from financial restitution to rating adjustments or sanctions.
+### Cancellation & conflict (DECIDED 2026-07-13 — see project/DECISIONS.md D45; euro amounts settle MANUAL in beta)
+- **Driver cancellation (voluntary) = ALWAYS 100% of the trip amount** — no early-notice reduction; deliberately tough (PickUp must be reliable for Businesses). It is a penalty owed to PickUp-the-intermediary, never a transport charge (agent position, Doc 01). Escape valves (no fee): hand the mission to a copilote (Phase 2, below) or the Business agrees to release it back to the Pool. _(Supersedes the earlier draft tier: >1wk €10 / gradual / <48h full.)_
+- **Business cancellation = free until 5h before pickup; 50% at T-5h; then +10% per hour to 100% at pickup** (−4h 60% · −3h 70% · −2h 80% · −1h 90% · 0h 100%). Replaces the earlier week-based draft (Riviera/airport transfers are short-lead). **PickUp's commission is non-refundable.**
+- **No-show = Driver paid in full (like a completed mission).** Fires on-site (status `arrived`) when the Guest doesn't appear within the wait window — **1h airport · 20 min city**. The Business is charged the full fare and settles with its own Guest. Deeper mechanics (contact-attempt gate, evidence, clock origin) TBD.
+- **T-60 Business reclaim** (NOT a cancel): only when the assigned Driver hasn't confirmed the Lock-in AND is unreachable, PickUp unlocks a reclaim button so the Business takes the trip back and re-pools it as a SPEED WIN (penalty-free for the Business; Driver takes a reliability mark). Gated to the non-confirmation state so it can't be abused.
+- **Mediation / conflict resolution (deferred):** report via email; PickUp reviews evidence (accept time, flight landing, contact log, proof of service) and mediates; corrective actions range from financial restitution to rating adjustments or sanctions.
 
 ### Communication (V1 = reveal phone numbers + tap-to-call)
 - **In-app chat & voice calls** — message/call without leaving the app.
@@ -51,7 +53,8 @@
 - **Multi-Dispatch** — multiple Dispatcher seats per Business account, each with individual rights, under centralized control.
 
 ### Driver tools & reliability
-- **Registered Driver teams / substitute driver** — designate a stand-in to avoid cancellation penalties and keep service uninterrupted.
+- **Driver→Driver hand-over ("copilote") — O7 Phase 2 (DECIDED model, 2026-07-13, D45).** A full **transfer (novation)** of a booked mission to another verified, **same-category** PickUp Driver — **NOT subcontracting**: the original Driver drops out entirely (no pay, no invoice, no liability) and keeps only a "passed on" trace; the copilote **re-accepts on their own account** and becomes the Driver of record. Avoids the outright-cancel penalty and keeps service uninterrupted. **Legally confirmed viable** (cleaner than sous-traitance — PickUp stays the pure intermediary; the credential gate is what keeps it legal, since *sous-traitance illicite* is a named REVTC offence from 2026). Requires the community/registration layer + credential-gating (WAY-Partner model). Precedent: Drivalty · iaDriver · WAY-Partner · VTC cooperatives. See D45 + IDEAS.md.
+- **SPEED WIN reachability gate (DECIDED, build later — D45)** — a SPEED WIN can only be accepted by a Driver who can **physically reach the pickup on time**: geolocate the Driver, compute the GPS ETA to pickup, and **block acceptance with a popup** if they'd be late. Needs Driver geolocation + a Directions ETA call.
 - **Multiple vehicles** per Driver.
 - **Auto invoice / quote / purchase-order (PO) generation** for Drivers operating as companies, with a feature opt-in selector.
 

@@ -15,7 +15,7 @@ export interface MissionTone {
 const HOURS_3 = 3 * 3_600_000;
 
 export function missionTone(
-  m: Pick<MissionRow, "status" | "pickup_at">,
+  m: Pick<MissionRow, "status" | "pickup_at"> & { no_show?: boolean | null },
   now: Date = new Date(),
   opts: { archived?: boolean } = {},
 ): MissionTone {
@@ -32,6 +32,13 @@ export function missionTone(
     case "on_board":
       return { tone: "success", label: "On board", needsAttention: false };
     case "completed":
+      if (m.no_show)
+        return {
+          tone: "warn",
+          label: "No-show",
+          hint: "Guest didn’t show — the trip was charged in full.",
+          needsAttention: false,
+        };
       return { tone: "neutral", label: "Completed", needsAttention: false };
     case "confirmed":
       return { tone: "info", label: "Confirmed", needsAttention: false };

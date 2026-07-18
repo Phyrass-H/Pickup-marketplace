@@ -15,10 +15,12 @@ import { isExecutable } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
+import { isAirportPickup, noShowWaitMinutes } from "@/lib/cancellation";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard, type AmendmentLeg } from "@/components/amendment-card";
 import { StatusControl } from "./status-control";
+import { DriverCancel, NoShowControl } from "./cancel-noshow";
 
 // Minutes of gap below which the trip's new end crowds the Driver's next pickup —
 // surfaces the amber "it's tighter" heads-up on the change card.
@@ -190,6 +192,20 @@ export default async function RidesPage() {
     }
   }
 
+  // No-show timers: for an 'arrived' mission, the latest 'arrived' status_event is when
+  // the free wait window started. A Driver reads its own mission's events under RLS.
+  const arrivedAt = new Map<string, string>();
+  const arrivedIds = (missions ?? []).filter((m) => m.status === "arrived").map((m) => m.id);
+  if (arrivedIds.length > 0) {
+    const { data: evs } = await supabase
+      .from("status_event")
+      .select("mission_id, created_at")
+      .eq("status", "arrived")
+      .in("mission_id", arrivedIds)
+      .order("created_at", { ascending: false });
+    for (const e of evs ?? []) if (!arrivedAt.has(e.mission_id)) arrivedAt.set(e.mission_id, e.created_at);
+  }
+
   return (
     <>
       <div className="card-row" style={{ alignItems: "center" }}>
@@ -233,7 +249,7 @@ export default async function RidesPage() {
           <div className="card" key={m.id}>
             <div className="card-row">
               <span className="fare">{formatMoney(currentFare(m))}</span>
-              <span className="badge status">{missionStatusLabel(m.status)}</span>
+              <span className="badge status">{m.no_show ? "No-show" : missionStatusLabel(m.status)}</span>
             </div>
             <div className="muted small" style={{ marginTop: 4 }}>
               {formatDateTime(m.pickup_at)} · {categoryLabel(m.category)}
@@ -372,6 +388,34 @@ export default async function RidesPage() {
                 status={m.status}
                 stops={stops}
                 stopsReached={stopsReached}
+              />
+            )}
+
+            {/* No-show (O7): once on-site, the amber report flow after the wait window. */}
+            {m.status === "arrived" && arrivedAt.get(m.id) && (
+              <NoShowControl
+                missionId={m.id}
+                fare={currentFare(m)}
+                arrivedAtIso={arrivedAt.get(m.id)!}
+                waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
+                guestPhone={
+                  (guestPhones.get(m.id) ?? []).find((g) => g.main)?.phone ??
+                  (guestPhones.get(m.id) ?? [])[0]?.phone ??
+                  null
+                }
+              />
+            )}
+
+            {/* Cancel (O7): available while the Driver holds the trip, before boarding. */}
+            {(m.status === "accepted" ||
+              m.status === "confirmed" ||
+              m.status === "en_route" ||
+              m.status === "arrived") && (
+              <DriverCancel
+                missionId={m.id}
+                fare={currentFare(m)}
+                businessPhone={c?.dispatcherPhone ?? null}
+                businessName={c?.businessName ?? null}
               />
             )}
           </div>

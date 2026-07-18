@@ -96,6 +96,66 @@
   the Business schedule. Pairs with the existing night-pickup nudge and the S31 guidance work. **Locale:** the
   French "nuit de X à Y" phrasing is the natural fix. Capture now; design + build later.
 
+## O7 hand-over / SPEED WIN gate / disputes — parked detail (2026-07-13, spec in DECISIONS D45 + BACKLOG § N)
+> The O7 cancellation *spine* is decided + build-ready (BACKLOG § N Phase 1). These three pieces are parked for LATER;
+> capturing the detail so nothing is lost. Promote into the spec docs when scoped.
+
+### Copilote community hand-over (O7 Phase 2) 🅥
+- **The model (founder, confirmed legal — D45):** a Driver who can't do a mission he holds **transfers** it to a friend
+  ("copilote") instead of paying the 100% cancel fee. It is a **full transfer / novation, NOT sous-traitance**: the
+  original Driver **drops out entirely** — no payment, no invoice, no legal obligation, no liability — and keeps only a
+  **"passed on" trace** in his history. The copilote **re-accepts on his own account**, becomes the Driver of record, and
+  carries everything (invoice to the Business via PickUp's intermediary flow, RC Pro, VTC obligations) exactly as if he'd
+  taken it from the Pool. "A Driver is a professional and must find solutions" — this is the sanctioned solution.
+- **Why it's legal / why this framing matters:** the risky pattern is classic *sous-traitance* (A stays the contractor,
+  pays B, invoices the Business, carries B's liability → a "mini-principal" + URSSAF requalification risk). The founder's
+  transfer model avoids all of it: A earns nothing and carries nothing, B is the fresh Driver of record on his own
+  account → no reselling, no *location de compte* (account-rental, banned), and **PickUp stays the pure intermediary/agent**
+  (VAT position intact, Doc 01). Since **2026 *sous-traitance illicite* is a named REVTC offence**, so the **credential gate
+  is the thing that keeps it lawful.** Real precedent: **Drivalty**, **iaDriver**, **WAY-Partner** (credential-gated pass),
+  plus VTC cooperatives (VTC Officiel, CoopVTC, Club VTC) — an established, buildable pattern.
+- **Mandatory guardrails when built:** copilote must be an **active, verified, same-category** PickUp Driver — valid REVTC
+  inscription, carte pro VTC, RC Pro transport de personnes, conforming vehicle — **checked live at the moment of transfer**
+  (block if any credential/insurance is expired); accepts on his **own account** (never the original's); **zero money flows
+  through the original Driver**; the Business **consents by default** via its terms (must be **explained in the tutorial**);
+  transfer only the Guest data the copilote needs (GDPR minimisation) + log it; **audit trail** distinguishing the
+  *accepting Driver* from the *performing Driver* (ratings, no-show, penalties attach to the right person).
+- **Needs first:** the **community/registration layer** (a Driver's trusted-copilote relations, all same-category verified
+  Drivers). **Data-model NOW (in the Phase-1 spine):** distinct accepting-Driver vs performing-Driver fields so this drops
+  in without a rewrite.
+- **Open sub-questions:** does a hand-over always waive the original's cancel fee (yes — it's the fee's alternative)? Can a
+  Driver hand over ANY trip voluntarily, or only on a genuine conflict? Can a copilote decline / hand it on again? Does the
+  Business get notified of *who* now holds it? (All later.)
+
+### SPEED WIN reachability gate (decided, build later — D45) 🔨
+- A SPEED WIN can only be accepted by a Driver **within reach of the pickup on time**. On accept: geolocate the Driver
+  (browser Geolocation / live location), compute the **GPS ETA** to the pickup (Mapbox Directions, traffic-aware), compare
+  to `pickup_at`. If they'd make it → allow; if not → **block with a popup** ("you're too far to arrive on time"). Distinct
+  from the CUT continuous live-map GPS — this is a **one-shot check at accept**. It is also the principled replacement for
+  the crude ±90-min `accept_mission` slot-conflict buffer (use real ETA/`duration_min`). Consider extending the gate to
+  *all* accepts later, not just SPEED WIN.
+
+### Mutual-consent release ("agreed cancellation") — O7 Phase 2 🔨
+- **The founder's "dating-app" flow (2026-07-13).** A **free, no-fee** cancellation that BOTH parties confirm — distinct
+  from the unilateral Business cancel (which always pays the ramp). Scenario: a Driver can't do a trip, calls the
+  Business, they agree the Business will release it. The Business taps a **dedicated "agreed release" button** (NOT the
+  normal cancel); the Driver receives a **notification and must ACCEPT**; only on the Driver's tap does the trip release
+  free and re-pool as a SPEED WIN.
+- **Why it matters (scam protection):** it stops a Business unilaterally cancelling on a *committed* Driver to dodge the
+  cancel fee. Without the Driver's acceptance, the Business's only route is the fee-paying unilateral cancel. Consent
+  makes the free path honest — the Driver agreed to be released.
+- **Build cost = MODERATE** — it reuses the existing amendment infrastructure almost exactly: a proposal record + a
+  Driver accept/decline + a SECURITY DEFINER atomic RPC (like `respond_to_amendment`). It degrades gracefully to
+  refresh-based until notifications land (same as amendments do today). **Recommend building right after the Phase-1
+  spine, or bundling as Phase 2.** (Full spec in DECISIONS D45.)
+
+### Disputes / mediation (deferred, documented) ⏸️
+- No dispute state exists (mission enum has none; mediation is email-only + deferred, Doc 05). The founder's flight-delay
+  case — a Business **disputes** a Driver's hand-back — has no representation yet. V1 stays: report by email, **PickUp
+  mediates on the timestamped trail** (accept time · actual flight landing · in-app contact log · proof of service), the
+  market-standard mediated-ticket model. When built: at least a "contested" marker on the mission + an evidence view (ties
+  to the future admin/back-office dispute-support tool, BACKLOG F2). "Come back to this more deeply later" (founder).
+
 ## Navy / redesign follow-ups (parked Session 14)
 - **Driver "Complete ride" button colour** — `app/(app)/rides/status-control.tsx` uses a `success-btn`
   class that has no CSS, so it falls through to the navy `.btn`. Make it intentionally **green** (define

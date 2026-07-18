@@ -38,8 +38,10 @@
 ## B. Mission lifecycle (gaps)
 - 🔨 **Mission edit** (limited per Doc 02: free while pooled; material edits after
   accept need driver re-consent or cancel+repost).
-- 🔨 **Cancel mission** — driver cancel re-pools; business cancel terminal.
-  👤 penalty/compensation amounts.
+- 🔨 **Cancel mission (O7)** — RULESET DECIDED 2026-07-13 ([[d45]]): driver voluntary cancel = always 100% (re-pools);
+  business cancel = free >5h then 50%@−5h +10%/h→100%; no-show (status `arrived`, 1h airport/20min city) = driver paid
+  full, business charged; T-60 reclaim (driver unconfirmed+unreachable) → re-pool as SPEED WIN. 👤 euro amounts MANUAL.
+  Copilote hand-over = Phase 2 (below). See § N.
 - ⚙️ **Scheduled jobs** (Supabase cron / Vercel cron): Lock-in auto-confirm +
   T-180 reminder, expiry of unfilled missions, return-to-pool on no-confirm.
 - 🔨 **Maps/geocoding** (Mapbox): autocomplete + lat/lng ✅ (D17); **road ETA** ✅ (S12/D23); stops are now
@@ -153,6 +155,19 @@
 - ⚙️ **Error monitoring + product analytics** — Sentry + PostHog (also in F2).
 - ⚙️ **Realtime** — swap `LiveRefresh` polling for Supabase Realtime websockets (also in I).
 - 🅥 Security audit / pen test (also in H) — plan post-V1.
+- **O7 review flags (2026-07-13, from the pre-deploy adversarial review — [[d45]]; before real Business users / payments):**
+  - 🔒 **`p_mission_business_update` has no WITH CHECK** → a Business can bypass the O7 fee/reclaim gates with a direct
+    PostgREST UPDATE on its own mission (set `status='cancelled'` skipping the fee, or unpool a *confirmed* trip). Fix with
+    column-level grants (`REVOKE UPDATE … ; GRANT UPDATE (info cols) …`) once the legit business-write paths
+    (updateMissionInfo, PhoneShareToggle, drafts) are audited. **HIGH for prod**; ~nil in beta (key-gated, no payments).
+  - 💶 **Fee BASIS: `currentFare` never freezes at `accepted_at`** → the recorded cancellation fee basis climbs to the
+    ceiling instead of the fare the Driver agreed at accept (e.g. a SPEED WIN accepted at €78 records €100). Pre-existing
+    pricing behaviour; a clean fix caps the climb at `accepted_at` in `lib/pdp.ts` — but it changes fare *display*
+    app-wide, so it's a **pricing-engine decision for the founder**. MANUAL settlement backstops it for now.
+  - 🔒 **`p_fare_snapshot` is client-supplied / forgeable** → recompute the fare inside the RPC from the mission's pdp
+    columns (or clamp) when the pricing engine lands. Beta-mitigated (MANUAL money, no payments).
+  - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
+    is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 
 ## I. Small follow-ups noted in code
 - ✅ Promote the per-booking **reference** (room/event) to a dedicated DB column. **SHIPPED S20**
@@ -194,9 +209,10 @@ full ML dynamic pricing · Amadeus GDS.
   + optional specific car; Pool matches tier + body + specific car. Additive migration applied.
   ↳ follow-ups: bind the **Driver's car to the catalog** (a picker) for fully-robust specific-car matching
   (today Drivers type make/model free-text, matched tolerantly); a DB/admin UI to edit the catalog later.
-- 🔨 **O7** driver **cancellation** flow: `cancel_mission` RPC (re-pool), auto-flip to SPEED WIN on re-pool,
-  big red Dispatch card (red-wash already exists), driver reliability/"mark" field, cancellation **fee** data.
-  (Fee/penalty *amounts* are a founder decision — MANUAL in beta per spec.)
+- 🔨 **O7** cancellation/no-show flow — **RULESET DECIDED ([[d45]]), see § N for the full spec.** Phase 1 spine =
+  `cancel_mission` RPC (driver 100% / re-pool) + business cancel with the hour-ramp % + no-show@`arrived` + T-60 reclaim +
+  re-pool-as-SPEED-WIN, big red Dispatch card (red-wash exists), driver reliability/"mark" field, cancellation **fee** data.
+  (Fee/penalty *amounts* are a founder decision — MANUAL in beta per spec.) Phase 2 = copilote hand-over (§ N).
 
 **🅥 Future (post-MVP — track, don't build)**
 - 🅥 **O8** Guest/passenger app (phone-based, cross-business, post-trip Q&A, download invite). Net-new third
@@ -272,3 +288,60 @@ full ML dynamic pricing · Amadeus GDS.
   `mission.reference` column. V2 still open: a per-business **custom reference label** (Hotel→Room, Restaurant→Table).
 - ❓ **Ultra-luxury "Exception" tier** (Rolls/Bentley above First) — a taxonomy decision; bundle with the
   IDEAS vehicle-taxonomy V2 (Bus tier, First-van, cargo vehicle).
+
+## N. O7 — Cancellation / no-show / hand-over (RULESET DECIDED 2026-07-13, [[d45]]) 🔨
+> Founder settled the policy (see DECISIONS.md D45 for rationale + the legal confirmation). **Amounts stay MANUAL** in
+> beta; the **rules** are fixed. All fees = penalties owed to PickUp-the-intermediary, never a transport charge (Doc 01).
+> The `cancelled`/`expired` states + `cancelled_by`/`cancelled_at` columns already exist (dormant). Mirror the amendment
+> pattern (immutable record + SECURITY DEFINER atomic RPC).
+
+**🔨 PHASE 1 — the cancellation spine (buildable now, one additive migration):**
+- **Driver voluntary cancel = always 100%** of the trip amount → re-pools the mission. Deliberately tough. Escape valves
+  (no fee): copilote hand-over (Phase 2) or a Business-agreed release.
+- **Business cancel = FREE while still pooled** (no Driver committed); once a Driver holds it: free >5h; **50% at −5h;
+  +10%/h (linear, 5% / 30 min) → 100% at pickup** (−4h 60 · −3h 70 · −2h 80 · −1h 90 · 0h 100).
+- **No-show** — fires when the Driver is on-site (**status `arrived`**) and the Guest doesn't appear within the wait
+  window: **1h airport · 20 min city** (airport = a flight number **OR** an airport-looking pickup address). Business
+  charged the full fare; Driver paid in full (like a completed mission); PickUp keeps commission; the Business settles
+  with its own Guest. **UI:** a professional "be sure before you report" confirm nudge; the report button is **amber, not
+  red** (a no-show pays the Driver — not a destructive action). _(Deeper: contact-attempt gate + evidence + clock
+  origin = later.)_
+- **T-60 Business reclaim** (NOT a cancel) — only when the assigned Driver **hasn't confirmed the Lock-in AND is
+  unreachable**, PickUp unlocks a reclaim button (~T-60) → Business takes the trip back, re-pools as **SPEED WIN**,
+  penalty-free for the Business, Driver takes a **reliability mark**. Gated to the non-confirmation state (anti-abuse).
+- **Re-pool pricing** — any re-pool (driver cancel · reclaim · release) re-enters the Pool as **SPEED WIN at 70% of
+  ceiling**. Needs a **`pooled_at`** climb-origin (PDP climbs from `created_at` today → would mis-price otherwise).
+- **Closes the amendment dead-end** — a Driver-declined amendment today resolves nothing; O7 gives the Business the
+  cancel/release path out of it.
+- **Migration (additive, founder-run):** `mission.cancellation_fee`, `mission.cancelled_reason`, `mission.pooled_at`,
+  no-show marker (`no_show` + `no_show_at`), a widened `status_event` CHECK **or** a `mission_cancellation` audit table,
+  a Driver **reliability mark**, + `cancel_mission` / `repool_mission` RPCs (mirror `accept_mission`).
+- **UI:** driver cancel + hand-over card (mirror `amendment-card.tsx`); a business cancel flow showing the live % it will
+  cost; the T-60 reclaim button; the no-show flow on the driver `arrived` screen; reuse the existing **red-wash**
+  (`missionTone`→danger) for the Dispatch alert. **Show D25 previews before building the UI.**
+
+**🅥 PHASE 2 — the "copilote" community hand-over (LATER — net-new, needs the community layer):**
+- A **full transfer (novation)** of a booked mission to another Driver — NOT subcontracting. Original Driver drops out
+  entirely (no pay/invoice/liability), keeps only a **"passed on" trace**; the copilote **re-accepts on their own account**
+  and becomes the Driver of record. **Legally confirmed** (D45) — cleaner than sous-traitance.
+- Guardrails (mandatory): copilote is an **active, verified, same-category** PickUp Driver (REVTC · carte pro · RC Pro ·
+  conforming vehicle, checked live); own account (no account-sharing); zero money through the original Driver; **Business
+  consents by default** via terms + explained in the **tutorial**; GDPR-minimised data transfer; audit trail
+  (accepting-Driver vs performing-Driver).
+- **Data-model NOW (in Phase 1):** distinct *accepting-Driver* vs *performing-Driver* fields so Phase 2 slots in.
+- Precedent to study: Drivalty · iaDriver · **WAY-Partner** (credential-gated) · VTC cooperatives.
+
+**🔨 MUTUAL-CONSENT RELEASE ("agreed cancellation") — Phase 2 (build right after the spine, or bundle here):** a free,
+no-fee cancellation BOTH sides confirm (Business taps a dedicated "agreed release" button → Driver gets a notification
+and must ACCEPT → releases free, re-pools as SPEED WIN). Scam protection: a Business can't dodge the fee by cancelling on
+a committed Driver without consent. MODERATE build — reuses the amendment pattern (proposal + accept/decline + atomic
+RPC, like `respond_to_amendment`). See [[d45]] + IDEAS.md.
+
+**🔨 SPEED WIN reachability gate (DECIDED, build later — [[d45]]):** a SPEED WIN may only be accepted by a Driver who can
+  **physically reach the pickup on time** — geolocate the Driver, compute the GPS ETA to pickup (Mapbox Directions), and
+  **block acceptance with a popup** if they'd be late. Needs Driver geolocation (browser API / live location) + a
+  point-in-time ETA call; also the clean way to replace the crude ±90-min `accept_mission` slot buffer. (Distinct from the
+  CUT continuous live-map GPS — this is a one-shot check at accept.)
+
+**⏸️ Disputes / mediation (deferred, documented):** the "Business disputes a hand-back / no-show / cancellation" path — no
+  state today; V1 stays email + PickUp mediates on the timestamped trail. Revisit deeper later.

@@ -5,6 +5,78 @@
 
 ---
 
+## 2026-07-13 — Session 39 — O7 cancellation: research + full ruleset decided + documented (no code yet)
+**Branch:** `main`. **No code / no schema change this session — design + decisions only.** Founder chose to work on **O7
+(cancellation)** and gave the full policy context; I ran a **4-agent research workflow** (canonical docs sweep · schema/code
+sweep · global web benchmarks · French VTC + hand-over legal angle) to ground it, then captured the settled ruleset.
+
+**Research highlights (fed the decisions):**
+- Founder's model largely matches the market: **no-show → Driver paid after a wait** is universal; the **1h airport / ~20min
+  city** split is the industry norm (Blacklane/Wheely/Uber Black/Welcome all = 60min from landing; city ~20–30min); an
+  **escalating % as pickup nears** is validated (a Côte d'Azur operator publishes >24h 0% / 24–12h 50% / 12–6h 70% / <6h 100%).
+- PickUp-specific (not a market norm, flagged): a **Driver fined ≈ the trip amount** (elsewhere a bailing driver is just
+  re-dispatched, not fined) — must live in the Driver↔PickUp contract as an intermediary penalty, never a transport charge.
+- **Copilote hand-over legal answer:** the founder's framing (full **transfer/novation** — original Driver drops out with
+  zero pay/invoice/liability, copilote re-accepts on his own account) is **the clean, lawful structure** — cleaner than
+  classic *sous-traitance* (which would make the original a "mini-principal" with URSSAF requalification risk). Guardrails:
+  credential-gate to active same-category verified Drivers (2026 made *sous-traitance illicite* a named REVTC offence), own
+  account, no money through the original, Business consent via terms. Precedent exists (Drivalty, iaDriver, WAY-Partner, VTC
+  coops). Confirmed viable; **Phase 2, later.**
+- Docs already encode part of it (driver-cancel-re-pools / business-cancel-terminal, dormant `cancelled_by`/`cancelled_at`,
+  Lock-in = "T-180"). **Gaps O7 must invent:** no-show (entirely undefined), the **T-60 reclaim**, the hour-based business
+  curve, the copilote layer, disputes, a fee/reliability data model, mid-trip cancel window (`arrived`), re-pool pricing.
+
+**Decided ruleset (→ [[d45]]).** Driver voluntary cancel = **always 100%** (re-pools). Business cancel = **free >5h · 50% at
+−5h · +10%/h → 100%** at pickup. No-show fires at status **`arrived`** (**1h airport / 20min city**) → **Business charged full,
+Driver paid full like a completed mission**, PickUp keeps commission, Business settles with its own Guest. **T-60 Business
+reclaim** (NOT a cancel) only when the assigned Driver **hasn't confirmed the Lock-in AND is unreachable** → reclaim button →
+re-pool as SPEED WIN, penalty-free for the Business, Driver takes a **reliability mark** (gated to non-confirmation = anti-
+abuse). Re-pool re-enters the Pool as **SPEED WIN at 70% of ceiling** (needs a `pooled_at` climb-origin). **Copilote hand-over
+= Phase 2.** **NEW: SPEED WIN reachability gate** — geolocate the Driver, GPS-ETA to pickup, **block accept with a popup** if
+they'd be late (build later). **Disputes = deferred, documented.** Euro *amounts* stay MANUAL in beta; the *rules* are fixed.
+
+**Documented in:** `project/DECISIONS.md` **D45** (authoritative + the legal confirmation) · `docs/05_Roadmap_Backlog_TODOs.md`
+(Cancellation & conflict section rewritten to the decided rules; copilote + SPEED WIN gate added) · `docs/PickUp_Phase0_Data_
+Spine.md` (the "Cancellation %s" open decision resolved) · `project/BACKLOG.md` (new **§ N** with the full Phase 1 spine +
+Phase 2 copilote + SPEED WIN gate + disputes; § B and § K O7 lines updated) · `project/IDEAS.md` (parked detail for the
+copilote model, SPEED WIN gate, disputes).
+
+**Phase 1 CODE BUILT (tsc + next build green; migration pending).** After the D25 previews were signed off (driver cancel
+sheet + amber no-show + "be sure" nudge; dispatch live-% cancel modal + T-60 reclaim), implemented the cancellation spine.
+- **Migration** `docs/migrations/2026-07-13_o7_cancellation.sql` (additive, founder-run): mission `cancellation_fee` /
+  `cancellation_reason` / `pooled_at` / `no_show` / `no_show_at`; `driver.reliability_marks`; a widened `status_event`
+  CHECK (adds cancelled/no_show/repooled); a `mission_cancellation` audit table (deny-by-default RLS, holds the fee record
+  even for re-pooled trips); and 4 SECURITY DEFINER RPCs — `driver_cancel_mission` (100% → re-pool as SPEED WIN),
+  `business_cancel_mission` (free while pooled / >5h, then 50%@−5h +10%/h → 100%; terminal), `reclaim_mission` (T-60,
+  gated to accepted-but-unconfirmed), `mark_no_show` (from `arrived`, 60/20-min window, → completed + no_show) — all
+  mirroring `accept_mission`.
+- **Code:** `lib/pdp.ts` now climbs from `pooled_at ?? created_at`; `lib/cancellation.ts` (shared % ramp + airport
+  heuristic, mirrors the SQL); driver `app/(app)/rides/cancel-noshow.tsx` (`DriverCancel` sheet + `NoShowControl` amber
+  countdown) + 2 actions in `rides/actions.ts`; dispatch `app/(dispatch)/dispatch/actions.ts` + `components/dispatch-cancel.tsx`
+  (`BusinessCancel` live-% modal + `ReclaimCard`) wired into `trip-row.tsx`; `missionTone` gained a "No-show" state;
+  `lib/database.types.ts` extended (columns + table + 4 RPCs + `MissionCancellationRow`).
+**Verified + reviewed (2026-07-13).** Migration applied by the founder. Ran a full end-to-end check via REAL authenticated
+sessions (the browser pane was flaky, so signed in as the demo Driver/Business with the anon key — the exact SECURITY
+DEFINER auth path the UI uses): all **5 money paths + 5 adversarial guards** pass against the live DB (business cancel
+free / 70.02%, reclaim→SPEED WIN at 0.7×ceiling, driver cancel 100%, no-show→completed+charged; guards: reclaim-ineligible,
+cross-tenant, no-show-too-early, role-mismatch ×2). UI rendering confirmed both sides via the a11y tree; airport heuristic
+confirmed (flight OR airport address → 60 m). tsc + next build green. Test artifacts cleaned off the demo DB.
+Then a **3-lens adversarial review** (correctness / security / integration) found 6 issues:
+- **FIXED in the migration** (re-run the file — every statement is idempotent): (a) **HIGH** the re-pool RPCs
+  (driver_cancel / reclaim) left a pending `mission_amendment` 'proposed', which could leak to the next Driver → now
+  supersede it on re-pool; (b) **LOW** the widened `status_event` CHECK let a Driver spoof no_show/repooled rows → tightened
+  `p_statusevent_driver_write` to the execution steps; (c) **LOW** a Business cancel's private `reason` was readable by the
+  released Driver → `actor_driver_id` set null on business_cancel rows.
+- **FLAGGED** (→ BACKLOG H2; not O7 regressions / beta-mitigated): **#1** `currentFare` doesn't freeze at `accepted_at`, so
+  the recorded fee BASIS inflates toward the ceiling (pre-existing pricing behaviour; MANUAL settlement backstops it — a
+  pricing-engine decision); **#2 (HIGH for prod)** `p_mission_business_update` has no WITH CHECK, so a Business could bypass
+  the fee/reclaim gates via a direct PostgREST UPDATE (pre-existing RLS gap; ~nil risk in beta — key-gated, no payments;
+  needs column-level grants before real Business users); **#3** `p_fare_snapshot` is client-supplied/forgeable → recompute
+  in SQL when the pricing engine lands; **#6b** a mid-run Business cancel makes the trip vanish from the Driver's My Rides
+  (visibility gap — pairs with notifications).
+**Next:** founder re-runs the updated migration → re-verify the amendment fix → deploy. Then the immediate follow-ups:
+the mutual-consent "agreed release" + the copilote hand-over (both reuse the amendment pattern).
+
 ## 2026-07-10 — Session 38 — Address search: Riviera-first ranking + narrower countries (Mapbox cleanup, Google deferred)
 **Branch:** `main`. **No schema change.** **Touched:** `components/address-autocomplete.tsx` only. Founder flagged bad
 autocomplete: typing "aéroport t2" returned a Roissy CDG Fnac #1, Barcelona/Geneva/Lisbon, with the Nice result buried at

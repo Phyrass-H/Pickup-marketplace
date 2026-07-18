@@ -19,6 +19,7 @@ import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-s
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { PhoneShareToggle } from "@/components/phone-share-toggle";
+import { BusinessCancel, ReclaimCard } from "@/components/dispatch-cancel";
 import {
   parsePassengers,
   passengerName,
@@ -110,6 +111,22 @@ export function TripRow({
   // holds the trip but hasn't started it (D39 Phase 2).
   const canAmend =
     !archived && (mission.status === "accepted" || mission.status === "confirmed");
+  // Business can cancel any live trip (O7). FREE while pooled; a fee applies once a
+  // Driver holds it (the modal shows the live %). Not once on_board / completed.
+  const cancellable =
+    !archived &&
+    (mission.status === "pooled" ||
+      mission.status === "accepted" ||
+      mission.status === "confirmed" ||
+      mission.status === "en_route" ||
+      mission.status === "arrived");
+  // T-60 reclaim: the Driver accepted but never confirmed the Lock-in (still 'accepted')
+  // and pickup is within the hour. The RPC re-checks; this only decides whether to offer it.
+  const reclaimEligible =
+    !archived &&
+    mission.status === "accepted" &&
+    !!driver &&
+    new Date(mission.pickup_at).getTime() <= Date.now() + 60 * 60_000;
   // "Edited · time" stamp — when the info was last edited (null = never).
   const editedAt = mission.info_edited_at;
   const languages = parseLanguages(mission.required_languages);
@@ -256,6 +273,9 @@ export function TripRow({
       </summary>
 
       <div className="dx-trip__detail">
+        {reclaimEligible && driver && (
+          <ReclaimCard missionId={mission.id} driverName={driver.name} driverPhone={driver.phone} />
+        )}
         {/* Top meta line: the private Reference tag (Business-only) + the detail-only
             "Edited · time" stamp. The stamp stays even after the trip is frozen so the
             edit record remains visible. */}
@@ -295,6 +315,17 @@ export function TripRow({
                 <span className="dx-act__s">New route or fare · the Driver must agree</span>
               </Link>
             )}
+          </div>
+        )}
+
+        {cancellable && (
+          <div style={{ marginBottom: 12 }}>
+            <BusinessCancel
+              missionId={mission.id}
+              fare={currentFare(mission)}
+              pickupAtIso={mission.pickup_at}
+              hasDriver={!!mission.driver_id}
+            />
           </div>
         )}
 

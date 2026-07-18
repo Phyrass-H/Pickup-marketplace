@@ -126,7 +126,7 @@ completed ──▶ Payment captured + LedgerTransaction + BookingVoucher
 - Commission split numbers (teaser: ~12.5% Business / ~10% Driver).
 - Commission carved-out vs added-on **[legal]**.
 - Charge timing — auth-at-booking vs capture-at-completion **[legal]**.
-- Cancellation %s — Business compensation tiers + Driver penalty cap **[legal]**.
+- ~~Cancellation %s — Business compensation tiers + Driver penalty cap.~~ **DECIDED (2026-07-13, D45):** Business free >5h · 50% at −5h · +10%/h → 100% at pickup; Driver voluntary cancel **always 100%**; **no-show** (fires at status `arrived`; 1h airport / 20 min city) = Driver paid full like a completed mission (Business charged full); **T-60 Business reclaim** (assigned Driver unconfirmed **and** unreachable) → re-pool as SPEED WIN, penalty-free for the Business, Driver reliability mark. A re-pool re-enters the Pool as SPEED WIN at 70% of ceiling (needs a `pooled_at` climb-origin). Euro *settlement* stays MANUAL in beta. Driver→Driver "copilote" hand-over = O7 Phase 2 (a full transfer, not sous-traitance).
 - Hard floor field — pending the floor-vs-benchmark decision.
 - Fare extras (waiting time, tolls, airport fee, hourly overtime) — base modelled; extras pending.
 - "SPEED WIN" final name (candidates: Rush, Fast Track).

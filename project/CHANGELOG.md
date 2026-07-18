@@ -5,6 +5,26 @@
 
 ---
 
+## 13 July 2026
+- **You can now cancel a trip — properly, on both sides.** This is the cancellation system (O7).
+  - **A Business can cancel a trip.** It's free while the trip is still unfilled (no Driver has taken it), and free up
+    until 5 hours before pickup. After that a fee kicks in — 50% at 5 hours out, then rising 10% an hour to the full fare
+    at pickup — and the cancel screen shows you exactly what it'll cost *before* you confirm, with a little chart of how
+    the fee grows as pickup nears.
+  - **A Driver can cancel a trip they've taken**, but it costs the full fare — the system is deliberately tough on Drivers
+    so Businesses can count on their bookings. Before the "cancel and pay" button, the app points the Driver to two better
+    options first: hand the trip to a trusted colleague (coming soon), or call the Business to agree a release. When a
+    Driver does cancel, the trip goes straight back into the Pool as a SPEED WIN so another Driver grabs it fast.
+  - **No-show.** If the Guest doesn't turn up, the Driver waits — an hour for airport pickups, 20 minutes in town — with a
+    live countdown, then reports a no-show and is **paid in full**, exactly like a completed trip (the Business is charged
+    and settles with its own guest). Because a no-show *pays* the Driver, that button is amber, not alarming red — and
+    there's a friendly "are you sure?" step first, since a good Driver gives it a few extra minutes.
+  - **"Take it back" when a Driver goes quiet.** If the assigned Driver never confirms and you can't reach them, close to
+    pickup you get a one-tap "reclaim" that pulls the trip back and re-pools it as a SPEED WIN — no penalty to you. It only
+    appears when the Driver genuinely hasn't confirmed, so a Business can't use it to dodge a cancellation fee.
+  - The exact euro amounts are settled by hand during the beta; the rules above are what's built. Needed a database change
+    (done). The "hand to a colleague" and the mutual "agreed release" flows come next.
+
 ## 10 July 2026 (later)
 - **Address search now puts local places first.** Typing something like "aéroport t2" was showing a Paris (Roissy)
   shop, then Barcelona and Geneva, with the Nice result buried down the list. Now Côte d'Azur results (Nice, Cannes,

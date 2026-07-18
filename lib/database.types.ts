@@ -168,6 +168,7 @@ export interface Database {
           preferred_gps: PreferredGps | null;
           stripe_account_id: string | null;
           verified: boolean;
+          reliability_marks: number; // O7 (D45): running count of cancel / no-confirm marks
           created_at: string;
         };
         Insert: {
@@ -188,6 +189,7 @@ export interface Database {
           preferred_gps?: PreferredGps | null;
           stripe_account_id?: string | null;
           verified?: boolean;
+          reliability_marks?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["driver"]["Insert"]>;
@@ -299,6 +301,11 @@ export interface Database {
           accepted_at: string | null;
           confirmed_at: string | null;
           info_edited_at: string | null; // set by updateMissionInfo on an info-only edit (2026-07-05 migration)
+          cancellation_fee: number | null; // O7 (D45): euro basis at cancel — MANUAL settle
+          cancellation_reason: string | null; // O7
+          pooled_at: string | null; // O7: PDP climb origin for a RE-POOLED mission
+          no_show: boolean; // O7: Guest didn't show → Driver paid like a completed mission
+          no_show_at: string | null; // O7
         };
         Insert: {
           id?: string;
@@ -353,8 +360,47 @@ export interface Database {
           accepted_at?: string | null;
           confirmed_at?: string | null;
           info_edited_at?: string | null;
+          cancellation_fee?: number | null;
+          cancellation_reason?: string | null;
+          pooled_at?: string | null;
+          no_show?: boolean;
+          no_show_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mission"]["Insert"]>;
+        Relationships: [];
+      };
+      mission_cancellation: {
+        Row: {
+          id: string;
+          mission_id: string;
+          business_id: string;
+          party: CancellationParty;
+          actor_driver_id: string | null;
+          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim";
+          reason: string | null;
+          fee_pct: number | null;
+          fee_amount: number | null;
+          fare_snapshot: number | null;
+          hours_before_pickup: number | null;
+          resulted_in: "repooled" | "terminal";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          business_id: string;
+          party: CancellationParty;
+          actor_driver_id?: string | null;
+          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim";
+          reason?: string | null;
+          fee_pct?: number | null;
+          fee_amount?: number | null;
+          fare_snapshot?: number | null;
+          hours_before_pickup?: number | null;
+          resulted_in: "repooled" | "terminal";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mission_cancellation"]["Insert"]>;
         Relationships: [];
       };
       mission_guest_contact: {
@@ -571,6 +617,24 @@ export interface Database {
         Args: { p_amendment_id: string; p_accept: boolean; p_reason?: string | null };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
+      // O7 cancellation spine (D45). SECURITY DEFINER + atomic, resolving the caller
+      // via current_driver_id()/current_business_id(); each returns the mission Row.
+      driver_cancel_mission: {
+        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot?: number | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
+      business_cancel_mission: {
+        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot?: number | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
+      reclaim_mission: {
+        Args: { p_mission_id: string };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
+      mark_no_show: {
+        Args: { p_mission_id: string; p_fare_snapshot?: number | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
       app_role: { Args: Record<PropertyKey, never>; Returns: UserRole };
       current_driver_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_business_id: { Args: Record<PropertyKey, never>; Returns: string };
@@ -594,6 +658,7 @@ export interface Database {
 export type MissionRow = Database["public"]["Tables"]["mission"]["Row"];
 export type MissionAmendmentRow = Database["public"]["Tables"]["mission_amendment"]["Row"];
 export type MissionInfoChangeRow = Database["public"]["Tables"]["mission_info_change"]["Row"];
+export type MissionCancellationRow = Database["public"]["Tables"]["mission_cancellation"]["Row"];
 export type DriverRow = Database["public"]["Tables"]["driver"]["Row"];
 export type VehicleRow = Database["public"]["Tables"]["vehicle"]["Row"];
 export type DispatcherRow = Database["public"]["Tables"]["dispatcher"]["Row"];
