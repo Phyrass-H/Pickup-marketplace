@@ -560,6 +560,38 @@ are fixed. All fees are penalties owed to **PickUp-the-intermediary**, never a t
   `mission_cancellation` audit table, a Driver **reliability mark**, and cancel/re-pool RPCs mirroring
   `accept_mission` / `respond_to_amendment`. The dormant `cancelled_by` / `cancelled_at` columns already exist.
 
+### D46 — O7 agreed release BUILT (Business-initiated) + the 24h re-pool SPEED-WIN window (2026-07-19)
+Built the mutual-consent **agreed release** (the D45 Phase-2 "agreed cancellation") and, in the same session, the founder
+refined the re-pool pricing rule. Migrations `2026-07-19_agreed_release.sql` + `2026-07-19_repool_speedwin_window.sql`
+(both additive, founder-run). Verified + 3-lens adversarially reviewed (6 findings fixed).
+
+- **Direction = Business-initiated ONLY** (founder chose this over bidirectional). The Business taps a dedicated **"Agreed
+  release · free"** button (distinct from the fee-paying Cancel) → the assigned Driver gets an accept/decline card and
+  **must accept** → the trip releases **free (no fee, no reliability mark)** and re-pools. Decline → the trip stays exactly
+  as agreed. The Driver's cancel-sheet escape valve ("Ask the Business to release it — free") is how a Driver *starts* it
+  by phone; there is **no** Driver-initiated in-app proposal. Eligible only while `accepted`/`confirmed` (pre-execution).
+- **Guardrails against pressure (founder's concern — a Business coercing a committed Driver into a free release).** The
+  platform can't police the phone call, but it owns the **defaults + the receipts**: (1) declining is framed as **free,
+  mark-free, and the Driver's choice** on the card; the Business-side decline state is **calm, not alarmist**; (2)
+  **dispute-ready audit** — `mission_release` is append-only, **declines are retained** (a Business only HIDES a resolved
+  request via `dismissed_at`, never deletes/rewrites), each row records who/when/note/decision/fare/**hours-before-pickup**
+  so "a free release proposed inside the fee window, repeatedly declined" is legible and **per-Business counts are a query**.
+  All writes go through **SECURITY DEFINER RPCs** (no client write policy) so the evidence can't be tampered with. The
+  founder's framing: *not something we control, but something we set up fairly and can prove.* Abuse-rate **dashboard** =
+  the deferred Admin workspace (BACKLOG F2); the data will be ready for it. **Review-weaponisation** (threatening a bad
+  review) → when a Business→Driver review system is built, gate reviews to **completed trips + double-blind** so a
+  released/declined trip generates no review right (logged as a constraint on that future feature).
+- **RE-POOL PRICING — the 24h SPEED-WIN window (founder decision; supersedes D45 "re-pool = always SPEED WIN at 70%").**
+  A re-pooled mission (driver cancel · T-60 reclaim · agreed release — **all re-pool paths**, for consistency) now prices
+  by time-to-pickup: **< 24h → SPEED WIN** (start 70% of ceiling, climb 5%/5 min); **≥ 24h → NORMAL Pool** (start 50% of
+  ceiling, climb 5%/10 min, SPEED WIN off) — no reason to burn SPEED-WIN margin when there's time to fill it. These are the
+  exact curves a fresh posting uses. (T-60 reclaim is structurally always <24h, so always SPEED WIN — kept uniform.)
+- **Review fixes folded in:** the cancel/reclaim/business-cancel RPCs now **supersede a pending `mission_release`** (they
+  already did this for `mission_amendment`; `business_cancel` gained the amendment supersede it was missing too), the
+  release cards/briefs are **gated to a still-releasable trip** (no dead/stale cards past accepted/confirmed or after a
+  new Driver re-accepts a released trip), and `respond_to_release` locks **mission → release** (matching `propose_release`)
+  to remove a deadlock inversion.
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

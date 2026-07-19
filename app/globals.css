@@ -1868,12 +1868,18 @@ textarea::placeholder {
 .amc__chip { font-size: 12.5px; color: #334155; background: #fff; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); padding: 6px 12px; cursor: pointer; font-family: inherit; }
 .amc__chip--on { color: #fff; background: var(--accent); border-color: var(--accent); }
 .amc__foot { font-size: 11.5px; color: var(--text-faint); text-align: center; margin: 11px 0 0; line-height: 1.5; }
+/* Agreed-release card extras (O7, D45): the intro line + the calm "declining is safe" note. */
+.amc__lead { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 9px 0 2px; }
+.amc__safe { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin: 12px 2px 0; }
 
 /* --- Schedule row: amendment state --- */
 .dx-amend { margin-top: 12px; border-radius: var(--radius-md); padding: 11px 13px; font-size: 13px; }
 .dx-amend--pending { background: var(--accent-soft); border: 1px solid #cdd7e6; }
 .dx-amend--declined { background: #fff8f4; border: 1px solid #f3d9cc; }
 .dx-amend--accepted { background: var(--tone-neutral-bg, #eef2f7); border: 1px solid var(--border); }
+/* Agreed-release schedule states reuse .dx-amend; --neutral is the calm grey for a
+   declined (Driver kept the trip) or completed release (O7, D45). */
+.dx-amend--neutral { background: var(--tone-neutral-bg, #eef2f7); border: 1px solid var(--border); }
 .dx-amend__head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .dx-amend__tag { font-size: 11.5px; font-weight: 600; color: var(--accent); background: #fff; border-radius: var(--radius-pill); padding: 2px 9px; }
 .dx-amend__tag--off { color: var(--danger); }

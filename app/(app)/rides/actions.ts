@@ -190,6 +190,38 @@ export async function driverCancelMission(
   return { ok: true };
 }
 
+// The Driver's answer to a proposed AGREED RELEASE (O7, D45). Accept → the trip
+// releases free and re-pools as a SPEED WIN (no fee, no reliability mark); decline →
+// the trip stays exactly as agreed. Runs the atomic respond_to_release RPC via the
+// USER session (SECURITY DEFINER resolves current_driver_id(), like accept_mission —
+// must NOT use the service role, D6). Declining is always free and safe for the Driver.
+export async function respondToRelease(
+  releaseId: string,
+  accept: boolean,
+  reason?: string | null,
+): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_release", {
+    p_release_id: releaseId,
+    p_accept: accept,
+    p_reason: reason?.trim() || null,
+  });
+  if (error) {
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message: msg && msg.length < 120 ? msg : "Couldn’t respond — please refresh and try again.",
+    };
+  }
+
+  revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
 // Report a Guest no-show (O7, D45). Only from 'arrived' once the wait window has elapsed
 // (the RPC enforces airport 60 / city 20 min). Business is charged the full fare; the
 // Driver is paid like a completed mission (status → completed, no_show = true).

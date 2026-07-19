@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Phone, AlertTriangle, UserX, Clock } from "lucide-react";
+import { Users, Phone, AlertTriangle, UserX, Clock, Handshake } from "lucide-react";
 import { driverCancelMission, markNoShow } from "./actions";
 import { formatMoney } from "@/lib/format";
 
@@ -85,9 +85,17 @@ export function DriverCancel({
       </div>
 
       {businessPhone && (
-        <a href={`tel:${businessPhone}`} className="btn" style={{ marginTop: 8, display: "block", textAlign: "center" }}>
-          <Phone size={15} aria-hidden /> Call {businessName ?? "the Business"} to release it
-        </a>
+        <div style={{ border: "0.5px solid var(--border-strong)", borderRadius: 10, padding: 12, marginTop: 12 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>
+            <Handshake size={15} aria-hidden /> Ask {businessName ?? "the Business"} to release it — free
+          </div>
+          <div className="muted small" style={{ marginTop: 4 }}>
+            If they agree, they’ll send a release you accept here — no fee, no mark. Call to arrange it.
+          </div>
+          <a href={`tel:${businessPhone}`} className="btn" style={{ marginTop: 10, display: "block", textAlign: "center" }}>
+            <Phone size={15} aria-hidden /> Call {businessName ?? "the Business"}
+          </a>
+        </div>
       )}
 
       <div style={{ background: "var(--tone-danger-bg)", borderRadius: 10, padding: 12, marginTop: 12 }}>
@@ -95,8 +103,8 @@ export function DriverCancel({
           <AlertTriangle size={14} aria-hidden /> Cancelling costs 100%
         </div>
         <div style={{ color: "var(--tone-danger-fg)", fontSize: 12, marginTop: 4 }}>
-          You’ll owe the full fare — {formatMoney(fare)}. This keeps PickUp reliable for Businesses. The trip re-pools
-          as a SPEED WIN.
+          You’ll owe the full fare — {formatMoney(fare)}. This keeps PickUp reliable for Businesses. The trip goes
+          back to the Pool for another Driver.
         </div>
       </div>
 

@@ -5,6 +5,59 @@
 
 ---
 
+## 2026-07-19 — Session 40 — O7 agreed release (Business-initiated) + the 24h re-pool SPEED-WIN window
+**Branch:** `main`. **Migrations (founder RAN both):** `docs/migrations/2026-07-19_agreed_release.sql` (new `mission_release`
+evidence table + `propose_release` / `respond_to_release` / `close_release` RPCs + widened `mission_cancellation.kind`) and
+`docs/migrations/2026-07-19_repool_speedwin_window.sql` (the 24h re-pool window + review fixes; `create or replace` of the
+four O7 RPCs). Both additive. **Decision [[d46]].** Finishes the actionable half of O7 (the copilote hand-over stays Phase 2 —
+needs the community layer).
+
+**The agreed release — the D45 mutual-consent "agreed cancellation".** A free, no-fee release that BOTH sides confirm.
+**Direction = Business-initiated ONLY** (founder chose this over bidirectional, after seeing the D25 preview): the Business
+taps a dedicated **"Agreed release · free"** button (distinct from the fee-paying Cancel) → the assigned Driver gets an
+accept/decline card and **must accept** → the trip releases **free (no fee, no reliability mark)** and re-pools; decline →
+the trip stays exactly as agreed. Eligible only while `accepted`/`confirmed`. The Driver's cancel-sheet escape valve ("Ask
+the Business to release it — free") is the phone trigger; there is no Driver-initiated in-app proposal. Mirrors the amendment
+pattern almost exactly (propose record + Driver accept/decline + atomic SECURITY DEFINER RPC).
+- **Files.** DB: the two migrations. Driver: `components/release-card.tsx` (the card, with the safe-decline reassurance),
+  `respondToRelease` in `rides/actions.ts`, loader + gate in `rides/page.tsx`, escape-valve copy in `rides/cancel-noshow.tsx`.
+  Business: `components/dispatch-release.tsx` (`AgreedRelease` button + confirm modal), `proposeRelease`/`closeRelease` in
+  `dispatch/actions.ts`, schedule states + button wiring + gates in `trip-row.tsx`, loader in `dispatch/page.tsx`. Types in
+  `lib/database.types.ts`; CSS in `globals.css` (`.amc__lead`/`.amc__safe`/`.dx-amend--neutral`, else reuses the amendment classes).
+
+**Dispute-ready evidence (founder's explicit concern — a Business coercing a committed Driver into a free release).** The
+platform can't police the phone call, so it owns the defaults + the receipts: (1) declining is framed as **free, mark-free,
+the Driver's choice** on the card, and the Business-side decline state is **calm, not alarmist**; (2) `mission_release` is
+**append-only** — declines are retained; a Business only HIDES a resolved request (`dismissed_at`), never deletes/rewrites;
+each row stores who/when/note/decision/`from_fare`/**`hours_before_pickup`** so "a free release proposed inside the fee
+window, repeatedly declined" is legible and **per-Business counts are a query**. ALL writes go through the SECURITY DEFINER
+RPCs (no client INSERT/UPDATE policy) → tamper-resistant (stronger than the amendment table; closes the class of gap the O7
+review flagged). Abuse dashboard = deferred Admin workspace (BACKLOG F2); the data is ready for it. Logged the
+review-weaponisation constraint (completed-trip + double-blind reviews) for whenever a Business→Driver review system is built.
+
+**Re-pool pricing — the 24h SPEED-WIN window (founder decision; supersedes D45 "re-pool = always SPEED WIN at 70%").** A
+re-pooled mission (driver cancel · T-60 reclaim · agreed release — ALL re-pool paths) now prices by time-to-pickup: **<24h →
+SPEED WIN** (start 70% of ceiling, climb 5%/5 min); **≥24h → NORMAL Pool** (start 50% of ceiling, climb 5%/10 min, SPEED WIN
+off) — the exact curves a fresh posting uses (`dispatch/new/actions.ts`). Re-pool re-bases the climb to `pooled_at`.
+
+**Adversarial 3-lens review (SQL-security / TS-integration / UX-policy) → 6 confirmed of 10, ALL fixed** (2 verified-REJECTED:
+client-forgeable `p_proposed_by` — tenant security holds; a hedged "24h" copy nuance). Fixes folded into the repool migration
++ UI: the cancel/reclaim/business-cancel RPCs now **supersede a pending `mission_release`** (business-cancel gained the
+amendment supersede it was missing too); the release cards/briefs are **gated to a still-releasable trip** (no dead card past
+accepted/confirmed; no stale "back in the Pool" once a new Driver re-accepts); `respond_to_release` locks **mission → release**
+(matching `propose_release`) to kill a deadlock inversion.
+
+**Verified live vs the real Supabase DB** — a self-contained script (`scratchpad/verify-release.mjs`) that creates a throwaway
+tenant + missions, signs in as real Business + Driver auth users (the exact SECURITY DEFINER path), exercises the loop, and
+cleans up: **28/28 assertions pass** — Test A (≥24h → normal 50%/int10/speed-off), B (<24h → SPEED WIN 70%/int5), C (decline
+untouched + reason retained), D (business-cancel supersedes pending release), E (status guard blocks a stale accept), F
+(deny-by-default writes: Business/Driver can't INSERT or rewrite a declined `mission_release`). `tsc` + `next build` green.
+Founder ran migration #2 (a first-paste "syntax error" then a clean "success" — an incomplete `$$…$$` paste; the successful
+idempotent re-run applied all four functions, confirmed by the 28 live checks). **Deployed to `main`.**
+
+**Next here:** the **copilote hand-over** (O7 Phase 2 — needs the community/registration layer) is the last O7 piece. The
+§ H2 review-flags remain (the Business-UPDATE RLS WITH CHECK; the fee basis freeze at `accepted_at`).
+
 ## 2026-07-13 — Session 39 — O7 cancellation: research + full ruleset decided + documented (no code yet)
 **Branch:** `main`. **No code / no schema change this session — design + decisions only.** Founder chose to work on **O7
 (cancellation)** and gave the full policy context; I ran a **4-agent research workflow** (canonical docs sweep · schema/code

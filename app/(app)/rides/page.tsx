@@ -10,7 +10,12 @@ import {
   missionStatusLabel,
   shortPlaceLabel,
 } from "@/lib/format";
-import type { MissionStatus, MissionRow, MissionAmendmentRow } from "@/lib/database.types";
+import type {
+  MissionStatus,
+  MissionRow,
+  MissionAmendmentRow,
+  MissionReleaseRow,
+} from "@/lib/database.types";
 import { isExecutable } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
@@ -19,6 +24,7 @@ import { isAirportPickup, noShowWaitMinutes } from "@/lib/cancellation";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard, type AmendmentLeg } from "@/components/amendment-card";
+import { ReleaseCard } from "@/components/release-card";
 import { StatusControl } from "./status-control";
 import { DriverCancel, NoShowControl } from "./cancel-noshow";
 
@@ -103,6 +109,19 @@ function buildAmendmentData(
     durNew,
     pickupAtIso: m.pickup_at,
     slot,
+  };
+}
+
+// Props for the "agreed release" card (O7, D45) — a free mutual release the Driver
+// accepts or declines. No route/fare change, so it just needs the trip + who asked.
+function buildReleaseData(r: MissionReleaseRow, m: MissionRow, businessName: string | null) {
+  return {
+    releaseId: r.id,
+    businessName: businessName ?? "The Business",
+    createdAtLabel: formatDateTime(r.created_at),
+    pickup: m.pickup_address,
+    dropoff: m.dropoff_address,
+    note: r.note,
   };
 }
 
@@ -192,6 +211,29 @@ export default async function RidesPage() {
     }
   }
 
+  // Pending agreed releases (O7, D45) — the "Release requested" accept/decline card.
+  // RLS (driver_id = current_driver_id()) scopes these to this Driver; one pending per
+  // mission (the Business supersedes on re-send).
+  const releaseData = new Map<string, ReturnType<typeof buildReleaseData>>();
+  if (missions && missions.length > 0) {
+    const { data: rels } = await supabase
+      .from("mission_release")
+      .select("*")
+      .in(
+        "mission_id",
+        missions.map((m) => m.id),
+      )
+      .eq("status", "proposed");
+    for (const r of rels ?? []) {
+      const m = missions.find((x) => x.id === r.mission_id);
+      // Only while the trip is still releasable (respond_to_release's own guard) — once
+      // it starts executing / completes, a lingering proposal would be a dead card.
+      if (m && (m.status === "accepted" || m.status === "confirmed")) {
+        releaseData.set(r.mission_id, buildReleaseData(r, m, contacts.get(m.id)?.businessName ?? null));
+      }
+    }
+  }
+
   // No-show timers: for an 'arrived' mission, the latest 'arrived' status_event is when
   // the free wait window started. A Driver reads its own mission's events under RLS.
   const arrivedAt = new Map<string, string>();
@@ -256,6 +298,7 @@ export default async function RidesPage() {
             </div>
 
             {amendmentData.has(m.id) && <AmendmentCard {...amendmentData.get(m.id)!} />}
+            {releaseData.has(m.id) && <ReleaseCard {...releaseData.get(m.id)!} />}
 
             <div className="route">
               <div className="leg">

@@ -10,6 +10,7 @@ import {
   TripRow,
   type DriverContact,
   type AmendmentBrief,
+  type ReleaseBrief,
   type InfoChangeBrief,
 } from "@/components/trip-row";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
@@ -21,7 +22,7 @@ import {
   changeSummary,
   declineReasonLabel,
 } from "@/lib/amendments";
-import type { MissionRow, MissionAmendmentRow } from "@/lib/database.types";
+import type { MissionRow, MissionAmendmentRow, MissionReleaseRow } from "@/lib/database.types";
 
 // Reduce a stored amendment to the compact brief the schedule row renders.
 function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
@@ -43,6 +44,11 @@ function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
     declineReason: declineReasonLabel(a.decline_reason),
     at: a.responded_at ?? a.created_at,
   };
+}
+
+// Reduce a stored release to the compact brief the schedule row renders.
+function buildReleaseBrief(r: MissionReleaseRow): ReleaseBrief {
+  return { id: r.id, status: r.status, at: r.responded_at ?? r.created_at };
 }
 
 export const dynamic = "force-dynamic";
@@ -67,6 +73,7 @@ function DayGroup({
   contacts,
   guestContacts,
   amendments,
+  releases,
   infoChanges,
   today,
 }: {
@@ -75,6 +82,7 @@ function DayGroup({
   contacts: Map<string, DriverContact>;
   guestContacts: Map<string, GuestContact[]>;
   amendments: Map<string, AmendmentBrief>;
+  releases: Map<string, ReleaseBrief>;
   infoChanges: Map<string, InfoChangeBrief>;
   today?: boolean;
 }) {
@@ -94,6 +102,7 @@ function DayGroup({
           driver={contacts.get(m.id) ?? null}
           guestContacts={guestContacts.get(m.id) ?? null}
           amendment={amendments.get(m.id) ?? null}
+          release={releases.get(m.id) ?? null}
           infoChange={infoChanges.get(m.id) ?? null}
         />
       ))}
@@ -174,6 +183,26 @@ export default async function DispatchSchedule({
     }
   }
 
+  // Agreed releases (O7, D45): the latest non-superseded, non-dismissed release per
+  // mission → the "Release pending / declined / accepted" states. RLS scopes to this
+  // Business. Degrades to empty if the 2026-07-19 migration hasn't been applied.
+  const releases = new Map<string, ReleaseBrief>();
+  if (missionIds.length > 0) {
+    const { data: rels } = await supabase
+      .from("mission_release")
+      .select("*")
+      .in("mission_id", missionIds)
+      .neq("status", "superseded")
+      .is("dismissed_at", null)
+      .order("created_at", { ascending: false });
+    const seen = new Set<string>();
+    for (const r of rels ?? []) {
+      if (seen.has(r.mission_id)) continue; // keep only the latest per mission
+      seen.add(r.mission_id);
+      releases.set(r.mission_id, buildReleaseBrief(r));
+    }
+  }
+
   // Detail-edit change-log (D40): the latest "what changed" trail per mission, for
   // the trip detail. Business-private side table (RLS-scoped); degrades to empty if
   // the 2026-07-10 migration hasn't been applied yet.
@@ -238,6 +267,7 @@ export default async function DispatchSchedule({
               contacts={contacts}
               guestContacts={guestContacts}
               amendments={amendments}
+              releases={releases}
               infoChanges={infoChanges}
               today
             />
@@ -255,6 +285,7 @@ export default async function DispatchSchedule({
                 contacts={contacts}
                 guestContacts={guestContacts}
                 amendments={amendments}
+                releases={releases}
                 infoChanges={infoChanges}
               />
             ))}
@@ -275,6 +306,7 @@ export default async function DispatchSchedule({
                     contacts={contacts}
                     guestContacts={guestContacts}
                     amendments={amendments}
+                    releases={releases}
                     infoChanges={infoChanges}
                   />
                 ))}

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Pencil, GitPullRequestArrow, Lock, Phone, Car, Clock, Star } from "lucide-react";
-import type { MissionRow, AmendmentStatus } from "@/lib/database.types";
+import type { MissionRow, AmendmentStatus, ReleaseStatus } from "@/lib/database.types";
 import { closeAmendment } from "@/app/(dispatch)/dispatch/[id]/amend/actions";
+import { closeRelease } from "@/app/(dispatch)/dispatch/actions";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
@@ -20,6 +21,7 @@ import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { PhoneShareToggle } from "@/components/phone-share-toggle";
 import { BusinessCancel, ReclaimCard } from "@/components/dispatch-cancel";
+import { AgreedRelease } from "@/components/dispatch-release";
 import {
   parsePassengers,
   passengerName,
@@ -53,6 +55,14 @@ export interface AmendmentBrief {
   at: string; // responded_at ?? created_at
 }
 
+// A proposed / resolved AGREED RELEASE for this trip (O7, D45), for the schedule
+// state. Precomputed server-side; the release itself carries no route/fare change.
+export interface ReleaseBrief {
+  id: string;
+  status: ReleaseStatus;
+  at: string; // responded_at ?? created_at
+}
+
 // The latest detail-edit change-log for this trip (D40 follow-up) — the "what
 // changed" trail shown under the edit actions. Business-private (side table).
 export interface InfoChangeBrief {
@@ -69,6 +79,7 @@ export function TripRow({
   driver,
   guestContacts,
   amendment,
+  release,
   infoChange,
   archived = false,
 }: {
@@ -76,6 +87,7 @@ export function TripRow({
   driver?: DriverContact | null;
   guestContacts?: GuestContact[] | null;
   amendment?: AmendmentBrief | null;
+  release?: ReleaseBrief | null;
   infoChange?: InfoChangeBrief | null;
   archived?: boolean;
 }) {
@@ -111,6 +123,14 @@ export function TripRow({
   // holds the trip but hasn't started it (D39 Phase 2).
   const canAmend =
     !archived && (mission.status === "accepted" || mission.status === "confirmed");
+  // An AGREED RELEASE (free, needs Driver consent) can be offered while a committed
+  // Driver holds the trip pre-execution (O7, D45). Hidden while one is already pending
+  // (the schedule shows that state instead).
+  const canRelease =
+    !archived &&
+    !!mission.driver_id &&
+    (mission.status === "accepted" || mission.status === "confirmed");
+  const releasePending = !!release && release.status === "proposed";
   // Business can cancel any live trip (O7). FREE while pooled; a fee applies once a
   // Driver holds it (the modal shows the live %). Not once on_board / completed.
   const cancellable =
@@ -318,14 +338,27 @@ export function TripRow({
           </div>
         )}
 
-        {cancellable && (
+        {(cancellable || (canRelease && !releasePending)) && (
           <div style={{ marginBottom: 12 }}>
-            <BusinessCancel
-              missionId={mission.id}
-              fare={currentFare(mission)}
-              pickupAtIso={mission.pickup_at}
-              hasDriver={!!mission.driver_id}
-            />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {canRelease && !releasePending && (
+                <AgreedRelease missionId={mission.id} driverName={driver?.name ?? ""} />
+              )}
+              {cancellable && (
+                <BusinessCancel
+                  missionId={mission.id}
+                  fare={currentFare(mission)}
+                  pickupAtIso={mission.pickup_at}
+                  hasDriver={!!mission.driver_id}
+                />
+              )}
+            </div>
+            {canRelease && !releasePending && (
+              <p className="muted small" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
+                Agreed release is free but {driver ? driver.name : "the Driver"} must accept it · Cancel is
+                unilateral and may cost a fee this close to pickup.
+              </p>
+            )}
           </div>
         )}
 
@@ -412,6 +445,64 @@ export function TripRow({
                 {acceptedFareChanged && acceptedRouteChanged && " · "}
                 {acceptedRouteChanged && amendment.summary}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Agreed-release state (O7, D45): a free release awaiting the Driver, a
+            decline (the Driver kept the trip — their right, framed calmly), or a
+            completed release (the trip is back in the Pool). */}
+        {release && release.status === "proposed" &&
+          (mission.status === "accepted" || mission.status === "confirmed") && (
+          <div className="dx-amend dx-amend--pending">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag">Release pending</span>
+              <span className="muted small">
+                Waiting for {driver ? driver.name : "the Driver"} to accept · free
+              </span>
+            </div>
+            {!archived && (
+              <form action={closeRelease} className="dx-amend__actions">
+                <input type="hidden" name="release_id" value={release.id} />
+                <input type="hidden" name="mission_id" value={mission.id} />
+                <button type="submit" className="dx-amend__link">Withdraw request</button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {release && release.status === "declined" && (
+          <div className="dx-amend dx-amend--neutral">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag">Release declined</span>
+              <span className="muted small">{driver ? driver.name : "The Driver"} kept the trip</span>
+            </div>
+            <p className="dx-amend__reassure">
+              That’s the Driver’s call — a release is only ever their choice. The trip stays exactly as
+              agreed. If you still need to end it, you can cancel (a fee may apply this close to pickup).
+            </p>
+            {!archived && (
+              <form action={closeRelease} className="dx-amend__actions">
+                <input type="hidden" name="release_id" value={release.id} />
+                <input type="hidden" name="mission_id" value={mission.id} />
+                <button type="submit" className="dx-amend__link">Dismiss</button>
+              </form>
+            )}
+          </div>
+        )}
+
+        {release && release.status === "accepted" && mission.status === "pooled" && (
+          <div className="dx-amend dx-amend--neutral">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag dx-amend__tag--ok">Released by agreement</span>
+              <span className="muted small">· back in the Pool · {formatDateTime(release.at)}</span>
+            </div>
+            {!archived && (
+              <form action={closeRelease} className="dx-amend__actions">
+                <input type="hidden" name="release_id" value={release.id} />
+                <input type="hidden" name="mission_id" value={mission.id} />
+                <button type="submit" className="dx-amend__link">Dismiss</button>
+              </form>
             )}
           </div>
         )}

@@ -55,6 +55,10 @@ export type PaymentStatus = "requires_capture" | "captured" | "refunded" | "fail
 // proposed → accepted | declined, or superseded when the Business replaces it.
 export type AmendmentStatus = "proposed" | "accepted" | "declined" | "superseded";
 
+// mission_release.status mirrors the amendment lifecycle (O7 agreed release, D45):
+// proposed → accepted | declined, or superseded when replaced/pre-empted by a cancel.
+export type ReleaseStatus = "proposed" | "accepted" | "declined" | "superseded";
+
 // status_event.status is a text CHECK, not the mission_status enum.
 export type StatusEventStatus = "en_route" | "arrived" | "on_board" | "completed";
 export type PreferredGps = "waze" | "google" | "apple";
@@ -376,7 +380,7 @@ export interface Database {
           business_id: string;
           party: CancellationParty;
           actor_driver_id: string | null;
-          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim";
+          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim" | "agreed_release";
           reason: string | null;
           fee_pct: number | null;
           fee_amount: number | null;
@@ -391,7 +395,7 @@ export interface Database {
           business_id: string;
           party: CancellationParty;
           actor_driver_id?: string | null;
-          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim";
+          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim" | "agreed_release";
           reason?: string | null;
           fee_pct?: number | null;
           fee_amount?: number | null;
@@ -472,6 +476,46 @@ export interface Database {
           responded_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mission_amendment"]["Insert"]>;
+        Relationships: [];
+      };
+      // Mutual-consent AGREED RELEASE (O7, D45): the Business proposes a free release
+      // of a committed Driver; the Driver must accept (respond_to_release RPC) before
+      // the trip re-pools. An append-only evidence trail — declines are retained, a
+      // Business only HIDES a resolved request (dismissed_at). ALL writes go through the
+      // propose/respond/close SECURITY DEFINER RPCs (no client write policy).
+      // (2026-07-19 migration.)
+      mission_release: {
+        Row: {
+          id: string;
+          mission_id: string;
+          business_id: string;
+          driver_id: string | null;
+          proposed_by: string | null;
+          status: ReleaseStatus;
+          note: string | null;
+          decline_reason: string | null;
+          from_fare: number | null; // computed fare at propose-time (dispute context)
+          hours_before_pickup: number | null; // server-computed at propose-time (the "inside the fee window?" signal)
+          dismissed_at: string | null; // Business hid a RESOLVED request from its schedule (evidence preserved)
+          created_at: string;
+          responded_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          mission_id: string;
+          business_id: string;
+          driver_id?: string | null;
+          proposed_by?: string | null;
+          status?: ReleaseStatus;
+          note?: string | null;
+          decline_reason?: string | null;
+          from_fare?: number | null;
+          hours_before_pickup?: number | null;
+          dismissed_at?: string | null;
+          created_at?: string;
+          responded_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["mission_release"]["Insert"]>;
         Relationships: [];
       };
       // Detail-edit change-log (D40 follow-up): one row per "Edit details" save,
@@ -635,6 +679,27 @@ export interface Database {
         Args: { p_mission_id: string; p_fare_snapshot?: number | null };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
+      // Mutual-consent agreed release (O7, D45). All SECURITY DEFINER + atomic,
+      // mirroring respond_to_amendment / driver_cancel_mission. propose_release
+      // (Business) + close_release (Business withdraw/dismiss) return the release Row;
+      // respond_to_release (Driver accept/decline) re-pools on accept + returns the mission.
+      propose_release: {
+        Args: {
+          p_mission_id: string;
+          p_note?: string | null;
+          p_from_fare?: number | null;
+          p_proposed_by?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["mission_release"]["Row"];
+      };
+      respond_to_release: {
+        Args: { p_release_id: string; p_accept: boolean; p_reason?: string | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
+      close_release: {
+        Args: { p_release_id: string };
+        Returns: Database["public"]["Tables"]["mission_release"]["Row"];
+      };
       app_role: { Args: Record<PropertyKey, never>; Returns: UserRole };
       current_driver_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_business_id: { Args: Record<PropertyKey, never>; Returns: string };
@@ -659,6 +724,7 @@ export type MissionRow = Database["public"]["Tables"]["mission"]["Row"];
 export type MissionAmendmentRow = Database["public"]["Tables"]["mission_amendment"]["Row"];
 export type MissionInfoChangeRow = Database["public"]["Tables"]["mission_info_change"]["Row"];
 export type MissionCancellationRow = Database["public"]["Tables"]["mission_cancellation"]["Row"];
+export type MissionReleaseRow = Database["public"]["Tables"]["mission_release"]["Row"];
 export type DriverRow = Database["public"]["Tables"]["driver"]["Row"];
 export type VehicleRow = Database["public"]["Tables"]["vehicle"]["Row"];
 export type DispatcherRow = Database["public"]["Tables"]["dispatcher"]["Row"];

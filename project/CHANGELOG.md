@@ -5,6 +5,26 @@
 
 ---
 
+## 19 July 2026
+- **"Agreed release" — a free, friendly way to hand a trip back, with both sides' say-so.** Sometimes a Driver who's taken a
+  trip genuinely can't do it and there's still time to re-fill it — nobody's at fault. Instead of the Driver paying the 100%
+  cancellation fee or the Business paying a cancel fee, there's now a proper **free release**: on an assigned trip the Business
+  taps **"Agreed release · free"** (a separate button from the red Cancel), and the Driver gets a card to **accept or decline**.
+  If the Driver accepts, the trip goes back to the Pool for another Driver — **no fee to anyone, no black mark on the Driver.**
+  If the Driver declines, nothing changes — the trip stays exactly as agreed.
+  - **Why the Driver has to agree:** it stops a Business quietly pressuring its way out of the cancellation fee. Without the
+    Driver's tap, the only way for a Business to cancel is the normal fee-paying cancel. Consent keeps the free door honest.
+  - **Declining is always safe for the Driver** — the card says so plainly ("free, no mark, only ever your choice"), and on the
+    Business side a decline is shown calmly ("that's the Driver's call — the trip stays as agreed"), never as the Driver being
+    difficult. We can't police a phone call, but the app makes saying "no" cost the Driver nothing.
+  - **Every release is on the record.** The Business's request, the Driver's answer (including declines), the time, and how far
+    out it was are all kept — so if a Business ever leans on Drivers with repeated "please release me" requests, there's a clear
+    trail. You can hide a finished request from your own schedule, but it's never erased. (Needed a database change — done.)
+- **Trips returning to the Pool are now priced smarter.** When a trip goes back to the Pool (a driver cancels, you reclaim it,
+  or it's released), how it's re-offered now depends on timing: **within 24 hours of pickup it goes out as a SPEED WIN** (a
+  higher offer, so someone grabs it fast); **more than 24 hours out it re-enters at the normal price and climbs as usual** —
+  no need to overpay when there's plenty of time to fill it. (Applies to every way a trip comes back to the Pool.)
+
 ## 13 July 2026
 - **You can now cancel a trip — properly, on both sides.** This is the cancellation system (O7).
   - **A Business can cancel a trip.** It's free while the trip is still unfilled (no Driver has taken it), and free up
