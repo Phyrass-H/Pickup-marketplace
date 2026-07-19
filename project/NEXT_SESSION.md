@@ -12,9 +12,10 @@ GitHub (`main`) and the app auto-deploys to Vercel. **Claude Code is allowed to 
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
-- `project/CHANGELOG.md` — plain-language history of everything shipped (the big picture, fast).
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 36–38, 2026-07-10)** for recent technical
-  detail. Older sessions are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
+- `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
+  `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 34–39)** for recent technical detail. Older sessions
+  (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
@@ -28,7 +29,8 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
   `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`,
-  `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`) — **ONLY** for schema/data work. (All applied to the live DB.)
+  `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`, `2026-07-13_o7_cancellation`) — **ONLY** for
+  schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -176,6 +178,26 @@ CURRENT STATE (live, deployed from `main`):
     Côte d'Azur hits to the top without hiding far destinations). "aéroport t2" now returns the Nice result at #1. **Mapbox
     POI ranking is still weak for prominent places** → **Google Places is the planned fix, DEFERRED until the founder
     registers the final domain** (so the API key is restricted once) — see BRAND/DOMAIN below + [[d43]].
+- **Shipped 2026-07-13 (Session 39) — O7 cancellation spine, LIVE ([[d45]]; migration `2026-07-13_o7_cancellation` applied):**
+  - **Driver cancel** (always 100% → re-pools as SPEED WIN; escape valves shown first — copilote "Soon", call the Business),
+    **Business cancel** (FREE while pooled / >5h, then 50% at −5h, +10%/h → 100%; a live-% modal), **No-show** (on-site
+    `arrived` + wait window 60 m airport / 20 m city → Business charged full, Driver paid like a completed trip; **amber**
+    button + a "be sure" nudge), **T-60 reclaim** (assigned Driver never confirmed + unreachable → re-pool, penalty-free).
+    Atomic SECURITY DEFINER RPCs (`driver_cancel_mission` / `business_cancel_mission` / `reclaim_mission` / `mark_no_show`)
+    mirroring `accept_mission` + a `mission_cancellation` audit table. `lib/pdp.ts` climbs from `pooled_at ?? created_at`;
+    `lib/cancellation.ts` shares the % ramp + airport heuristic. Files: `app/(app)/rides/cancel-noshow.tsx`,
+    `components/dispatch-cancel.tsx`, `app/(dispatch)/dispatch/actions.ts`, `rides/actions.ts`, `trip-row.tsx`,
+    `dispatch-status.ts`, `pdp.ts`, `database.types.ts`. Fee **amounts settle MANUAL** in beta; the rules are fixed.
+  - **Verified** end-to-end vs the live DB via real authenticated sessions (5 money paths + 5 adversarial guards) + a
+    3-lens adversarial review → **3 fixes applied** (supersede a pending amendment on re-pool; lock down status_event
+    spoofing; keep the business-cancel reason private from the Driver). Deployed `e9052d7` → Vercel Production `success`.
+  - **⚑ Flagged (BACKLOG § H2 — before real Business users / payments; NOT O7 regressions):** `p_mission_business_update`
+    has no WITH CHECK (a Business could bypass the fee via a raw PostgREST UPDATE — **HIGH for prod**, ~nil in beta);
+    `currentFare` doesn't freeze at `accepted_at` so the fee BASIS inflates to the ceiling (a **pricing-engine decision**);
+    `p_fare_snapshot` is client-forgeable (recompute in SQL with the pricing engine); a mid-run Business cancel vanishes
+    from the Driver's My Rides (pairs with notifications).
+  - **Next here:** the mutual-consent **"agreed release"** (a free, both-sides-confirm cancellation — reuses the amendment
+    pattern; scam-proofs the free path) then the **copilote hand-over** (O7 Phase 2 — needs the community layer). Both spec'd in [[d45]].
 - **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
   couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
@@ -196,8 +218,8 @@ RECOMMENDED NEXT STEP:
    **`respond_to_amendment` RPC** mirroring `accept_mission`. Verified end-to-end on the real DB (fare accept + decline +
    a real add-a-stop route change → the mission genuinely swapped). **Phase 3 is the future here** (auto price-delta via
    the pricing engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop?
-   +€X" note) — deferred on those integrations. The **decline "or Business cancels" path needs O7** (cancel/re-pool, not
-   built).
+   +€X" note) — deferred on those integrations. The **decline "or Business cancels" path is now unblocked by O7** —
+   cancel + re-pool shipped (S39, [[d45]]); the free mutual **"agreed release"** is the remaining piece.
 
 **B. ✅ Unfolded (expanded) trip-row redesign — SHIPPED (S36, 2026-07-10, [[d41]]).** Plus the S37 mission-form polish
    ([[d42]]) and the S38 Riviera-first address-search cleanup ([[d43]]). So the freshest open items are now the **Driver
@@ -254,7 +276,9 @@ OTHER OPEN ITEMS (pick what the founder asks):
   the Business sets the ceiling, PickUp recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
   Pool handles the deadhead. Seeding approach in IDEAS (taxi tariff floor + base+€/km+€/min grid). Don't build until the
   founder brings the rule; then the suggested Ceiling/base-fare range on the form follows.
-- **O7 cancellation** (driver re-pool + big red Dispatch card), **O2 guest phone to the Driver** (additive).
+- **O7 cancellation — ✅ SHIPPED + DEPLOYED (S39, 2026-07-13, [[d45]]).** Remaining: the mutual-consent **"agreed
+  release"** + the **copilote hand-over** (Phase 2), and the § H2 review-flag hardening (the Business-UPDATE RLS gate; the
+  fee basis / pricing).
 - **Engineering hardening (BACKLOG H2):** automated tests (money/PDP/`accept_mission`/RLS first), CI on PRs,
   generated DB types (`supabase gen types`), error monitoring.
 
