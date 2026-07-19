@@ -14,7 +14,7 @@ START BY READING — **just these four**; they get you fully up to date without 
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
   `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 34–39)** for recent technical detail. Older sessions
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 36–40)** for recent technical detail. Older sessions
   (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
@@ -196,8 +196,23 @@ CURRENT STATE (live, deployed from `main`):
     `currentFare` doesn't freeze at `accepted_at` so the fee BASIS inflates to the ceiling (a **pricing-engine decision**);
     `p_fare_snapshot` is client-forgeable (recompute in SQL with the pricing engine); a mid-run Business cancel vanishes
     from the Driver's My Rides (pairs with notifications).
-  - **Next here:** the mutual-consent **"agreed release"** (a free, both-sides-confirm cancellation — reuses the amendment
-    pattern; scam-proofs the free path) then the **copilote hand-over** (O7 Phase 2 — needs the community layer). Both spec'd in [[d45]].
+  - **✅ Agreed release SHIPPED (S40, below).** Remaining O7 piece: the **copilote hand-over** (Phase 2 — needs the community layer).
+- **Shipped 2026-07-19 (Session 40) — O7 agreed release + the 24h re-pool window, LIVE ([[d46]]; migrations
+  `2026-07-19_agreed_release` + `2026-07-19_repool_speedwin_window` applied):**
+  - **Agreed release (Business-initiated).** The Business taps **"Agreed release · free"** (distinct from the fee Cancel) →
+    the Driver **must accept** → the trip releases **free (no fee, no reliability mark)** and re-pools; decline → stays as
+    agreed. New `mission_release` **append-only evidence** table (declines retained; `dismissed_at` hides-without-deleting;
+    stores who/when/note/decision/fare/hours-before-pickup → dispute proof + per-Business abuse counts). ALL writes via
+    SECURITY DEFINER RPCs `propose_release` / `respond_to_release` / `close_release` (no client write policy → tamper-proof).
+    Driver `components/release-card.tsx` + `respondToRelease`; Business `components/dispatch-release.tsx` + `proposeRelease` /
+    `closeRelease`; schedule states + gates in `trip-row.tsx`. Guardrails: declining is framed free/safe/no-mark; the Business
+    decline state is calm. Review-weaponisation → gate a future Business→Driver review system to completed-trip + double-blind (logged).
+  - **24h re-pool SPEED-WIN window (supersedes D45 "always 70%").** ALL re-pool paths (driver cancel · reclaim · release):
+    **<24h → SPEED WIN** (70% / 5-min climb) · **≥24h → normal Pool** (50% / 10-min climb, SPEED WIN off) — the fresh-posting
+    curves. `create or replace` of the 4 O7 RPCs.
+  - **3-lens adversarial review → 6 fixes** (supersede pending release on cancel/reclaim/business-cancel; gate release cards to
+    a still-releasable trip; `respond_to_release` lock order mission→release). **Verified live 28/28** vs the real DB via real
+    Business+Driver sessions (pricing branches · free re-pool · decline · supersede · deny-by-default writes). Deployed `d939df7` → Vercel `success`.
 - **VERIFICATION NOTE (this stretch):** another chat held the `next dev` server on **:3000**, so the preview/Chrome MCPs
   couldn't reach it. Workaround that worked well: a **static harness** (a tiny Node server on :4612 serving an HTML page
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
@@ -219,7 +234,7 @@ RECOMMENDED NEXT STEP:
    a real add-a-stop route change → the mission genuinely swapped). **Phase 3 is the future here** (auto price-delta via
    the pricing engine + notifications so the Driver is alerted without watching the app + an in-app "could we add a stop?
    +€X" note) — deferred on those integrations. The **decline "or Business cancels" path is now unblocked by O7** —
-   cancel + re-pool shipped (S39, [[d45]]); the free mutual **"agreed release"** is the remaining piece.
+   cancel + re-pool shipped (S39, [[d45]]) and the free mutual **"agreed release"** shipped (S40, [[d46]]).
 
 **B. ✅ Unfolded (expanded) trip-row redesign — SHIPPED (S36, 2026-07-10, [[d41]]).** Plus the S37 mission-form polish
    ([[d42]]) and the S38 Riviera-first address-search cleanup ([[d43]]). So the freshest open items are now the **Driver
@@ -276,9 +291,9 @@ OTHER OPEN ITEMS (pick what the founder asks):
   the Business sets the ceiling, PickUp recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
   Pool handles the deadhead. Seeding approach in IDEAS (taxi tariff floor + base+€/km+€/min grid). Don't build until the
   founder brings the rule; then the suggested Ceiling/base-fare range on the form follows.
-- **O7 cancellation — ✅ SHIPPED + DEPLOYED (S39, 2026-07-13, [[d45]]).** Remaining: the mutual-consent **"agreed
-  release"** + the **copilote hand-over** (Phase 2), and the § H2 review-flag hardening (the Business-UPDATE RLS gate; the
-  fee basis / pricing).
+- **O7 cancellation — ✅ SHIPPED + DEPLOYED (spine S39 [[d45]]; agreed release + 24h re-pool window S40 [[d46]]).**
+  Remaining: the **copilote hand-over** (Phase 2 — needs the community/registration layer), and the § H2 review-flag
+  hardening (the Business-UPDATE RLS WITH CHECK gate; the fee basis freeze at `accepted_at` / pricing).
 - **Engineering hardening (BACKLOG H2):** automated tests (money/PDP/`accept_mission`/RLS first), CI on PRs,
   generated DB types (`supabase gen types`), error monitoring.
 
