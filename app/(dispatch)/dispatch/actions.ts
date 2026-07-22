@@ -21,6 +21,40 @@ function revalidateDispatch() {
 // committed); once a Driver holds it, a time-based fee applies — business_cancel_mission
 // (SECURITY DEFINER) computes the % from time-to-pickup and stamps the terminal cancel.
 // The fare snapshot is computed server-side (authoritative) as the euro basis (MANUAL).
+// D48 — the Business declares the no-show ("stop waiting, the Guest isn't coming"). Same
+// terminal outcome as the Driver's report: the Driver is paid the fare plus the accrued
+// waiting, the Business is charged both. The RPC enforces status='arrived' AND that the
+// courtesy wait has elapsed, so this can't be used as a cheap early cancel.
+export async function businessDeclareNoShow(missionId: string): Promise<ActionResult> {
+  const ctx = await getAppContext();
+  if (!ctx.business) return { ok: false, message: "You’re not signed in as a Business." };
+
+  const supabase = await createClient();
+  const { data: mission } = await supabase
+    .from("mission")
+    .select(FARE_COLS)
+    .eq("id", missionId)
+    .eq("business_id", ctx.business.id)
+    .maybeSingle();
+  if (!mission) return { ok: false, message: "This isn’t one of your trips." };
+
+  const { error } = await supabase.rpc("business_declare_no_show", {
+    p_mission_id: missionId,
+    p_fare_snapshot: currentFare(mission),
+  });
+  if (error) {
+    const msg = error.message?.trim();
+    return {
+      ok: false,
+      message:
+        msg && msg.length < 120 ? msg : "Couldn’t close the trip — please refresh and try again.",
+    };
+  }
+
+  revalidateDispatch();
+  return { ok: true };
+}
+
 export async function businessCancelMission(
   missionId: string,
   reason?: string | null,

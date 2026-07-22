@@ -223,7 +223,7 @@ export async function respondToRelease(
 }
 
 // Report a Guest no-show (O7, D45 as amended 2026-07-19). Only from 'arrived', once the
-// free wait has elapsed — measured from when the GUEST was due (pickup_at, or a tracked
+// courtesy wait has elapsed — measured from when the GUEST was due (pickup_at, or a tracked
 // guest_ready_at), NOT from the Driver's arrival — plus a 5-min on-site floor. The RPC
 // enforces all three (airport 60 / city 20 min). Business is charged the full fare; the
 // Driver is paid like a completed mission (status → completed, no_show = true).

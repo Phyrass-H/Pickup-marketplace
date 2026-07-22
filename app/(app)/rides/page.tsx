@@ -25,6 +25,7 @@ import {
   isAirportPickup,
   noShowAvailableAt,
   noShowWaitMinutes,
+  waitingAt,
 } from "@/lib/cancellation";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
@@ -241,7 +242,7 @@ export default async function RidesPage() {
 
   // No-show: the latest 'arrived' status_event is the Driver's on-site attestation — the
   // precondition to report, and the basis of the 5-min on-site floor. It is NOT the clock
-  // origin: the free wait runs from when the GUEST was due (see noShowAvailableAt).
+  // origin: the courtesy wait runs from when the GUEST was due (see noShowAvailableAt).
   // A Driver reads its own mission's events under RLS.
   const arrivedAt = new Map<string, string>();
   let arrivedErr: string | null = null;
@@ -461,6 +462,8 @@ export default async function RidesPage() {
                 guestDueIso={guestDueAt(m).toISOString()}
                 availableAtIso={noShowAvailableAt(m, arrivedAt.get(m.id)!).toISOString()}
                 waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
+                waitingFromIso={waitingAt(m).from.toISOString()}
+                waitingUntilIso={waitingAt(m).until.toISOString()}
                 guestPhone={
                   (guestPhones.get(m.id) ?? []).find((g) => g.main)?.phone ??
                   (guestPhones.get(m.id) ?? [])[0]?.phone ??

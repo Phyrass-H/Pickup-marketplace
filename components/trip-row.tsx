@@ -22,6 +22,12 @@ import { BoardFileLink } from "@/components/board-file-link";
 import { PhoneShareToggle } from "@/components/phone-share-toggle";
 import { BusinessCancel, ReclaimCard } from "@/components/dispatch-cancel";
 import { AgreedRelease } from "@/components/dispatch-release";
+import { WaitingPanel } from "@/components/dispatch-waiting";
+import {
+  isAirportPickup,
+  noShowWaitMinutes,
+  waitingAt,
+} from "@/lib/cancellation";
 import {
   parsePassengers,
   passengerName,
@@ -336,6 +342,19 @@ export function TripRow({
               </Link>
             )}
           </div>
+        )}
+
+        {/* D48 — the Driver is on site: show the meter, and the door out. Before this the
+            Business saw nothing at all while a Driver waited and being charged. */}
+        {mission.status === "arrived" && (
+          <WaitingPanel
+            missionId={mission.id}
+            driverName={driver?.name ?? ""}
+            fare={currentFare(mission)}
+            waitingFromIso={waitingAt(mission).from.toISOString()}
+            waitingUntilIso={waitingAt(mission).until.toISOString()}
+            courtesyMinutes={noShowWaitMinutes(isAirportPickup(mission))}
+          />
         )}
 
         {(cancellable || (canRelease && !releasePending)) && (

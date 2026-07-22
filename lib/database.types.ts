@@ -311,6 +311,14 @@ export interface Database {
           pooled_at: string | null; // O7: PDP climb origin for a RE-POOLED mission
           no_show: boolean; // O7: Guest didn't show → Driver paid like a completed mission
           no_show_at: string | null; // O7
+          no_show_by: "driver" | "business" | "system" | null; // D48: who declared it
+          // D48 waiting fee — settled outcome. Business owes it, Driver is paid it (a
+          // pass-through, NOT a PickUp penalty). MANUAL settlement in beta.
+          waiting_from: string | null; // meter start = guest due + courtesy wait
+          waiting_to: string | null; // meter stop = least(settled, guest due + ceiling)
+          waiting_minutes: number | null; // minutes STARTED, clamped by the ceiling
+          waiting_rate: number | null; // €/min pinned for this row (rate is PROVISIONAL)
+          waiting_fee: number | null; // waiting_minutes * waiting_rate
         };
         Insert: {
           id?: string;
@@ -371,6 +379,12 @@ export interface Database {
           pooled_at?: string | null;
           no_show?: boolean;
           no_show_at?: string | null;
+          no_show_by?: "driver" | "business" | "system" | null; // D48
+          waiting_from?: string | null; // D48: see Row
+          waiting_to?: string | null;
+          waiting_minutes?: number | null;
+          waiting_rate?: number | null;
+          waiting_fee?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["mission"]["Insert"]>;
         Relationships: [];
@@ -678,6 +692,13 @@ export interface Database {
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       mark_no_show: {
+        Args: { p_mission_id: string; p_fare_snapshot?: number | null };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
+      // D48: the Business's "stop waiting, the Guest isn't coming" — the same terminal
+      // outcome as mark_no_show, declared from the other side. Gated to status='arrived'
+      // and to the courtesy wait having elapsed, so it can't be a cheap early cancel.
+      business_declare_no_show: {
         Args: { p_mission_id: string; p_fare_snapshot?: number | null };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };

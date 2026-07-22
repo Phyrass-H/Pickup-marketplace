@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, Phone, AlertTriangle, UserX, Clock, Handshake } from "lucide-react";
 import { driverCancelMission, markNoShow } from "./actions";
 import { formatMoney, formatTime } from "@/lib/format";
+import { WAITING_RATE_PER_MIN } from "@/lib/cancellation";
 
 // Driver cancel (O7, D45): always 100%, re-pools the trip as a SPEED WIN. The sheet
 // surfaces the escape valves FIRST (hand to a copilote — Phase 2; call the Business to
@@ -158,7 +159,7 @@ export function DriverCancel({
 }
 
 // No-show (O7, D45 as amended 2026-07-19): available once the Driver is on-site
-// ('arrived') AND the free wait has elapsed (airport 60 min / city 20 min). The wait runs
+// ('arrived') AND the courtesy wait has elapsed (airport 60 min / city 20 min). The wait runs
 // from when the GUEST was due — the ordered pickup time, or a tracked landing instant —
 // never from the Driver's arrival, so turning up early can't start (or exhaust) the clock.
 // Amber, not red — a no-show PAYS the Driver. A professional "be sure" confirm step
@@ -170,13 +171,17 @@ export function NoShowControl({
   availableAtIso,
   waitMinutes,
   guestPhone,
+  waitingFromIso,
+  waitingUntilIso,
 }: {
   missionId: string;
   fare: number;
-  guestDueIso: string; // when the Guest was due — the free wait starts here
+  guestDueIso: string; // when the Guest was due — the courtesy wait starts here
   availableAtIso: string; // when reporting unlocks (wait elapsed + on-site floor)
   waitMinutes: number;
   guestPhone: string | null;
+  waitingFromIso: string; // D48: when the paid meter starts
+  waitingUntilIso: string; // D48: when it stops paying (the ceiling)
 }) {
   const router = useRouter();
   const [now, setNow] = useState<number | null>(null);
@@ -193,9 +198,9 @@ export function NoShowControl({
 
   const guestDue = new Date(guestDueIso).getTime();
   const windowEnds = new Date(availableAtIso).getTime();
-  // The free wait itself (for the header chip). When a LATE Driver's on-site floor is
+  // The courtesy wait itself (for the header chip). When a LATE Driver's on-site floor is
   // what actually gates reporting, windowEnds > waitEnds — so the chip must not claim
-  // the free wait is still running.
+  // the courtesy wait is still running.
   const waitEnds = guestDue + waitMinutes * 60_000;
 
   function report() {
@@ -220,7 +225,7 @@ export function NoShowControl({
 
   const elapsed = now >= windowEnds;
   // Before the Guest was even due, there is no countdown to run — showing one would
-  // conflate "time until pickup" with "free wait".
+  // conflate "time until pickup" with "courtesy wait".
   const notStarted = now < guestDue;
   const remainingMs = Math.max(0, windowEnds - now);
   const mm = Math.floor(remainingMs / 60_000);
@@ -229,22 +234,102 @@ export function NoShowControl({
   const dueLabel = formatTime(guestDueIso);
   const waitElapsed = now >= waitEnds;
 
+  // The live meter. Computed here (not server-side) so it ticks; the authoritative
+  // settlement is mission_waiting() in SQL, which this mirrors.
+  const wFrom = new Date(waitingFromIso).getTime();
+  const wUntil = new Date(waitingUntilIso).getTime();
+  const wStop = Math.min(now, wUntil);
+  const wMinutes = Math.max(0, Math.ceil((wStop - wFrom) / 60_000));
+  const waiting = {
+    minutes: wMinutes,
+    fee: wMinutes * WAITING_RATE_PER_MIN,
+    maxFee: Math.round((wUntil - wFrom) / 60_000) * WAITING_RATE_PER_MIN,
+    capped: now >= wUntil,
+    until: new Date(wUntil),
+  };
+
   return (
     <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span className="muted small">
-          <Clock size={14} aria-hidden /> Free wait ({waitMinutes} min)
+          <Clock size={14} aria-hidden />{" "}
+          {waitElapsed ? "Courtesy wait used" : `Courtesy wait (${waitMinutes} min)`}
         </span>
         <span
           style={{
             fontWeight: 600,
             fontVariantNumeric: "tabular-nums",
-            color: elapsed ? "var(--success)" : "var(--text)",
+            color: waitElapsed ? "var(--success)" : "var(--text)",
           }}
         >
           {waitElapsed ? "Elapsed" : notStarted ? `Starts ${dueLabel}` : `${countdown} left`}
         </span>
       </div>
+
+      {/* D48 — once the courtesy wait lapses the Business is charged per minute STARTED
+          and the Driver is paid it. The meter freezes at the ceiling; the trip does NOT
+          end there (the Driver may keep waiting, unpaid, and reports when ready). */}
+      {waiting && waitElapsed && (
+        <div
+          style={{
+            background: waiting.capped ? "var(--tone-neutral-bg)" : "var(--tone-warn-bg)",
+            borderRadius: 10,
+            padding: 12,
+            marginTop: 10,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
+              }}
+            >
+              {waiting.capped ? "Waiting closed" : "Paid waiting"} · {waiting.minutes} min
+            </span>
+            <span
+              style={{
+                fontSize: 19,
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+                color: waiting.capped ? "var(--text)" : "var(--tone-warn-fg)",
+              }}
+            >
+              {formatMoney(waiting.fee)}
+            </span>
+          </div>
+          <div
+            style={{
+              height: 5,
+              borderRadius: 999,
+              background: "var(--border)",
+              marginTop: 7,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.min(100, (waiting.fee / waiting.maxFee) * 100)}%`,
+                background: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
+                borderRadius: 999,
+              }}
+            />
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              marginTop: 6,
+              color: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
+            }}
+          >
+            {waiting.capped
+              ? `Stopped at the ${formatMoney(waiting.maxFee)} ceiling. You can still wait, but it no longer adds up — report when you're ready.`
+              : `${formatMoney(1)} per minute started · stops at ${formatMoney(waiting.maxFee)} (${formatTime(waiting.until.toISOString())})`}
+          </div>
+        </div>
+      )}
 
       {guestPhone && (
         <a href={`tel:${guestPhone}`} className="btn" style={{ marginTop: 10, display: "block", textAlign: "center" }}>
@@ -276,7 +361,7 @@ export function NoShowControl({
           {elapsed
             ? "Report a no-show"
             : notStarted
-              ? `Report a no-show — free wait starts ${dueLabel}`
+              ? `Report a no-show — courtesy wait starts ${dueLabel}`
               : `Report a no-show — available in ${countdown}`}
         </button>
       ) : (
@@ -306,7 +391,11 @@ export function NoShowControl({
               cursor: "pointer",
             }}
           >
-            {pending ? "…" : `Report the no-show — you’re paid ${formatMoney(fare)}`}
+            {pending
+              ? "…"
+              : waiting.fee > 0
+                ? `Report the no-show — you’re paid ${formatMoney(fare)} + ${formatMoney(waiting.fee)} waiting`
+                : `Report the no-show — you’re paid ${formatMoney(fare)}`}
           </button>
           <button
             type="button"
