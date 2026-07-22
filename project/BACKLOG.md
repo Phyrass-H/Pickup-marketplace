@@ -169,6 +169,13 @@
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 - **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
+  - ⚠️ **ORDER MATTERS: add pickup-time amendments BEFORE freezing `pickup_at`.** The amendment table
+    (`2026-07-07_mission_amendment.sql`) has `new_pickup_address` / `new_waypoints` / `new_fare` but **no
+    `new_pickup_at`** — the amend screen only *displays* the time. So freezing `pickup_at` first would close the fee
+    loophole AND remove the legitimate "the flight's delayed, can we push to 18:00?" path, with no route left for a real
+    time change. Build (1) pickup time as an amendable field — `new_pickup_at` column + the field on `/dispatch/[id]/amend`
+    + the before→after on the Driver's accept/decline card + apply it in `respond_to_amendment` — then (2) the freeze
+    trigger. Worth doing on its own merits: "can we move it later?" is likely the commonest real Business request.
   - 🔒 **`pickup_at` is Business-writable and feeds two money gates** → `mark_no_show` measures the free wait from
     `coalesce(guest_ready_at, pickup_at)` and `business_cancel_mission` derives its fee tier from `pickup_at`, yet a
     Business can UPDATE it via raw PostgREST (so a late cancel can be re-tiered to 0%). Same root cause as the
