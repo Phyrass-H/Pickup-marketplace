@@ -169,6 +169,18 @@
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 - **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
+  - ❓ **BLOCKER on amendable time — "postpone then cancel" laundering (founder, 2026-07-22). DECIDE BEFORE BUILDING.**
+    `business_cancel_mission` prices the fee from the **current** `pickup_at` (`v_hours := extract(epoch from
+    (pickup_at - now()))/3600`). So the moment pickup time becomes amendable, a Business can dodge the fee **inside the
+    app, with no technical skill**: at −30 min (100% = €180) propose "move to Friday" → the Driver accepts (rational — he
+    keeps the job) → `pickup_at` is now 72h out → cancel → **€0**. The Driver consented to a DATE CHANGE, not to waiving
+    his fee, but his tap is what unlocked it. Today this is closed only because time is not amendable
+    (`2026-07-07_mission_amendment.sql:29` — "pickup_at (time) is NOT amended in v1"), so **building amendable time
+    OPENS it**. Needs a founder POLICY decision, not just code — sketch: price a cancel that follows a POSTPONEMENT
+    against the **pre-amendment** time (i.e. the fee clock never gets reset later by an amendment), with the founder
+    deciding the edges: does it apply indefinitely or only for a window after the amendment? does a genuine
+    later-cancellation of a long-postponed trip eventually price normally? Same family as the § H2 "fee basis doesn't
+    freeze at `accepted_at`" flag — decide them together.
   - ⚠️ **ORDER MATTERS: add pickup-time amendments BEFORE freezing `pickup_at`.** The amendment table
     (`2026-07-07_mission_amendment.sql`) has `new_pickup_address` / `new_waypoints` / `new_fare` but **no
     `new_pickup_at`** — the amend screen only *displays* the time. So freezing `pickup_at` first would close the fee
