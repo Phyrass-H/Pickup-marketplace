@@ -621,11 +621,18 @@ live** against the real DB via a real Driver session.
 - **`hours_before_pickup`** is now recorded on no-show rows (it was hardcoded `0`, blanking the audit trail exactly where
   it is needed). It is **negative** for a no-show — reported *after* pickup — which is the opposite sign convention from
   the other four cancellation kinds. Cosmetic while settlement is MANUAL; noted in BACKLOG § H2.
-- **Deferred to BACKLOG § H2 (founder):** `guest_ready_at` and `pickup_at` are both **Business-writable** via PostgREST,
-  so a Business could shift a money gate. Two attempts to guard the column failed live (a column `REVOKE` is a no-op
-  against a table-level grant; a `SECURITY DEFINER` trigger sees the *owner* in `current_user`, never the caller). The
-  correct fix is the full column-grant audit already flagged in § H2. **⚠️ A no-op trigger `trg_mission_guard_guest_ready_at`
-  now exists in the DB and protects nothing — fix or drop it.**
+- **`guest_ready_at` is now guarded (3rd attempt, verified live).** It feeds a money gate, so a Business must not be able
+  to push it forward and hold the no-show gate shut. Trigger `trg_mission_guard_guest_ready_at` (migration
+  `2026-07-22_guest_ready_at_guard_fix.sql`) rejects a change from `anon`/`authenticated`. Verified: Business PATCH →
+  **403, value unchanged**; a normal Business column edit → 204; the **service role** (the future flight-tracking feed) →
+  204. The two earlier attempts FAILED and are worth remembering as Postgres gotchas: (1) a **column-level `REVOKE` is a
+  no-op** while the role holds table-level UPDATE — column privileges are only consulted when the table-level grant is
+  absent; (2) a **`SECURITY DEFINER` trigger sees the function OWNER in `current_user`**, never the caller, so the guard
+  never matched. The fix was dropping `security definer` (SECURITY INVOKER is what makes `current_user` the caller).
+- **Still deferred to BACKLOG § H2 (founder):** **`pickup_at` has the same exposure** and additionally feeds
+  `business_cancel_mission`'s fee tier — but it has a LEGITIMATE client writer (draft resume rewrites it), so it needs a
+  status-aware rule, not a blanket block. Fix it with the full column-grant audit alongside the
+  `p_mission_business_update` WITH CHECK flag.
 
 ---
 

@@ -169,16 +169,17 @@
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 - **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
-  - 🔒 **Money-gate columns are Business-writable** → `guest_ready_at` and `pickup_at` both feed a fee gate
-    (`mark_no_show` measures the free wait from `coalesce(guest_ready_at, pickup_at)`; `business_cancel_mission` derives its
-    fee tier from `pickup_at`), and both are UPDATE-able by a Business via raw PostgREST. Same root cause as the
-    `p_mission_business_update` WITH CHECK flag above — fix them **together** in the column-grant audit
-    (`REVOKE UPDATE ON mission FROM authenticated` + `GRANT UPDATE (…legit cols…)`). `pickup_at` additionally needs a
-    status-aware rule, not a blanket block, because draft-resume legitimately rewrites it.
-    **⚠️ TRAP: a trigger `trg_mission_guard_guest_ready_at` EXISTS in the live DB and does NOTHING.** Two guard attempts
-    failed (2026-07-19): a column-level `REVOKE` is a no-op while the role holds table-level UPDATE; and the replacement
-    trigger was written `SECURITY DEFINER`, so `current_user` is the function OWNER, never the caller. Either fix it
-    (drop `security definer`) or drop the trigger — do not assume the column is protected.
+  - 🔒 **`pickup_at` is Business-writable and feeds two money gates** → `mark_no_show` measures the free wait from
+    `coalesce(guest_ready_at, pickup_at)` and `business_cancel_mission` derives its fee tier from `pickup_at`, yet a
+    Business can UPDATE it via raw PostgREST (so a late cancel can be re-tiered to 0%). Same root cause as the
+    `p_mission_business_update` WITH CHECK flag above — fix **together** in the column-grant audit
+    (`REVOKE UPDATE ON mission FROM authenticated` + `GRANT UPDATE (…legit cols…)`). `pickup_at` needs a **status-aware**
+    rule, not a blanket block, because draft-resume legitimately rewrites it (`dispatch/new/actions.ts`).
+    ✅ **`guest_ready_at` is DONE** — trigger `trg_mission_guard_guest_ready_at`
+    (`2026-07-22_guest_ready_at_guard_fix.sql`), verified live (Business → 403, service role → 204). **Two Postgres
+    gotchas worth remembering** when doing the audit: a column-level `REVOKE` is a **no-op** while the role holds
+    table-level UPDATE (column privileges are only consulted when the table grant is absent), and a **`SECURITY DEFINER`
+    trigger sees the function OWNER in `current_user`**, never the caller.
   - 💶 **`hours_before_pickup` is NEGATIVE on no-show rows** (e.g. `-0.5` = reported 30 min after pickup) — the opposite
     sign convention from the other four cancellation kinds, which count *down* to pickup. Arguably the honest value; decide
     the convention (signed / `abs()` / a separate column) before money is automated.

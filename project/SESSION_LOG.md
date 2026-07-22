@@ -36,17 +36,22 @@ window. Hidden because `api/seed` writes "Aéroport" into `pickup_address`. Now 
   case was **demonstrated failing (ALLOWED) before the 2nd migration and passing (BLOCKED) after** — a genuine red→green.
   A city POI stays on 20 min, guarding against over-match. Two adversarial workflows ran (46 + 30 agents).
 
-**⚠️ FAILURES — read before trusting the 3rd migration.** Two attempts to stop a Business writing `guest_ready_at` both
-failed **live**, and both were my error:
-1. `revoke update (guest_ready_at) … from authenticated` — **no-op**: Postgres consults column privileges only when the
-   role lacks table-level UPDATE, which `authenticated` has.
-2. A `before update` trigger — **no-op**: written `security definer`, so `current_user` is the function OWNER, never the
-   caller, and the guard never matched.
-Verified by PATCHing as a Business both times (HTTP 204, value changed). **`trg_mission_guard_guest_ready_at` now exists
-in the live DB and protects nothing** — fix (drop `security definer`) or drop it. Founder **deferred** the real fix to
-BACKLOG § H2 with the `pickup_at` exposure + the `p_mission_business_update` flag (one column-grant audit). Test writes
-were reverted (0 rows non-null); one live pooled mission (`2dd71a4d`, Antibes) had `luggage_count` set to 2 during the
-"normal edits still work" check and the prior value was not recorded.
+**The `guest_ready_at` guard took THREE attempts — two failed silently, both my error.** Worth recording as Postgres
+gotchas, because each one *looked* applied and neither protected anything:
+1. `revoke update (guest_ready_at) … from authenticated` — **no-op**: column privileges are only consulted when the role
+   lacks **table-level** UPDATE, which `authenticated` has (via `p_mission_business_update`).
+2. A `before update` trigger declared **`security definer`** — **no-op**: inside SECURITY DEFINER, `current_user` is the
+   function OWNER, never the caller, so `current_user in ('anon','authenticated')` was never true.
+3. ✅ **Same trigger, `security definer` removed** (`2026-07-22_guest_ready_at_guard_fix.sql`) — SECURITY INVOKER makes
+   `current_user` the role PostgREST switched to. **Verified live: Business PATCH → 403 + value unchanged; normal Business
+   column edit → 204; service role (the future tracking feed) → 204; no-show suite still 9/9.**
+Each failure was caught only because the guard was **tested**, not assumed — migrations 1 and 2 both returned "success".
+Test writes reverted (0 rows non-null). One live pooled mission (`2dd71a4d`, Antibes) had `luggage_count` set to 2 during
+the "normal edits still work" check; prior value not recorded, founder chose to **leave it at 2**.
+
+**Still open (BACKLOG § H2):** `pickup_at` has the same exposure and additionally feeds `business_cancel_mission`'s fee
+tier, but it has a legitimate client writer (draft resume), so it needs a status-aware rule — folded into the
+column-grant audit with the `p_mission_business_update` flag.
 
 **Also logged to § H2:** negative `hours_before_pickup` on no-show rows (opposite sign to the other 4 kinds); the
 `advanceStatus` early-tap (now data-quality, not money); device-clock vs Postgres-clock countdown skew (fails safe).
