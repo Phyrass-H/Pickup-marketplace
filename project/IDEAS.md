@@ -135,6 +135,21 @@
   the crude ±90-min `accept_mission` slot-conflict buffer (use real ETA/`duration_min`). Consider extending the gate to
   *all* accepts later, not just SPEED WIN.
 
+### Driver-initiated "ask for a release" button (later — founder, 2026-07-22) 🔨
+- **The gap.** The agreed release is **Business-initiated only** ([[d46]]): the Driver's only route is the cancel-sheet
+  escape valve telling him to **phone** the Business. So when a Driver genuinely asks to be released and the Business
+  refuses (or stalls until he has to cancel and eat the 100%), **there is no record that he ever asked.** The
+  `mission_release` table proves what the Business proposed and how the Driver answered — it cannot prove the request
+  that came first.
+- **Why it matters.** It is the mirror image of the abuse D46 was built to prevent. D46 protects the Driver from a
+  Business pressuring him into a free release; this protects him from a Business *withholding* one. Same philosophy —
+  *not something we control, but something we set up fairly and can prove* — applied to the other direction.
+- **Shape.** A "Ask to be released" button on the Driver's cancel sheet (next to the existing phone valve) that records
+  the request (who/when/reason/hours-before-pickup) and surfaces it to the Business as a card they accept or decline.
+  It does NOT change the D46 rule that only the Business can grant a free release — it just makes the *asking* legible.
+  Reuses the `mission_release` table (add a `requested_by` / direction column) + the amendment/release UI pattern.
+- **Pairs with:** notifications (the Business needs to know a request is waiting) and the disputes/mediation work below.
+
 ### Mutual-consent release ("agreed cancellation") — O7 Phase 2 🔨
 - **The founder's "dating-app" flow (2026-07-13).** A **free, no-fee** cancellation that BOTH parties confirm — distinct
   from the unilateral Business cancel (which always pays the ramp). Scenario: a Driver can't do a trip, calls the
@@ -250,6 +265,21 @@
 ### At-Disposal (mise à disposition) form UX — build with O12 (V2)
 - 🅥 When **At-Disposal** is selected, the date/time picker should switch to a **from → to + hours/day** model
   instead of a single pickup instant. (O12 / hourly is confirmed **V2** — build this alongside it.)
+
+### Convert a transfer INTO an at-disposal mid-mission (V2 — founder idea, 2026-07-22) 🅥
+- **The scenario.** The Guest is running very late — late enough that the waiting model (free wait → €1/min → cap)
+  isn't the right answer. Instead of letting it die as a no-show, the **Business converts the live mission**: e.g. a
+  transfer becomes **1 hour at-disposal + the transfer**, so the Driver is paid for the held time as *service* rather
+  than as a waiting penalty, and the Guest still gets taken where they're going.
+- **Why it's attractive.** It turns a lose-lose (no-show: Business charged full, Guest stranded, Driver leaves) into a
+  billable, useful outcome for all three. It also fits the real VTC habit of "mise à dispo" absorbing messy timing.
+- **What it needs.** O12 (at-disposal / hourly) must exist first — the `hourly` enum hook is already in the schema but
+  unbuilt. Then: changing `mission_type` **during execution**, a pricing recalculation (hourly rate + the transfer leg),
+  and Driver consent — this is a material change to the deal, so it belongs in the **amendment** pattern (propose →
+  Driver accepts/declines), not a silent Business edit. Note the tension with the "no rescheduling, cancel + rebook"
+  rule: this is a *scope* change, not a *time* change, so it stays amendable.
+- **Open:** does the free-wait/€1-per-min meter stop the moment the conversion is accepted (it should — the time is now
+  billed as at-disposal, not as waiting)? Does the cap still apply?
 
 ### PRM / accessible transport — bundle with the Bus / vehicle-taxonomy expansion (later)
 - 🅥 **PRM (wheelchair-accessible)** is a **vehicle category**, not a per-mission Driver flag — it needs an

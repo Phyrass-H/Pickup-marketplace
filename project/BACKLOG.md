@@ -169,7 +169,12 @@
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 - **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
-  - ❓ **BLOCKER on amendable time — "postpone then cancel" laundering (founder, 2026-07-22). DECIDE BEFORE BUILDING.**
+  - ✅ **RESOLVED by [[d48]] (2026-07-22) — the two entries below are SUPERSEDED, kept for the reasoning trail.** The
+    founder cut the knot: **a booked trip's pickup time never moves.** Late Guests are handled by **waiting fees**
+    (€1/min after the free wait, cap 60 min city / 120 min airport) and a genuine time change is a **cancel + rebook as a
+    new trip**. So pickup time never becomes amendable, the postpone-then-cancel dodge cannot exist, and `pickup_at` gets
+    a **blanket freeze after draft** — no status-aware rule, no amendment dependency. Research owed on the €1/min rate.
+  - ~~❓ **BLOCKER on amendable time — "postpone then cancel" laundering (founder, 2026-07-22). DECIDE BEFORE BUILDING.**~~
     `business_cancel_mission` prices the fee from the **current** `pickup_at` (`v_hours := extract(epoch from
     (pickup_at - now()))/3600`). So the moment pickup time becomes amendable, a Business can dodge the fee **inside the
     app, with no technical skill**: at −30 min (100% = €180) propose "move to Friday" → the Driver accepts (rational — he
@@ -181,7 +186,8 @@
     deciding the edges: does it apply indefinitely or only for a window after the amendment? does a genuine
     later-cancellation of a long-postponed trip eventually price normally? Same family as the § H2 "fee basis doesn't
     freeze at `accepted_at`" flag — decide them together.
-  - ⚠️ **ORDER MATTERS: add pickup-time amendments BEFORE freezing `pickup_at`.** The amendment table
+  - ~~⚠️ **ORDER MATTERS: add pickup-time amendments BEFORE freezing `pickup_at`.**~~ *(superseded by [[d48]] — time is
+    never amendable, so the freeze has no dependency.)* The amendment table
     (`2026-07-07_mission_amendment.sql`) has `new_pickup_address` / `new_waypoints` / `new_fare` but **no
     `new_pickup_at`** — the amend screen only *displays* the time. So freezing `pickup_at` first would close the fee
     loophole AND remove the legitimate "the flight's delayed, can we push to 18:00?" path, with no route left for a real
@@ -334,6 +340,13 @@ full ML dynamic pricing · Amadeus GDS.
 > beta; the **rules** are fixed. All fees = penalties owed to PickUp-the-intermediary, never a transport charge (Doc 01).
 > The `cancelled`/`expired` states + `cancelled_by`/`cancelled_at` columns already exist (dormant). Mirror the amendment
 > pattern (immutable record + SECURITY DEFINER atomic RPC).
+
+**❓ WAITING-FEE RATE — research owed ([[d48]], 2026-07-22).** The €1/min-started rate is a **placeholder the founder set
+to unblock the build**, not a researched number. Before real money: benchmark the French **préfecture *tarifs taxi***
+orders (the hourly *tarif d'attente* is the legal reference point), what **Uber / Bolt / Blacklane / Welcome Pickups**
+charge for waiting on airport transfers, and what Riviera VTC operators actually bill. Decide whether the rate should
+vary by **tier** (an S-Class hour is not a Prius hour) and whether the airport rate differs from city. Feeds — and is
+fed by — the founder's pricing engine. Also revisit the **caps** (60 min city / 120 min airport) once real data exists.
 
 **🔨 PHASE 1 — the cancellation spine (buildable now, one additive migration):**
 - **Driver voluntary cancel = always 100%** of the trip amount → re-pools the mission. Deliberately tough. Escape valves

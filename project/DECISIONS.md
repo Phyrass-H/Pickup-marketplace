@@ -634,6 +634,39 @@ live** against the real DB via a real Driver session.
   status-aware rule, not a blanket block. Fix it with the full column-grant audit alongside the
   `p_mission_business_update` WITH CHECK flag.
 
+### D48 — Waiting fees replace rescheduling: pay the Driver to wait, never move a booked trip (2026-07-22)
+Founder simplification, and it **supersedes the amendable-pickup-time plan** logged the same day. The chain that led here:
+freezing `pickup_at` would block a delayed flight from being moved → so make time amendable first → but then a Business
+could postpone, get the Driver to accept, and cancel free (the Driver's consent to a *date* change silently waiving his
+fee). The founder cut the knot: **a booked trip's time never moves.**
+
+- **The rule.** *"A Guest who is late is charged for the waiting — the Driver has a reason to wait because he is paid
+  for it. If the Business or Guest needs a different time, that is a NEW trip: cancel, rebook, post it to the Pool.
+  Nothing to do with the current Driver."* Same model every ride-hailing app uses.
+- **The meter.** Free wait unchanged (**20 min city / 60 min airport**). After it: **€1 per minute started** charged to
+  the Business, paid to the Driver. **⚠️ The rate is PROVISIONAL — proper research owed** (benchmark VTC/taxi waiting
+  tariffs, the préfecture *tarifs taxi* orders, and what Uber/Bolt/Blacklane charge). Revisit with the pricing engine.
+- **Hard cap — ends the trip.** Total **60 min city / 120 min airport** from clock start, so the PAID portion is
+  **40 min (€40) city / 60 min (€60) airport**. Past the cap the trip is over as a no-show.
+- **Three exits, in the founder's order of preference:** (1) the **Business** declares *"stop waiting, the Guest isn't
+  coming"* — NET-NEW, they're the one being charged and the one who knows; (2) the **Driver** reports a no-show, already
+  available from the moment the free wait ends (waiting past it is his choice, now paid); (3) the **cap** ends it, for
+  when the Business is unreachable.
+- **AIRPORT CLOCK — the founder's operational point, from driving.** *"As long as the plane is on the way or hasn't
+  taken off, the trip is still mine — the countdown starts at the landing."* A flight still in the air cannot burn
+  anyone's free wait. This is exactly what `guest_ready_at` was built for in [[d47]]; the model needs no new mechanism,
+  only the flight feed. **Interim (today): `guest_ready_at` is always NULL, so an airport clock falls back to the BOOKED
+  time** — acceptable for beta, but it is the strongest argument for prioritising flight tracking.
+- **No rescheduling ⇒ `pickup_at` freezes after draft.** With no legitimate post-draft writer, a blanket trigger works —
+  no status-aware subtlety, no amendment dependency. This **kills the postpone-then-cancel dodge outright** rather than
+  policing it. Route/stop changes stay amendable ([[d40]]); only TIME leaves the amendment flow.
+- **The cap needs no cron.** Scheduled jobs don't exist (BACKLOG § B). The cap is a **computed boundary**, not an event:
+  past it the trip *is* over, the fee stops at the cap, and the next action settles it. Only the *notification* is
+  missing, and that is deferred anyway.
+- **Parked to IDEAS (V2):** converting a transfer into an **at-disposal** mid-mission when a Guest is very late (turns a
+  lose-lose no-show into a billable, useful outcome — needs O12 first, and it is a *scope* change so it stays amendable);
+  and a **Driver-initiated "ask to be released"** button, because today nothing records that a Driver ever asked.
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
