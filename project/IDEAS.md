@@ -184,6 +184,32 @@
 - **Bind the Driver's car to the catalog** — Drivers type make/model free-text (matched tolerantly via
   `carMatches`). A picker bound to `lib/vehicle-catalog.ts` would make specific-car Pool matching fully robust.
 
+## Naming / terminology pass — do it TOGETHER with the founder (2026-07-22) 🔨
+> Founder ask: several features carry working names that were never chosen, just typed. Sit down and name them
+> properly. The first one is settled in spirit — **"free wait" → "courtesy wait"** (warmer, and it frames the wait as
+> hospitality rather than an entitlement being consumed). The rest are candidates to discuss, not decisions.
+>
+> **Two different jobs, don't mix them:**
+> - **Plain labels** — invented in passing, rename freely, it's a copy change: *free wait · paid waiting · the cap ·
+>   "Report a no-show" · "Stop waiting" · "Agreed release" · "reclaim" (the T-60 take-back — clunky) · "Luggage run" ·
+>   "Edited ·" · the status pills.*
+> - **Glossary terms** — Business · Dispatcher · Driver · Guest · Pool · PDP · Ceiling · SPEED WIN. These are a **hard
+>   rule in `CLAUDE.md`** and are wired through code, docs and copy. Renaming one is a real decision with a migration of
+>   its own (update `CLAUDE.md`, the spec docs, and every component). **SPEED WIN already has an open rename** in
+>   DECISIONS ("Open decisions inherited from the spec" — candidates *Rush*, *Fast Track*).
+>
+> Specific ones worth a view:
+> - **"Free wait" → "Courtesy wait"** ✅ founder's instinct, and it reads better to a hotel.
+> - **"No-show"** — industry standard and instantly understood; probably keep, but the Driver-facing *button* could be
+>   softer than the internal term.
+> - **"Lock-in" / "T-180"** — pure jargon, taught nowhere. Already flagged in GUIDANCE_AUDIT as needing plain words.
+> - **"PDP"** — internal only today; make sure it never leaks into user-facing copy.
+> - **"At-disposal" / *mise à disposition*** — the French is the natural term for the trade; decide the English label
+>   before O12 ships.
+> - **FR vs EN**: the beta is the French Riviera with international Guests. Some of these need a French name that is
+>   *the* professional term (*attente de courtoisie*, *course*, *mise à dispo*) and an English one that isn't a clumsy
+>   translation. Ties to the deferred i18n work (O17).
+
 ## Questions to raise with the user when relevant
 - ~~Beta zones / third town~~ — RESOLVED: founder confirmed the beta covers the **whole French
   Riviera, Saint-Tropez → Monaco/Menton**. `lib/zones.ts` now lists the Riviera communes.

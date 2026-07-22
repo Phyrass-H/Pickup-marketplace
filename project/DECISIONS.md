@@ -646,12 +646,20 @@ fee). The founder cut the knot: **a booked trip's time never moves.**
 - **The meter.** Free wait unchanged (**20 min city / 60 min airport**). After it: **€1 per minute started** charged to
   the Business, paid to the Driver. **⚠️ The rate is PROVISIONAL — proper research owed** (benchmark VTC/taxi waiting
   tariffs, the préfecture *tarifs taxi* orders, and what Uber/Bolt/Blacklane charge). Revisit with the pricing engine.
-- **Hard cap — ends the trip.** Total **60 min city / 120 min airport** from clock start, so the PAID portion is
-  **40 min (€40) city / 60 min (€60) airport**. Past the cap the trip is over as a no-show.
-- **Three exits, in the founder's order of preference:** (1) the **Business** declares *"stop waiting, the Guest isn't
-  coming"* — NET-NEW, they're the one being charged and the one who knows; (2) the **Driver** reports a no-show, already
-  available from the moment the free wait ends (waiting past it is his choice, now paid); (3) the **cap** ends it, for
-  when the Business is unreachable.
+- **The cap stops the MONEY, not the trip** (founder revised this after seeing the preview — the earlier "cap ends the
+  trip" wording is superseded). Total **60 min city / 120 min airport** from clock start, so the PAID portion is
+  **40 min (€40) city / 60 min (€60) airport**. At the ceiling the **meter stops and the Business is warned**; the trip
+  does **not** auto-terminate. The Driver may keep waiting if he chooses — he simply stops earning — and files whenever
+  he's ready. Rationale: the problem was a Driver with an empty afternoon billing forever, which the ceiling alone fixes.
+  Nothing is gained by *also* having the app end someone's job, and it avoids a money action with nobody tapping anything.
+  **Build consequence: no auto-termination logic and no cron question at all** — the cap is a `least()` clamp on the fee.
+- **Two exits, both human:** (1) the **Business** declares *"stop waiting, the Guest isn't coming"* — NET-NEW, they're
+  the one being charged and the one who knows, and the founder's preferred primary; (2) the **Driver** reports a no-show,
+  already available from the moment the free wait ends. **Both get a confirm step** — closing a trip is delicate, so
+  neither side terminates on a single tap.
+- **Known dangling state (accepted):** if neither party acts, the mission sits at `arrived` indefinitely. That is already
+  true today and the money is now bounded by the ceiling, so it is not a new exposure — but it is the thing a future
+  scheduled-jobs pass (BACKLOG § B) should sweep up.
 - **AIRPORT CLOCK — the founder's operational point, from driving.** *"As long as the plane is on the way or hasn't
   taken off, the trip is still mine — the countdown starts at the landing."* A flight still in the air cannot burn
   anyone's free wait. This is exactly what `guest_ready_at` was built for in [[d47]]; the model needs no new mechanism,
@@ -660,9 +668,12 @@ fee). The founder cut the knot: **a booked trip's time never moves.**
 - **No rescheduling ⇒ `pickup_at` freezes after draft.** With no legitimate post-draft writer, a blanket trigger works —
   no status-aware subtlety, no amendment dependency. This **kills the postpone-then-cancel dodge outright** rather than
   policing it. Route/stop changes stay amendable ([[d40]]); only TIME leaves the amendment flow.
-- **The cap needs no cron.** Scheduled jobs don't exist (BACKLOG § B). The cap is a **computed boundary**, not an event:
-  past it the trip *is* over, the fee stops at the cap, and the next action settles it. Only the *notification* is
-  missing, and that is deferred anyway.
+- **`business_cancel_mission` must settle the accrued waiting too** (found by the pre-build review, verified live).
+  Today it accepts `status='arrived'` and charges a flat **100%** past pickup (`v_hours < 0 → v_pct := 100`) — i.e. the
+  Business's existing **Cancel** button already costs exactly what a no-show costs, **minus the waiting**. Ship the meter
+  without this and "stop waiting" is strictly the dearer door, growing €1/min worse, so every Dispatcher learns to press
+  Cancel and the Driver never sees his waiting money. Both doors must cost the same — they are the same economic event,
+  differently declared.
 - **Parked to IDEAS (V2):** converting a transfer into an **at-disposal** mid-mission when a Guest is very late (turns a
   lose-lose no-show into a billable, useful outcome — needs O12 first, and it is a *scope* change so it stays amendable);
   and a **Driver-initiated "ask to be released"** button, because today nothing records that a Driver ever asked.
