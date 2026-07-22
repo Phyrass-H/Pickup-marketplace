@@ -20,7 +20,12 @@ import { isExecutable } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
-import { isAirportPickup, noShowWaitMinutes } from "@/lib/cancellation";
+import {
+  guestDueAt,
+  isAirportPickup,
+  noShowAvailableAt,
+  noShowWaitMinutes,
+} from "@/lib/cancellation";
 import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard, type AmendmentLeg } from "@/components/amendment-card";
@@ -234,17 +239,22 @@ export default async function RidesPage() {
     }
   }
 
-  // No-show timers: for an 'arrived' mission, the latest 'arrived' status_event is when
-  // the free wait window started. A Driver reads its own mission's events under RLS.
+  // No-show: the latest 'arrived' status_event is the Driver's on-site attestation — the
+  // precondition to report, and the basis of the 5-min on-site floor. It is NOT the clock
+  // origin: the free wait runs from when the GUEST was due (see noShowAvailableAt).
+  // A Driver reads its own mission's events under RLS.
   const arrivedAt = new Map<string, string>();
+  let arrivedErr: string | null = null;
   const arrivedIds = (missions ?? []).filter((m) => m.status === "arrived").map((m) => m.id);
   if (arrivedIds.length > 0) {
-    const { data: evs } = await supabase
+    const { data: evs, error: evErr } = await supabase
       .from("status_event")
       .select("mission_id, created_at")
       .eq("status", "arrived")
       .in("mission_id", arrivedIds)
       .order("created_at", { ascending: false });
+    // Don't swallow this: a failed read silently hides the whole no-show control.
+    if (evErr) arrivedErr = evErr.message;
     for (const e of evs ?? []) if (!arrivedAt.has(e.mission_id)) arrivedAt.set(e.mission_id, e.created_at);
   }
 
@@ -260,6 +270,13 @@ export default async function RidesPage() {
       {error && (
         <div className="notice error">
           Couldn’t load your rides: {error.message}
+        </div>
+      )}
+
+      {arrivedErr && (
+        <div className="notice error">
+          Couldn’t load your arrival times: {arrivedErr}. The no-show report may be
+          unavailable — reload, or call the Business.
         </div>
       )}
 
@@ -434,12 +451,15 @@ export default async function RidesPage() {
               />
             )}
 
-            {/* No-show (O7): once on-site, the amber report flow after the wait window. */}
+            {/* No-show (O7): once on-site, the amber report flow after the wait window.
+                The window runs from when the GUEST was due — the ordered pickup time, or a
+                tracked landing instant — never from the Driver's arrival. */}
             {m.status === "arrived" && arrivedAt.get(m.id) && (
               <NoShowControl
                 missionId={m.id}
                 fare={currentFare(m)}
-                arrivedAtIso={arrivedAt.get(m.id)!}
+                guestDueIso={guestDueAt(m).toISOString()}
+                availableAtIso={noShowAvailableAt(m, arrivedAt.get(m.id)!).toISOString()}
                 waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
                 guestPhone={
                   (guestPhones.get(m.id) ?? []).find((g) => g.main)?.phone ??

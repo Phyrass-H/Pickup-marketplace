@@ -5,6 +5,24 @@
 
 ---
 
+## 19 July 2026 (later)
+- **The no-show wait now starts when your Guest was due — not when the Driver turns up.** This was wrong, and it mattered.
+  The free wait is the *Guest's* grace period, so it has to be counted from the moment the Guest was supposed to be there:
+  for a town pickup, the time on the booking; for an airport, the moment the flight actually lands. Before this, a Driver
+  who arrived early started the clock early — and could report a no-show *before the booked pickup time had even passed*.
+  In the worst case a Driver could tap "on my way" and "arrived" a day and a half ahead, wait twenty minutes, and report a
+  no-show: you'd have been charged the full fare for a trip that hadn't happened yet, and your Guest would have been left
+  with a booking already marked finished. That's now impossible — the wait can't run out before the trip exists.
+  - **A Driver who turns up late can't file instantly either.** They have to actually be there a few minutes first, so
+    lateness can't be turned into a paid no-show.
+  - **Airport pickups were quietly getting the wrong window.** When you pick an airport from the address suggestions, the
+    app stores the street address in one place and the name ("Aéroport Nice Côte d'Azur") in another — and the wait rule
+    was only reading the street address. So an airport booking without a flight number was treated as a *town* pickup:
+    20 minutes of free wait instead of 60. Your Guest could still be at baggage reclaim. Fixed — it now reads both. (This
+    one had been there since the cancellation system launched on the 13th.)
+  - Groundwork is in place for automatic flight tracking: when we connect it, a delayed flight will shift the free wait
+    with it, so nobody's clock starts while the plane is still in the air. (Needed two database changes — done.)
+
 ## 19 July 2026
 - **"Agreed release" — a free, friendly way to hand a trip back, with both sides' say-so.** Sometimes a Driver who's taken a
   trip genuinely can't do it and there's still time to re-fill it — nobody's at fault. Instead of the Driver paying the 100%

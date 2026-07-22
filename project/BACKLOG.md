@@ -168,6 +168,26 @@
     columns (or clamp) when the pricing engine lands. Beta-mitigated (MANUAL money, no payments).
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
+- **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
+  - 🔒 **Money-gate columns are Business-writable** → `guest_ready_at` and `pickup_at` both feed a fee gate
+    (`mark_no_show` measures the free wait from `coalesce(guest_ready_at, pickup_at)`; `business_cancel_mission` derives its
+    fee tier from `pickup_at`), and both are UPDATE-able by a Business via raw PostgREST. Same root cause as the
+    `p_mission_business_update` WITH CHECK flag above — fix them **together** in the column-grant audit
+    (`REVOKE UPDATE ON mission FROM authenticated` + `GRANT UPDATE (…legit cols…)`). `pickup_at` additionally needs a
+    status-aware rule, not a blanket block, because draft-resume legitimately rewrites it.
+    **⚠️ TRAP: a trigger `trg_mission_guard_guest_ready_at` EXISTS in the live DB and does NOTHING.** Two guard attempts
+    failed (2026-07-19): a column-level `REVOKE` is a no-op while the role holds table-level UPDATE; and the replacement
+    trigger was written `SECURITY DEFINER`, so `current_user` is the function OWNER, never the caller. Either fix it
+    (drop `security definer`) or drop the trigger — do not assume the column is protected.
+  - 💶 **`hours_before_pickup` is NEGATIVE on no-show rows** (e.g. `-0.5` = reported 30 min after pickup) — the opposite
+    sign convention from the other four cancellation kinds, which count *down* to pickup. Arguably the honest value; decide
+    the convention (signed / `abs()` / a separate column) before money is automated.
+  - ⏱ **`advanceStatus` has no time guard** → a Driver can still mark themselves `en_route`/`arrived` arbitrarily early
+    (sequencing is checked, timing is not). Since D47 this can no longer produce a no-show, so it is now a **data-quality**
+    issue (the Business sees a bogus "arrived" a day out), not a money one. Needs a founder call on how early is too early.
+  - 🕐 **Countdown uses the device clock** → `cancel-noshow.tsx` compares against `Date.now()` while the gate runs on
+    Postgres `now()`. Fails safe and self-heals (the RPC re-checks and its message is surfaced), but device skew can show a
+    button state the server disagrees with. Pass a server `now` from the RSC if it ever matters.
 
 ## I. Small follow-ups noted in code
 - ✅ Promote the per-booking **reference** (room/event) to a dedicated DB column. **SHIPPED S20**

@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-07-22 — Session 41 — No-show clock origin: the Guest's due time, not the Driver's arrival ([[d47]])
+**Branch:** `main`. **Migrations (founder RAN all three):** `2026-07-19_no_show_clock_origin.sql`,
+`2026-07-19_no_show_airport_label.sql`, `2026-07-19_guest_ready_at_guard.sql` (the third is a **no-op** — see Failures).
+Started as the Driver-app redesign; the founder corrected the no-show model mid-preview and the fix took the session.
+
+**The correction (founder).** The free-wait countdown was anchored to the Driver's `arrived` tap in BOTH engines
+(`mark_no_show` line ~310 and `rides/page.tsx` → `NoShowControl`). Wrong party: the free wait is the **Guest's** grace
+period. Origin is now `coalesce(guest_ready_at, pickup_at)`; reporting unlocks at
+`greatest(guest_due + wait, arrived_at + 5 min)`. Durations unchanged (60 airport / 20 city). `arrived` stays a
+**precondition**, not the origin.
+
+**It was a live exploit, not just a model error.** `advanceStatus` (`rides/actions.ts:76-79`) checks sequencing only — no
+time guard — so a Driver could walk to `arrived` ~33h early, wait out the 20-min city window, and file: Business charged
+100%, mission `completed`+`no_show`, Guest stranded. `pickup_at` anchoring closes it structurally.
+
+**Second bug found by the review (pre-existing, from `2026-07-13_o7_cancellation.sql`).** Airport detection read only
+`pickup_address`, but `address-autocomplete.tsx:235` writes `full_address` there and the POI name to `pickup_label`
+(`2026-06-27_mission_place_labels`). So an autocomplete airport pickup **with no flight number** got the 20-min city
+window. Hidden because `api/seed` writes "Aéroport" into `pickup_address`. Now tests both + `nullif(flight_number,'')`.
+
+- **Files.** DB: the three migrations (`mission.guest_ready_at` nullable = the flight-tracking hook; deliberately NOT
+  `flight_eta`, which is display-only). App: `lib/cancellation.ts` (new `guestDueAt` / `noShowAvailableAt` /
+  `NO_SHOW_ON_SITE_FLOOR_MIN`, widened `isAirportPickup`), `rides/page.tsx` (passes `guestDueIso`+`availableAtIso`; stops
+  swallowing the `status_event` query error), `rides/cancel-noshow.tsx` (separate `waitEnds` for the header chip so a
+  floor-gated countdown can't claim the free wait is running; new "Starts HH:MM" state; `formatTime` instead of a
+  per-tick `Intl` formatter), `rides/actions.ts` (comment), `lib/database.types.ts`.
+- **Verification: 9/9 live** vs the real DB (scratchpad harness, real Driver JWT for `demo.driver@pickup.local` → Marc
+  Dubois; creates disposable missions, exercises `mark_no_show`, deletes everything, `leftover=0`). The autocomplete-airport
+  case was **demonstrated failing (ALLOWED) before the 2nd migration and passing (BLOCKED) after** — a genuine red→green.
+  A city POI stays on 20 min, guarding against over-match. Two adversarial workflows ran (46 + 30 agents).
+
+**⚠️ FAILURES — read before trusting the 3rd migration.** Two attempts to stop a Business writing `guest_ready_at` both
+failed **live**, and both were my error:
+1. `revoke update (guest_ready_at) … from authenticated` — **no-op**: Postgres consults column privileges only when the
+   role lacks table-level UPDATE, which `authenticated` has.
+2. A `before update` trigger — **no-op**: written `security definer`, so `current_user` is the function OWNER, never the
+   caller, and the guard never matched.
+Verified by PATCHing as a Business both times (HTTP 204, value changed). **`trg_mission_guard_guest_ready_at` now exists
+in the live DB and protects nothing** — fix (drop `security definer`) or drop it. Founder **deferred** the real fix to
+BACKLOG § H2 with the `pickup_at` exposure + the `p_mission_business_update` flag (one column-grant audit). Test writes
+were reverted (0 rows non-null); one live pooled mission (`2dd71a4d`, Antibes) had `luggage_count` set to 2 during the
+"normal edits still work" check and the prior value was not recorded.
+
+**Also logged to § H2:** negative `hours_before_pickup` on no-show rows (opposite sign to the other 4 kinds); the
+`advanceStatus` early-tap (now data-quality, not money); device-clock vs Postgres-clock countdown skew (fails safe).
+
+**Next:** back to the **Driver app redesign** — v2 preview approved in principle, two opens: (1) do the Pool filter chips
+stay (they are a NEW feature I invented, not in the app today)? (2) the `arrived` screen still needs a v3 drawn against
+the corrected model, since the "Starts HH:MM" state didn't exist when v2 was drawn.
+
 ## 2026-07-19 — Session 40 — O7 agreed release (Business-initiated) + the 24h re-pool SPEED-WIN window
 **Branch:** `main`. **Migrations (founder RAN both):** `docs/migrations/2026-07-19_agreed_release.sql` (new `mission_release`
 evidence table + `propose_release` / `respond_to_release` / `close_release` RPCs + widened `mission_cancellation.kind`) and

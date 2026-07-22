@@ -592,6 +592,41 @@ refined the re-pool pricing rule. Migrations `2026-07-19_agreed_release.sql` + `
   new Driver re-accepts a released trip), and `respond_to_release` locks **mission → release** (matching `propose_release`)
   to remove a deadlock inversion.
 
+### D47 — No-show clock runs from when the GUEST was due, not from the Driver's arrival (2026-07-19)
+Founder correction to D45. The free-wait countdown was anchored to the **Driver's** `arrived` tap — the wrong party. The
+free wait is the **Guest's** grace period, so it runs from **when the Guest was due to be available**. Migrations
+`2026-07-19_no_show_clock_origin.sql` + `2026-07-19_no_show_airport_label.sql` (additive, founder-run). Verified **9/9
+live** against the real DB via a real Driver session.
+
+- **The rule.** `guest_due := coalesce(guest_ready_at, pickup_at)`; reporting unlocks at
+  `greatest(guest_due + wait, arrived_at + 5 min)`. Wait durations **unchanged** (60 min airport / 20 min city) — only the
+  ORIGIN moved. The founder's two cases: an **airport** pickup starts the clock when the flight is **marked landed**; a
+  **town** pickup starts it at the **ordered pickup time**, even if the Driver turns up early.
+- **`arrived` is still required to report — it is just no longer the origin. Gate ≠ origin.** It remains a timestamped
+  on-site attestation and part of the D45 dispute trail.
+- **The 5-min on-site floor** (founder-approved) exists because a pure `pickup_at` anchor *introduces* a new abuse: a
+  Driver arriving after the window already closed could file instantly and collect 100% for their own lateness. The floor
+  never binds for an on-time Driver.
+- **This closed a live exploit, not just a modelling error.** `advanceStatus` gates the `confirmed → en_route → arrived`
+  walk on **sequencing only** — no time check. So a Driver could tap through ~33h early, wait out the 20-min city window
+  and file a no-show: Business charged the full fare a day and a half before the trip, mission driven terminal, Guest
+  stranded. Anchoring to `pickup_at` closes it, because the window can no longer elapse before the trip exists.
+- **`mission.guest_ready_at`** (new, nullable) is the flight-tracking hook — the tracked instant the Guest became
+  available. NULL until that integration lands, so today the behaviour is pure `pickup_at`. Deliberately **not**
+  `flight_eta`, which is documented display-only: wiring a billing gate to a display column is how this bug happens twice.
+- **Airport detection also reads `pickup_label`** (second migration). The Mapbox autocomplete stores the POI name in
+  `pickup_label` and the navigable street address in `pickup_address`, so an airport booked from autocomplete **with no
+  flight number** had no keyword in the address and silently got the 20-min city window. Pre-dates this work (it is in the
+  original D45 migration); hidden because the seed writes "Aéroport" straight into `pickup_address`.
+- **`hours_before_pickup`** is now recorded on no-show rows (it was hardcoded `0`, blanking the audit trail exactly where
+  it is needed). It is **negative** for a no-show — reported *after* pickup — which is the opposite sign convention from
+  the other four cancellation kinds. Cosmetic while settlement is MANUAL; noted in BACKLOG § H2.
+- **Deferred to BACKLOG § H2 (founder):** `guest_ready_at` and `pickup_at` are both **Business-writable** via PostgREST,
+  so a Business could shift a money gate. Two attempts to guard the column failed live (a column `REVOKE` is a no-op
+  against a table-level grant; a `SECURITY DEFINER` trigger sees the *owner* in `current_user`, never the caller). The
+  correct fix is the full column-grant audit already flagged in § H2. **⚠️ A no-op trigger `trg_mission_guard_guest_ready_at`
+  now exists in the DB and protects nothing — fix or drop it.**
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)

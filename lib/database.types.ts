@@ -275,6 +275,7 @@ export interface Database {
           pickup_at: string;
           flight_number: string | null;
           flight_eta: string | null;
+          guest_ready_at: string | null; // O7: tracked instant the Guest became available (flight landed); overrides pickup_at as the no-show wait origin. Null until flight tracking lands.
           passenger_name: string | null;
           passenger_names: Json | null;
           pax_count: number | null;
@@ -334,6 +335,7 @@ export interface Database {
           pickup_at: string;
           flight_number?: string | null;
           flight_eta?: string | null;
+          guest_ready_at?: string | null; // O7: see Row
           passenger_name?: string | null;
           passenger_names?: Json | null;
           pax_count?: number | null;

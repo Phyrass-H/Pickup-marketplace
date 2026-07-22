@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Phone, AlertTriangle, UserX, Clock, Handshake } from "lucide-react";
 import { driverCancelMission, markNoShow } from "./actions";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatTime } from "@/lib/format";
 
 // Driver cancel (O7, D45): always 100%, re-pools the trip as a SPEED WIN. The sheet
 // surfaces the escape valves FIRST (hand to a copilote — Phase 2; call the Business to
@@ -157,19 +157,24 @@ export function DriverCancel({
   );
 }
 
-// No-show (O7, D45): available once the Driver is on-site ('arrived') and the free wait
-// window has elapsed (airport 60 min / city 20 min). Amber, not red — a no-show PAYS the
-// Driver. A professional "be sure" confirm step discourages bailing the instant it opens.
+// No-show (O7, D45 as amended 2026-07-19): available once the Driver is on-site
+// ('arrived') AND the free wait has elapsed (airport 60 min / city 20 min). The wait runs
+// from when the GUEST was due — the ordered pickup time, or a tracked landing instant —
+// never from the Driver's arrival, so turning up early can't start (or exhaust) the clock.
+// Amber, not red — a no-show PAYS the Driver. A professional "be sure" confirm step
+// discourages bailing the instant it opens. Both gates are re-enforced in mark_no_show().
 export function NoShowControl({
   missionId,
   fare,
-  arrivedAtIso,
+  guestDueIso,
+  availableAtIso,
   waitMinutes,
   guestPhone,
 }: {
   missionId: string;
   fare: number;
-  arrivedAtIso: string;
+  guestDueIso: string; // when the Guest was due — the free wait starts here
+  availableAtIso: string; // when reporting unlocks (wait elapsed + on-site floor)
   waitMinutes: number;
   guestPhone: string | null;
 }) {
@@ -186,7 +191,12 @@ export function NoShowControl({
     return () => clearInterval(t);
   }, []);
 
-  const windowEnds = new Date(arrivedAtIso).getTime() + waitMinutes * 60_000;
+  const guestDue = new Date(guestDueIso).getTime();
+  const windowEnds = new Date(availableAtIso).getTime();
+  // The free wait itself (for the header chip). When a LATE Driver's on-site floor is
+  // what actually gates reporting, windowEnds > waitEnds — so the chip must not claim
+  // the free wait is still running.
+  const waitEnds = guestDue + waitMinutes * 60_000;
 
   function report() {
     setError(null);
@@ -209,10 +219,15 @@ export function NoShowControl({
   }
 
   const elapsed = now >= windowEnds;
+  // Before the Guest was even due, there is no countdown to run — showing one would
+  // conflate "time until pickup" with "free wait".
+  const notStarted = now < guestDue;
   const remainingMs = Math.max(0, windowEnds - now);
   const mm = Math.floor(remainingMs / 60_000);
   const ss = Math.floor((remainingMs % 60_000) / 1000);
   const countdown = `${mm}:${ss.toString().padStart(2, "0")}`;
+  const dueLabel = formatTime(guestDueIso);
+  const waitElapsed = now >= waitEnds;
 
   return (
     <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
@@ -227,7 +242,7 @@ export function NoShowControl({
             color: elapsed ? "var(--success)" : "var(--text)",
           }}
         >
-          {elapsed ? "Elapsed" : `${countdown} left`}
+          {waitElapsed ? "Elapsed" : notStarted ? `Starts ${dueLabel}` : `${countdown} left`}
         </span>
       </div>
 
@@ -257,7 +272,12 @@ export function NoShowControl({
             color: elapsed ? "#fff" : "var(--text-faint)",
           }}
         >
-          <UserX size={16} aria-hidden /> {elapsed ? "Report a no-show" : "Report a no-show — available at 0:00"}
+          <UserX size={16} aria-hidden />{" "}
+          {elapsed
+            ? "Report a no-show"
+            : notStarted
+              ? `Report a no-show — free wait starts ${dueLabel}`
+              : `Report a no-show — available in ${countdown}`}
         </button>
       ) : (
         <div style={{ marginTop: 10 }}>
