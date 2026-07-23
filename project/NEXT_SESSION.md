@@ -14,7 +14,7 @@ START BY READING — **just these four**; they get you fully up to date without 
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
   `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 36–40)** for recent technical detail. Older sessions
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 40–42)** for recent technical detail. Older sessions
   (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
@@ -29,7 +29,10 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
   `2026-07-04_luggage_run_phase1`, `2026-07-05_mission_info_edited_at`,
-  `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`, `2026-07-13_o7_cancellation`) — **ONLY** for
+  `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`, `2026-07-13_o7_cancellation`,
+  `2026-07-19_agreed_release`, `2026-07-19_repool_speedwin_window`, `2026-07-19_no_show_clock_origin`,
+  `2026-07-19_no_show_airport_label`, `2026-07-19_guest_ready_at_guard`, `2026-07-22_waiting_fee`,
+  `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`) — **ONLY** for
   schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
@@ -218,6 +221,37 @@ CURRENT STATE (live, deployed from `main`):
   that `<link>`s the **real** `app/globals.css` + the actual component markup) for CSS/layout checks, plus an **isolated
   `next build` in a detached git worktree** (`node_modules` symlinked, `.env.local` copied) to validate compile/RSC
   without corrupting the running server's `.next`. Reuse these when :3000 is taken.
+- **Shipped 2026-07-22 (Session 41) — the no-show CLOCK ORIGIN fix, LIVE ([[d47]]; migrations `2026-07-19_no_show_clock_origin`
+  + `2026-07-19_no_show_airport_label` + `2026-07-19_guest_ready_at_guard` applied):** the free-wait countdown was anchored to
+  the **Driver's `arrived` tap** in both the client and `mark_no_show` — the wrong party. It now runs from **when the GUEST was
+  due** = `coalesce(guest_ready_at, pickup_at)`; reporting unlocks at `greatest(guest_due + wait, arrived_at + 5 min)`. This
+  **closed a live exploit** (`advanceStatus` has no time guard → a Driver could tap through ~33h early, wait out the 20-min
+  window, and file a no-show, charging the Business full fare before the trip). `mission.guest_ready_at` (new, nullable) is the
+  flight-tracking hook — NULL today, so airport falls back to the booked time. `arrived` stays a *precondition to report*, not the
+  origin. Verified 9/9 live. **Guard saga:** two attempts to lock `guest_ready_at` were no-ops (a column REVOKE against a
+  table-level grant; a SECURITY DEFINER trigger sees the owner in `current_user`) — fixed 3rd try (Session 42) by dropping
+  `security definer`.
+- **Shipped 2026-07-23 (Session 42) — WAITING FEES + a hard end-to-end stress test, LIVE ([[d48]]; migrations
+  `2026-07-22_waiting_fee` + `2026-07-22_airport_accent_fix` + `2026-07-22_guest_ready_at_guard_fix` applied; deployed `0aed706`):**
+  - **D48 waiting model.** Founder chose "pay the Driver to wait" over reschedulable time. **Courtesy wait** (renamed from "free
+    wait") 20 city / 60 airport, then **€1/min started** Business→Driver, ceiling **€40 city / €60 airport**. The ceiling stops
+    the MONEY not the trip (a `least()` clamp — no cron needed). **Two exits, both confirmed:** the Driver reports, or the
+    Business declares via net-new **`business_declare_no_show`**. `business_cancel_mission` **also settles accrued waiting** (else
+    Cancel was strictly cheaper than "stop waiting" — the loophole the pre-build review caught). A booked trip's **`pickup_at` is
+    frozen after draft** (blanket trigger) → dissolves the postpone-then-cancel fee dodge. Net-new Business UI: the Dispatch row
+    now **shows the running meter** (before it showed nothing while a Driver waited). Files: `lib/cancellation.ts`,
+    `rides/cancel-noshow.tsx`, `components/dispatch-waiting.tsx`, `dispatch/actions.ts`, `trip-row.tsx`; one shared SQL
+    `mission_waiting()` / `mission_is_airport()` so the three settlement paths can't drift.
+  - **⚑ The bug of the session — found by PROBING, not reading.** The airport predicate `a[eé]roport` used a bracket expression
+    with a multibyte char; **Postgres `~*` doesn't reliably match it**, so `"Aéroport Nice Côte d'Azur"` (the exact Mapbox string
+    for the main airport) classified CITY → every accented airport pickup without a flight number got 20 min instead of 60. Latent
+    since 2026-07-13. Fixed by matching the ASCII substring `roport`. **NOTE: this was Postgres, NOT Mapbox — moving to Google
+    Places would NOT have fixed it.**
+  - **Verification:** 13/13 live (clock + waiting) + a 3-door settlement proof (Business charged == Driver paid, no cheaper door)
+    + a **12-battery / 49-case end-to-end stress test** on a tagged 14-driver/3-business fleet (accept atomicity · both cancel
+    paths · no-show clock · waiting math · money conservation · **concurrency race x5, exactly one winner** · release · amendment ·
+    reclaim · RLS/privacy · guards) → **49/49 GREEN, 0 real bugs**, DB restored to baseline 34 missions. Fleet lib +
+    test scripts live in the **session scratchpad only** (never the repo).
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
@@ -225,6 +259,22 @@ Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a l
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
 RECOMMENDED NEXT STEP:
+
+**★ THE LIVE FRONT (2026-07-23, after Sessions 41–42): the Driver app redesign.** The whole money-and-state engine (O7
+cancellation · D47 clock · D48 waiting fees) is **shipped, deployed, and verified end-to-end (49/49 live)** — so the freshest
+open build is the **Driver app layout redesign**. Two decisions are already **half-made and waiting on the founder** (a preview
+loop was in flight when Session 41 pivoted to the clock fix):
+   1. **The `arrived` screen needs a v3.** The approved-in-principle v2 preview predates the D48 **running waiting meter**, which
+      now lives on that exact screen — so redraw the `arrived` state against the shipped meter before building.
+   2. **Pool filter chips — keep or drop?** The v1 preview invented `All / SPEED WIN / Today` filter chips at the top of the
+      Pool; they are NOT in the app today (the Pool is an unsectioned list). Founder to decide.
+   Use the D25 preview loop (inline mockup → sign-off → build matching the preview). Bundle the small navy polish: Driver
+   **"Complete ride" → green** (`success-btn` still falls through to navy) + re-export the **logo** to harmonise its sky-blue.
+   Also open, smaller: **guidance Tier 2** (glossary "?" tooltips) and the **saved-addresses book**.
+   **Parked, founder-gated:** Google Places for POI ranking (⚠️ NOT the airport-accent bug — that was Postgres, fixed S42; Google
+   fixes *ranking*, and it waits on the RED domain registration) · the €1/min **waiting-rate research** + cap review (pricing
+   model) · **§ H2** the `pickup_at` column-grant audit (still Business-writable) + **automated tests** (S42 made the case — 3 of
+   its bugs looked correct in code and only fell to live probing).
 
 **A. ✅ Mission-edit Phase 2 — SHIPPED + DEPLOYED (S35, 2026-07-07, [[d40]]; migration applied, full loop verified live).**
    The amendment/consent flow is live: a Business **Propose a change** screen (`/dispatch/[id]/amend` — route incl. pickup
