@@ -5,6 +5,29 @@
 
 ---
 
+## 23 July 2026
+- **Late Guests: the Driver is now paid to wait, instead of the trip being rescheduled.** This is the big decision of the
+  day. If a Guest is running late, the Driver waits — and gets paid for it — rather than anyone moving the booking around.
+  After the free "courtesy wait" (20 minutes in town, an hour at the airport), the Business is charged **€1 for every
+  minute started**, which goes to the Driver. It stops climbing at a ceiling — **€40 in town, €60 at the airport** — so a
+  Driver with an empty afternoon can't run the meter forever, but he's fairly paid for the time he's held.
+  - **The Business can see the meter and stop it.** While a Driver is waiting, the Business now sees the running total on
+    its schedule (before, it saw nothing until the invoice) and has a **"Stop waiting — the Guest isn't coming"** button.
+    The Driver keeps his own way to report a no-show too. Either way the Driver is paid the fare plus the waiting.
+  - **No more rescheduling a booked trip.** If the time genuinely needs to change, that's a new trip: cancel and rebook.
+    A booked trip's pickup time is now locked once it's posted. (This also quietly closes a loophole where a Business
+    could have pushed the time back to dodge a cancellation fee.)
+  - **The €1/min is a starting figure**, set so we could build it — the real rate (and whether it differs by car class)
+    is something to research properly later.
+- **Fixed: airport pickups were quietly getting the short wait.** When you picked the airport from the address
+  suggestions without typing a flight number, the app was treating "Aéroport Nice Côte d'Azur" as a *town* pickup — 20
+  minutes of free wait instead of 60 — because of how the accented "é" was being read. Now airports are always recognised.
+  This one had been hiding since the cancellation system launched; we only caught it by testing against real data.
+- **Put the whole system through a hard test.** Before closing the day we ran an automated end-to-end test across the
+  booking, acceptance, cancellation, no-show, waiting, and privacy rules — dozens of scenarios with many simulated
+  Drivers and Businesses at once, including two Drivers grabbing the same trip at the same instant. **Everything passed**,
+  and the test data was cleaned up afterwards so nothing was left behind.
+
 ## 19 July 2026 (later)
 - **The no-show wait now starts when your Guest was due — not when the Driver turns up.** This was wrong, and it mattered.
   The free wait is the *Guest's* grace period, so it has to be counted from the moment the Guest was supposed to be there:

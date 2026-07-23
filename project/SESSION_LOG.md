@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-07-23 — Session 42 — Waiting fees + a hard end-to-end stress test ([[d48]])
+**Branch:** `main`. **Migrations (founder RAN all):** `2026-07-22_waiting_fee.sql`, `2026-07-22_airport_accent_fix.sql`,
+`2026-07-22_guest_ready_at_guard_fix.sql`. Continues Session 41; the founder chose waiting fees over reschedulable time.
+
+**D48 waiting model, SHIPPED + DEPLOYED (`0aed706`).** Courtesy wait (renamed from "free wait") 20 city / 60 airport,
+then **€1/min started** Business→Driver, ceiling **€40 city / €60 airport** — the ceiling stops the MONEY not the trip
+(no cron; a `least()` clamp). Two exits, both with a confirm: the Driver reports, or the Business declares via the
+net-new **`business_declare_no_show`**. **`business_cancel_mission` now settles accrued waiting too** — it already
+accepted `arrived` and charged a flat 100% past pickup, so without this "Cancel" was strictly cheaper than "stop
+waiting" by the whole waiting amount (the loophole the pre-build review caught). A booked trip's **`pickup_at` is frozen
+after draft** (blanket trigger, safe because time is never amendable) — this dissolves the postpone-then-cancel dodge.
+- **Files.** SQL: the three migrations + one shared `mission_waiting()` / `mission_is_airport()` so the three settlement
+  paths can't drift. App: `lib/cancellation.ts` (`waitingAt`, `WAITING_RATE_PER_MIN`, widened `isAirportPickup`),
+  `rides/cancel-noshow.tsx` (the Driver meter states), `components/dispatch-waiting.tsx` (net-new Business meter +
+  "stop waiting" confirm), `dispatch/actions.ts` (`businessDeclareNoShow`), `trip-row.tsx` (mount), `database.types.ts`.
+- **THE BUG OF THE SESSION — found by probing, not reading.** The airport predicate `a[eé]roport` used a bracket
+  expression with a multibyte char; **Postgres `~*` does not reliably match it**, so `"Aéroport Nice Côte d'Azur"` — the
+  exact Mapbox string for the region's main airport — was classified CITY. Every accented airport pickup without a flight
+  number had been getting a 20-min courtesy wait instead of 60 (a no-show fileable 40 min early). Latent since the O7
+  spine (2026-07-13); the 07-19 label fix reused the same broken expression so didn't cure it. Proven with 3 identical
+  missions differing only in the label; fixed by matching the ASCII substring `roport` (accent/case/NFC-NFD immune).
+- **The guest_ready_at guard finally works (3rd try).** Two earlier attempts were no-ops (a column REVOKE against a
+  table-level grant; a SECURITY DEFINER trigger where `current_user` is the owner). Fixed by dropping `security definer`.
+  Live: Business PATCH → 403 unchanged; service role → 204. `pickup_at` still Business-writable (deferred, § H2).
+
+**THE HARD END-TO-END STRESS TEST (founder-requested session close).** A tagged 14-driver / 3-business fleet provisioned
+with real auth (`scratchpad/fleet.mjs`), then a **12-battery workflow** exercised the whole RPC + RLS + trigger layer
+against the LIVE DB, each battery on dedicated drivers, each self-cleaning: **49/49 cases GREEN, 0 real bugs, 0 test
+artifacts.** Batteries: accept_mission (atomic first-wins + lock-in) · driver-cancel + re-pool SPEED-WIN window ·
+business-cancel ramp (fee_pct 0/50.83/80/90/100) · no-show clock D47 (incl. the accent regression as a discriminator) ·
+waiting math + ceiling · money conservation across all 3 doors (identical totals, Business charged == Driver paid) ·
+**concurrency race x5 (exactly one winner, RPC winner == DB driver_id)** + slot conflict · agreed release + supersede ·
+amendment accept/decline · T-60 reclaim · RLS/privacy (cross-driver read denial, guest-contact side table, both column
+guards) · state-machine guards. Fleet torn down; **DB verified back to baseline 34 missions**, no leftovers. Test scripts
+live in the session scratchpad only (never the repo). Earlier the same paths were proven 13/13 + a 3-door settlement proof.
+
+**Next:** the **Driver app redesign** (v2 preview approved in principle; the `arrived` screen needs a v3 drawn against the
+now-shipped running meter, and the Pool filter chips are still an open keep/drop). Pricing-model research owed on the
+€1/min rate + the caps. § H2 still holds: `pickup_at` freeze needs the column-grant audit; automated tests (this session
+made the case — 3 of the session's bugs looked correct in code and only fell to live probing).
+
 ## 2026-07-22 — Session 41 — No-show clock origin: the Guest's due time, not the Driver's arrival ([[d47]])
 **Branch:** `main`. **Migrations (founder RAN all three):** `2026-07-19_no_show_clock_origin.sql`,
 `2026-07-19_no_show_airport_label.sql`, `2026-07-19_guest_ready_at_guard.sql` (the third is a **no-op** — see Failures).
