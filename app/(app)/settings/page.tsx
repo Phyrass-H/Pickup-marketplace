@@ -8,6 +8,7 @@ import { AvatarEditor } from "@/components/avatar-editor";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { DriverVehicleFields } from "@/components/driver-vehicle-fields";
 import { HelpLegalCard } from "@/components/help-legal-card";
+import { DriverSignOut } from "@/components/driver-signout";
 import { updateDriverSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -153,6 +154,10 @@ export default async function DriverSettingsPage({
           View your ride history →
         </Link>
       </p>
+
+      <div style={{ marginTop: 20 }}>
+        <DriverSignOut />
+      </div>
     </>
   );
 }

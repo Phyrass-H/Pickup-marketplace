@@ -156,6 +156,50 @@ export function formatDate(iso: string | null | undefined): string {
   return dateOnly.format(new Date(iso));
 }
 
+// Pool card "when": a relative day + date ("Today · 24 Jul", "Sun · 26 Jul") and
+// the time on its own line. `today` flags the current Paris day so the card can
+// accent it. Relative today/tomorrow are decided on the Paris calendar date, so
+// they never drift with the viewer's own timezone.
+const poolWeekday = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  timeZone: "Europe/Paris",
+});
+const poolDayMonth = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Paris",
+});
+const parisCalDate = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Europe/Paris",
+});
+
+export function formatPoolWhen(iso: string | null | undefined): {
+  day: string;
+  time: string;
+  today: boolean;
+} {
+  if (!iso) return { day: "—", time: "—", today: false };
+  const d = new Date(iso);
+  const dCal = parisCalDate.format(d);
+  const todayCal = parisCalDate.format(new Date());
+  // Tomorrow from the Paris calendar date, not a fixed +24h offset — a Paris day
+  // is 23h/25h across a DST boundary, so a millisecond offset lands on the wrong
+  // date in those two ~1h windows a year. Noon UTC keeps us mid-afternoon Paris.
+  const [ty, tm, td] = todayCal.split("-").map(Number);
+  const tomorrowCal = parisCalDate.format(new Date(Date.UTC(ty, tm - 1, td + 1, 12)));
+
+  let prefix: string;
+  const today = dCal === todayCal;
+  if (today) prefix = "Today";
+  else if (dCal === tomorrowCal) prefix = "Tomorrow";
+  else prefix = poolWeekday.format(d);
+
+  return { day: `${prefix} · ${poolDayMonth.format(d)}`, time: timeOnly.format(d), today };
+}
+
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {
   eco: "Eco",
   business: "Business",

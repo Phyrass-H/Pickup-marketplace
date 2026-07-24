@@ -687,7 +687,9 @@ textarea::placeholder {
 }
 .ac-list {
   position: absolute;
-  z-index: 20;
+  /* Above the fixed Driver tab bar (z-index 40) so base-address suggestions in
+     Settings are never covered on short viewports; still below modals (100). */
+  z-index: 50;
   top: calc(100% + 4px);
   left: 0;
   right: 0;
@@ -1584,6 +1586,256 @@ textarea::placeholder {
   background: var(--surface-2); border: 1px solid var(--border);
   border-radius: 6px; padding: 2px 8px;
 }
+
+/* ============================================================================
+   Driver app shell — bottom tab bar (replaces the old top text-nav) + content
+   padding so the fixed bar never covers the last card.
+   ========================================================================== */
+.dapp-main {
+  max-width: var(--width-app);
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(80px + env(safe-area-inset-bottom));
+}
+.dtabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.dtabbar__inner {
+  max-width: var(--width-app);
+  margin: 0 auto;
+  display: flex;
+  padding: 8px 6px 10px;
+}
+.dtab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  font-weight: 400;
+  text-decoration: none;
+}
+.dtab:hover { color: var(--text-muted); }
+.dtab--active,
+.dtab--active:hover { color: var(--accent); font-weight: 500; }
+
+.dsignout { width: auto; }
+
+/* ============================================================================
+   Pool — screen header + redesigned mission card (uniform, scannable, quiet).
+   ========================================================================== */
+.pool-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.pool-head__title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.pool-head__sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.pool-head__live {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #2f7a54;
+}
+.pool-head__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #22a55f;
+}
+
+.pcard {
+  display: block;
+  background: var(--surface);
+  border: 1px solid #ebedf1;
+  border-radius: 16px;
+  padding: 15px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+  color: var(--text);
+}
+.pcard:active { border-color: #dfe3ea; }
+.pcard:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.pcard__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pcard__fare {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #1a2233;
+}
+.pcard__when {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.pcard__day {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pcard__day--today { color: var(--accent); font-weight: 500; }
+.pcard__time {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a2233;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+/* Gentle divider: price + when above; badges + route grouped below. */
+.pcard__body {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid #f1f2f5;
+}
+.pcard__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pbadge--type {
+  background: #eaeef4;
+  color: #33415c;
+  font-size: 10.5px;
+  padding: 4px 9px;
+}
+.pbadge--speed {
+  background: #fdece9;
+  color: #b4261a;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+}
+.pbadge--run {
+  background: #eef1f6;
+  color: #4a5878;
+  font-size: 10.5px;
+  padding: 4px 9px;
+}
+
+/* Route rail: navy dot (pickup) → line → grey +N dot → line → hollow ring. */
+.proute { margin-top: 12px; }
+.proute__leg { display: flex; gap: 11px; align-items: stretch; }
+.proute__leg--last { align-items: flex-start; }
+.proute__rail { position: relative; width: 14px; flex: none; }
+.proute__line {
+  position: absolute;
+  left: 6.25px;
+  top: 5px;
+  bottom: 0;
+  width: 1.5px;
+  background: #d7dbe2;
+}
+.proute__dot {
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  transform: translateX(-50%);
+  z-index: 1;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px var(--surface);
+}
+.proute__dot--from { width: 10px; height: 10px; background: var(--accent); }
+.proute__dot--stop { width: 9px; height: 9px; background: #c3cad6; }
+.proute__dot--to {
+  width: 11px;
+  height: 11px;
+  background: var(--surface);
+  border: 2px solid #aeb6c3;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.proute__addr {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #2b3342;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.proute__addr--pad { padding-bottom: 13px; }
+.proute__addr--stop { font-size: 12px; color: var(--text-muted); }
+
+/* Footer: one line — trip facts (+ discreet vehicle) | capped request icons. */
+.pcard__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f1f4;
+}
+.pcard__facts {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.pcard__facts svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 5px; }
+.pcard__veh { color: var(--text-muted); }
+.pcard__veh::before { content: "·"; color: #c3c9d2; margin: 0 5px 0 2px; }
+.pcard__veh svg { color: var(--text-muted); margin: 0 3px 0 0; }
+.pcard__reqs {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--text-muted);
+}
+.pcard__reqs svg { width: 16px; height: 16px; }
+.pcard__more { font-size: 12px; font-weight: 500; color: var(--text-muted); }
 
 /* ---- Passenger list (named Guests, capacity-capped) ---- */
 .pl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }

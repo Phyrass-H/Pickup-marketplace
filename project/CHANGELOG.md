@@ -5,6 +5,21 @@
 
 ---
 
+## 24 July 2026
+- **The Driver app got a proper redesign — starting with the Pool (the Driver's list of available trips).** Until now the
+  Driver side only had the new navy colours; its layout was never redone the way the Business side was. Two big changes:
+  - **A real bottom menu bar with icons** — Pool, My Rides, Earnings, Settings — replacing the old plain text links at the
+    top that looked cheap. It feels like a proper phone app now. (Sign out moved into Settings.)
+  - **Redesigned trip cards** — every card is the same clean shape, so a Driver's eye learns exactly where to look: price
+    and time up top; the trip type (Transfer / At disposal) and any SPEED WIN; the pickup→drop-off route as a tidy line
+    with a "+2" marker when there are extra stops; the full addresses; and one neat bottom line with the trip distance and
+    small icons for what the trip needs (child seat, luggage, meet & greet…). Busy trips show the 3 most important and a "+N".
+  - **A new "Earnings" tab** in the menu (the screen itself is a "coming soon" placeholder for now — we'll design it next).
+- All of it was drawn first as on-screen mockups you signed off, then built to match, checked live in the browser, and run
+  through an automated review that caught and fixed six small polish issues (mostly legibility and phone-edge spacing).
+- **Still to decide:** whether to keep the small greyed-out car type on each card (it's the Driver's own car, so a bit
+  redundant). The rest of the Driver screens get the same treatment in later passes.
+
 ## 23 July 2026
 - **Late Guests: the Driver is now paid to wait, instead of the trip being rescheduled.** This is the big decision of the
   day. If a Guest is running late, the Driver waits — and gets paid for it — rather than anyone moving the booking around.

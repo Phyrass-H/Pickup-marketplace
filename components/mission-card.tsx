@@ -1,89 +1,173 @@
 import Link from "next/link";
+import {
+  ArrowRight,
+  Clock,
+  Zap,
+  Route,
+  Car,
+  Baby,
+  PawPrint,
+  Luggage,
+  Signature,
+  UserRound,
+  Shirt,
+  Languages,
+  VolumeX,
+  Plane,
+  type LucideIcon,
+} from "lucide-react";
 import type { MissionRow } from "@/lib/database.types";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
-  formatDateTime,
   formatMoney,
   formatTripMeta,
+  formatPoolWhen,
   serviceClassLabel,
+  addressLine,
 } from "@/lib/format";
-import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
+import { parseDriverFlags, parseLanguages } from "@/lib/driver-service";
 
-// Presentational Pool card: live PDP fare, date/time, ETA (road distance +
-// travel time when cached, else straight-line), and the route.
+// Pool card. Everything a Driver weighs at a glance, one uniform shape:
+//   price + when → mission type / SPEED WIN → route (rail) → trip facts + requests.
+// Deeper detail lives on tap (/missions/[id]). Service requests are capped at 3
+// (highest-priority first) with a "+N"; the drop-off is absent for an at-disposal
+// (hourly) mission, which shows a duration instead of a route on the facts line.
 export function MissionCard({ mission }: { mission: MissionRow }) {
   const fare = currentFare(mission);
+  const when = formatPoolWhen(mission.pickup_at);
+  const isHourly = mission.mission_type === "hourly";
+
   const straightKm = tripDistanceKm(
     mission.pickup_lat,
     mission.pickup_lng,
     mission.dropoff_lat,
     mission.dropoff_lng,
   );
-  const meta = formatTripMeta(mission.distance_km, mission.duration_min, straightKm);
+  const tripMeta = formatTripMeta(mission.distance_km, mission.duration_min, straightKm);
   const stops = parseWaypoints(mission.waypoints).length;
+  const vehicle = serviceClassLabel(mission.category, mission.required_body_type);
 
-  // Compact requirements a Driver weighs before tapping in (S19): dress code,
-  // requested languages, request flags. Board name + message stay hidden until
-  // accept, so they're not surfaced here.
-  const languages = parseLanguages(mission.required_languages);
-  const reqTags = [
-    dressCodeLabel(mission.dress_code),
-    languages.length > 0 ? languages.join(" / ") : null,
-    ...activeFlagLabels(mission.driver_flags),
-  ].filter((b): b is string => !!b);
+  // Service requests, highest-priority first: things that make a Driver decline or
+  // need something physical rank first (child seat → pets → luggage), then prep,
+  // then nice-to-know. Card shows the top 3; the rest surface on tap.
+  const flags = parseDriverFlags(mission.driver_flags);
+  const hasLuggage = (mission.luggage_count ?? 0) > 0 || !!flags.luggage_help;
+  const hasDress = !!mission.dress_code && mission.dress_code !== "driver_choice";
+  const hasLang = parseLanguages(mission.required_languages).length > 0;
+  const services: { key: string; Icon: LucideIcon; label: string }[] = (
+    [
+      flags.child_seat && { key: "child", Icon: Baby, label: "Child seat" },
+      flags.pets && { key: "pets", Icon: PawPrint, label: "Pets" },
+      hasLuggage && { key: "luggage", Icon: Luggage, label: "Luggage" },
+      flags.meet_greet && { key: "meet", Icon: Signature, label: "Meet & greet" },
+      flags.greeter && { key: "greeter", Icon: UserRound, label: "Greeter" },
+      hasDress && { key: "dress", Icon: Shirt, label: "Dress code" },
+      hasLang && { key: "lang", Icon: Languages, label: "Language" },
+      flags.quiet_ride && { key: "quiet", Icon: VolumeX, label: "Quiet ride" },
+      mission.flight_number && { key: "flight", Icon: Plane, label: "Flight" },
+    ].filter(Boolean) as { key: string; Icon: LucideIcon; label: string }[]
+  );
+  const shownServices = services.slice(0, 3);
+  const moreServices = services.length - shownServices.length;
+
+  // Route rail legs: pickup → [+N stops] → drop-off. An at-disposal trip has no
+  // fixed drop-off, so it's the pickup alone.
+  type Leg = { kind: "from" | "stop" | "to"; text: string };
+  const legs: Leg[] = [{ kind: "from", text: addressLine(mission.pickup_address) }];
+  if (stops > 0) legs.push({ kind: "stop", text: `+${stops}` });
+  if (!isHourly && mission.dropoff_address) {
+    legs.push({ kind: "to", text: addressLine(mission.dropoff_address) });
+  }
 
   return (
-    <Link href={`/missions/${mission.id}`} className="card">
-      <div className="card-row">
-        <span className="fare">{formatMoney(fare)}</span>
-        <span style={{ display: "flex", gap: 6 }}>
-          {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
-          {mission.luggage_only && <span className="badge luggage">Luggage run</span>}
-          <span className="badge">
-            {serviceClassLabel(mission.category, mission.required_body_type)}
+    <Link href={`/missions/${mission.id}`} className="pcard">
+      <div className="pcard__head">
+        <span className="pcard__fare">{formatMoney(fare)}</span>
+        <span className="pcard__when">
+          <span className={when.today ? "pcard__day pcard__day--today" : "pcard__day"}>
+            {when.day}
           </span>
+          <span className="pcard__time">{when.time}</span>
         </span>
       </div>
 
-      <div className="muted small" style={{ marginTop: 4 }}>
-        {formatDateTime(mission.pickup_at)}
-        {meta ? ` · ${meta}` : ""}
-        {mission.luggage_only
-          ? ` · no passengers${mission.luggage_count ? ` · ${mission.luggage_count} bags` : ""}`
-          : ""}
-        {mission.zone ? ` · ${mission.zone}` : ""}
+      <div className="pcard__body">
+        <div className="pcard__badges">
+          <span className="pbadge pbadge--type">
+            {isHourly ? (
+              <Clock size={13} strokeWidth={1.9} aria-hidden="true" />
+            ) : (
+              <ArrowRight size={13} strokeWidth={2} aria-hidden="true" />
+            )}
+            {isHourly ? "At disposal" : "Transfer"}
+          </span>
+          {mission.speed_win && (
+            <span className="pbadge pbadge--speed">
+              <Zap size={11} strokeWidth={2} aria-hidden="true" />
+              SPEED WIN
+            </span>
+          )}
+          {mission.luggage_only && (
+            <span className="pbadge pbadge--run">
+              <Luggage size={12} strokeWidth={1.9} aria-hidden="true" />
+              Luggage run
+            </span>
+          )}
+        </div>
+
+        <div className="proute">
+          {legs.map((leg, i) => {
+            const last = i === legs.length - 1;
+            return (
+              <div key={i} className={last ? "proute__leg proute__leg--last" : "proute__leg"}>
+                <span className="proute__rail">
+                  {!last && <span className="proute__line" />}
+                  <span className={`proute__dot proute__dot--${leg.kind}`} />
+                </span>
+                <span
+                  className={
+                    `proute__addr proute__addr--${leg.kind}` + (last ? "" : " proute__addr--pad")
+                  }
+                >
+                  {leg.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="route">
-        <div className="leg">
-          <span className="dot" />
-          <span>{mission.pickup_address}</span>
-        </div>
-        {stops > 0 && (
-          <div className="leg">
-            <span className="dot" style={{ background: "#98a2b3" }} />
-            <span className="muted">
-              +{stops} stop{stops === 1 ? "" : "s"}
-            </span>
-          </div>
+      <div className="pcard__foot">
+        <span className="pcard__facts">
+          {isHourly ? (
+            <Clock size={13} aria-hidden="true" />
+          ) : (
+            <Route size={13} aria-hidden="true" />
+          )}
+          {isHourly ? "Flexible route" : tripMeta || "—"}
+          <span className="pcard__veh">
+            <Car size={13} aria-hidden="true" />
+            {vehicle}
+          </span>
+        </span>
+        {shownServices.length > 0 && (
+          <span className="pcard__reqs">
+            {shownServices.map(({ key, Icon, label }) => (
+              <Icon key={key} size={16} strokeWidth={1.75} role="img" aria-label={label} />
+            ))}
+            {moreServices > 0 && (
+              <span
+                className="pcard__more"
+                aria-label={`${moreServices} more request${moreServices === 1 ? "" : "s"}`}
+              >
+                +{moreServices}
+              </span>
+            )}
+          </span>
         )}
-        <div className="leg">
-          <span className="dot end" />
-          <span>{mission.dropoff_address ?? "—"}</span>
-        </div>
       </div>
-
-      {reqTags.length > 0 && (
-        <div className="mc-tags">
-          {reqTags.map((tag, i) => (
-            <span className="mc-tag" key={i}>
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
     </Link>
   );
 }

@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-07-24 — Session 43 — Driver Pool redesign + bottom tab bar (Pool-first)
+**Branch:** `main`. **No migration** — `mission_type` (`'transfer'|'hourly'`, hourly = at-disposal) and a nullable
+`dropoff_address` already exist in the schema. Design decided via the **D25 preview loop** (v1→v9 inline mockups, founder
+sign-off each round), then built to match.
+
+**The Driver app finally gets a layout redesign — Pool first.** It had inherited the navy palette (D24) but never a
+structural redesign the way Dispatch did. This session: the shell + the Pool card.
+- **Bottom tab bar** (`components/driver-tabbar.tsx`) replaces the old top text-nav (`components/app-header.tsx`, now
+  unused): Pool (stack / Lucide `Layers`) · My Rides (`Car`) · Earnings (`Wallet`) · Settings (`Settings`). Fixed,
+  safe-area aware, active-state by pathname (Pool stays active on `/missions/*`). Content moved into
+  `<main class="dapp-main">` (bottom padding clears the bar). **Sign out** moved from the header into Settings
+  (`components/driver-signout.tsx`).
+- **Pool card** (`components/mission-card.tsx`, full rewrite) to the approved v9 mockup — uniform, quiet, refined weights
+  (nothing 700):
+  * head: fare (left) + when (right: day "Today · 24 Jul" / "Sun · 26 Jul" + time; today accented navy), a **gentle
+    divider**, then **mission-only badges** — Transfer OR "At disposal" (`mission_type='hourly'`), SPEED WIN, Luggage run.
+    The vehicle class is NOT a badge — it's the Driver's own car (the Pool is filtered to it), so it's redundant → demoted.
+  * **route rail** (Dispatch-style): navy dot (pickup) → line → grey mid-dot with "+N" (waypoint count) → line → hollow
+    ring (drop-off). Full **2-line** addresses (`addressLine()` + `-webkit-line-clamp:2`). An at-disposal (hourly) trip
+    has no drop-off → pickup alone; the facts line shows "Flexible route" instead of distance.
+  * **one-line footer**: trip facts (distance·duration) + a **discreet vehicle** (Car icon + class, muted, truncates
+    first) | service-request icons **capped at 3 by priority** (child seat > pets > luggage > meet&greet > greeter >
+    dress > language > quiet > flight) then "+N".
+- **Earnings** = the new 4th tab (`app/(app)/earnings/page.tsx`) — honest "coming soon" placeholder; its own screen gets
+  a D25 pass later (payouts settle manually in beta, Stripe deferred).
+- **CSS** (`app/globals.css`): new `.dtabbar/.dtab`, `.dapp-main`, `.pool-head`, `.pcard/.proute/.pbadge`. The shared
+  `.card/.route/.badge` are UNTOUCHED (still used by My Rides / mission detail — those screens redesign in a later pass).
+- **`lib/format.ts`**: new `formatPoolWhen()` (Paris-tz relative Today/Tomorrow else weekday + "D Mon" + time).
+
+**Verified** in-browser vs the real Supabase DB (Pool · My Rides · Earnings render, no console errors; 2-line wrap, route
+rail, badges, capped icons, Luggage-run badge all correct). **3-lens adversarial review (13 agents) → 6 confirmed (0
+high), ALL FIXED:** the "Tomorrow" **DST drift** (now Paris-calendar arithmetic, not +24h), `viewportFit:'cover'` for the
+iOS safe-area, `.ac-list` z-index raised above the tab bar, `role="img"` on the service icons + an aria-label on "+N",
+muted-grey **contrast** darkened to `--text-muted` (was failing WCAG AA on white), and real `<h1>`s for the Pool/Earnings
+titles. `tsc` clean.
+
+**Locked via the preview loop:** uniform cards; badges = mission-only; the route rail with a mid-dot "+N"; full 2-line
+addresses (no truncated titles); one-line footer; icons capped 3 + N by priority; Pool tab icon = stack; 4 tabs (Earnings
+added). **Not exercised by seed data (code-reviewed only):** SPEED WIN badge, the +N stop marker, the at-disposal card,
+the Today/Tomorrow accent.
+
+**⚑ Parked (founder to decide):** the **discreet vehicle** in the footer — keep (it truncates to "Business · Se…" on a
+narrow card) or drop it (it's redundant); the **"Both"** mission type (needs a new enum value + the model). **Not yet
+redesigned:** My Rides / mission detail / Settings cards (Pool-first); the Earnings screen; the Pool empty + loading
+states. **Next:** founder tests on phone (deploy `main`), then the follow-ons.
+
 ## 2026-07-23 — Session 42 — Waiting fees + a hard end-to-end stress test ([[d48]])
 **Branch:** `main`. **Migrations (founder RAN all):** `2026-07-22_waiting_fee.sql`, `2026-07-22_airport_accent_fix.sql`,
 `2026-07-22_guest_ready_at_guard_fix.sql`. Continues Session 41; the founder chose waiting fees over reschedulable time.

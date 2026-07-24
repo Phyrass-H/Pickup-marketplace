@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
@@ -8,6 +9,25 @@ import { carMatches } from "@/lib/vehicle-catalog";
 
 // The Pool changes constantly (PDP climbs, others accept) → never cache.
 export const dynamic = "force-dynamic";
+
+// Pool screen header: title + a context subtitle, with a "Live" cue when trips
+// are on screen (the Pool is force-dynamic — it really does update on refresh).
+function PoolHead({ sub, live = false }: { sub: ReactNode; live?: boolean }) {
+  return (
+    <div className="pool-head">
+      <div>
+        <h1 className="pool-head__title">Pool</h1>
+        <div className="pool-head__sub">{sub}</div>
+      </div>
+      {live && (
+        <span className="pool-head__live">
+          <span className="pool-head__dot" />
+          Live
+        </span>
+      )}
+    </div>
+  );
+}
 
 export default async function PoolPage({
   searchParams,
@@ -32,7 +52,7 @@ export default async function PoolPage({
   if (!seeAll && (driver.base_lat == null || driver.base_lng == null)) {
     return (
       <>
-        <h1>Pool</h1>
+        <PoolHead sub="Set your service area to see trips" />
         <div className="empty">
           Set your base and service radius to see matching missions.
           <br />
@@ -82,17 +102,19 @@ export default async function PoolPage({
 
   return (
     <>
-      <h1>Pool</h1>
-      <p className="muted" style={{ marginTop: -8 }}>
-        {seeAll ? (
-          <>Every pooled trip · filters bypassed</>
-        ) : (
-          <>
-            {serviceClassLabel(vehicle.category, vehicle.body_type)} · within {radius} km of{" "}
-            {driver.base_label ?? "your base"}
-          </>
-        )}
-      </p>
+      <PoolHead
+        live={!error && missions.length > 0}
+        sub={
+          seeAll ? (
+            <>Every pooled trip · filters bypassed</>
+          ) : (
+            <>
+              {serviceClassLabel(vehicle.category, vehicle.body_type)} · within {radius} km of{" "}
+              {driver.base_label ?? "your base"}
+            </>
+          )
+        }
+      />
 
       {/* Dev-only testing switch — never rendered in production. */}
       {!hosted && (

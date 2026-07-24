@@ -15,6 +15,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Let env(safe-area-inset-*) resolve to real insets so the fixed Driver tab
+  // bar sits above the iOS home indicator in the installed PWA.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
