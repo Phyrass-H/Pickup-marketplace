@@ -1,4 +1,4 @@
-# PickUp — What we've built (plain-language history · archive)
+# Kavenue — What we've built (plain-language history · archive)
 
 > Older entries moved out of `CHANGELOG.md` to keep session startup light. Newest-first.
 > Recent entries: `CHANGELOG.md`. Technical log: `SESSION_LOG.md`.

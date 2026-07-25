@@ -104,7 +104,7 @@ export function DriverCancel({
           <AlertTriangle size={14} aria-hidden /> Cancelling costs 100%
         </div>
         <div style={{ color: "var(--tone-danger-fg)", fontSize: 12, marginTop: 4 }}>
-          You’ll owe the full fare — {formatMoney(fare)}. This keeps PickUp reliable for Businesses. The trip goes
+          You’ll owe the full fare — {formatMoney(fare)}. This keeps Kavenue reliable for Businesses. The trip goes
           back to the Pool for another Driver.
         </div>
       </div>

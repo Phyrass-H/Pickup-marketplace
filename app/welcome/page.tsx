@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppContext, routeFor } from "@/lib/app-context";
 
-// First screen after a brand-new sign-in: pick which side of PickUp you are.
+// First screen after a brand-new sign-in: pick which side of Kavenue you are.
 export default async function WelcomePage() {
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
@@ -10,9 +10,9 @@ export default async function WelcomePage() {
 
   return (
     <main className="container" style={{ paddingTop: 28 }}>
-      <h1>Welcome to PickUp</h1>
+      <h1>Welcome to Kavenue</h1>
       <p className="muted" style={{ marginTop: -8 }}>
-        How will you use PickUp? Signed in as <strong>{ctx.user.email}</strong>.
+        How will you use Kavenue? Signed in as <strong>{ctx.user.email}</strong>.
       </p>
 
       <div className="card">

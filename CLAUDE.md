@@ -1,19 +1,19 @@
-# CLAUDE.md — PickUp (read me first, every session)
+# CLAUDE.md — Kavenue (read me first, every session)
 
-PickUp is a **B2B VTC booking marketplace** — a French *centrale de réservation VTC*.
+Kavenue is a **B2B VTC booking marketplace** — a French *centrale de réservation VTC*.
 Professional VTC **Drivers** ↔ **Businesses** (hotels first) that need transport.
 
 ## Source of truth (do not contradict)
 The spec docs live in **`docs/`** and are canonical. **Read on demand** — open the relevant one when a decision
 touches it; don't read them all at startup (see `project/NEXT_SESSION.md` for the lean startup set):
-- `docs/00_Overview_and_Index.md` — what PickUp is + the glossary
+- `docs/00_Overview_and_Index.md` — what Kavenue is + the glossary
 - `docs/01_Legal_VAT_Compliance.md` — agent/intermediary positioning, VAT, voucher rules
 - `docs/02_Product_Features_MVP.md` — V1 scope: **KEEP / CUT / MANUAL** per feature
 - `docs/03_Technical_Stack.md` — stack & architecture
 - `docs/04_Business_GTM.md` — market, beta strategy
 - `docs/05_Roadmap_Backlog_TODOs.md` — deferred (V2+) features & open decisions
-- `docs/PickUp_Phase0_Data_Spine.md` — entities, enums, state machine
-- `docs/pickup_schema.sql` — the actual DB schema (RPCs + RLS)
+- `docs/Kavenue_Phase0_Data_Spine.md` — entities, enums, state machine
+- `docs/kavenue_schema.sql` — the actual DB schema (RPCs + RLS)
 
 ## For session continuity, read `project/`
 - `project/SESSION_LOG.md` — chronological log of each session (the resume point)
@@ -25,11 +25,11 @@ touches it; don't read them all at startup (see `project/NEXT_SESSION.md` for th
 ## Hard rules (never break)
 1. **Glossary — use these exact terms, always:** Business, Dispatcher, Driver, Guest,
    Pool, PDP, Ceiling, SPEED WIN. **Never** "client" or "principal".
-2. **PickUp is an AGENT / intermediary, never the principal.** This is a legal/VAT
-   position (Doc 01). Never frame PickUp as the transport operator or reseller.
-3. **PickUp ≠ PickUp Go.** They are different things; do not conflate.
+2. **Kavenue is an AGENT / intermediary, never the principal.** This is a legal/VAT
+   position (Doc 01). Never frame Kavenue as the transport operator or reseller.
+3. **Kavenue ≠ PickUp Go.** They are different things; do not conflate.
 4. **The schema is ALREADY APPLIED to the live Supabase DB.** Never recreate, migrate,
-   drop, or re-run `docs/pickup_schema.sql`. Generate TypeScript types FROM it.
+   drop, or re-run `docs/kavenue_schema.sql`. Generate TypeScript types FROM it.
 5. **Build NOTHING marked CUT in `docs/02_Product_Features_MVP.md`.** Build only KEEP.
    MANUAL items are done by a human in beta — don't build UI for them unless told.
 

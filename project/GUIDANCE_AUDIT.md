@@ -1,4 +1,4 @@
-# PickUp — In-app Guidance Audit & Roadmap
+# Kavenue — In-app Guidance Audit & Roadmap
 
 > Full inventory of every piece of in-app guidance (helper text, hinting placeholders,
 > soft warnings, empty states, confirmations, tooltips, "coming soon" stubs, concept
@@ -50,7 +50,7 @@ Legend for TYPE: **helper** (p.muted.small / subtext) · **placeholder** · **hi
 
 | # | File:line · TYPE | Exact text | WHEN | Screen |
 |---|---|---|---|---|
-| 1 | `page.tsx:59` · helper | "Review it before it goes live. Posts into the matching Driver Pool — you set the ceiling; PickUp prices up to that maximum." | always | top of New-mission page |
+| 1 | `page.tsx:59` · helper | "Review it before it goes live. Posts into the matching Driver Pool — you set the ceiling; Kavenue prices up to that maximum." | always | top of New-mission page |
 
 ## Card 1 — Vehicle & class (`service-class-fields.tsx`)
 
@@ -203,7 +203,7 @@ Legend for TYPE: **helper** (p.muted.small / subtext) · **placeholder** · **hi
 
 These are confusion points specific to this form where **no guidance exists today**:
 
-1. **"Ceiling" is never actually defined in plain terms.** The concept-label says "your maximum" and helper #69 says "the most a Driver can climb to," but a first-time hotel Dispatcher is never told *why* a price climbs at all, or that they don't pay the ceiling — they pay whatever fare a Driver accepts at. The page intro (#1) mentions "PickUp prices up to that maximum" but the mechanic (auction that starts low and rises) is invisible until you notice the "starting fare · climbs up to…" line. No tooltip/explainer on the word "Ceiling."
+1. **"Ceiling" is never actually defined in plain terms.** The concept-label says "your maximum" and helper #69 says "the most a Driver can climb to," but a first-time hotel Dispatcher is never told *why* a price climbs at all, or that they don't pay the ceiling — they pay whatever fare a Driver accepts at. The page intro (#1) mentions "Kavenue prices up to that maximum" but the mechanic (auction that starts low and rises) is invisible until you notice the "starting fare · climbs up to…" line. No tooltip/explainer on the word "Ceiling."
 
 2. **"Base fare" has no anchor for what a *reasonable* number is.** The only feedback (#68) fires when ceiling < base fare, i.e. it assumes the Dispatcher already knows a market rate. There's no suggested/estimated fare from the computed ETA/distance (the form has `route_distance_km`/`route_duration_min` in hand) — so a hotel clerk pricing a Nice→Cannes transfer gets zero help choosing a number, and "Estimated base fare (optional)" reads as busywork with unclear payoff.
 
@@ -357,12 +357,12 @@ Status pill labels via `lib/dispatch-status.ts` (concept-bearing status wording,
 | settings-tabs.tsx:44 | Concept badge | `"soon"` | On Billing & Notifications nav items | Settings left-nav |
 | settings/page.tsx:404 | Success (.notice success) | `"Your changes were saved."` | After a successful save (`?ok=1`) | Settings top |
 | settings/page.tsx:29-35,405 | Error map (.notice error) | `"Please fill in the required field before saving."` (missing) / `"Something went wrong saving your changes. Please try again."` (db) / `"Your logo couldn't be uploaded. Please try another file."` (upload) / `"That logo is too large (max 10 MB)."` (filesize) / `"Please use a PNG, JPG or WebP image."` (filetype) | On the matching error redirect | Settings top |
-| settings/page.tsx:94 | Section helper (SectionHead desc) | `"Who the business legally is — used on bookings and on PickUp's invoices to you."` | Always | Company → Company identity |
+| settings/page.tsx:94 | Section helper (SectionHead desc) | `"Who the business legally is — used on bookings and on Kavenue's invoices to you."` | Always | Company → Company identity |
 | settings/page.tsx:118-120 | Placeholder hint | `"Oetker Hôtel Management Company"` | On empty Legal entity field | Company |
 | settings/page.tsx:128 | Placeholder hint | `"552 116 329 00012"` | On empty SIRET field | Company |
 | settings/page.tsx:137 | Placeholder hint | `"FR 76 552116329"` | On empty VAT field | Company |
 | settings/page.tsx:148 | Placeholder hint | `"112 Rue du Faubourg Saint-Honoré, 75008 Paris"` | On empty Registered address | Company |
-| settings/page.tsx:167-168 | Section helper | `"The Dispatcher seat — how the Driver and PickUp reach the business."` | Always | Contact |
+| settings/page.tsx:167-168 | Section helper | `"The Dispatcher seat — how the Driver and Kavenue reach the business."` | Always | Contact |
 | settings/page.tsx:171 | Field label (concept) | `"Contact name (the Dispatcher)"` | Always | Contact |
 | settings/page.tsx:177-179 | Inline note (small.set-note) | `"The email tied to your sign-in. Contact support to change it."` | Always (field disabled) | Contact → Account email |
 | settings/page.tsx:188,190 | Placeholder + note | placeholder `"+33 6 12 34 56 78"`; note `"Revealed to the Driver on acceptance."` | Always | Contact → Mobile phone |
@@ -373,10 +373,10 @@ Status pill labels via `lib/dispatch-status.ts` (concept-bearing status wording,
 | settings/page.tsx:243-246 | Inline note | `"Used to pre-fill bookings. Pick it from the dropdown so it has a location."` | Always | Booking defaults → Your address |
 | settings/page.tsx:254-259 | Toggle label + note | `"Pre-fill my address as the pickup"` + `"On a new mission, start the pickup with your address (swap it to the drop-off for an arrival). Turn this off if your address is never an endpoint."` | Always | Booking defaults toggle |
 | settings/page.tsx:263-272 | Field label + option | `"Default vehicle class"`; options `"No default"`, `"Eco"`, `"Business"`, `"First"` | Always | Booking defaults |
-| settings/page.tsx:289-291 | Section helper | `"Where PickUp's invoices go. Card payments go live later."` | Always | Billing |
-| settings/page.tsx:296-301 | Placeholder + note | placeholder `"accounts@hotel.com"`; note `"Where we'll send PickUp invoices."` | Always | Billing → Billing email |
-| settings/page.tsx:311-318 | "Coming soon" stub | `"Payment method"` · `"Coming soon"` + `"When billing goes live you'll add a card here. Stripe collects it securely — PickUp never stores your card number. The trip fare is collected on the Driver's behalf; PickUp's service fee (with 20% VAT on the fee only) shows as a separate line."` + disabled `"Add a payment method"` | Always | Billing stub |
-| settings/page.tsx:327-333 | "Coming soon" stub | `"Invoices & statements"` · `"Coming soon"` + `"Your PickUp invoices will appear here once billing is live."` | Always | Billing stub |
+| settings/page.tsx:289-291 | Section helper | `"Where Kavenue's invoices go. Card payments go live later."` | Always | Billing |
+| settings/page.tsx:296-301 | Placeholder + note | placeholder `"accounts@hotel.com"`; note `"Where we'll send Kavenue invoices."` | Always | Billing → Billing email |
+| settings/page.tsx:311-318 | "Coming soon" stub | `"Payment method"` · `"Coming soon"` + `"When billing goes live you'll add a card here. Stripe collects it securely — Kavenue never stores your card number. The trip fare is collected on the Driver's behalf; Kavenue's service fee (with 20% VAT on the fee only) shows as a separate line."` + disabled `"Add a payment method"` | Always | Billing stub |
+| settings/page.tsx:327-333 | "Coming soon" stub | `"Invoices & statements"` · `"Coming soon"` + `"Your Kavenue invoices will appear here once billing is live."` | Always | Billing stub |
 | settings/page.tsx:347-359 | "Coming soon" stub | `"Notifications"` desc `"How you'll hear about mission updates."` + `"Mission alerts"` · `"Coming soon"` + `"Soon you'll choose which mission events notify you — accepted, Driver en route, completed — and how (email or SMS). For now, updates appear when you refresh the schedule."` | Always | Notifications |
 | settings/page.tsx:372-379 | Section text | `"Your account"` + `"To export your data or close the business account, email support@pickupbedriven.com."` | Always | Help & legal |
 | settings/page.tsx:381-388 | Nav affordance | `"View mission history →"` | Always | Help & legal |
@@ -410,7 +410,7 @@ Status pill labels via `lib/dispatch-status.ts` (concept-bearing status wording,
 | file:line | TYPE | Exact text | WHEN | Section |
 |---|---|---|---|---|
 | help-legal-card.tsx:19-32 | Nav affordances | `"Terms of use"`, `"Privacy policy"`, `"Support"`, `"Share feedback"` | Always | Help & legal |
-| help-legal-card.tsx:35-37 | Version stamp | `"PickUp · beta"` | Always | Help & legal foot |
+| help-legal-card.tsx:35-37 | Version stamp | `"Kavenue · beta"` | Always | Help & legal foot |
 
 ---
 
@@ -537,7 +537,7 @@ Terms confirmed against glossary: Business, Dispatcher, Driver, Guest, Pool, PDP
 
 | file:line | TYPE | Exact text | WHEN | Section |
 |---|---|---|---|---|
-| welcome/page.tsx:14-16 | helper (p.muted) | "How will you use PickUp? Signed in as {email}." | always | top |
+| welcome/page.tsx:14-16 | helper (p.muted) | "How will you use Kavenue? Signed in as {email}." | always | top |
 | welcome/page.tsx:20 | concept subtext (p.muted.small) | "Browse the Pool, accept and run VTC missions." | always | Driver card |
 | welcome/page.tsx:22 | primary action | "Continue as Driver" | always | Driver card |
 | welcome/page.tsx:28-30 | subtext | "Post missions and manage bookings (hotel, agency, concierge)." | always | Business card |
@@ -554,7 +554,7 @@ Terms confirmed against glossary: Business, Dispatcher, Driver, Guest, Pool, PDP
 | settings/page.tsx:108-111 | helper (p.muted.small) | "A mission appears in your Pool when its pickup **or** drop-off is within this distance of your base — so a long transfer that ends near you still shows up." | always | Where you work |
 | settings/page.tsx:135-137 | status subtext (.muted.small) | "Connected — payouts are set up." / "Not connected yet. Your weekly earnings are paid out via Stripe." | conditional | Payouts |
 | settings/page.tsx:139-141 | **coming-soon stub** (disabled btn) | "Set up payouts with Stripe — coming soon" | always | Payouts |
-| settings/page.tsx:142-145 | reassurance (p.muted.small) | "Bank details are collected securely by Stripe when payouts go live. PickUp never stores your card or IBAN." | always | Payouts |
+| settings/page.tsx:142-145 | reassurance (p.muted.small) | "Bank details are collected securely by Stripe when payouts go live. Kavenue never stores your card or IBAN." | always | Payouts |
 | document-section.tsx:112-114 | helper (p.muted.small) | "PDF or image, up to 10 MB. We review each document before it's marked verified." | always | Documents |
 | document-section.tsx:64 | empty status (muted small) | "Not uploaded" | no doc | Documents row |
 | document-section.tsx:33 | validation | "Please choose a file." | submit empty | Documents |
@@ -562,7 +562,7 @@ Terms confirmed against glossary: Business, Dispatcher, Driver, Guest, Pool, PDP
 | address-autocomplete.tsx:331-334 | inline hint (p.small.muted) | "Pick an address from the list so we can place it on the map." | 3+ chars, none picked | base field |
 | address-autocomplete.tsx:326-329 | status | "Locating…" | while fetching | base field |
 | address-autocomplete.tsx:336-338 | error | "Address search is unavailable (Mapbox token missing)." | no token | base field |
-| help-legal-card.tsx:16-37 | links/stubs | "Terms of use", "Privacy policy", "Support", "Share feedback", "PickUp · beta" | always | Help & legal |
+| help-legal-card.tsx:16-37 | links/stubs | "Terms of use", "Privacy policy", "Support", "Share feedback", "Kavenue · beta" | always | Help & legal |
 
 ## App-wide — `components/app-header.tsx`
 
@@ -608,7 +608,7 @@ Key label files for reference: `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/
 
 ## D · Cross-cutting sweep (stragglers, auth/legal, consistency)
 
-# Cross-Cutting Guidance Sweep — PickUp
+# Cross-Cutting Guidance Sweep — Kavenue
 
 Scope: every UI string whose job is to teach/steer (helper text, hinting placeholders, `.notice.*`, empty states, confirmations, tooltips, teaching aria-labels, "coming soon" stubs, concept-explaining labels). Plain field labels and pure data are excluded. Per-area audits cover the big screens; this catches the stragglers and assesses consistency.
 
@@ -643,7 +643,7 @@ Phone placeholders (`"+33 6 12 34 56 78"`, `"+33 …"`, `"+33 1 53 43 43 00"`) r
 | `app/(app)/settings/page.tsx:108` · always · "A mission appears in your Pool when its pickup **or** drop-off is within this distance of your base — so a long transfer that ends near you still shows up." |
 | `app/onboarding/page.tsx:97` · always · shorter variant: "A mission shows in your Pool when its pickup **or** drop-off is within this distance of your base." |
 | `app/onboarding/page.tsx:61` · always · "Make, colour and plate are shown to the Business so the Guest knows which car to look for. You can edit these later in Settings." |
-| `app/(app)/settings/page.tsx:142` · always · "Bank details are collected securely by Stripe when payouts go live. PickUp never stores your card or IBAN." |
+| `app/(app)/settings/page.tsx:142` · always · "Bank details are collected securely by Stripe when payouts go live. Kavenue never stores your card or IBAN." |
 | `components/driver-vehicle-fields.tsx:71` · always · "set automatically from your car" (Service tier is derived) |
 | `components/service-class-fields.tsx:136-139` · conditional (car picker shown) · "Only Drivers with this exact car will see the mission — expect fewer matches." / "Pick an exact model only if the Guest insists — it narrows the Pool." |
 | `components/service-class-fields.tsx:149` · conditional (Eco tier) · "{Tier} matches any standard car — no specific models to choose." |
@@ -659,8 +659,8 @@ Phone placeholders (`"+33 6 12 34 56 78"`, `"+33 …"`, `"+33 1 53 43 43 00"`) r
 | `app/(app)/missions/[id]/page.tsx:130` · always · "Guest name, the name board and any private message are revealed once you accept." |
 | `app/(app)/rides/page.tsx:276-279` · conditional (accepted) · "Awaiting readiness confirmation (Lock-in at T-180). Trip controls appear once confirmed." |
 | `app/(dispatch)/dispatch/settings/page.tsx:177-179` · always · "The email tied to your sign-in. Contact support to change it." |
-| `.set-note` lines 190, 200, 244, 255-257, 301 · always · "Revealed to the Driver on acceptance." / "Your reception / front-desk line (optional)." / "Used to pre-fill bookings. Pick it from the dropdown so it has a location." / "On a new mission, start the pickup with your address (swap it to the drop-off for an arrival). Turn this off if your address is never an endpoint." / "Where we'll send PickUp invoices." |
-| `SectionHead desc=` 94, 168, 217, 231, 291, 348 · always · e.g. "Who the business legally is — used on bookings and on PickUp's invoices to you." / "The Dispatcher seat — how the Driver and PickUp reach the business." / "Your logo — the face shown to Drivers and on vouchers." |
+| `.set-note` lines 190, 200, 244, 255-257, 301 · always · "Revealed to the Driver on acceptance." / "Your reception / front-desk line (optional)." / "Used to pre-fill bookings. Pick it from the dropdown so it has a location." / "On a new mission, start the pickup with your address (swap it to the drop-off for an arrival). Turn this off if your address is never an endpoint." / "Where we'll send Kavenue invoices." |
+| `SectionHead desc=` 94, 168, 217, 231, 291, 348 · always · e.g. "Who the business legally is — used on bookings and on Kavenue's invoices to you." / "The Dispatcher seat — how the Driver and Kavenue reach the business." / "Your logo — the face shown to Drivers and on vouchers." |
 
 ### A3. Concept-explaining labels & the Pricing card (New mission)
 
@@ -738,10 +738,10 @@ Phone placeholders (`"+33 6 12 34 56 78"`, `"+33 …"`, `"+33 1 53 43 43 00"`) r
 
 - **Login** (`login-form.tsx`): role-aware subtitles (`COPY`, lines 7-11) "Sign in to see available missions." / "Sign in to manage your bookings."; success `.notice.success` "Check your email — we sent a sign-in link to **{email}**. Open it on this device to continue."; helper "No password needed. We email you a secure one-time link."; dev link "Local testing? Use one-click dev sign-in →".
 - **Dev-login** (`dev-login/page.tsx`): "Testing only. No email needed — pick a side…"; per-card "Post missions and manage the schedule." / "Browse the Pool and run missions."
-- **Welcome / role picker** (`welcome/page.tsx`): "How will you use PickUp?"; "Browse the Pool, accept and run VTC missions." / "Post missions and manage bookings (hotel, agency, concierge)."
+- **Welcome / role picker** (`welcome/page.tsx`): "How will you use Kavenue?"; "Browse the Pool, accept and run VTC missions." / "Post missions and manage bookings (hotel, agency, concierge)."
 - **Landing splash** (`landing-splash.tsx`): "The booking platform linking professional VTC Drivers with Businesses." + two role cards.
 - **Legal** (`legal/terms`, `legal/privacy`): both lead with a bilingual `.notice.warn` draft banner ("Brouillon… / Draft — pending legal review."); "Last updated: TBD"; Terms teaches the **agent/intermediary** position and **Ceiling/PDP** concepts (§2, §3) — this is the one long-form place those concepts are defined for users.
-- **Help & legal card** (`help-legal-card.tsx`): Terms / Privacy / mailto Support / mailto Share feedback + "PickUp · beta". Business settings adds an account note (373-378) "To export your data or close the business account, email support@…".
+- **Help & legal card** (`help-legal-card.tsx`): Terms / Privacy / mailto Support / mailto Share feedback + "Kavenue · beta". Business settings adds an account note (373-378) "To export your data or close the business account, email support@…".
 - **No dedicated FAQ / Help / Support route exists** — support is a `mailto:` only (see Gaps).
 
 ---

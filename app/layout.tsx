@@ -4,10 +4,10 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PickUp",
-  description: "PickUp — the booking platform linking VTC Drivers with Businesses.",
+  title: "Kavenue",
+  description: "Kavenue — the booking platform linking VTC Drivers with Businesses.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "PickUp", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Kavenue", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

@@ -1,17 +1,17 @@
-# 00 — PickUp · Overview & Index
+# 00 — Kavenue · Overview & Index
 
-> **Read me first.** This is the orientation doc for the whole PickUp project knowledge. It explains what PickUp is, defines the shared vocabulary, and maps the other documents.
+> **Read me first.** This is the orientation doc for the whole Kavenue project knowledge. It explains what Kavenue is, defines the shared vocabulary, and maps the other documents.
 > **Last updated:** current session · **Stage:** Pre-MVP (defining V1 scope, legal positioning, stack).
 
 ---
 
-## What PickUp is
+## What Kavenue is
 
 A two-sided **B2B booking platform** connecting professional VTC drivers with **Businesses** that need transport (hotels first, then event agencies, concierges, corporate accounts). The Business adds its own margin and serves its end client (e.g. a hotel guest). Two surfaces:
-- **PickUp Driver** — mobile app for drivers.
-- **PickUp Dispatch** — web dashboard / PWA for Businesses.
+- **Kavenue Driver** — mobile app for drivers.
+- **Kavenue Dispatch** — web dashboard / PWA for Businesses.
 
-PickUp is the legal **intermediary** (a *centrale de réservation VTC*), not the transport operator — see Doc 01.
+Kavenue is the legal **intermediary** (a *centrale de réservation VTC*), not the transport operator — see Doc 01.
 
 **Beta target:** French Riviera (Cannes, Nice + one more town). ~200 drivers lined up; hotels are the side still to secure. Every trip in beta is human-confirmed for reassurance.
 
@@ -22,7 +22,7 @@ PickUp is the legal **intermediary** (a *centrale de réservation VTC*), not the
 ## Glossary (use consistently across all docs)
 
 - **Business** — the company/entity that posts missions (hotel, agency, concierge). The term for "the one who gives the missions." *Avoid "client"* (ambiguous with the passenger) and *avoid "principal"* (loaded VAT/legal term — see Doc 01).
-- **Dispatcher** — the user/seat at a Business who posts and manages missions via PickUp Dispatch. One Business can have several Dispatcher seats (future multi-dispatch).
+- **Dispatcher** — the user/seat at a Business who posts and manages missions via Kavenue Dispatch. One Business can have several Dispatcher seats (future multi-dispatch).
 - **Driver** — the professional VTC who accepts and performs the mission.
 - **Guest / passenger** — the Business's end client who actually rides.
 - **Pool** — the list of available missions, filtered by category and within the Driver's service radius of their base location, that Drivers browse and accept from. (A mission qualifies when its pickup *or* drop-off is in range — so a long transfer ending near the Driver still shows. Replaced the old town-list "zones" model 2026-06-17; see DECISIONS D17.)
@@ -37,7 +37,7 @@ PickUp is the legal **intermediary** (a *centrale de réservation VTC*), not the
 | Doc | Title | Use it for |
 |---|---|---|
 | 00 | Overview & Index (this doc) | Orientation, vocabulary, where things live |
-| 01 | Legal, VAT & Compliance | What PickUp legally is, obligations, tax model |
+| 01 | Legal, VAT & Compliance | What Kavenue legally is, obligations, tax model |
 | 02 | Product & Features (MVP V1) | What we're building now and the full feature list |
 | 03 | Technical Stack & Architecture | How it's built |
 | 04 | Business Model & Go-to-Market | Commercials, market, beta strategy |

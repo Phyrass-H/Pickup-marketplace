@@ -142,7 +142,7 @@ export default async function DriverSettingsPage({
           Set up payouts with Stripe — coming soon
         </button>
         <p className="muted small" style={{ marginTop: 10 }}>
-          Bank details are collected securely by Stripe when payouts go live. PickUp
+          Bank details are collected securely by Stripe when payouts go live. Kavenue
           never stores your card or IBAN.
         </p>
       </div>

@@ -211,7 +211,7 @@ export function AmendmentCard({
         </>
       )}
 
-      <p className="amc__foot">Your tap is what counts — PickUp records it for both sides.</p>
+      <p className="amc__foot">Your tap is what counts — Kavenue records it for both sides.</p>
     </div>
   );
 }

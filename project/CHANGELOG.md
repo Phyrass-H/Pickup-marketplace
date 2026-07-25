@@ -1,7 +1,29 @@
-# PickUp — What we've built (plain-language history)
+# Kavenue — What we've built (plain-language history)
 
 > A simple, dated log of what's been done — written to be read, not for engineers.
 > Newest at the top. The detailed technical version lives in `SESSION_LOG.md`.
+
+---
+
+## 25 July 2026
+- **The product is now called Kavenue, everywhere in the app and the docs.** The old "PickUp" name is gone from every
+  screen a Business or a Driver can see — the Dispatch header now reads **Kavenue Dispatch**, the sign-in pages, the
+  welcome screen, the Settings pages, the cancellation and no-show wording, and both legal pages (French and English) all
+  say Kavenue. The phone app's name and icon label changed too, so installing it to a home screen gives you "Kavenue
+  Driver". All the internal paperwork (spec documents, session notes) was renamed to match.
+- **Nothing about how the app works changed.** This was purely a change of name — no new features, no database changes,
+  nothing moved. Everything was rechecked afterwards: the app builds cleanly and all 18 screens were opened against the
+  real database to confirm the old name appears nowhere.
+- **Three things were left alone on purpose, and they're yours to do when you're ready:**
+  - The **web address is still `pickupbedriven.com`** — changing it needs the new domain registered first, and touching it
+    early would take the live site down. Everything in the code is ready for the switch.
+  - The **folder on your Mac** (`PickUp_project_dev`) and the **GitHub project name** still say PickUp. Renaming those
+    from here would have broken the connection to your repository, so they need doing by hand.
+  - The **demo login accounts** (the "sign in as demo Business/Driver" buttons) still use old-name email addresses behind
+    the scenes. Those addresses are real records in the database — renaming just the app's copy of them would break the
+    demo sign-in, so they should only be changed together with the database.
+- Also left alone deliberately: the word "pickup" where it means **the pickup point of a trip** (the Route column, "pickup
+  time", "pre-fill my address as the pickup"). That's the transport word, not the brand.
 
 ---
 
@@ -203,7 +225,7 @@
 - **Your business name now sits in the top-right of the Dispatch screen, not squeezed into the bottom-left corner.**
   Before, your company showed as a small avatar and name tucked under "Settings" at the bottom of the sidebar — easy
   to miss. Now it's an account chip in the top bar, on the right: your logo (or initials) next to your business name.
-  Click it for a small menu with "Sign out". "PickUp Dispatch" stays exactly where it was, top-left. Nothing else
+  Click it for a small menu with "Sign out". "Kavenue Dispatch" stays exactly where it was, top-left. Nothing else
   changed — "Settings" is still in the sidebar and collapsing the sidebar works the same.
 
 ## 28 June 2026

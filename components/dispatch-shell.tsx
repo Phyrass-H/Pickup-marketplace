@@ -125,7 +125,7 @@ export function DispatchShell({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="brand-logo" src="/logo.png" alt="" aria-hidden="true" />
           <span className="dx-label dx-brandname">
-            PickUp{" "}
+            Kavenue{" "}
             <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>
               Dispatch
             </span>

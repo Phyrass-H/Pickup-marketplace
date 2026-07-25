@@ -1,5 +1,5 @@
 // Public landing for the bare production domain (pickupbedriven.com / www).
-// PickUp is an intermediary connecting professional VTC Drivers with Businesses
+// Kavenue is an intermediary connecting professional VTC Drivers with Businesses
 // — neither side is the "default", so the root just lets a visitor pick which
 // app they want and sends them to its subdomain. Design is intentionally light
 // (bones only); the real skin comes in the design pass.
@@ -15,7 +15,7 @@ export function LandingSplash() {
         <div className="auth-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="auth-logo" src="/logo.png" alt="" aria-hidden="true" />
-          <h1>PickUp</h1>
+          <h1>Kavenue</h1>
         </div>
         <p className="muted small" style={{ textAlign: "center", marginTop: 0 }}>
           The booking platform linking professional VTC Drivers with Businesses.

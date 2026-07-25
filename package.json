@@ -1,8 +1,8 @@
 {
-  "name": "pickup-driver",
+  "name": "kavenue-driver",
   "version": "0.1.0",
   "private": true,
-  "description": "PickUp — Driver PWA (B2B VTC booking marketplace). V1 vertical slice.",
+  "description": "Kavenue — Driver PWA (B2B VTC booking marketplace). V1 vertical slice.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

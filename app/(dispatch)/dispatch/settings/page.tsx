@@ -91,7 +91,7 @@ export default async function BusinessSettingsPage({
           <form action={updateCompany} className="card">
             <SectionHead
               title="Company identity"
-              desc="Who the business legally is — used on bookings and on PickUp’s invoices to you."
+              desc="Who the business legally is — used on bookings and on Kavenue’s invoices to you."
             />
             <div className="grid-2">
               <label className="field">
@@ -165,7 +165,7 @@ export default async function BusinessSettingsPage({
         <form action={updateContact} className="card">
           <SectionHead
             title="Contact"
-            desc="The Dispatcher seat — how the Driver and PickUp reach the business."
+            desc="The Dispatcher seat — how the Driver and Kavenue reach the business."
           />
           <label className="field">
             <span>Contact name (the Dispatcher)</span>
@@ -288,7 +288,7 @@ export default async function BusinessSettingsPage({
           <form action={updateBillingEmail} className="card">
             <SectionHead
               title="Billing"
-              desc="Where PickUp’s invoices go. Card payments go live later."
+              desc="Where Kavenue’s invoices go. Card payments go live later."
             />
             <label className="field">
               <span>Billing email</span>
@@ -298,7 +298,7 @@ export default async function BusinessSettingsPage({
                 defaultValue={business.billing_email ?? ""}
                 placeholder="accounts@hotel.com"
               />
-              <small className="set-note">Where we’ll send PickUp invoices.</small>
+              <small className="set-note">Where we’ll send Kavenue invoices.</small>
             </label>
             <button className="btn" type="submit">
               Save billing email
@@ -312,9 +312,9 @@ export default async function BusinessSettingsPage({
                 <span className="set-soon">Coming soon</span>
               </div>
               <p className="muted small">
-                When billing goes live you’ll add a card here. Stripe collects it securely — PickUp
+                When billing goes live you’ll add a card here. Stripe collects it securely — Kavenue
                 never stores your card number. The trip fare is collected on the Driver’s behalf;
-                PickUp’s service fee (with 20% VAT on the fee only) shows as a separate line.
+                Kavenue’s service fee (with 20% VAT on the fee only) shows as a separate line.
               </p>
               <button className="btn secondary" type="button" disabled>
                 Add a payment method
@@ -329,7 +329,7 @@ export default async function BusinessSettingsPage({
                 <span className="set-soon">Coming soon</span>
               </div>
               <p className="muted small">
-                Your PickUp invoices will appear here once billing is live.
+                Your Kavenue invoices will appear here once billing is live.
               </p>
             </div>
           </div>

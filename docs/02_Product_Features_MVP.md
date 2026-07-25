@@ -1,4 +1,4 @@
-# 02 — PickUp · Product & Features (MVP V1)
+# 02 — Kavenue · Product & Features (MVP V1)
 
 > Scope: what we are building for V1, the full feature inventory with status, the pricing mechanic, and the core loop. For deferred (V2+) features and their original detail, see Doc 05.
 > **Last updated:** current session.
@@ -24,7 +24,7 @@
 - **PDP (simplified, deterministic):** fare starts underquoted (e.g. ~50% of ceiling) and **climbs in fixed steps over time** toward the ceiling until a Driver accepts. No demand/season/ML inputs in V1.
 - **SPEED WIN:** urgent missions start at/near the ceiling for instant acceptance.
 - **Too-low ceiling → soft warning** (nudge, not block; phrased as consequence: "Trips below the recommended fare are rarely accepted and may go unfulfilled"). Optional **hard floor** at ~Driver break-even to keep junk lowball missions out of the pool.
-- *Legal note:* Business-sets-ceiling + PickUp-recommends reinforces the AGENT position (see Doc 01).
+- *Legal note:* Business-sets-ceiling + Kavenue-recommends reinforces the AGENT position (see Doc 01).
 
 ---
 

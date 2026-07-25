@@ -27,7 +27,7 @@ export default async function DevLoginPage({
   return (
     <div className="center-screen">
       <div className="auth-card">
-        <h1>PickUp — quick sign-in</h1>
+        <h1>Kavenue — quick sign-in</h1>
         <p className="muted" style={{ marginTop: -8 }}>
           Testing only. No email needed — pick a side. On the live domain each
           side opens on its own subdomain, so you can stay signed in as both.

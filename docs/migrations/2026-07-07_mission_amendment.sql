@@ -1,5 +1,5 @@
 -- Mission edit — PHASE 2: the amendment / consent flow (D39).
--- Once a Driver has ACCEPTED a mission, PickUp is the AGENT between two parties,
+-- Once a Driver has ACCEPTED a mission, Kavenue is the AGENT between two parties,
 -- so a MATERIAL change (route / fare) can't be applied silently — it's a
 -- proposed amendment the Driver accepts or declines. This is the audit trail +
 -- the atomic, consented apply (a mini accept_mission).

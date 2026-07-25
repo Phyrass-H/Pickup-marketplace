@@ -1,7 +1,47 @@
-# PickUp — Session Log
+# Kavenue — Session Log
 
 > Append-only, newest at top. One entry per working session. Keep it short:
 > what changed, what was decided, what's next.
+
+---
+
+## 2026-07-25 — Session 44 — PickUp → Kavenue rename (brand only, no behaviour change)
+**Branch:** `rename/kavenue` → merged to `main`. **No migration. No schema, dependency or behaviour change.** Executes
+[[d50]]; the full rationale + the never-rename list is **[[d51]]**.
+
+**Scope: 51 files.** User-facing copy (Dispatch topbar wordmark → "Kavenue Dispatch", login/welcome/dev-login titles,
+FR+EN legal pages, Business + Driver Settings, cancel/no-show, release + amendment cards), `app/layout.tsx`
+`metadata.title`/`description`/`appleWebApp.title`, `public/manifest.webmanifest`, `package.json` + `package-lock.json`
+(`pickup-driver` → `kavenue-driver`), `README.md`, `.claude/launch.json`, all of `docs/` + `project/`, and **SQL comments
+only** in `docs/migrations/*.sql`. Two git-renamed files (tracked as renames, history preserved):
+`docs/PickUp_Phase0_Data_Spine.md` → `docs/Kavenue_Phase0_Data_Spine.md` · `docs/pickup_schema.sql` →
+`docs/kavenue_schema.sql`, all 12 references updated.
+
+**The hard part was the never-rename list** — "PickUp" the brand and "pickup" the transport term are the same token.
+Held back deliberately: every `pickupbedriven.com` hostname (DNS move hasn't happened) · the
+`Phyrass-H/Pickup-marketplace` remote · the `PickUp_project_dev` directory · `PickUp Go` + La Poste's "Pickup" trademark
++ all rebrand/historical prose (renaming these makes the sentences self-contradicting) · the transport term and its DB
+columns (`pickup_at`, `prefill_pickup`, `isAirportPickup`, the "Pickup"/"Route" headers) · and two **live-data
+couplings**: the `pickup-dx-collapsed` localStorage key and the `*@pickup.local` dev-login/seed emails, which address
+real Supabase auth rows — renaming the constant alone breaks dev-login. Full list in [[d51]].
+
+**Method.** 7 parallel edit agents partitioned so no two touched the same file, under one explicit ruleset; then 4
+adversarial verify lenses (missed-brand · over-rename · reference-integrity · copy-coherence). The decisive check was
+**mechanical reversibility** — reverse every added line (Kavenue→PickUp) and diff against the removed line: **0 mismatches
+across 209 changed lines**, proving no collateral edit. 23 findings → real ones fixed. Biggest miss: `NEXT_SESSION.md`
+was skipped entirely and still claimed the rename hadn't happened (plus 2 dead file paths) — the one file every new
+session reads first. Also fixed: stale "RED Executive" survivors in `IDEAS.md` + `SESSION_LOG.md:295`, and a
+`package-lock.json` name drift that the next `npm install` would have silently rewritten.
+
+**Verified.** `tsc --noEmit` clean · `next build` green (24 routes) · dev server on :3000 vs the **real Supabase DB**,
+18 routes fetched (Driver + Dispatch + public + manifest + both legal pages) → **0 occurrences of "PickUp"** in rendered
+HTML · no console errors · FR legal élision checked ("Kavenue" is consonant-initial, so "de Kavenue" is correct).
+
+**Not done (founder-owned):** the repo **directory** rename, the **GitHub repo** rename, the **domain migration**, and
+`.claude/settings.local.json` (a permission rule mentions the old brand; line 32 holds a stale — already-dead —
+`pickup_schema.sql` path). Claude deliberately left the permissions file alone.
+**Next:** the two remaining **Driver card redesigns** (pre-accept mission detail + the accepted/My-Rides run-flow incl.
+the D48 waiting meter) via the D25 preview loop — the founder deferred these out of this session.
 
 ---
 
@@ -212,8 +252,8 @@ sweep · global web benchmarks · French VTC + hand-over legal angle) to ground 
 - Founder's model largely matches the market: **no-show → Driver paid after a wait** is universal; the **1h airport / ~20min
   city** split is the industry norm (Blacklane/Wheely/Uber Black/Welcome all = 60min from landing; city ~20–30min); an
   **escalating % as pickup nears** is validated (a Côte d'Azur operator publishes >24h 0% / 24–12h 50% / 12–6h 70% / <6h 100%).
-- PickUp-specific (not a market norm, flagged): a **Driver fined ≈ the trip amount** (elsewhere a bailing driver is just
-  re-dispatched, not fined) — must live in the Driver↔PickUp contract as an intermediary penalty, never a transport charge.
+- Kavenue-specific (not a market norm, flagged): a **Driver fined ≈ the trip amount** (elsewhere a bailing driver is just
+  re-dispatched, not fined) — must live in the Driver↔Kavenue contract as an intermediary penalty, never a transport charge.
 - **Copilote hand-over legal answer:** the founder's framing (full **transfer/novation** — original Driver drops out with
   zero pay/invoice/liability, copilote re-accepts on his own account) is **the clean, lawful structure** — cleaner than
   classic *sous-traitance* (which would make the original a "mini-principal" with URSSAF requalification risk). Guardrails:
@@ -226,7 +266,7 @@ sweep · global web benchmarks · French VTC + hand-over legal angle) to ground 
 
 **Decided ruleset (→ [[d45]]).** Driver voluntary cancel = **always 100%** (re-pools). Business cancel = **free >5h · 50% at
 −5h · +10%/h → 100%** at pickup. No-show fires at status **`arrived`** (**1h airport / 20min city**) → **Business charged full,
-Driver paid full like a completed mission**, PickUp keeps commission, Business settles with its own Guest. **T-60 Business
+Driver paid full like a completed mission**, Kavenue keeps commission, Business settles with its own Guest. **T-60 Business
 reclaim** (NOT a cancel) only when the assigned Driver **hasn't confirmed the Lock-in AND is unreachable** → reclaim button →
 re-pool as SPEED WIN, penalty-free for the Business, Driver takes a **reliability mark** (gated to non-confirmation = anti-
 abuse). Re-pool re-enters the Pool as **SPEED WIN at 70% of ceiling** (needs a `pooled_at` climb-origin). **Copilote hand-over
@@ -234,7 +274,7 @@ abuse). Re-pool re-enters the Pool as **SPEED WIN at 70% of ceiling** (needs a `
 they'd be late (build later). **Disputes = deferred, documented.** Euro *amounts* stay MANUAL in beta; the *rules* are fixed.
 
 **Documented in:** `project/DECISIONS.md` **D45** (authoritative + the legal confirmation) · `docs/05_Roadmap_Backlog_TODOs.md`
-(Cancellation & conflict section rewritten to the decided rules; copilote + SPEED WIN gate added) · `docs/PickUp_Phase0_Data_
+(Cancellation & conflict section rewritten to the decided rules; copilote + SPEED WIN gate added) · `docs/Kavenue_Phase0_Data_
 Spine.md` (the "Cancellation %s" open decision resolved) · `project/BACKLOG.md` (new **§ N** with the full Phase 1 spine +
 Phase 2 copilote + SPEED WIN gate + disputes; § B and § K O7 lines updated) · `project/IDEAS.md` (parked detail for the
 copilote model, SPEED WIN gate, disputes).
@@ -292,10 +332,11 @@ project + Places API key + billing the founder sets up (deferred to the integrat
 integrations). Logged as the future fix for true POI precision.
 **UPDATE (2026-07-10, later):** founder explicitly **deferred the Google swap until the final domain is registered** — so
 the browser API key gets restricted to the *right* domains ONCE (avoids redoing it after the rebrand DNS move). The brand
-name is now **RED Executive** (Riviera Executive Driver) and a Google Cloud project "RED Executive" exists, but the key/
+name **at that date** was **RED Executive** (Riviera Executive Driver) — **since superseded by `Kavenue`, [[d50]]** — and a
+Google Cloud project was created under that name, but the key/
 switch waits. **For now: stay on Mapbox** (the Riviera-first cleanup above is the current state). When the switch happens
 it's ~1 session, one file (`address-autocomplete.tsx`), Mapbox kept for routing. Related: the domain migration
-(pickupbedriven.com → a RED domain) is its own separate ~1-session task (DNS + Vercel + Supabase redirect allowlist +
+(pickupbedriven.com → a Kavenue domain) is its own separate ~1-session task (DNS + Vercel + Supabase redirect allowlist +
 `lib/hosts.ts` + the key restriction), also waiting on the founder registering the name/domain.
 
 **Shipped (Mapbox cleanup):** (1) `DEFAULT_COUNTRIES` narrowed `fr,mc,it,ch,de,es,be,lu,nl,gb,at,pt` → **`fr,mc,it,ch`**
@@ -390,7 +431,7 @@ amend-form.tsx,actions.ts}`, `components/amendment-card.tsx`. **Touched:** `lib/
 `app/(app)/rides/{page.tsx,actions.ts}`, `app/globals.css`. **D25 previews** (4 driver-card iterations → the muted-ends
 route-diff card; the propose screen; the decline path) all signed off ("agreed go"). [[d40]]
 
-**Why (D39 Phase 2):** once a Driver has ACCEPTED, PickUp is the AGENT between two parties, so a **material change
+**Why (D39 Phase 2):** once a Driver has ACCEPTED, Kavenue is the AGENT between two parties, so a **material change
 (route / fare)** can't be applied silently — it's a **proposed amendment the Driver accepts or declines**, recorded
 in-app even if they agreed by phone. Phase 1 (info-only edit, no consent) shipped S34; this is the consent flow.
 

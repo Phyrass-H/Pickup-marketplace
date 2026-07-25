@@ -1,10 +1,10 @@
 -- ============================================================
--- PickUp · additive migration — Driver service area (radius from a base)
+-- Kavenue · additive migration — Driver service area (radius from a base)
 -- Approved by founder 2026-06-17 (Session 8). Replaces the fixed town-list
 -- "operational zones" with a base location + service radius (geofence).
 --
 -- SAFE: this only ADDS columns. It touches no existing data, drops nothing,
--- and does NOT re-run docs/pickup_schema.sql (hard-rule #4). `if not exists`
+-- and does NOT re-run docs/kavenue_schema.sql (hard-rule #4). `if not exists`
 -- makes it idempotent — running it twice is harmless.
 --
 -- HOW TO RUN: Supabase dashboard → SQL Editor → New query → paste → Run.

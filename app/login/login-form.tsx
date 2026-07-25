@@ -5,9 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { RoleSub } from "@/lib/hosts";
 
 const COPY: Record<"driver" | "dispatch" | "generic", { title: string; subtitle: string }> = {
-  driver: { title: "PickUp Driver", subtitle: "Sign in to see available missions." },
-  dispatch: { title: "PickUp Dispatch", subtitle: "Sign in to manage your bookings." },
-  generic: { title: "PickUp", subtitle: "Sign in to continue." },
+  driver: { title: "Kavenue Driver", subtitle: "Sign in to see available missions." },
+  dispatch: { title: "Kavenue Dispatch", subtitle: "Sign in to manage your bookings." },
+  generic: { title: "Kavenue", subtitle: "Sign in to continue." },
 };
 
 export function LoginForm({

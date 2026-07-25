@@ -87,7 +87,7 @@ export function dressCodeLabel(value: string | null | undefined): string | null 
 // ---- Request flags ------------------------------------------------------------
 // A single jsonb of booleans. PRM/accessible deliberately excluded (it's a
 // vehicle category — parked for the Bus expansion, see IDEAS.md). No "card only"
-// (PickUp handles payment).
+// (Kavenue handles payment).
 export const REQUEST_FLAG_KEYS = [
   "meet_greet",
   "greeter",

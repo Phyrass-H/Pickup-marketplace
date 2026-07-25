@@ -1,4 +1,4 @@
-# PickUp — Session Log (archive: Sessions 1–33)
+# Kavenue — Session Log (archive: Sessions 1–33)
 
 > Older entries moved out of `SESSION_LOG.md` to keep session startup light. Newest-first.
 > Plain-language history: `CHANGELOG.md`. Active log: `SESSION_LOG.md`.
@@ -150,7 +150,7 @@ avatar + name + a "Sign out" text link tucked under the Settings item at the bot
 footnote instead of the account identity. Showed 3 directions in a visualize mockup (D25 loop): A = polished account
 card at the bottom with a click menu · B = business identity at the TOP of the sidebar as a workspace header · C =
 account chip in the top-right of the topbar. Founder first picked B; on seeing it live, corrected to **C** — keep
-"PickUp Dispatch" in the top-left of the sidebar exactly as before, and put the business name **top-right**.
+"Kavenue Dispatch" in the top-left of the sidebar exactly as before, and put the business name **top-right**.
 
 **Shipped (Option C — the standard SaaS top-right account menu):**
 - **Account chip in the topbar (top-right)** (`.dx-acctchip` in `.dx-topbar`, now `justify-content: space-between`):
@@ -159,7 +159,7 @@ account chip in the top-right of the topbar. Founder first picked B; on seeing i
 - **Click opens a dropdown** (`.dx-acctpop`, `role="menu"`): a header showing the business name + "Business account",
   a divider, then **Sign out** (calls the existing `signOut`; "Signing out…" while pending). Dismisses on
   outside-click, on Escape, and on navigation (three `useEffect`s + a `menuRef`; chevron rotates while open).
-- **Sidebar reverted to "as before":** the top-left is the original `brand-logo` + "PickUp Dispatch" wordmark again;
+- **Sidebar reverted to "as before":** the top-left is the original `brand-logo` + "Kavenue Dispatch" wordmark again;
   the footer is just the **Settings** nav item. The old bottom `.dx-acct` block (avatar + name + inline Sign out) is
   gone — its identity moved to the chip, its Sign out into the dropdown. Collapse/expand unchanged.
 - **CSS:** added `.dx-acctmenu/.dx-acctchip*/.dx-acctpop*`; restored `.dx-brandname` + the sidebar `.brand-logo`
@@ -168,7 +168,7 @@ account chip in the top-right of the topbar. Founder first picked B; on seeing i
   hides < 560px (logo + chevron remain).
 
 **Verified:** `tsc` clean. Drove it live on `localhost:3000` (dev-login as the demo Business, seeded): top-left shows
-"PickUp Dispatch" as before; top-right chip = "LG" monogram + "Le Grand Hôtel (demo)" + chevron; the menu opens
+"Kavenue Dispatch" as before; top-right chip = "LG" monogram + "Le Grand Hôtel (demo)" + chevron; the menu opens
 (header + Sign out), closes on outside-click; collapse still works (chip stays put, sidebar → icons); no console errors.
 
 **Next:** unchanged queue — mission-form guidance (BACKLOG §L), the saved-addresses address book, Driver app redesign.
@@ -230,8 +230,8 @@ server-action form so they save independently (the action echoes `?s=<key>` so t
 - **Booking defaults**: **geocoded default pickup** (reuses `AddressAutocomplete` — pre-fills the new-mission form),
   default vehicle class, default Guest instructions. → `updateBookingDefaults`.
 - **Billing** (deferred stub): saveable **billing email** now; payment-method + invoices are clearly-flagged "coming
-  soon". Agent-positioned copy — fare *collected on the Driver's behalf*, PickUp service fee + 20% VAT on the fee a
-  separate line, never PickUp-as-seller; **no derived VAT / invoice preview**. → `updateBillingEmail`.
+  soon". Agent-positioned copy — fare *collected on the Driver's behalf*, Kavenue service fee + 20% VAT on the fee a
+  separate line, never Kavenue-as-seller; **no derived VAT / invoice preview**. → `updateBillingEmail`.
 - **Notifications** (deferred stub): single "coming soon" card — NO inert toggles (per the critique).
 - **Help & legal**: existing `HelpLegalCard` + an account/data line + history link.
 - **Migration columns:** business_type, legal_name, siret, vat_number, registered_address, reception_phone,
@@ -628,7 +628,7 @@ via the D25 preview loop first (6 mockup iterations, founder-approved), then bui
     pick then sticks for that mission. (Cross-mission *learned* default after N repeats = deferred, see below.) Suit &
     tie carries a neutral "Specific event or VIP protocol" note w/ a Sparkles icon.
   - **Requests** — jsonb flags: meet_greet, **greeter (wait at the car)**, luggage_help, child_seat, quiet_ride, pets.
-    (Dropped "card only" — PickUp handles payment; dropped PRM — it's a vehicle category, parked to IDEAS for the Bus
+    (Dropped "card only" — Kavenue handles payment; dropped PRM — it's a vehicle category, parked to IDEAS for the Bus
     expansion.) Meet & greet reveals a **name board**: `board_name` text **or** an attached PDF/JPG/PNG.
   - **Message to the Driver** — private free-text, revealed only post-accept.
 - **DB (additive, founder runs):** `docs/migrations/2026-06-25_mission_driver_section.sql` adds `required_languages
@@ -1179,13 +1179,13 @@ per-role PWA), or detail/behavior fixes.
   splash). Verified live.
 - **Design pass 1 (Business)** — `app/globals.css` refreshed to a clean, conventional **blue/slate**
   theme (action blue `#2563EB`); **white app header + brand logo** (`public/logo.png`) replacing the navy
-  bar; blue buttons; logo on login + splash. Login is **host/side-aware** (`dispatch.*` → "PickUp
-  Dispatch", `driver.*` → "PickUp Driver"; was hardcoded "PickUp Driver" on both). Fixed the logo aspect
+  bar; blue buttons; logo on login + splash. Login is **host/side-aware** (`dispatch.*` → "Kavenue
+  Dispatch", `driver.*` → "Kavenue Driver"; was hardcoded "Kavenue Driver" on both). Fixed the logo aspect
   ratio (tall 924×1153 pin; was squished to a square). Verified live on both subdomains.
 - **Mapbox token URL-restriction** — still deferred (BACKLOG H); fine for closed beta.
 - **Claude Design loop** — added `project/DESIGN_BRIEF.md`. Feed Claude Design via its **"Create here →
   Connect to GitHub"** path (repo is public) — NOT `/design-sync` (that's for packaged design-system
-  libraries / Storybook; PickUp is a Next.js app, and DesignSync needs a `/login` re-auth). Round-trip:
+  libraries / Storybook; Kavenue is a Next.js app, and DesignSync needs a `/login` re-auth). Round-trip:
   design in Claude Design → **Export → "Send to local coding agent"** → Claude Code implements + deploys.
   See D19.
 
@@ -1432,7 +1432,7 @@ feed + mission detail/edit; mission can be posted with a past pickup time (no gu
 
 **What shipped** — the first end-to-end Driver slice, KEEP-only, design deferred:
 - Scaffolded Next.js 15.5 (App Router, TS) + Supabase (`@supabase/supabase-js` + `@supabase/ssr`).
-  Hand-wrote `lib/database.types.ts` from `pickup_schema.sql` (D3) — never migrated the schema.
+  Hand-wrote `lib/database.types.ts` from `kavenue_schema.sql` (D3) — never migrated the schema.
 - **Auth:** email magic-link (OTP/PKCE) → `/auth/callback` → cookie session via middleware.
   `/login` is a server-guarded wrapper (redirects authed users) around a client form.
 - **Onboarding** (glue): minimal Driver profile — zones + one vehicle/category — because the
@@ -1473,7 +1473,7 @@ files were byte-identical, nothing lost). `CLAUDE.md` references updated to `doc
 **Branch:** `claude/compassionate-tesla-rdbmqb`
 
 **What happened**
-- Read all spec docs (00–05), the Phase 0 Data Spine, and `pickup_schema.sql`.
+- Read all spec docs (00–05), the Phase 0 Data Spine, and `kavenue_schema.sql`.
 - Agreed the first milestone: a single end-to-end Driver PWA vertical slice
   (auth → Pool → detail → accept → My Rides). Plan approved in principle; build deferred
   until the user says go.
@@ -1484,7 +1484,7 @@ files were byte-identical, nothing lost). `CLAUDE.md` references updated to `doc
 
 **Decisions** — see `DECISIONS.md` (D1–D5).
 
-**State of the DB:** empty. First session of PickUp; nothing exists yet.
+**State of the DB:** empty. First session of Kavenue; nothing exists yet.
 
 **Next session:** when user says go — scaffold the Next.js PWA and build the Driver slice
 (see `STATUS.md` → Next up).

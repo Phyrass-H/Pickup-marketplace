@@ -1,11 +1,11 @@
-# Prompt for the next PickUp session
+# Prompt for the next Kavenue session
 
-> Copy-paste the block below (from "We're continuing PickUp" to the end) into a fresh
+> Copy-paste the block below (from "We're continuing Kavenue" to the end) into a fresh
 > Claude Code session. It orients a new Claude and sets the scope.
 
 ---
 
-We're continuing PickUp (B2B VTC booking marketplace). This is a LOCAL session on my Mac; we push to
+We're continuing Kavenue (B2B VTC booking marketplace). This is a LOCAL session on my Mac; we push to
 GitHub (`main`) and the app auto-deploys to Vercel. **Claude Code is allowed to push `main` to deploy**
 (an `autoMode.allow` rule is set in `.claude/settings.local.json`).
 
@@ -23,8 +23,8 @@ and it loses nothing — the docs are all still here, just read when relevant):
 - `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
   **D39**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
 - `project/GUIDANCE_AUDIT.md` — the full in-app guidance inventory + gaps + roadmap (for any guidance/microcopy work).
-- `docs/` — `00`–`05` + `PickUp_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
-- `docs/pickup_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
+- `docs/` — `00`–`05` + `Kavenue_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
+- `docs/kavenue_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
   `2026-06-19_vehicle_taxonomy_and_eta`, `2026-06-23_named_passengers`, `2026-06-25_mission_driver_section`,
   `2026-06-27_mission_reference`, `2026-06-27_mission_guest_contact`, `2026-06-28_mission_stops_reached`,
   `2026-06-28_business_profile_fields`, `2026-06-28_business_address_and_prefill`,
@@ -124,8 +124,8 @@ CURRENT STATE (live, deployed from `main`):
     **pickup ⇄ drop-off swap** button. Groundwork for the saved-addresses book. Removed "Default Guest instructions".
 - **Shipped 2026-07-03/04 (Sessions 30–32) — all live (decisions [[d35]]–[[d38]]):**
   - **S30 — Business identity → account chip in the topbar** (no schema): the Business logo + name moved OUT of the
-    cramped sidebar bottom-left into a **top-right account chip** in `.dx-topbar` (a dropdown → Sign out). "PickUp
-    Dispatch" stays top-left as before; Settings stays in the sidebar footer. Founder picked this (Option C) after
+    cramped sidebar bottom-left into a **top-right account chip** in `.dx-topbar` (a dropdown → Sign out). The topbar
+    wordmark (now "Kavenue Dispatch") stays top-left as before; Settings stays in the sidebar footer. Founder picked this (Option C) after
     seeing the "workspace header" option (B) live and preferring the topbar chip. `components/dispatch-shell.tsx`.
   - **S31 — Mission-form input-driven nudges** (no schema) + a **full guidance audit** (`project/GUIDANCE_AUDIT.md`):
     2 calm amber `.notice.warn` nudges on `/dispatch/new` that appear ONLY when the input triggers them — **luggage >
@@ -270,6 +270,27 @@ CURRENT STATE (live, deployed from `main`):
     z-index above the tab bar, icon a11y, muted-grey **WCAG-AA contrast**, real `<h1>`s). `tsc` clean.
   - **⚑ Parked:** the discreet **vehicle** footer note — keep (truncates to "Business · Se…" on a narrow card) or drop
     (redundant). **NOT redesigned yet:** My Rides / mission detail / Settings / the Earnings screen / Pool empty+loading.
+- **Shipped 2026-07-25 (Session 44) — the PickUp → Kavenue RENAME, LIVE ([[d51]]; NO migration, NO behaviour change):**
+  a pure brand rename across **51 files**: user-facing copy (Dispatch topbar wordmark, login/welcome/dev-login titles, the
+  FR+EN legal pages, Settings, cancel/no-show and release/amendment copy), `app/layout.tsx` metadata + `appleWebApp.title`,
+  `public/manifest.webmanifest`, `package.json`/`package-lock.json` (`kavenue-driver`), `README.md`, `.claude/launch.json`,
+  every `docs/` + `project/` doc, and SQL **comments only** in `docs/migrations/*.sql`. Two files git-renamed (tracked as
+  renames, history preserved): `docs/PickUp_Phase0_Data_Spine.md` → **`docs/Kavenue_Phase0_Data_Spine.md`** and
+  `docs/pickup_schema.sql` → **`docs/kavenue_schema.sql`**, with all 12 references updated.
+  - **Method:** 7 parallel edit agents partitioned by file (no two touching the same file) under an explicit never-rename
+    ruleset, then **4 adversarial verify lenses** (missed-brand · over-rename · reference-integrity · copy-coherence).
+    The over-rename lens ran a **mechanical reversibility check** — reverse every added line and diff it against the removed
+    line — **0 mismatches across all 209 changed lines**, proving no collateral edits. 23 findings → all real ones fixed
+    (the big one: `project/NEXT_SESSION.md` had been skipped entirely and still claimed the rename hadn't happened).
+  - **Verified:** `tsc --noEmit` clean · `next build` green (24 routes) · **18 routes fetched in-browser against the real
+    Supabase DB → 0 occurrences of "PickUp"** in rendered HTML, including the PWA manifest and both legal pages · no
+    console errors · French legal copy checked for élision (Kavenue is consonant-initial, so "de Kavenue" is correct).
+  - **⚑ Founder actions still open (Claude deliberately did NOT do these):** rename the repo **directory**
+    `PickUp_project_dev` (it's this session's cwd + the Claude project config path); rename the **GitHub repo**
+    `Phyrass-H/Pickup-marketplace` (outward-facing, your account); the **domain migration** (below). Also flagged, not
+    touched: `.claude/settings.local.json` line 42 mentions the old brand inside a permission rule and line 32 has a stale
+    `pickup_schema.sql` path (a dead entry — that path was already wrong pre-rename) — it's your permissions config, so
+    edit it yourself if you want it tidy.
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
@@ -278,17 +299,18 @@ the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate
 
 RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — do these two, in this order):
 
-**★ 1. RENAME the project PickUp → `Kavenue` — EVERYWHERE ([[d50]], the founder's explicit Session-44 priority).** The brand
-name is now **Kavenue** (supersedes "RED Executive"). This is a **full rename across docs, code, folders, copy, and config** —
-not just a label swap. Work through carefully: the repo/dir name (`PickUp_project_dev`), the package name + `metadata.title` /
-`appleWebApp.title` (`app/layout.tsx` — "PickUp"), the **Dispatch topbar wordmark** ("PickUp Dispatch"), the Driver header,
-`public/manifest.webmanifest`, and **every `docs/` + `project/` mention**. **Do NOT touch** the product hard-rule glossary
-(Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN), and **Kavenue ≠ PickUp Go**. The **domain** move
-(`pickupbedriven.com` → a Kavenue domain: DNS + Vercel + Supabase redirect allowlist + `lib/hosts.ts`) and the **Google
-Places** key restriction still **wait on the founder registering the Kavenue domain** (do those AFTER the DNS move; restrict
-the key ONCE). Suggest: do the rename on a branch, keep `tsc` + `next build` green, then deploy.
+**★ 1. ✅ RENAME PickUp → `Kavenue` — SHIPPED (S44, [[d51]]).** Done across app copy, spec docs, `project/`, package name,
+PWA manifest, README and the Dispatch topbar wordmark; the two brand-named doc files were git-renamed to
+`docs/Kavenue_Phase0_Data_Spine.md` + `docs/kavenue_schema.sql` and every reference updated. Verified by 4 adversarial
+lenses (a mechanical reversibility check on all 209 changed lines found 0 collateral edits) + 18 routes in-browser.
+**Deliberately NOT renamed** (each would break something real): every `pickupbedriven.com` hostname (DNS move hasn't
+happened), the `Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev` directory, `PickUp Go`, La Poste's
+"Pickup" trademark, the `pickup_*` transport term/DB columns, the `pickup-dx-collapsed` localStorage key, and the
+`*@pickup.local` dev-login/seed identities (they map to REAL Supabase auth rows — renaming the string alone breaks
+dev-login). See the founder-action list at the end of this file.
 
-**★ 2. Redesign the two remaining Driver cards (D25 preview loop → sign-off → build to match).** The Pool card is done (S43);
+**★ 2. Redesign the two remaining Driver cards (D25 preview loop → sign-off → build to match) — NOW THE TOP PRIORITY.**
+The Pool card is done (S43);
 these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refined weights, route rail, service icons):
    1. **The extended pre-accept mission card** — what a Driver sees on **`/missions/[id]` BEFORE accepting** (today it's still
       the old `.card`/`.route`/`.kv` style; `app/(app)/missions/[id]/page.tsx` + `accept-button.tsx`).
@@ -318,14 +340,17 @@ looked correct in code and only fell to live probing); the **"Both"** mission ty
    app redesign**, the **guidance tooltips (Tier 2)**, the **saved-addresses book**, and the parked **Google Places switch
    + domain migration** (below).
 
-**⚠️ BRAND / DOMAIN — name is now `Kavenue` ([[d50]], supersedes RED Executive [[d44]]):** the product's name is
-   **Kavenue** — the rebrand away from "PickUp" (La Poste's EU transport trademark). **As of end-of-Session-43 the repo/docs
-   are STILL codenamed "PickUp"** — the full rename is the **Session 44 priority** (see RECOMMENDED NEXT STEP #1); DON'T
-   assume it's happened — the topbar still says "PickUp Dispatch", the live domain is still `*.pickupbedriven.com`. Waiting
-   on the founder registering the Kavenue domain: (1) **domain migration** `pickupbedriven.com` → a Kavenue domain (DNS +
-   Vercel + Supabase redirect allowlist + `lib/hosts.ts`); (2) **Google Places** swap for address search — restrict the key
-   ONCE, after the DNS move. ≠ **PickUp Go** (separate product, hard rule). For now: **stay on Mapbox** for search. See
-   [[d43]] [[d50]] + IDEAS.md.
+**⚠️ BRAND / DOMAIN — name is `Kavenue` ([[d50]], supersedes RED Executive [[d44]]):** the rebrand away from "PickUp"
+   (La Poste's EU transport trademark). **The code/copy rename SHIPPED in Session 44 ([[d51]])** — app copy, the Dispatch
+   topbar wordmark, spec docs, `project/`, package name, PWA manifest and README all say **Kavenue**; `tsc` + `next build`
+   green, 18 routes verified with zero "PickUp" leakage. **Kavenue ≠ PickUp Go** (separate product, hard rule) and the
+   glossary (Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN) was deliberately untouched.
+   **Still outstanding, founder-owned:** (1) the **repo directory** is still `PickUp_project_dev` and the **GitHub repo** is
+   still `Phyrass-H/Pickup-marketplace` — both are the founder's to rename (they'd break this session's cwd / the remote);
+   (2) **domain migration** `pickupbedriven.com` → a Kavenue domain (DNS + Vercel + Supabase redirect allowlist +
+   `lib/hosts.ts`) — every hostname in code is deliberately still `pickupbedriven.com` and MUST stay until the DNS move;
+   (3) **Google Places** swap for address search — restrict the key ONCE, after the DNS move. For now: **stay on Mapbox**.
+   See [[d43]] [[d50]] [[d51]] + IDEAS.md.
 
 **PRICING is IN PROGRESS — the founder is working on the model themselves** (how a Ceiling / base-fare is estimated;
 one-way vs round-trip). Respect **[[d37]] — NO empty-return charge** (a smart trajectory Pool solves the deadhead). Don't
@@ -364,7 +389,7 @@ OTHER OPEN ITEMS (pick what the founder asks):
 - **Navy polish (small):** Driver **"Complete ride"** uses a `success-btn` class that falls through to navy
   `.btn` — make it intentionally **green**; re-export the **logo** to harmonise its sky-blue with navy.
 - **Pricing engine** (IDEAS, ❓) — **founder is working on this now.** No objective base price by tier×body×distance×season;
-  the Business sets the ceiling, PickUp recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
+  the Business sets the ceiling, Kavenue recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
   Pool handles the deadhead. Seeding approach in IDEAS (taxi tariff floor + base+€/km+€/min grid). Don't build until the
   founder brings the rule; then the suggested Ceiling/base-fare range on the form follows.
 - **O7 cancellation — ✅ SHIPPED + DEPLOYED (spine S39 [[d45]]; agreed release + 24h re-pool window S40 [[d46]]).**
@@ -374,7 +399,7 @@ OTHER OPEN ITEMS (pick what the founder asks):
   generated DB types (`supabase gen types`), error monitoring.
 
 HARD RULES (from CLAUDE.md): glossary exactly (Business, Dispatcher, Driver, Guest, Pool, PDP, Ceiling,
-SPEED WIN — never "client"/"principal"); PickUp is an AGENT, never principal; PickUp ≠ PickUp Go; the Supabase
+SPEED WIN — never "client"/"principal"); Kavenue is an AGENT, never principal; Kavenue ≠ PickUp Go; the Supabase
 schema is ALREADY APPLIED — never re-run it (additive ALTERs only, founder-approved, in `docs/migrations/`);
 build only KEEP items (Doc 02).
 

@@ -1,4 +1,4 @@
-# PickUp — Design Brief (brand + screens)
+# Kavenue — Design Brief (brand + screens)
 
 > The **default design loop is now D25**: Claude Code authors a self-contained HTML
 > mockup from the real tokens + data, renders it inline, the founder reacts, we
@@ -8,10 +8,10 @@
 > Either way it captures brand, constraints, and every screen so a redesign maps
 > cleanly back onto the codebase.
 
-## What PickUp is
+## What Kavenue is
 A **B2B VTC booking marketplace** — a French *centrale de réservation VTC*. It
 connects professional VTC **Drivers** with **Businesses** (hotels first) that need
-transport. PickUp is an **agent / intermediary** — never the transport operator or
+transport. Kavenue is an **agent / intermediary** — never the transport operator or
 reseller. Tone: professional, trustworthy, calm. This is a **tool for professionals,
 not a design showcase**: functional and intuitive over decorative.
 

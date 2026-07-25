@@ -33,8 +33,8 @@
 -- historical settlements don't re-price when the constant moves.
 --
 -- NOTE ON SHAPE: every other fee in mission_cancellation is a penalty owed to
--- PickUp-the-intermediary (Doc 01). The waiting fee is NOT that — it is a Business → Driver
--- pass-through that PickUp merely intermediates. It is recorded here for MANUAL settlement;
+-- Kavenue-the-intermediary (Doc 01). The waiting fee is NOT that — it is a Business → Driver
+-- pass-through that Kavenue merely intermediates. It is recorded here for MANUAL settlement;
 -- when ledger_transaction gets its first writer, that is its structurally correct home.
 --
 -- Additive + idempotent. Safe to re-run.

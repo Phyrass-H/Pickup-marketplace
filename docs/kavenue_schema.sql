@@ -1,5 +1,5 @@
 -- ============================================================
--- PickUp · V1 Supabase schema  (Phase 0 data spine → SQL)
+-- Kavenue · V1 Supabase schema  (Phase 0 data spine → SQL)
 -- Run this in: Supabase → SQL Editor → New query → paste → Run.
 -- Safe to run once on a fresh project. Order matters; keep it as-is.
 --

@@ -1,4 +1,4 @@
-# 03 — PickUp · Technical Stack & Architecture
+# 03 — Kavenue · Technical Stack & Architecture
 
 > Scope: recommended stack, integrations, build approach, and the limits to plan around.
 > **Last updated:** current session. (Recommendation, not yet locked — confirm with whoever owns the build.)

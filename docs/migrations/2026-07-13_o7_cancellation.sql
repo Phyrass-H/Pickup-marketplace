@@ -6,7 +6,7 @@
 --   • T-60 reclaim    → the assigned Driver accepted but never confirmed the Lock-in;
 --                       the Business takes it back → re-pool as SPEED WIN (penalty-free).
 --
--- All fees are penalties owed to PickUp-the-INTERMEDIARY, never a transport charge
+-- All fees are penalties owed to Kavenue-the-INTERMEDIARY, never a transport charge
 -- (agent position, Doc 01). EURO amounts settle MANUAL in beta — the RPCs record the
 -- policy % + a server-computed fare snapshot so a human can settle. Copilote hand-over
 -- (a full transfer to another Driver) = Phase 2, not in this migration.
@@ -90,7 +90,7 @@ create policy p_cancellation_driver_read on mission_cancellation for select usin
 
 -- ---------------------------------------------------------------------------
 -- 4. DRIVER cancel — always 100%; re-pools the mission as a SPEED WIN.
---    The 100% fee is a penalty owed to PickUp (not a transport charge). The
+--    The 100% fee is a penalty owed to Kavenue (not a transport charge). The
 --    escape valves that AVOID it (Business-agreed release; copilote hand-over)
 --    are separate flows; this is the plain "I'm cancelling" path.
 -- ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ begin
   end if;
 
   v_hours := extract(epoch from (v_mission.pickup_at - now())) / 3600.0;
-  -- No Driver has committed yet → free (nobody to protect; PickUp's commission is
+  -- No Driver has committed yet → free (nobody to protect; Kavenue's commission is
   -- only taken at completion, so there is no cut to refund either).
   if v_mission.status = 'pooled' or v_mission.driver_id is null then
     v_pct := 0;

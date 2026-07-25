@@ -1,4 +1,4 @@
-# PickUp — Ideas & Parked Notes
+# Kavenue — Ideas & Parked Notes
 
 > Loose ideas, "remember to consider", and things that aren't yet in the spec docs.
 > When an idea becomes a real plan, promote it into the spec docs (00–05) or DECISIONS.md
@@ -15,14 +15,17 @@
 
 ## Parked (not yet scoped)
 - **Address search → Google Places (New)** — the real fix for POI precision (Mapbox ranks a random shop over the Nice
-  airport terminal; Google weights prominence). Deferred until the founder registers the final RED domain, so the browser
-  API key is restricted to the right domains ONCE. ~1 session, one file (`address-autocomplete.tsx`), keep Mapbox for
-  routing. Founder has a Google Cloud project "RED Executive" ready. See [[d43]].
-- **Domain migration `pickupbedriven.com` → a RED domain** (`dispatch.redexecutive.com` / `driver.redexecutive.com`, or a
-  `.red` TLD). Separate ~1-session task: DNS + Vercel domains + Supabase redirect allowlist + `lib/hosts.ts` + the Google
-  key restriction. Waiting on the founder registering the name/domain. See [[d44]].
-- **Code/copy rebrand PickUp → RED Executive** — the repo is still codenamed PickUp; a later pass renames user-facing copy
-  ("PickUp Dispatch" topbar, emails, etc.). Keep the glossary (Business/Dispatcher/Driver/Guest/Pool/Ceiling/SPEED WIN).
+  airport terminal; Google weights prominence). Deferred until the founder registers the final Kavenue domain, so the
+  browser API key is restricted to the right domains ONCE. ~1 session, one file (`address-autocomplete.tsx`), keep Mapbox
+  for routing. The founder already has a Google Cloud project ready (created under the earlier "RED Executive" name). See
+  [[d43]] [[d50]].
+- **Domain migration `pickupbedriven.com` → a Kavenue domain.** Separate ~1-session task: DNS + Vercel domains + Supabase
+  redirect allowlist + `lib/hosts.ts` + the Google key restriction. Waiting on the founder registering the domain.
+  See [[d44]] [[d50]].
+- ~~**Code/copy rebrand PickUp → Kavenue**~~ — **DONE (Session 44, [[d50]])**: user-facing copy, spec docs, `project/`,
+  package name, PWA manifest and the Dispatch topbar wordmark all say Kavenue. The glossary
+  (Business/Dispatcher/Driver/Guest/Pool/Ceiling/SPEED WIN) was deliberately left untouched. Still outstanding and
+  founder-owned: the repo directory name, the GitHub repo slug, and the domain (above).
 - **Detail-edit change-log: multi-edit visible history** — today `mission_info_change` stores every edit as a row but the
   schedule shows only the LATEST. A small extension could show a "…and N earlier edits" expand. (S36 / D41.)
 - **Pricing vehicle chip: include the specific car** — the chip shows class·body only; wire an `onCarChange` up from
@@ -55,7 +58,7 @@
 - **Dispatcher mission edit — KEEP per Doc 02** (free edits while pooled; material edits after acceptance need
   re-consent). Design agreed with the founder 2026-07-05, phased. The **line that decides everything: has a Driver
   accepted yet?** Pooled = the mission is nobody's → edit anything freely (no consent). Accepted+ = two parties in
-  a deal and **PickUp is the AGENT between them, not the boss** → a material change is a *proposed amendment the
+  a deal and **Kavenue is the AGENT between them, not the boss** → a material change is a *proposed amendment the
   Driver accepts or declines* (this is what keeps us an intermediary AND keeps the deal honest — the Driver
   consents to the new price + time).
   - **Phase 1 — info-only edit (BUILDING NOW, Session 34).** Let a Business edit the **pure-info** fields of a
@@ -105,16 +108,16 @@
   ("copilote") instead of paying the 100% cancel fee. It is a **full transfer / novation, NOT sous-traitance**: the
   original Driver **drops out entirely** — no payment, no invoice, no legal obligation, no liability — and keeps only a
   **"passed on" trace** in his history. The copilote **re-accepts on his own account**, becomes the Driver of record, and
-  carries everything (invoice to the Business via PickUp's intermediary flow, RC Pro, VTC obligations) exactly as if he'd
+  carries everything (invoice to the Business via Kavenue's intermediary flow, RC Pro, VTC obligations) exactly as if he'd
   taken it from the Pool. "A Driver is a professional and must find solutions" — this is the sanctioned solution.
 - **Why it's legal / why this framing matters:** the risky pattern is classic *sous-traitance* (A stays the contractor,
   pays B, invoices the Business, carries B's liability → a "mini-principal" + URSSAF requalification risk). The founder's
   transfer model avoids all of it: A earns nothing and carries nothing, B is the fresh Driver of record on his own
-  account → no reselling, no *location de compte* (account-rental, banned), and **PickUp stays the pure intermediary/agent**
+  account → no reselling, no *location de compte* (account-rental, banned), and **Kavenue stays the pure intermediary/agent**
   (VAT position intact, Doc 01). Since **2026 *sous-traitance illicite* is a named REVTC offence**, so the **credential gate
   is the thing that keeps it lawful.** Real precedent: **Drivalty**, **iaDriver**, **WAY-Partner** (credential-gated pass),
   plus VTC cooperatives (VTC Officiel, CoopVTC, Club VTC) — an established, buildable pattern.
-- **Mandatory guardrails when built:** copilote must be an **active, verified, same-category** PickUp Driver — valid REVTC
+- **Mandatory guardrails when built:** copilote must be an **active, verified, same-category** Kavenue Driver — valid REVTC
   inscription, carte pro VTC, RC Pro transport de personnes, conforming vehicle — **checked live at the moment of transfer**
   (block if any credential/insurance is expired); accepts on his **own account** (never the original's); **zero money flows
   through the original Driver**; the Business **consents by default** via its terms (must be **explained in the tutorial**);
@@ -166,7 +169,7 @@
 
 ### Disputes / mediation (deferred, documented) ⏸️
 - No dispute state exists (mission enum has none; mediation is email-only + deferred, Doc 05). The founder's flight-delay
-  case — a Business **disputes** a Driver's hand-back — has no representation yet. V1 stays: report by email, **PickUp
+  case — a Business **disputes** a Driver's hand-back — has no representation yet. V1 stays: report by email, **Kavenue
   mediates on the timestamped trail** (accept time · actual flight landing · in-app contact log · proof of service), the
   market-standard mediated-ticket model. When built: at least a "contested" marker on the mission + an evidence view (ties
   to the future admin/back-office dispute-support tool, BACKLOG F2). "Come back to this more deeply later" (founder).
@@ -248,19 +251,19 @@
   VIP / security / multilingual / child-seat capability. Pairs with the grouped-mission idea above.
 
 ### Pricing engine (open — needed before real money) ❓
-- ❓ **How is the fare actually computed?** Today the Business sets a **Ceiling** and PickUp recommends a start
+- ❓ **How is the fare actually computed?** Today the Business sets a **Ceiling** and Kavenue recommends a start
   (PDP climbs toward it); there is no objective base price by **tier × body × distance × season/time**. Founder
   ask: is there a known VTC/taxi pricing model or dataset to seed the MVP?
   - Initial take (research later — it's data/integration, deferred this phase): there is **no single public VTC
     price DB**. Practical seeds — French **taxi tariff orders** (préfecture *tarifs taxi* A/B/C/D) as a floor;
     a hand-tuned **base + €/km + €/min** grid per tier with airport/season multipliers; later, learn
-    empirically from our own accepted-fare data. PickUp stays the **recommender, never the price-setter**
+    empirically from our own accepted-fare data. Kavenue stays the **recommender, never the price-setter**
     (Doc 01 — the Business sets the Ceiling). Connects to the Doc 05 "hard-floor" + "fare extras" open items.
 
 ### Smart Pool — trajectory-based Driver prioritisation · no empty-return charge (V2) 🅥
 > Founder decision, 2026-07-04.
 - **The Business is NEVER charged for the Driver's empty return leg (*retour à vide*).** Instead of pricing the
-  deadhead into the fare, PickUp solves it **structurally** with a **smart Pool** that prioritises Drivers by
+  deadhead into the fare, Kavenue solves it **structurally** with a **smart Pool** that prioritises Drivers by
   **trajectory**: a Driver finishing a trip is bumped up the Pool for missions whose **pickup is near their
   current drop-off**, within a **time window**, so the return isn't empty. Example: a Driver on
   **Cannes → Saint-Tropez** is prioritised for missions *departing* Saint-Tropez when the timing matches
@@ -280,10 +283,10 @@
   SPEED WIN loop). Pros/cons discussed in chat 2026-06-23. Ties to driver verification (BACKLOG F2) + Lock-in.
 
 ### Keep both sides on the platform + overtime (later)
-- 🅥 **Anti-disintermediation** — once a hotel meets a good Driver via PickUp, what stops them going
-  off-platform? Strategy/comms (belongs in **Doc 04 GTM**): position PickUp as the **guarantee layer** — for
+- 🅥 **Anti-disintermediation** — once a hotel meets a good Driver via Kavenue, what stops them going
+  off-platform? Strategy/comms (belongs in **Doc 04 GTM**): position Kavenue as the **guarantee layer** — for
   Drivers, secured/guaranteed payment + dispute cover; for Businesses, vetted drivers, SLA, a backup if a
-  Driver cancels, one invoice + VAT. Draft the "why stay on PickUp" pitch for each side.
+  Driver cancels, one invoice + VAT. Draft the "why stay on Kavenue" pitch for each side.
 - 🅥 **Overtime / waiting time** — handle a mission running long (mise-à-disposition overrun, airport waiting).
   Connects to the existing **Doc 05 open decision "fare extras (waiting, tolls, airport, hourly overtime)"**.
   Later: a time-tracking / extra-charge mechanism.

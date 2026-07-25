@@ -1,6 +1,6 @@
 // Role ↔ subdomain mapping for the production domain.
 //
-// In production the two sides of PickUp live on separate subdomains:
+// In production the two sides of Kavenue live on separate subdomains:
 //   • driver.pickupbedriven.com    → the Driver app (Pool, My Rides, …)
 //   • dispatch.pickupbedriven.com  → the Business / Dispatch app
 //

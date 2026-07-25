@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Conditions générales d'utilisation · PickUp",
+  title: "Conditions générales d'utilisation · Kavenue",
 };
 
 // DRAFT placeholder. The binding legal text must be drafted and validated with a
@@ -12,7 +12,7 @@ export default function TermsPage() {
     <main className="container" style={{ paddingTop: 28, paddingBottom: 48, maxWidth: 720 }}>
       <p className="small">
         <Link href="/" className="muted">
-          ← PickUp
+          ← Kavenue
         </Link>
       </p>
 
@@ -29,24 +29,24 @@ export default function TermsPage() {
 
       <h2>1. Objet</h2>
       <p>
-        PickUp est une <strong>centrale de réservation VTC</strong> qui met en
+        Kavenue est une <strong>centrale de réservation VTC</strong> qui met en
         relation des chauffeurs VTC professionnels indépendants (les «&nbsp;Drivers&nbsp;»)
         avec des professionnels (les «&nbsp;Businesses&nbsp;», hôtels en premier lieu)
         ayant besoin de transport pour leurs clients (les «&nbsp;Guests&nbsp;»).
       </p>
 
-      <h2>2. Rôle de PickUp — intermédiaire</h2>
+      <h2>2. Rôle de Kavenue — intermédiaire</h2>
       <p>
-        PickUp agit en qualité d&apos;<strong>intermédiaire / agent</strong> et
+        Kavenue agit en qualité d&apos;<strong>intermédiaire / agent</strong> et
         n&apos;est jamais l&apos;opérateur de transport ni le revendeur de la
         prestation. La prestation de transport est fournie par le Driver, lequel
-        reste un prestataire indépendant. PickUp facilite la mise en relation et,
+        reste un prestataire indépendant. Kavenue facilite la mise en relation et,
         le cas échéant, l&apos;encaissement pour le compte du Driver.
       </p>
 
       <h2>3. Tarification</h2>
       <p>
-        Le Business fixe son plafond (le «&nbsp;Ceiling&nbsp;»). PickUp se contente
+        Le Business fixe son plafond (le «&nbsp;Ceiling&nbsp;»). Kavenue se contente
         de recommander un tarif évolutif (PDP) jusqu&apos;à ce plafond. Le prix
         affiché en temps réel est calculé à la lecture et ne constitue pas un prix
         figé.
@@ -77,23 +77,23 @@ export default function TermsPage() {
 
       <h2>1. Purpose</h2>
       <p>
-        PickUp is a <strong>VTC booking marketplace</strong> connecting independent
+        Kavenue is a <strong>VTC booking marketplace</strong> connecting independent
         professional VTC drivers (&quot;Drivers&quot;) with businesses
         (&quot;Businesses&quot;, hotels first) that need transport for their end
         customers (&quot;Guests&quot;).
       </p>
 
-      <h2>2. PickUp&apos;s role — intermediary</h2>
+      <h2>2. Kavenue&apos;s role — intermediary</h2>
       <p>
-        PickUp acts as an <strong>intermediary / agent</strong> and is never the
+        Kavenue acts as an <strong>intermediary / agent</strong> and is never the
         transport operator or reseller. Transport is supplied by the Driver, who
-        remains an independent contractor. PickUp facilitates the connection and,
+        remains an independent contractor. Kavenue facilitates the connection and,
         where applicable, collects payment on the Driver&apos;s behalf.
       </p>
 
       <h2>3. Pricing</h2>
       <p>
-        The Business sets its Ceiling. PickUp only recommends a progressive fare
+        The Business sets its Ceiling. Kavenue only recommends a progressive fare
         (PDP) up to that Ceiling. The live fare is computed on read and is not a
         fixed price.
       </p>

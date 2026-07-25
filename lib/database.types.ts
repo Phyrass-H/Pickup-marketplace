@@ -1,6 +1,6 @@
 // =====================================================================
-// PickUp — database.types.ts
-// HAND-WRITTEN from docs/pickup_schema.sql (Decision D3). The schema is ALREADY
+// Kavenue — database.types.ts
+// HAND-WRITTEN from docs/kavenue_schema.sql (Decision D3). The schema is ALREADY
 // APPLIED to the live Supabase DB — never recreate or migrate it. This file
 // only mirrors it so our TypeScript is type-safe. If the Supabase CLI gets
 // wired up later, regenerate with `supabase gen types` to confirm parity.
@@ -313,7 +313,7 @@ export interface Database {
           no_show_at: string | null; // O7
           no_show_by: "driver" | "business" | "system" | null; // D48: who declared it
           // D48 waiting fee — settled outcome. Business owes it, Driver is paid it (a
-          // pass-through, NOT a PickUp penalty). MANUAL settlement in beta.
+          // pass-through, NOT a Kavenue penalty). MANUAL settlement in beta.
           waiting_from: string | null; // meter start = guest due + courtesy wait
           waiting_to: string | null; // meter stop = least(settled, guest due + ceiling)
           waiting_minutes: number | null; // minutes STARTED, clamped by the ceiling

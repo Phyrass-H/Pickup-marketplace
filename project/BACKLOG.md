@@ -1,4 +1,4 @@
-# PickUp — Backlog (what's built, what's next)
+# Kavenue — Backlog (what's built, what's next)
 
 > Single planning list for upcoming sessions. Tags map to the spec (Doc 02):
 > ✅ done · 🔨 KEEP (build for V1) · 👤 MANUAL (a human does it in beta) ·
@@ -6,7 +6,7 @@
 > ❓ needs a founder/legal decision.
 >
 > Most KEEP items need NO schema change — the tables already exist in
-> `docs/pickup_schema.sql` (document, payment, ledger_transaction, payout,
+> `docs/kavenue_schema.sql` (document, payment, ledger_transaction, payout,
 > booking_voucher, status_event). Build against them.
 
 ---
@@ -73,15 +73,15 @@
 ## F. Analytics & reporting  ❓ (mostly V2 in the spec — confirm priority)
 - 🅥 **Business-facing analytics**: by category / period / zone, profitability,
   CSV export, year-over-year. (Doc 02 marks reporting/analytics CUT for V1.)
-- ⚙️ **PickUp internal / investor metrics**: signups, missions posted vs accepted
+- ⚙️ **Kavenue internal / investor metrics**: signups, missions posted vs accepted
   vs completed, **fill rate**, time-to-accept, GMV, commission earned, liquidity
   by zone/category, cancellation rate. (Admin dashboard; great for the raise.)
 - ⚙️ **Dev observability**: error monitoring (e.g. Sentry), structured logs, uptime.
 - 🔨/⚙️ **Admin role + dashboard** (`admin` role exists in schema): verify drivers,
   oversee missions, run payouts.
 
-## F2. Internal tooling & observability stack  ⚙️/🔨 (PickUp back-office — future pillar)
-> Founder request (2026-06-17): the PickUp-internal layer for **dev / marketing /
+## F2. Internal tooling & observability stack  ⚙️/🔨 (Kavenue back-office — future pillar)
+> Founder request (2026-06-17): the Kavenue-internal layer for **dev / marketing /
 > dispute-support** — so when a user calls about a bug we can see what happened, and
 > marketing can follow usage. It's NOT one dashboard: it's a stack of distinct tools per
 > audience. Consolidates the analytics/observability pieces above into one named pillar.
@@ -104,12 +104,12 @@
   (Driver: licence, VTC card, REVTC, insurance, RC Pro, carte grise · Business: Kbis) shown inline
   via signed-URL preview, with **approve / reject** controls that set each `document.status`
   (pending → verified/rejected) and flip **`driver.verified`** true once the file is complete. This
-  is the dedicated interface PickUp staff use to **manually validate every new user in beta** (👤).
+  is the dedicated interface Kavenue staff use to **manually validate every new user in beta** (👤).
   Pairs with the 👤 verify + video-interview items in section A. Needs an admin **write** path
   (service role) — browser RLS is read-only for admins today. The upload side already exists
   (Session 7: documents land in the `documents` bucket as `pending`); this is the review/confirm side.
 - 📊 Doubles as **investor metrics** (fill rate, time-to-accept, GMV, commission) — see the
-  ⚙️ "PickUp internal / investor metrics" line in F.
+  ⚙️ "Kavenue internal / investor metrics" line in F.
 - ⚠️ **GDPR dependency**: analytics + session replay capture PII → require PII masking,
   cookie consent, and listing Sentry/PostHog as processors in the privacy policy. Do together
   with **G › GDPR**. Don't enable for real users before that.
@@ -117,7 +117,7 @@
 ## G. Trust, legal, compliance
 - 🔨 **GDPR**: privacy policy, consent capture, data-deletion path.
 - 🔨 PII/financial **encryption** (use providers' built-in).
-- 👤 DGITM declaration · PickUp RC Pro insurance · verify each driver is registered VTC.
+- 👤 DGITM declaration · Kavenue RC Pro insurance · verify each driver is registered VTC.
 
 ## H. Platform / production readiness
 - ✅ **Custom domain**: `pickupbedriven.com` (OVH) live on Vercel with role subdomains
@@ -130,7 +130,7 @@
     (redirect to a side, a "Driver / Business" splash, or a marketing landing).
   - ↳ **Supabase redirect URLs** — add `driver.*` + `dispatch.*` `/auth/callback` before real email.
 - 🔨 **PWA polish**: icons, install prompt, offline shell — **per-role manifest** so each subdomain
-  installs as its own app (PickUp Driver / PickUp Dispatch).
+  installs as its own app (Kavenue Driver / Kavenue Dispatch).
 - 🔨 **Design/skin** pass. ✅ **Dispatch** (S10 / D20: tokens + Geist + Lucide + sidebar + schedule +
   calendar). ✅ **Route card** (S13: stop autocomplete + live ETA + "Add a stop" button + red stop marker).
   ✅ **App-wide navy + new-mission two-pane** (S14 / D24: navy `#25344C` at the token layer; `/dispatch/new` =
@@ -337,7 +337,7 @@ full ML dynamic pricing · Amadeus GDS.
 
 ## N. O7 — Cancellation / no-show / hand-over (RULESET DECIDED 2026-07-13, [[d45]]) 🔨
 > Founder settled the policy (see DECISIONS.md D45 for rationale + the legal confirmation). **Amounts stay MANUAL** in
-> beta; the **rules** are fixed. All fees = penalties owed to PickUp-the-intermediary, never a transport charge (Doc 01).
+> beta; the **rules** are fixed. All fees = penalties owed to Kavenue-the-intermediary, never a transport charge (Doc 01).
 > The `cancelled`/`expired` states + `cancelled_by`/`cancelled_at` columns already exist (dormant). Mirror the amendment
 > pattern (immutable record + SECURITY DEFINER atomic RPC).
 
@@ -355,12 +355,12 @@ fed by — the founder's pricing engine. Also revisit the **caps** (60 min city 
   +10%/h (linear, 5% / 30 min) → 100% at pickup** (−4h 60 · −3h 70 · −2h 80 · −1h 90 · 0h 100).
 - **No-show** — fires when the Driver is on-site (**status `arrived`**) and the Guest doesn't appear within the wait
   window: **1h airport · 20 min city** (airport = a flight number **OR** an airport-looking pickup address). Business
-  charged the full fare; Driver paid in full (like a completed mission); PickUp keeps commission; the Business settles
+  charged the full fare; Driver paid in full (like a completed mission); Kavenue keeps commission; the Business settles
   with its own Guest. **UI:** a professional "be sure before you report" confirm nudge; the report button is **amber, not
   red** (a no-show pays the Driver — not a destructive action). _(Deeper: contact-attempt gate + evidence + clock
   origin = later.)_
 - **T-60 Business reclaim** (NOT a cancel) — only when the assigned Driver **hasn't confirmed the Lock-in AND is
-  unreachable**, PickUp unlocks a reclaim button (~T-60) → Business takes the trip back, re-pools as **SPEED WIN**,
+  unreachable**, Kavenue unlocks a reclaim button (~T-60) → Business takes the trip back, re-pools as **SPEED WIN**,
   penalty-free for the Business, Driver takes a **reliability mark**. Gated to the non-confirmation state (anti-abuse).
 - **Re-pool pricing** — any re-pool (driver cancel · reclaim · release) re-enters the Pool as **SPEED WIN at 70% of
   ceiling**. Needs a **`pooled_at`** climb-origin (PDP climbs from `created_at` today → would mis-price otherwise).
@@ -377,7 +377,7 @@ fed by — the founder's pricing engine. Also revisit the **caps** (60 min city 
 - A **full transfer (novation)** of a booked mission to another Driver — NOT subcontracting. Original Driver drops out
   entirely (no pay/invoice/liability), keeps only a **"passed on" trace**; the copilote **re-accepts on their own account**
   and becomes the Driver of record. **Legally confirmed** (D45) — cleaner than sous-traitance.
-- Guardrails (mandatory): copilote is an **active, verified, same-category** PickUp Driver (REVTC · carte pro · RC Pro ·
+- Guardrails (mandatory): copilote is an **active, verified, same-category** Kavenue Driver (REVTC · carte pro · RC Pro ·
   conforming vehicle, checked live); own account (no account-sharing); zero money through the original Driver; **Business
   consents by default** via terms + explained in the **tutorial**; GDPR-minimised data transfer; audit trail
   (accepting-Driver vs performing-Driver).
@@ -397,4 +397,4 @@ RPC, like `respond_to_amendment`). See [[d45]] + IDEAS.md.
   CUT continuous live-map GPS — this is a one-shot check at accept.)
 
 **⏸️ Disputes / mediation (deferred, documented):** the "Business disputes a hand-back / no-show / cancellation" path — no
-  state today; V1 stays email + PickUp mediates on the timestamped trail. Revisit deeper later.
+  state today; V1 stays email + Kavenue mediates on the timestamped trail. Revisit deeper later.

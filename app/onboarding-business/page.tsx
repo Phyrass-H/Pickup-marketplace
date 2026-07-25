@@ -18,7 +18,7 @@ export default async function BusinessOnboardingPage({
     <main className="container" style={{ paddingTop: 28 }}>
       <h1>Set up your Business</h1>
       <p className="muted" style={{ marginTop: -8 }}>
-        Post missions to PickUp Drivers. Signed in as{" "}
+        Post missions to Kavenue Drivers. Signed in as{" "}
         <strong>{ctx.user.email}</strong>.
       </p>
 

@@ -1,4 +1,4 @@
-# PickUp — Decision Log
+# Kavenue — Decision Log
 
 > Every non-trivial choice, why it was made, and when. Append-only; supersede rather
 > than delete (note "superseded by Dn"). Decisions about *scope/legal/glossary* defer to
@@ -13,7 +13,7 @@ Per Doc 03. No native build for V1; revisit only when background GPS/push truly 
 Spec says "email". Chose passwordless OTP/magic-link over password (no password storage,
 matches Supabase-native auth). Revisit if a password flow is preferred.
 
-### D3 — Hand-write `database.types.ts` from `pickup_schema.sql` (2026-06-16)
+### D3 — Hand-write `database.types.ts` from `kavenue_schema.sql` (2026-06-16)
 Can't run `supabase gen types` without DB/CLI credentials wired in this environment, and
 the schema file is the source of truth and already applied. Hand-write types to match it.
 If the Supabase CLI gets wired up later, regenerate to confirm parity.
@@ -145,7 +145,7 @@ neutrals, white header) + the brand logo (`public/logo.png`, a purple→blue pin
 **Claude Design** (claude.ai/design) for its design POV: link the **public GitHub repo** via Claude
 Design's **"Create here → Connect to GitHub"** (it reads our real React components + `globals.css` +
 `project/DESIGN_BRIEF.md`). We do **not** use the `/design-sync` skill: it targets packaged design-system
-*libraries* (Storybook, or a component package with a build), but PickUp is a Next.js *app* (no Storybook,
+*libraries* (Storybook, or a component package with a build), but Kavenue is a Next.js *app* (no Storybook,
 no library exports), and the `DesignSync` tool also needs a `claude.ai` `/login` (this session's
 `CLAUDE_CODE_OAUTH_TOKEN` can't be granted design scopes). Handoff back is native: in Claude Design,
 **Export → "Send to local coding agent"** drops a structured bundle (component spec + design tokens +
@@ -176,8 +176,8 @@ mission still starts at 50% and climbs +5% every 10 min. This leaves the Driver 
 while still pulling a fast pickup. Implementation: removed the `speed_win → return ceiling` short-circuit
 in `lib/pdp.ts` (the fare now always uses the normal climb from `pdp_start`); `dispatch/new/actions.ts`
 sets `pdp_start = ceiling*0.7` and `pdp_interval = 5` for SPEED WIN. **No schema change** — `pdp_start`
-already exists. Legally safe: the **Business still sets the ceiling** and PickUp only *recommends* the
-start point (Doc 01 — keeps PickUp out of "the pricing algorithm controlling the fare"). The spec glossary
+already exists. Legally safe: the **Business still sets the ceiling** and Kavenue only *recommends* the
+start point (Doc 01 — keeps Kavenue out of "the pricing algorithm controlling the fare"). The spec glossary
 wording ("starts at/near the ceiling") is now superseded; updated here, not yet in Doc 00. [[d12]]
 
 ### D22 — New-mission flow: preview-before-post + save-as-draft (reverses D12 "straight to pool") (2026-06-19)
@@ -298,7 +298,7 @@ via the D25 preview loop (6 mockup iterations) first, then built to match. Key c
   Stored as label strings (curated set FR/EN/IT/ES/DE/AR), shown to the Driver and matched visually against their
   existing free-text `driver.languages`. **No proficiency "level"** — Drivers don't store one (founder dropped it).
 - **Request flags** = one `jsonb` (meet_greet, greeter, luggage_help, child_seat, quiet_ride, pets). **"Card only"
-  dropped** (PickUp handles payment); **PRM dropped** — it's a *vehicle category*, parked to IDEAS for the Bus
+  dropped** (Kavenue handles payment); **PRM dropped** — it's a *vehicle category*, parked to IDEAS for the Bus
   expansion, not a per-mission flag.
 - **Meet & greet name board** = a typed name **or** an attached PDF/JPG/PNG, reusing the existing private
   `documents` Storage bucket. Uploaded inside `createMission` with a **random storage path** (no insert-return-id)
@@ -363,7 +363,7 @@ Removed the case-by-case "Default Guest instructions". Migration `2026-06-28_bus
 S30. The Business was a cramped avatar + name tucked under "Settings" at the bottom-left of the Dispatch sidebar —
 reading like a footnote. Showed 3 directions in a visualize mockup (D25): A = polished account card at the bottom · B
 = business identity at the TOP of the sidebar (workspace header) · C = account chip in the top-right of the topbar.
-Founder first picked B; on seeing it live, **corrected to C** — keep "PickUp Dispatch" top-left exactly as before, and
+Founder first picked B; on seeing it live, **corrected to C** — keep "Kavenue Dispatch" top-left exactly as before, and
 put the business name **top-right** as a chip that opens a dropdown (Sign out). Settings stays in the sidebar footer.
 Uses the previously-empty right side of the topbar; standard SaaS account-menu pattern. [[d25]]
 
@@ -378,7 +378,7 @@ Shipped 2 nudges (luggage-vs-vehicle, night pickup). The suggested Ceiling/base-
 
 ### D37 — No empty-return charge; a smart trajectory-based Pool solves the deadhead instead (2026-07-04)
 Founder decision. A long one-way transfer means the Driver drives back empty (*retour à vide*) — but the Business is
-**never charged for it**. Instead of pricing the deadhead into the fare, PickUp will solve it **structurally** with a
+**never charged for it**. Instead of pricing the deadhead into the fare, Kavenue will solve it **structurally** with a
 **smart Pool** that prioritises Drivers by **trajectory**: a Driver finishing Cannes→Saint-Tropez is bumped up the Pool
 for missions *departing* Saint-Tropez when the timing matches (backhaul / deadhead reduction). This is why the S31
 long-distance "cover the return" nudge was **dropped before building** — it contradicted the model. The smart Pool is a
@@ -400,7 +400,7 @@ it live). Preview signed off (D25).
 ### D39 — Mission edit is PHASED; the line is "has a Driver accepted yet?"; Phase 1 = info-only, no consent (2026-07-05)
 S34. The KEEP "limited edit" (Doc 02) is built in phases, and the deciding principle is **whether a Driver has
 accepted**. **Pooled** = the mission is nobody's → the Business edits anything freely (no consent). **Accepted+** =
-two parties in a deal and **PickUp is the AGENT between them, not the boss** → a *material* change (route/price/time)
+two parties in a deal and **Kavenue is the AGENT between them, not the boss** → a *material* change (route/price/time)
 must be a **proposed amendment the Driver accepts or declines** (this is what keeps us an intermediary AND keeps the
 deal honest — the Driver consents to the new price/time).
 - **Phase 1 (SHIPPED):** info-only edit of a posted mission (guests+phones, flight, luggage, reference, Driver &
@@ -490,21 +490,21 @@ founder registering the name/domain. **Not to be confused with PickUp Go** (a se
 Founder settled the full O7 policy: cancellation (both sides), no-show, the T-60 Business reclaim, re-pool pricing, and the
 future Driver→Driver hand-over. **Split: Phase 1 = the cancellation spine (build now); Phase 2 = the "copilote" community
 (later); disputes/mediation deferred but documented.** Fee *amounts* stay MANUAL to settle in beta, but the *rules* below
-are fixed. All fees are penalties owed to **PickUp-the-intermediary**, never a transport charge (agent position, Doc 01).
+are fixed. All fees are penalties owed to **Kavenue-the-intermediary**, never a transport charge (agent position, Doc 01).
 
 - **DRIVER cancel (voluntary) = ALWAYS 100% of the trip amount** — no early-notice reduction. Deliberately tough because
-  PickUp must be reliable for Businesses. The two escape valves (no fee): **hand the mission to a copilote** (Phase 2) or
+  Kavenue must be reliable for Businesses. The two escape valves (no fee): **hand the mission to a copilote** (Phase 2) or
   **the Business agrees to release** it back to the Pool. (A flight delay does NOT auto-waive the fee — the Driver's out is
   an escape valve, not an exception; whether a *documented* delay earns a protected release is an open sub-question.)
 - **BUSINESS cancel = free until 5h before pickup; then a per-hour ramp.** >5h = **0%**; at **T-5h (−300 min) = 50%**;
   then **+10% per hour to 100% at pickup** (−4h 60 · −3h 70 · −2h 80 · −1h 90 · 0h 100). Replaces the earlier week-based
-  draft in Doc 05 (Riviera/airport transfers are short-lead). PickUp's commission stays non-refundable.
+  draft in Doc 05 (Riviera/airport transfers are short-lead). Kavenue's commission stays non-refundable.
 - **NO-SHOW = Driver paid in full, like a completed mission.** Fires when the Driver is on-site (status **`arrived`**) and
   the Guest doesn't appear within the wait window: **1h airport · 20 min city/point-to-point.** The **Business is charged
-  the full agreed fare** (Driver fully paid, PickUp keeps commission); the Business settles with its own Guest. Deeper
+  the full agreed fare** (Driver fully paid, Kavenue keeps commission); the Business settles with its own Guest. Deeper
   mechanics (contact-attempt gate, evidence, whether the clock starts at scheduled time or flight landing) = defined later.
 - **T-60 Business reclaim (NOT a Business cancel).** ONLY when the assigned Driver **hasn't confirmed the Lock-in
-  notification AND is unreachable by phone**, PickUp **unlocks a reclaim button** (~T-60) so the Business takes the trip
+  notification AND is unreachable by phone**, Kavenue **unlocks a reclaim button** (~T-60) so the Business takes the trip
   back and **re-pools it as SPEED WIN** — penalty-free for the Business (the Driver flaked → Driver takes a reliability
   mark). The button is **gated to the non-confirmation state** so a Business can't use it to dodge a legit cancel fee.
 - **Re-pool pricing.** A re-pooled mission (Driver cancel · T-60 reclaim · released hand-back) re-enters the Pool as a
@@ -515,7 +515,7 @@ are fixed. All fees are penalties owed to **PickUp-the-intermediary**, never a t
   account**, becomes the Driver of record (invoices, gets paid, carries every obligation) exactly as if taken from the
   Pool. The original Driver keeps only a **"passed on" trace** in history. **Legally confirmed viable — and this transfer
   model is *cleaner* than classic sous-traitance** (see the legal note below + IDEAS.md). Mandatory guardrails: copilote is
-  an **active, verified, same-category** PickUp Driver (REVTC · carte pro · RC Pro · conforming vehicle — checked live at
+  an **active, verified, same-category** Kavenue Driver (REVTC · carte pro · RC Pro · conforming vehicle — checked live at
   transfer); accepts on their **own account** (no account-sharing / *location de compte*); **zero money flows through the
   original Driver**; **Business consents by default** via terms (explained in the tutorial); GDPR-minimised data transfer;
   full **audit trail** (accepting-Driver vs performing-Driver). Needs the community/registration layer first. **Data-model
@@ -524,10 +524,10 @@ are fixed. All fees are penalties owed to **PickUp-the-intermediary**, never a t
   right one. The risky version is *sous-traitance* (A stays the contractor, pays B, invoices the Business, carries B's
   liability → a "mini-principal" + URSSAF requalification traps). The founder's version is a **clean transfer**: A earns
   nothing and carries nothing, B is the fresh Driver of record on their own account → no reselling, no account-rental, and
-  PickUp stays the pure intermediary/agent (VAT position intact). Since 2026 *sous-traitance illicite* is a named REVTC
+  Kavenue stays the pure intermediary/agent (VAT position intact). Since 2026 *sous-traitance illicite* is a named REVTC
   offence, so the **credential gate is what keeps it legal.** Real precedent exists (Drivalty, iaDriver, and WAY-Partner —
   which credential-gates the pass — plus VTC cooperatives), so it's an established, buildable pattern.
-- **Disputes / mediation = deferred, documented.** No dispute state today; V1 stays email + PickUp mediates on the
+- **Disputes / mediation = deferred, documented.** No dispute state today; V1 stays email + Kavenue mediates on the
   timestamped trail (accept time · flight landing · contact log · proof of service), per Doc 05. Revisit deeper later.
 - **NEW — SPEED WIN reachability gate (decided, build later).** A SPEED WIN may only be accepted by a Driver who can
   **physically reach the pickup on time**: geolocate the Driver, compute the GPS ETA to pickup, and **block acceptance with
@@ -535,7 +535,7 @@ are fixed. All fees are penalties owed to **PickUp-the-intermediary**, never a t
   ±90-min `accept_mission` slot buffer. Captured in IDEAS.md + BACKLOG.
 - **Refinements (founder answers, 2026-07-13):**
   - **Business cancel is FREE while the trip is still `pooled`** (no Driver has committed). The fee only protects a
-    *committed* Driver, and PickUp's commission is taken at completion, so there is no cut to refund. The ramp applies
+    *committed* Driver, and Kavenue's commission is taken at completion, so there is no cut to refund. The ramp applies
     only once a Driver holds it (accepted/confirmed/en_route/arrived).
   - **The Business ramp is LINEAR — 5% every 30 min** (= +10%/hour, landing exactly on 50/60/70/80/90/100 at each whole
     hour; fairer in between).
@@ -706,6 +706,39 @@ glossary (Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN). The **do
 Kavenue domain) + the **Google Places** key restriction still wait on the founder registering the Kavenue domain
 (restrict the key once, after the DNS move). Legal (INPI/EUIPO trademark search classes 39/35/42) stays the founder's
 track — flag, don't gate ([[legal-not-mvp-blocker]]).
+
+### D51 — The Kavenue rename: what changed, and the six things that deliberately did NOT (2026-07-25)
+Executes [[d50]]. The rename is a **pure brand substitution — no behaviour change, no schema change, no new dependency.**
+51 files: user-facing copy, `app/layout.tsx` metadata + `appleWebApp.title`, `public/manifest.webmanifest`,
+`package.json`/`package-lock.json` (`kavenue-driver`), `README.md`, `.claude/launch.json`, all of `docs/` + `project/`,
+and **SQL comments only** in `docs/migrations/*.sql` (never a line of executable SQL — those migrations are already
+applied). Two files git-renamed with history preserved: `docs/PickUp_Phase0_Data_Spine.md` →
+`docs/Kavenue_Phase0_Data_Spine.md`, `docs/pickup_schema.sql` → `docs/kavenue_schema.sql`.
+
+**The decision that mattered was what NOT to rename.** "PickUp" the brand and "pickup" the transport term are the same
+token, so a blind sweep would have been destructive. Six categories were held back, each because renaming breaks something
+real:
+1. **Every `pickupbedriven.com` hostname** — the DNS move hasn't happened; renaming these breaks the live site.
+2. **`Phyrass-H/Pickup-marketplace`** — the actual git remote and the deploy-verification `gh api` path.
+3. **The `PickUp_project_dev` directory** — the session cwd and the Claude project config path. Founder-owned.
+4. **`PickUp Go`** (hard rule #3, a different product) and **La Poste's "Pickup" trademark** — renaming these makes the
+   sentences that explain *why we rebranded* into nonsense. Same for historical/rebrand prose in the logs and D44/D50.
+5. **The transport term** — `pickup_at`, `pickup_address`, `prefill_pickup`, `isAirportPickup`, `nextPickupIso`, the
+   "Pickup" column header, "pickup ⇄ drop-off". All DB columns and identifiers.
+6. **Two live-data couplings:** the `pickup-dx-collapsed` localStorage key (renaming silently resets every Dispatcher's
+   sidebar state for zero user benefit) and the `*@pickup.local` dev-login/seed identities — those strings address **real
+   Supabase auth rows**, so renaming the constant alone would break dev-login. Rename only alongside the DB rows.
+
+**Method (worth repeating for any wide sweep):** 7 parallel edit agents partitioned so no two touch the same file, under
+one explicit never-rename ruleset — then 4 adversarial verify lenses. The decisive check was **mechanical reversibility**:
+reverse every added line (Kavenue→PickUp) and diff it against the removed line — **0 mismatches over 209 changed lines**,
+which proves no collateral edit slipped in alongside the brand token. That is a far stronger guarantee than re-reading the
+diff. 23 findings → the real ones fixed; the largest was that `project/NEXT_SESSION.md` had been skipped entirely and still
+asserted the rename hadn't happened — the one file every new session reads first.
+
+**Verified:** `tsc` clean · `next build` green (24 routes) · 18 routes fetched in-browser vs the real Supabase DB with
+**0 "PickUp"** in rendered HTML (incl. the PWA manifest + both legal pages) · no console errors. French legal copy checked
+for élision — "Kavenue" is consonant-initial, so "de Kavenue" / "Rôle de Kavenue" are correct.
 
 ---
 

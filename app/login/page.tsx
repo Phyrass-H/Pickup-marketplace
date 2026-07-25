@@ -7,7 +7,7 @@ import { LoginForm } from "./login-form";
 // Server wrapper: route already-authenticated users onward (by role) instead of
 // showing them the sign-in form again, and pass any callback error to the form.
 // The `side` (driver vs dispatch) comes from the host so each subdomain's login
-// reads correctly (e.g. dispatch.* no longer says "PickUp Driver").
+// reads correctly (e.g. dispatch.* no longer says "Kavenue Driver").
 export default async function LoginPage({
   searchParams,
 }: {

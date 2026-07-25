@@ -1,7 +1,7 @@
 {
-  "name": "PickUp Driver",
-  "short_name": "PickUp",
-  "description": "PickUp — accept and run VTC missions.",
+  "name": "Kavenue Driver",
+  "short_name": "Kavenue",
+  "description": "Kavenue — accept and run VTC missions.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f6f7f9",

@@ -25,14 +25,14 @@ export function HelpLegalCard() {
           Support
         </a>
         <a
-          href="mailto:feedback@pickupbedriven.com?subject=PickUp%20feedback"
+          href="mailto:feedback@pickupbedriven.com?subject=Kavenue%20feedback"
           style={link}
         >
           Share feedback
         </a>
       </div>
       <p className="muted small" style={{ marginTop: 12 }}>
-        PickUp · {APP_VERSION}
+        Kavenue · {APP_VERSION}
       </p>
     </div>
   );

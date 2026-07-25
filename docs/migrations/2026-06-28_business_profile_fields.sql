@@ -19,7 +19,7 @@
 --   default_vehicle_category  matches the mission category values
 --   default_booking_notes   house default Guest instructions
 -- Billing:
---   billing_email           where PickUp invoices are sent (storable now; Stripe is deferred)
+--   billing_email           where Kavenue invoices are sent (storable now; Stripe is deferred)
 
 alter table business
   add column if not exists business_type           text,

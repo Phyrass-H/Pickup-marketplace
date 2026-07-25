@@ -1,4 +1,4 @@
-// PickUp vehicle catalog + classification (O5).
+// Kavenue vehicle catalog + classification (O5).
 //
 // Two-step fallback (founder's design): a vehicle's TIER is derived from its
 // make+model, not self-selected:

@@ -1,4 +1,4 @@
-# Phase 0 — PickUp · Data Spine
+# Phase 0 — Kavenue · Data Spine
 
 > Scope: the single structural reference for the build — entities, fields, enums, relationships, and the mission state machine. Everything in the Driver PWA and Dispatch dashboard maps back to this.
 > **Last updated:** 2026-06-19 — vehicle taxonomy (tier × body), cached trip ETA, base+radius Pool, SPEED-WIN-at-70%, save-as-draft. Reflects the applied additive migrations in `docs/migrations/` — see DECISIONS D17/D21/D22/D23.

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité · PickUp",
+  title: "Politique de confidentialité · Kavenue",
 };
 
 // DRAFT placeholder. Final RGPD/GDPR text must be validated with a lawyer before
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
     <main className="container" style={{ paddingTop: 28, paddingBottom: 48, maxWidth: 720 }}>
       <p className="small">
         <Link href="/" className="muted">
-          ← PickUp
+          ← Kavenue
         </Link>
       </p>
 
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
       </p>
 
       <h2>1. Responsable du traitement</h2>
-      <p>PickUp. Coordonnées et DPO à compléter.</p>
+      <p>Kavenue. Coordonnées et DPO à compléter.</p>
 
       <h2>2. Données collectées</h2>
       <p>
@@ -65,7 +65,7 @@ export default function PrivacyPage() {
       <h1>Privacy policy</h1>
 
       <h2>1. Data controller</h2>
-      <p>PickUp. Contact details and DPO to be completed.</p>
+      <p>Kavenue. Contact details and DPO to be completed.</p>
 
       <h2>2. Data we collect</h2>
       <p>
