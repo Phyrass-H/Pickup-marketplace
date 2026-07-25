@@ -12,6 +12,7 @@ import {
   Lock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
@@ -24,16 +25,34 @@ import {
   addressLine,
 } from "@/lib/format";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
+import {
+  parsePassengers,
+  parseGuestContacts,
+  zipGuestContacts,
+  type GuestPhone,
+} from "@/lib/passengers";
+import { buildAmendmentData, buildReleaseData } from "@/lib/mission-cards";
+import type { MissionStatus } from "@/lib/database.types";
+import { MissionRunView } from "@/components/mission-run-view";
 import { AcceptButton } from "./accept-button";
 
 export const dynamic = "force-dynamic";
 
-// Mission detail, pre-accept: "the Pool card, opened". It deliberately reuses the
-// S43 Pool-card shape — price + when → mission type / SPEED WIN → route rail →
-// trip facts — so a Driver recognises the same object they just tapped. What the
-// card had to compress opens up here: every stop shows its full address instead of
-// a "+N", and the service requests get their own rows. The page is free to scroll;
-// what's still hidden (Guest, name board, private message) is named, not teased.
+// The statuses that mean "this trip is live in My Rides" (as opposed to archived in
+// History). An owned mission outside this set is terminal — its detail is read-only.
+const ACTIVE_STATUSES: MissionStatus[] = [
+  "accepted",
+  "confirmed",
+  "en_route",
+  "arrived",
+  "on_board",
+];
+
+// Mission detail = "the mission, opened". For a Driver's OWN trip it's the run view
+// (state, route, unlocked contacts, and every action — advance / waiting meter /
+// no-show / cancel) with a back link to My Rides. For a pooled trip it's the
+// pre-accept view ("the Pool card, opened") ending in Accept. The two never share a
+// screen, so the header can lead with state on one and price on the other.
 export default async function MissionDetailPage({
   params,
 }: {
@@ -52,6 +71,117 @@ export default async function MissionDetailPage({
   if (!mission) notFound();
 
   const isMine = !!driver && mission.driver_id === driver.id;
+
+  // ---- The Driver's own trip: the dedicated run page ----------------------
+  if (isMine && driver) {
+    const isActive = ACTIVE_STATUSES.includes(mission.status);
+    const backHref = isActive ? "/rides" : "/rides/history";
+    const backLabel = isActive ? "← My Rides" : "← History";
+
+    // Reveal the contact + shared Guest phones via the service role (a Driver can't
+    // read the Dispatcher / mission_guest_contact rows under RLS) — gated to THIS
+    // mission, which the RLS query above already proved is the Driver's.
+    const admin = createAdminClient();
+    const [{ data: disp }, { data: biz }, { data: gc }] = await Promise.all([
+      admin.from("dispatcher").select("name, phone").eq("id", mission.dispatcher_id).maybeSingle(),
+      admin.from("business").select("name").eq("id", mission.business_id).maybeSingle(),
+      admin
+        .from("mission_guest_contact")
+        .select("contacts")
+        .eq("mission_id", mission.id)
+        .maybeSingle(),
+    ]);
+
+    const guestPhones: GuestPhone[] = zipGuestContacts(
+      parsePassengers(mission.passenger_names),
+      parseGuestContacts(gc?.contacts),
+    ).filter((g) => g.shared);
+
+    // Arrival attestation: the latest 'arrived' status_event is the precondition to
+    // report a no-show (and the basis of the 5-min on-site floor). NOT the clock
+    // origin — the courtesy wait runs from when the Guest was due.
+    let arrivedAtIso: string | null = null;
+    let arrivedErr: string | null = null;
+    if (mission.status === "arrived") {
+      const { data: evs, error: evErr } = await supabase
+        .from("status_event")
+        .select("created_at")
+        .eq("status", "arrived")
+        .eq("mission_id", mission.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      // Don't swallow this: a failed read leaves arrivedAtIso null, which hides the
+      // whole (money-bearing) no-show control with no explanation. Surface it instead.
+      if (evErr) arrivedErr = evErr.message;
+      arrivedAtIso = evs?.[0]?.created_at ?? null;
+    }
+
+    // Pending "respond to a change" cards. One proposed of each per mission (the
+    // Business supersedes on re-send). Both are answerable ONLY while accepted/confirmed
+    // — respond_to_amendment / respond_to_release reject any later status, and nothing
+    // supersedes a stale 'proposed' row on the ordinary drive-to-complete path, so an
+    // ungated card would keep offering a live Accept/Decline (that errors on tap) right
+    // through to a completed trip opened read-only from History.
+    const [{ data: amd }, { data: rel }, { data: myMissions }] = await Promise.all([
+      supabase
+        .from("mission_amendment")
+        .select("*")
+        .eq("mission_id", mission.id)
+        .eq("status", "proposed")
+        .maybeSingle(),
+      supabase
+        .from("mission_release")
+        .select("*")
+        .eq("mission_id", mission.id)
+        .eq("status", "proposed")
+        .maybeSingle(),
+      // The Driver's other live trips — used only for the amendment slot heads-up.
+      supabase
+        .from("mission")
+        .select("*")
+        .eq("driver_id", driver.id)
+        .in("status", ACTIVE_STATUSES)
+        .order("pickup_at", { ascending: true }),
+    ]);
+
+    const answerable = mission.status === "accepted" || mission.status === "confirmed";
+    const amendment =
+      amd && answerable
+        ? buildAmendmentData(amd, mission, myMissions ?? [], biz?.name ?? null)
+        : null;
+    const release =
+      rel && answerable ? buildReleaseData(rel, mission, biz?.name ?? null) : null;
+
+    return (
+      <>
+        <p className="small">
+          <Link href={backHref} className="muted">
+            {backLabel}
+          </Link>
+        </p>
+
+        {arrivedErr && (
+          <div className="notice error">
+            Couldn’t load your arrival time: {arrivedErr}. The no-show report may be
+            unavailable — reload, or call the Business.
+          </div>
+        )}
+
+        <MissionRunView
+          mission={mission}
+          businessName={biz?.name ?? null}
+          dispatcherName={disp?.name ?? null}
+          dispatcherPhone={disp?.phone ?? null}
+          guestPhones={guestPhones}
+          arrivedAtIso={arrivedAtIso}
+          amendment={amendment}
+          release={release}
+        />
+      </>
+    );
+  }
+
+  // ---- Pooled (or no longer available): the pre-accept view ---------------
   const isPooled = mission.status === "pooled";
   const isHourly = mission.mission_type === "hourly";
   const fare = currentFare(mission);
@@ -219,10 +349,6 @@ export default async function MissionDetailPage({
 
       {isPooled ? (
         <AcceptButton missionId={mission.id} />
-      ) : isMine ? (
-        <Link href="/rides" className="dcta dcta--ghost">
-          You’ve accepted this — open My Rides
-        </Link>
       ) : (
         <div className="notice warn">
           This mission is no longer available in the Pool.

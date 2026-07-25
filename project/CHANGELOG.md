@@ -6,6 +6,18 @@
 ---
 
 ## 25 July 2026
+- **My Rides is a clean list now — and each trip opens on its own page.** Your accepted trips used to pile up in
+  one long scroll with every button — start, complete, cancel, the waiting meter — crammed under each card, so your
+  live trip's controls sat squeezed between other trips above and below. Confusing. Now **My Rides is just a tidy
+  list, like the Pool**: one tap-through card per trip showing where it stands, the route, and the fare — nothing
+  else. **Tap a trip and it opens on its own page**, where all the buttons live, with a **"← My Rides" link** to get
+  back. One trip, one screen.
+- **Finished trips move to History.** My Rides only shows what's live or coming up now; completed trips go to the
+  History page, so the list stays short and current.
+- **The no-show reminder got shorter.** The note before reporting a no-show is now one line — "Make sure you've
+  tried everything to reach the Guest — a call, the full wait. Then you're clear to report." — instead of a
+  paragraph, and it no longer talks about bags. The report button just shows the amount, without the "you're paid"
+  wording.
 - **The Driver app's two remaining screens got the new look.** In July we redesigned the Pool — the list of trips a
   Driver can take. Now the other two catch up, so the whole Driver app finally looks like one product. **Tapping a
   Pool trip** opens what is recognisably the same card, just opened up: the price and time at the top, the badges,

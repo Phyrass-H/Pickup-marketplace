@@ -307,10 +307,11 @@ the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate
 **★ SESSION-46 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4) — this is a suggestion, not a mandate.**
 The Driver app's three main screens are redesigned (Pool S43 · pre-accept + accepted S45). What's left on that track is
 small and finishable in one session; the D25 preview loop applies to every item.
-1. **Close the S45 verification gap FIRST (cheap, do it before anything else).** The `arrived` + **waiting-meter**
-   (`.dmeter`) and the **no-show confirm** visuals were never seen against real data — no trip was in that state. Drive
-   a demo mission to `arrived` locally (dev-login as Driver + Business, advance the status) and eyeball the amber meter,
-   the capped state, and the confirm nudge. Logic is unchanged from D48, so this is a *look*, not a rebuild.
+1. **✅ S45 verification gap — CLOSED (S46, 2026-07-25).** The `arrived` waiting-meter (`.dmeter`), its capped state,
+   and the no-show confirm nudge were all verified live vs the real DB (mobile 375×812) by seeding 3 tagged `arrived`
+   test missions with past `pickup_at` under a dedicated dev driver. Amber running meter (city €40 / airport €60 cap,
+   €1/min), neutral "Waiting closed" capped state, and the "The pro move" confirm with the paid-sum button all render
+   correctly, no console errors. No code change warranted (a *look*, not a rebuild). Test missions removed after.
 2. **Pool empty + loading states** — the only un-designed part of the Pool screen (S43 left them).
 3. **The Earnings tab** — today an honest "coming soon" placeholder (S43). Needs its own D25 pass, and a decision on
    what it can even show before payments exist (completed trips + fares + waiting fees are all in the DB already).
@@ -336,8 +337,9 @@ a `Service` card of `.dfact` rows + `.dchip`s, a `.dlock` reveal row, a plain fu
 bar, no fare beside it), and the My Rides card leads with **state not price** (`.dpill` + a `.dprog` segment bar with a
 plain-words caption, stop progress on the rail, `.dcall` tap-to-call chips, a `.dnote` prep box, fare in the foot).
 **One filled button per screen** — no-show + cancel dropped to `.dquiet` text actions; `Complete ride` is finally green.
-No schema, no behaviour change. **⚑ Not verified live:** the `arrived`/waiting-meter + no-show-confirm visuals (no trip
-was in that state) — logic is unchanged, but give `.dmeter` a look when a real trip reaches `arrived`.
+No schema, no behaviour change. **✅ Now verified live (S46, 2026-07-25):** the `arrived`/waiting-meter (`.dmeter`) +
+no-show-confirm visuals were checked against real data — amber running meter, neutral capped state, and the confirm
+nudge all render correctly, no console errors.
 **Founder preference recorded:** these pages **scroll by design** — breathing room beats fitting one viewport.
 
 <details><summary>Original S45 brief (kept for reference)</summary>

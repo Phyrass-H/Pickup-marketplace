@@ -2373,3 +2373,19 @@ textarea::placeholder {
 .dquiet--warn { color: var(--tone-warn-fg); }
 .dquiet--danger { color: var(--tone-danger-fg); }
 .dstack { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+
+/* ---- My Rides list: the whole card is a tap target into /missions/[id] ---- */
+.ridecard { display: block; text-decoration: none; color: inherit; transition: border-color 0.12s ease; }
+.ridecard:hover { border-color: var(--border-strong); }
+.ridecard:active { background: var(--surface-2); }
+.ridecard__chev { color: var(--text-faint); flex: none; align-self: center; }
+.ridecard__flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tone-warn-fg);
+}
+.ridecard__flag svg { width: 14px; height: 14px; flex: none; }

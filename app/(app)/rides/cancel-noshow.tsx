@@ -284,9 +284,7 @@ export function NoShowControl({
           <div style={{ background: "var(--tone-warn-bg)", borderRadius: 10, padding: 12 }}>
             <div style={{ color: "var(--tone-warn-fg)", fontWeight: 600, fontSize: 13 }}>The pro move</div>
             <div style={{ color: "var(--tone-warn-fg)", fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
-              A quick call or a few more minutes goes a long way — flights and bags run late, and Businesses remember
-              Drivers who go the extra mile. If you’ve waited the full window and tried to reach them, you’re clear to
-              report.
+              Make sure you’ve tried everything to reach the Guest — a call, the full wait. Then you’re clear to report.
             </div>
           </div>
           {/* At this point reporting IS the action — so it earns the one filled button. */}
@@ -300,8 +298,8 @@ export function NoShowControl({
             {pending
               ? "…"
               : waiting.fee > 0
-                ? `Report the no-show — you’re paid ${formatMoney(fare)} + ${formatMoney(waiting.fee)} waiting`
-                : `Report the no-show — you’re paid ${formatMoney(fare)}`}
+                ? `Report the no-show — ${formatMoney(fare)} + ${formatMoney(waiting.fee)} waiting`
+                : `Report the no-show — ${formatMoney(fare)}`}
           </button>
           <button
             type="button"

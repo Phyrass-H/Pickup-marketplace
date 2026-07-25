@@ -5,6 +5,70 @@
 
 ---
 
+## 2026-07-25 — Session 46 — My Rides restructure (tap-through list + dedicated mission page) + waiting-meter verification
+
+**Part B — My Rides restructure (founder-approved, D25 preview signed off).** The complaint: `/rides` dumped every
+active/completed trip in one scroll AND hung each mission's action buttons (Guest on board, the waiting meter, cancel,
+amendment/release cards) inline under its card — so a live mission's controls sat sandwiched between unrelated rides.
+The fix, per the approved 3-frame preview:
+- **`/rides` is now a clean tap-through list** — one `<Link>` card per trip (state pill · when · progress · route ·
+  business+fare · chevron), **current + upcoming only** (`accepted/confirmed/en_route/arrived/on_board`; completed &
+  cancelled dropped to History). A small amber flag ("A change/release is waiting for your answer") when a
+  `mission_amendment`/`mission_release` is `proposed`. No action buttons in the list.
+- **`/missions/[id]` is the single "mission, opened" page, now branching by ownership.** OWNED (isMine) → the full run
+  view (new `components/mission-run-view.tsx`, ported verbatim from the old inline rides card + `.dstack` actions) with
+  a **`← My Rides`** back link and every action (StatusControl · NoShowControl · DriverCancel · Amendment/Release
+  cards). OWNED + terminal (completed/cancelled) → the same view renders read-only (no executable step → no buttons) with
+  a **`← History`** back link. NOT-mine → the unchanged pre-accept view (fare-first + Accept, `← Back to Pool`) or the
+  "no longer available" notice.
+- **Contact reveal moved from the batch list into the per-mission page**, still gated strictly to `isMine` (dispatcher/
+  business/shared-guest phones via the service role, only inside the `isMine` branch; the list reveals business NAMES
+  only). Amendment/release builders extracted to `lib/mission-cards.ts`; `statusPill`/`progressCaption` exported from
+  `mission-run-view.tsx` so the list and the run view can't drift.
+- **Copy (founder):** the no-show "The pro move" nudge cut to one generic line ("Make sure you've tried everything to
+  reach the Guest — a call, the full wait. Then you're clear to report." — no more "bags"); the filled report button
+  drops "you're paid" ("Report the no-show — €X + €Y waiting").
+- Files: `app/(app)/rides/page.tsx` (rewrite → list), `app/(app)/missions/[id]/page.tsx` (branch + run data load),
+  `components/mission-run-view.tsx` (new), `lib/mission-cards.ts` (new), `app/(app)/rides/cancel-noshow.tsx` (copy),
+  `app/globals.css` (`.ridecard*`). No schema, no migration, no server-action/RPC change.
+- **Verified live** (localhost, real DB, mobile) on a seeded 6-mission mix: list shows the 5 active as tap-through cards
+  (completed correctly absent); the airport Arrived opens with `← My Rides` + meter + new copy + the "€95 + €23 waiting"
+  button; completed opens read-only with `← History`; a seeded pending release shows the list flag AND the accept/decline
+  card on the detail page; a pooled trip still shows the pre-accept Accept view. `tsc` clean; no console errors. 3-lens
+  adversarial review (privacy-gating · parity · branching).
+
+---
+
+## 2026-07-25 — Session 46 (Part A) — Verified the S45 waiting-meter visuals against live data (no code change)
+
+**Scope (founder-approved, item #1 only).** Close the one gap S45 left open: the `arrived` waiting-meter (`.dmeter`),
+its capped state, and the no-show confirm nudge were never seen against real data (no trip was in that state when S45
+shipped). A *look*, not a rebuild — D48 logic is unchanged. No code, no schema, no migration.
+
+**Method.** The UI can't post a past-pickup mission (the form, plus the D48 `pickup_at` freeze trigger — which is
+`before update` only), so — per the S42 test-data precedent — a scratchpad service-role script seeded 3 tagged
+(`reference = "S46-VERIFY"`) `arrived` missions with past `pickup_at` + a matching `arrived` status_event, under a
+dedicated dev driver (`s46.driver@pickup.local`) so `/rides` stayed clean of the demo driver's ~20 legacy trips.
+Dev-login as that driver → `/rides`, screenshotted each state, then deleted the 3 missions (DB restored, tree clean).
+
+**Verified live (localhost, real Supabase DB), mobile 375×812:**
+- **Running meter (amber `.dmeter`)** — city + airport variants. Warm amber panel, `Paid waiting · N min`, live-ticking
+  fee, amber progress bar, note `1,00 € per minute started · stops at 40,00 € / 60,00 €`. Matches D48 exactly (€1/min
+  started, courtesy 20/60 min, cap €40 city / €60 airport).
+- **Capped meter (`.dmeter--capped`)** — a neutral "closed" look (deliberately NOT amber): `Waiting closed · 40 min ·
+  40,00 €`, full bar, note "Stopped at the 40,00 € ceiling… report when you're ready." Good contrast: amber = money
+  accruing, neutral = money stopped.
+- **Confirm nudge** — tap "Report a no-show" → "The pro move" reassurance box + the one filled button `Report the
+  no-show — you're paid 95,00 € + 24,00 € waiting` (fare + live waiting fee summed, the `waiting.fee > 0` branch) +
+  quiet "Keep waiting". One filled button per card ("Guest on board"); no-show + cancel stay `.dquiet`.
+- No console errors; the meter renders + ticks correctly, no visual defects.
+
+**Outcome.** S45's flagged "not verified live" gap is CLOSED — no code change warranted. Inert test identities
+(`s46.driver` / `s46.verify` dev auth + their driver/business rows) left in the DB like the existing seed identities;
+the 3 test missions were removed.
+
+---
+
 ## 2026-07-25 — Session 45 — the two remaining Driver cards (pre-accept + accepted), redesigned
 
 **Scope.** Carry the S43 Pool-card design language onto the last two un-redesigned Driver screens. No schema, no
