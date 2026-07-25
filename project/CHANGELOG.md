@@ -6,6 +6,11 @@
 ---
 
 ## 25 July 2026
+- **Accepting a trip now works right away.** Before, if you grabbed a trip more than 3 hours ahead, it sat in a
+  half-accepted state — no "Start" button, and a confusing "Lock-in at T-180" note — and nothing ever un-stuck it.
+  Now accepting a trip confirms it on the spot: the run controls are there immediately. Two small tidy-ups on the
+  pre-accept card went with it — the redundant city label is gone from the footer, and the "unlock once you accept"
+  line is now one short sentence ("Private details unlock once you accept.").
 - **The Pool's quiet moments got designed.** When there are no trips for you yet, the Pool no longer shows a bare
   line of grey text — it's a calm little state that tells you *why* it's empty ("New Business · Sedan trips within
   15 km of Nice land here…"), so you know it's working, not broken. If you haven't set your driving area yet, it

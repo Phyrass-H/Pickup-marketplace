@@ -5,7 +5,28 @@
 
 ---
 
-## 2026-07-25 — Session 46 — My Rides restructure + Pool empty/loading states + waiting-meter verification
+## 2026-07-25 — Session 46 — My Rides restructure + Pool empty/loading states + pre-accept polish + waiting-meter verification
+
+**Part D — pre-accept card polish + Option A: accept always confirms (founder).** Three founder-flagged items on the
+pre-accept / accepted Driver cards.
+1. **Removed the redundant zone** from the pre-accept card footer (`missions/[id]/page.tsx`) — the city is already in
+   the pickup address, and the Pool card never showed it. Footer now reads `distance · duration · Business · Sedan`,
+   matching the Pool card.
+2. **Shortened the unlock line** from "Guest name, the name board and any private message unlock once you accept." to
+   **"Private details unlock once you accept."**
+3. **Dropped the Lock-in time gate on accept (Option A).** The old `accept_mission` auto-confirmed only when pickup was
+   <3h away, else left the trip `accepted` awaiting Lock-in at T-180 — but nothing flips it at T-180 (that needs the
+   deferred cron), so a trip accepted 3h+ out sat in `accepted` limbo with no controls and a dead-end "awaiting readiness
+   confirmation (Lock-in at T-180)" message. Founder chose: **accept ALWAYS confirms immediately.** Migration
+   `docs/migrations/2026-07-25_accept_always_confirms.sql` (create-or-replace `accept_mission`, always `confirmed` +
+   `confirmed_at`, plus a one-time backfill of existing `accepted` → `confirmed`). App: **removed the T-180 message**
+   from `mission-run-view.tsx` and the dead "Awaiting Lock-in" list caption in `rides/page.tsx`. Done via the RPC (not by
+   touching the shared `mission-flow` helpers, which the Dispatch `trip-row` also uses).
+   - **⚠️ Needs the founder to run the migration** (Claude's keys can't run DDL). Deploy sequencing: run the migration
+     first, then push — so no trip is briefly left in `accepted` limbo between the code deploy and the RPC change.
+   - **Verified live (localhost, real DB):** footer zone gone; unlock line shortened; a `confirmed` trip shows
+     "Start — I'm en route"; an `accepted` trip no longer shows the T-180 message (its controls return once the migration
+     backfills it to `confirmed`). `tsc` clean.
 
 **Part C — Pool empty + loading states (founder-approved, D25 preview signed off).** The un-designed parts S43 left.
 - **New `app/(app)/pool/loading.tsx`** — a route-level Suspense fallback: the `pool-head` shell + three `.pcard--skel`

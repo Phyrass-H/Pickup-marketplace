@@ -92,10 +92,7 @@ export default async function RidesPage() {
         const { tone, Icon: PillIcon } = statusPill(m);
         const segments = progressSegments(stops.length);
         const done = progressDone(m.status, stops.length, stopsReached);
-        const caption =
-          m.status === "accepted"
-            ? "Awaiting Lock-in"
-            : progressCaption(m.status, stops.length, stopsReached);
+        const caption = progressCaption(m.status, stops.length, stopsReached);
         const flag = pending.get(m.id);
 
         return (

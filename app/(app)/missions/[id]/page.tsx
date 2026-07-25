@@ -287,7 +287,6 @@ export default async function MissionDetailPage({
               <Car size={13} aria-hidden="true" />
               {vehicle}
             </span>
-            {mission.zone && <span className="pcard__veh">{mission.zone}</span>}
           </span>
         </div>
       </div>
@@ -343,7 +342,7 @@ export default async function MissionDetailPage({
       {isPooled && (
         <p className="dlock">
           <Lock size={15} strokeWidth={1.75} aria-hidden="true" />
-          <span>Guest name, the name board and any private message unlock once you accept.</span>
+          <span>Private details unlock once you accept.</span>
         </p>
       )}
 

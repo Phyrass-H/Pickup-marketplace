@@ -278,12 +278,6 @@ export function MissionRunView({
             </div>
           )}
 
-          {m.status === "accepted" && (
-            <p className="muted small" style={{ marginTop: 14, marginBottom: 0 }}>
-              Awaiting readiness confirmation (Lock-in at T-180). Trip controls
-              appear once confirmed.
-            </p>
-          )}
         </div>
 
         <div className="pcard__foot">
