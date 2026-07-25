@@ -304,7 +304,21 @@ Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a l
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — do these two, in this order):
+**★ SESSION-46 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4) — this is a suggestion, not a mandate.**
+The Driver app's three main screens are redesigned (Pool S43 · pre-accept + accepted S45). What's left on that track is
+small and finishable in one session; the D25 preview loop applies to every item.
+1. **Close the S45 verification gap FIRST (cheap, do it before anything else).** The `arrived` + **waiting-meter**
+   (`.dmeter`) and the **no-show confirm** visuals were never seen against real data — no trip was in that state. Drive
+   a demo mission to `arrived` locally (dev-login as Driver + Business, advance the status) and eyeball the amber meter,
+   the capped state, and the confirm nudge. Logic is unchanged from D48, so this is a *look*, not a rebuild.
+2. **Pool empty + loading states** — the only un-designed part of the Pool screen (S43 left them).
+3. **The Earnings tab** — today an honest "coming soon" placeholder (S43). Needs its own D25 pass, and a decision on
+   what it can even show before payments exist (completed trips + fares + waiting fees are all in the DB already).
+4. **The discreet-vehicle keep/drop call** (parked since S43): the muted "Business · Se…" footer note on the Pool card —
+   keep it or drop it as redundant (it's the Driver's own car).
+5. Then the non-Driver items below (**guidance Tier-2 tooltips**, the **saved-addresses book**).
+
+RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — ★1 and ★2 are now both SHIPPED):
 
 **★ 1. ✅ RENAME PickUp → `Kavenue` — SHIPPED (S44, [[d51]]).** Done across app copy, spec docs, `project/`, package name,
 PWA manifest, README and the Dispatch topbar wordmark; the two brand-named doc files were git-renamed to
