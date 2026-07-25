@@ -6,6 +6,28 @@
 ---
 
 ## 25 July 2026
+- **The Driver app's two remaining screens got the new look.** In July we redesigned the Pool — the list of trips a
+  Driver can take. Now the other two catch up, so the whole Driver app finally looks like one product. **Tapping a
+  Pool trip** opens what is recognisably the same card, just opened up: the price and time at the top, the badges,
+  and the route — except every stop is now spelled out in full instead of being folded into a "+2". Underneath, a
+  clean **Service** panel (passengers, bags, flight) and small grey tags for the things the Business asked for
+  (meet & greet, child seat, dress code, languages). A quiet locked line explains what's still hidden — the Guest's
+  name, the name board, the private message — and why: those unlock the moment you accept. The **Accept mission**
+  button sits at the bottom, on its own, with nothing competing with it.
+- **The trip you've already accepted is now a working screen, not a list entry.** Once a trip is yours, the price
+  stops being the headline — you know what you're earning — so the top of the card now shows **where you are in the
+  trip**: a status badge, a progress bar, and a line in plain words ("Not started", "On the way", "Waiting for the
+  Guest", "On board · 1/2 stops"). The price moved down to the bottom corner. Phone numbers became **big tap-to-call
+  buttons** for the Guest and the Dispatcher instead of small rows of text — you can hit them without looking. The
+  name board and the Business's private message sit together in their own little box, so you can check what to have
+  ready in one glance. Stops now tick off **on the route line itself** as you reach them.
+- **One button that matters, per screen.** Whatever the next step is — "Start — I'm en route", "Guest on board",
+  "Complete ride" — that's the only filled-in button on screen. "Report a no-show" and "Cancel this trip" are still
+  right there, but as quiet text underneath, so a tired thumb doesn't hit them by mistake. (Reporting a no-show
+  still asks you to confirm, and that confirmation is still a big amber button — at that point it *is* the action.)
+  Small fix along the way: **"Complete ride" is finally green** instead of navy, the way it was always meant to be.
+- **The waiting meter didn't change — it just got tidier.** The courtesy wait, the €1 per minute after it, the €40
+  city / €60 airport stop point: all identical. It just looks like the rest of the app now.
 - **The product is now called Kavenue, everywhere in the app and the docs.** The old "PickUp" name is gone from every
   screen a Business or a Driver can see — the Dispatch header now reads **Kavenue Dispatch**, the sign-in pages, the
   welcome screen, the Settings pages, the cancellation and no-show wording, and both legal pages (French and English) all

@@ -12,10 +12,11 @@ function shortStop(address: string): string {
   return address.split(",")[0]?.trim() || address;
 }
 
-// The Driver's "advance the trip" button. Normally it shows the next status step;
-// when the Guest is on board and stops remain, it becomes "Reached — <stop>" (one
-// tap per stop) before finally offering "Complete ride". On tap it records the
-// change and refreshes (the Business sees it within seconds).
+// The Driver's "advance the trip" button — the ONE filled action on the screen.
+// Normally it shows the next status step; when the Guest is on board and stops
+// remain, it becomes "Reached — <stop>" (one tap per stop) before finally offering
+// "Complete ride" (green). On tap it records the change and refreshes (the Business
+// sees it within seconds).
 export function StatusControl({
   missionId,
   status,
@@ -58,12 +59,7 @@ export function StatusControl({
   return (
     <div className="stack" style={{ marginTop: 12 }}>
       {error && <div className="notice error">{error}</div>}
-      <button
-        className={isComplete ? "btn success-btn" : "btn"}
-        onClick={go}
-        disabled={pending}
-        style={isComplete ? { background: "var(--success)" } : undefined}
-      >
+      <button className={isComplete ? "dcta dcta--done" : "dcta"} onClick={go} disabled={pending}>
         {pending ? "…" : label}
       </button>
     </div>

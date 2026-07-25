@@ -742,6 +742,36 @@ for élision — "Kavenue" is consonant-initial, so "de Kavenue" / "Rôle de Kav
 
 ---
 
+### D52 — The Driver detail + accepted cards REUSE the Pool card's classes, and carry one filled button (2026-07-25)
+Completes the Driver redesign started in [[d49]] (S43 Pool card). Three choices worth recording:
+
+**1. Reuse, don't re-cut.** `.pcard__*`, `.pbadge*` and `.proute*` are unnested selectors, so the two detail screens
+render out of the *same* CSS the Pool card uses; only a roomier container (`.dcard`) and genuinely new pieces
+(`.dfact`, `.dpill`, `.dprog`, `.dcall`, `.dnote`, `.dmeter`, `.dcta`, `.dquiet`) were added. **Why:** an opened
+mission must read as the same *object* as its Pool card — a second, parallel card vocabulary would drift within a
+session or two, which is exactly how the codebase ended up with three disjoint systems (`.card`/`.kv`, `.pcard`,
+`.amc*`). The trade: `.pcard__*` is no longer private to `components/mission-card.tsx`, so changing it now moves
+three screens — that's the point, but it must be done deliberately.
+
+**2. The accepted card leads with STATE, not price.** Pre-accept, the fare is the decision, so it's the headline.
+Post-accept the fare is settled and the Driver's question is "what do I do next / who do I call" — so the status
+pill, the progress bar and the route lead, and the fare drops to the card foot. **Why:** the same data, ranked by
+what the screen is *for*. This is why the two cards deliberately differ despite sharing a vocabulary.
+
+**3. Exactly one filled button per screen; escape hatches go quiet.** The next status step is the only filled CTA;
+"Report a no-show" and "Cancel this trip" become `.dquiet` text actions. **Why:** they're rare, consequential and
+one-tap-from-money — a filled amber no-show button sitting beside the primary action invited a mis-tap on a phone
+used one-handed at a kerb. The no-show *confirm* step keeps a filled amber button, because by then it is the action
+and the "be sure" nudge has already been read. Also fixes `success-btn` falling through to navy: **Complete ride is
+green** ([[founder-design-taste]] — hierarchy from restraint).
+
+**Founder notes that shaped it (D25 preview, v1):** drop the fare beside the Accept CTA (it was in a sticky bar —
+the whole sticky bar went with it); and give the accepted card real breathing room — *"the screen does not have to
+fit in a fixed screen… it always needs to be easy to read fast and comfortably"*, so these pages scroll by design.
+
+**Not verified live:** the `arrived`/waiting-meter and no-show-confirm visuals (no trip in that state to hand).
+Logic unchanged; only classes moved.
+
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:
 - Commission split exact numbers (~12.5% Business / ~10% Driver, teaser).

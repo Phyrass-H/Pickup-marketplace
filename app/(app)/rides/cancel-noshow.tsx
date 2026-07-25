@@ -38,28 +38,14 @@ export function DriverCancel({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          marginTop: 12,
-          width: "100%",
-          background: "transparent",
-          color: "var(--tone-danger-fg)",
-          border: "none",
-          padding: 8,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
+      <button type="button" className="dquiet dquiet--danger" onClick={() => setOpen(true)}>
         Cancel this trip
       </button>
     );
   }
 
   return (
-    <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
+    <div className="dcard">
       <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>Can’t do this trip?</div>
       <div className="muted small" style={{ marginTop: 4 }}>
         A Driver is a pro — try to keep it covered before you cancel.
@@ -93,8 +79,9 @@ export function DriverCancel({
           <div className="muted small" style={{ marginTop: 4 }}>
             If they agree, they’ll send a release you accept here — no fee, no mark. Call to arrange it.
           </div>
-          <a href={`tel:${businessPhone}`} className="btn" style={{ marginTop: 10, display: "block", textAlign: "center" }}>
-            <Phone size={15} aria-hidden /> Call {businessName ?? "the Business"}
+          <a href={`tel:${businessPhone}`} className="dcta dcta--ghost" style={{ marginTop: 10 }}>
+            <Phone size={15} strokeWidth={1.75} aria-hidden="true" /> Call{" "}
+            {businessName ?? "the Business"}
           </a>
         </div>
       )}
@@ -128,30 +115,14 @@ export function DriverCancel({
 
       <button
         type="button"
+        className="dcta"
         onClick={cancel}
         disabled={pending}
-        style={{
-          width: "100%",
-          marginTop: 10,
-          background: "var(--tone-danger-fg)",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          padding: 11,
-          fontSize: 14,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
+        style={{ marginTop: 10, background: "var(--tone-danger-fg)" }}
       >
         {pending ? "…" : `Cancel and pay ${formatMoney(fare)}`}
       </button>
-      <button
-        type="button"
-        onClick={() => setOpen(false)}
-        disabled={pending}
-        className="muted"
-        style={{ width: "100%", marginTop: 8, background: "transparent", border: "none", padding: 6, fontSize: 13, cursor: "pointer" }}
-      >
+      <button type="button" className="dquiet" onClick={() => setOpen(false)} disabled={pending}>
         Keep the trip
       </button>
     </div>
@@ -213,14 +184,7 @@ export function NoShowControl({
   }
 
   if (now === null) {
-    return (
-      <div
-        className="muted small"
-        style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 12, padding: 12 }}
-      >
-        Waiting for the Guest…
-      </div>
-    );
+    return <div className="dcard muted small">Waiting for the Guest…</div>;
   }
 
   const elapsed = now >= windowEnds;
@@ -249,17 +213,18 @@ export function NoShowControl({
   };
 
   return (
-    <div style={{ marginTop: 12, border: "0.5px solid var(--border)", borderRadius: 12, padding: 14 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span className="muted small">
-          <Clock size={14} aria-hidden />{" "}
+    <div>
+      {/* Where the courtesy wait stands — a fact row, not a headline. */}
+      <div className="dfact">
+        <span className="dfact__l">
+          <Clock size={16} strokeWidth={1.75} aria-hidden="true" />
           {waitElapsed ? "Courtesy wait used" : `Courtesy wait (${waitMinutes} min)`}
         </span>
         <span
+          className="dfact__v"
           style={{
-            fontWeight: 600,
             fontVariantNumeric: "tabular-nums",
-            color: waitElapsed ? "var(--success)" : "var(--text)",
+            color: waitElapsed ? "var(--success)" : undefined,
           }}
         >
           {waitElapsed ? "Elapsed" : notStarted ? `Starts ${dueLabel}` : `${countdown} left`}
@@ -270,70 +235,31 @@ export function NoShowControl({
           and the Driver is paid it. The meter freezes at the ceiling; the trip does NOT
           end there (the Driver may keep waiting, unpaid, and reports when ready). */}
       {waiting && waitElapsed && (
-        <div
-          style={{
-            background: waiting.capped ? "var(--tone-neutral-bg)" : "var(--tone-warn-bg)",
-            borderRadius: 10,
-            padding: 12,
-            marginTop: 10,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
-              }}
-            >
+        <div className={waiting.capped ? "dmeter dmeter--capped" : "dmeter"}>
+          <div className="dmeter__head">
+            <span className="dmeter__label">
+              <Clock size={14} strokeWidth={1.75} aria-hidden="true" />
               {waiting.capped ? "Waiting closed" : "Paid waiting"} · {waiting.minutes} min
             </span>
-            <span
-              style={{
-                fontSize: 19,
-                fontWeight: 700,
-                fontVariantNumeric: "tabular-nums",
-                color: waiting.capped ? "var(--text)" : "var(--tone-warn-fg)",
-              }}
-            >
-              {formatMoney(waiting.fee)}
-            </span>
+            <span className="dmeter__fee">{formatMoney(waiting.fee)}</span>
           </div>
-          <div
-            style={{
-              height: 5,
-              borderRadius: 999,
-              background: "var(--border)",
-              marginTop: 7,
-              overflow: "hidden",
-            }}
-          >
+          <div className="dmeter__bar">
             <div
-              style={{
-                height: "100%",
-                width: `${Math.min(100, (waiting.fee / waiting.maxFee) * 100)}%`,
-                background: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
-                borderRadius: 999,
-              }}
+              className="dmeter__fill"
+              style={{ width: `${Math.min(100, (waiting.fee / waiting.maxFee) * 100)}%` }}
             />
           </div>
-          <div
-            style={{
-              fontSize: 11.5,
-              marginTop: 6,
-              color: waiting.capped ? "var(--text-muted)" : "var(--tone-warn-fg)",
-            }}
-          >
+          <p className="dmeter__note">
             {waiting.capped
               ? `Stopped at the ${formatMoney(waiting.maxFee)} ceiling. You can still wait, but it no longer adds up — report when you're ready.`
               : `${formatMoney(1)} per minute started · stops at ${formatMoney(waiting.maxFee)} (${formatTime(waiting.until.toISOString())})`}
-          </div>
+          </p>
         </div>
       )}
 
       {guestPhone && (
-        <a href={`tel:${guestPhone}`} className="btn" style={{ marginTop: 10, display: "block", textAlign: "center" }}>
-          <Phone size={15} aria-hidden /> Call the Guest
+        <a href={`tel:${guestPhone}`} className="dcta dcta--ghost" style={{ marginTop: 12 }}>
+          <Phone size={15} strokeWidth={1.75} aria-hidden="true" /> Call the Guest
         </a>
       )}
 
@@ -342,22 +268,11 @@ export function NoShowControl({
       {!confirming ? (
         <button
           type="button"
+          className="dquiet dquiet--warn"
           onClick={() => setConfirming(true)}
           disabled={!elapsed}
-          style={{
-            width: "100%",
-            marginTop: 10,
-            borderRadius: 8,
-            padding: 11,
-            fontSize: 14,
-            fontWeight: 600,
-            border: "none",
-            cursor: elapsed ? "pointer" : "not-allowed",
-            background: elapsed ? "var(--tone-warn-fg)" : "var(--slate-100)",
-            color: elapsed ? "#fff" : "var(--text-faint)",
-          }}
         >
-          <UserX size={16} aria-hidden />{" "}
+          <UserX size={16} strokeWidth={1.75} aria-hidden="true" />{" "}
           {elapsed
             ? "Report a no-show"
             : notStarted
@@ -374,22 +289,13 @@ export function NoShowControl({
               report.
             </div>
           </div>
+          {/* At this point reporting IS the action — so it earns the one filled button. */}
           <button
             type="button"
+            className="dcta"
             onClick={report}
             disabled={pending}
-            style={{
-              width: "100%",
-              marginTop: 10,
-              background: "var(--tone-warn-fg)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: 11,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
+            style={{ marginTop: 10, background: "var(--tone-warn-fg)" }}
           >
             {pending
               ? "…"
@@ -399,10 +305,9 @@ export function NoShowControl({
           </button>
           <button
             type="button"
+            className="dquiet"
             onClick={() => setConfirming(false)}
             disabled={pending}
-            className="muted"
-            style={{ width: "100%", marginTop: 8, background: "transparent", border: "none", padding: 6, fontSize: 13, cursor: "pointer" }}
           >
             Keep waiting
           </button>

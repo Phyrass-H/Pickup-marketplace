@@ -1,21 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  ArrowRight,
+  Clock,
+  Zap,
+  Route,
+  Car,
+  Luggage,
+  Users,
+  Plane,
+  Lock,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
 import { currentFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
-  formatDateTime,
   formatMoney,
   formatTripMeta,
+  formatPoolWhen,
   serviceClassLabel,
+  addressLine,
 } from "@/lib/format";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { AcceptButton } from "./accept-button";
 
 export const dynamic = "force-dynamic";
 
+// Mission detail, pre-accept: "the Pool card, opened". It deliberately reuses the
+// S43 Pool-card shape — price + when → mission type / SPEED WIN → route rail →
+// trip facts — so a Driver recognises the same object they just tapped. What the
+// card had to compress opens up here: every stop shows its full address instead of
+// a "+N", and the service requests get their own rows. The page is free to scroll;
+// what's still hidden (Guest, name board, private message) is named, not teased.
 export default async function MissionDetailPage({
   params,
 }: {
@@ -35,7 +53,9 @@ export default async function MissionDetailPage({
 
   const isMine = !!driver && mission.driver_id === driver.id;
   const isPooled = mission.status === "pooled";
+  const isHourly = mission.mission_type === "hourly";
   const fare = currentFare(mission);
+  const when = formatPoolWhen(mission.pickup_at);
   const waypoints = parseWaypoints(mission.waypoints);
   const distanceKm = tripDistanceKm(
     mission.pickup_lat,
@@ -44,9 +64,20 @@ export default async function MissionDetailPage({
     mission.dropoff_lng,
   );
   const tripMeta = formatTripMeta(mission.distance_km, mission.duration_min, distanceKm);
+  const vehicle = serviceClassLabel(mission.category, mission.required_body_type);
   const languages = parseLanguages(mission.required_languages);
   const dressLabel = dressCodeLabel(mission.dress_code);
   const flagLabels = activeFlagLabels(mission.driver_flags);
+  const hasChips = languages.length > 0 || !!dressLabel || flagLabels.length > 0;
+
+  // Same rail as the Pool card, uncollapsed: pickup → every stop → drop-off. An
+  // at-disposal (hourly) trip has no fixed drop-off, so it ends at the pickup.
+  type Leg = { kind: "from" | "stop" | "to"; text: string };
+  const legs: Leg[] = [{ kind: "from", text: addressLine(mission.pickup_address) }];
+  for (const w of waypoints) legs.push({ kind: "stop", text: addressLine(w.address) });
+  if (!isHourly && mission.dropoff_address) {
+    legs.push({ kind: "to", text: addressLine(mission.dropoff_address) });
+  }
 
   return (
     <>
@@ -56,87 +87,140 @@ export default async function MissionDetailPage({
         </Link>
       </p>
 
-      <div className="card-row">
-        <span className="fare" style={{ fontSize: 26 }}>
-          {formatMoney(fare)}
-        </span>
-        <span style={{ display: "flex", gap: 6 }}>
-          {mission.speed_win && <span className="badge speed">SPEED WIN</span>}
-          {mission.luggage_only && <span className="badge luggage">Luggage run</span>}
-          <span className="badge">
-            {serviceClassLabel(mission.category, mission.required_body_type)}
+      <div className="dcard">
+        <div className="pcard__head">
+          <span className="pcard__fare">{formatMoney(fare)}</span>
+          <span className="pcard__when">
+            <span className={when.today ? "pcard__day pcard__day--today" : "pcard__day"}>
+              {when.day}
+            </span>
+            <span className="pcard__time">{when.time}</span>
           </span>
-        </span>
-      </div>
-      <p className="muted" style={{ marginTop: 4 }}>
-        {formatDateTime(mission.pickup_at)}
-        {mission.zone ? ` · ${mission.zone}` : ""}
-      </p>
-
-      <div className="card">
-        <div className="card-row" style={{ alignItems: "baseline" }}>
-          <h2 style={{ margin: 0 }}>Route</h2>
-          {tripMeta && <span className="muted small">{tripMeta}</span>}
         </div>
-        <div className="route">
-          <div className="leg">
-            <span className="dot" />
-            <span>{mission.pickup_address}</span>
+
+        <div className="pcard__body">
+          <div className="pcard__badges">
+            <span className="pbadge pbadge--type">
+              {isHourly ? (
+                <Clock size={13} strokeWidth={1.9} aria-hidden="true" />
+              ) : (
+                <ArrowRight size={13} strokeWidth={2} aria-hidden="true" />
+              )}
+              {isHourly ? "At disposal" : "Transfer"}
+            </span>
+            {mission.speed_win && (
+              <span className="pbadge pbadge--speed">
+                <Zap size={11} strokeWidth={2} aria-hidden="true" />
+                SPEED WIN
+              </span>
+            )}
+            {mission.luggage_only && (
+              <span className="pbadge pbadge--run">
+                <Luggage size={12} strokeWidth={1.9} aria-hidden="true" />
+                Luggage run
+              </span>
+            )}
           </div>
-          {waypoints.map((w, i) => (
-            <div className="leg" key={i}>
-              <span className="dot" style={{ background: "#98a2b3" }} />
-              <span className="muted">{w.address}</span>
-            </div>
-          ))}
-          <div className="leg">
-            <span className="dot end" />
-            <span>{mission.dropoff_address ?? "—"}</span>
+
+          <div className="proute">
+            {legs.map((leg, i) => {
+              const last = i === legs.length - 1;
+              return (
+                <div key={i} className={last ? "proute__leg proute__leg--last" : "proute__leg"}>
+                  <span className="proute__rail">
+                    {!last && <span className="proute__line" />}
+                    <span className={`proute__dot proute__dot--${leg.kind}`} />
+                  </span>
+                  <span
+                    className={
+                      `proute__addr proute__addr--${leg.kind}` +
+                      (last ? "" : " proute__addr--pad")
+                    }
+                  >
+                    {leg.text}
+                  </span>
+                </div>
+              );
+            })}
           </div>
+        </div>
+
+        <div className="pcard__foot">
+          <span className="pcard__facts">
+            {isHourly ? (
+              <Clock size={13} aria-hidden="true" />
+            ) : (
+              <Route size={13} aria-hidden="true" />
+            )}
+            {isHourly ? "Flexible route" : tripMeta || "—"}
+            <span className="pcard__veh">
+              <Car size={13} aria-hidden="true" />
+              {vehicle}
+            </span>
+            {mission.zone && <span className="pcard__veh">{mission.zone}</span>}
+          </span>
         </div>
       </div>
 
-      <div className="card">
-        <h2>Details</h2>
-        <dl className="kv">
-          <dt>Passengers</dt>
-          <dd>{mission.luggage_only ? "None (luggage run)" : (mission.pax_count ?? "—")}</dd>
-          <dt>Luggage</dt>
-          <dd>{mission.luggage_count ?? "—"}</dd>
-          {mission.flight_number && (
-            <>
-              <dt>Flight</dt>
-              <dd>{mission.flight_number}</dd>
-            </>
-          )}
-          {languages.length > 0 && (
-            <>
-              <dt>Languages</dt>
-              <dd>{languages.join(", ")}</dd>
-            </>
-          )}
-          {dressLabel && (
-            <>
-              <dt>Dress code</dt>
-              <dd>{dressLabel}</dd>
-            </>
-          )}
-          {flagLabels.length > 0 && (
-            <>
-              <dt>Requests</dt>
-              <dd>{flagLabels.join(" · ")}</dd>
-            </>
-          )}
-        </dl>
-        <p className="muted small" style={{ marginTop: 12 }}>
-          Guest name, the name board and any private message are revealed once you accept.
+      <div className="dcard">
+        <p className="dcard__label">Service</p>
+
+        <div className="dfact">
+          <span className="dfact__l">
+            <Users size={16} strokeWidth={1.75} aria-hidden="true" />
+            Passengers
+          </span>
+          <span className="dfact__v">
+            {mission.luggage_only ? "None (luggage run)" : (mission.pax_count ?? "—")}
+          </span>
+        </div>
+
+        <div className="dfact">
+          <span className="dfact__l">
+            <Luggage size={16} strokeWidth={1.75} aria-hidden="true" />
+            Luggage
+          </span>
+          <span className="dfact__v">{mission.luggage_count ?? "—"}</span>
+        </div>
+
+        {mission.flight_number && (
+          <div className="dfact">
+            <span className="dfact__l">
+              <Plane size={16} strokeWidth={1.75} aria-hidden="true" />
+              Flight
+            </span>
+            <span className="dfact__v">{mission.flight_number}</span>
+          </div>
+        )}
+
+        {hasChips && (
+          <div className="dchips">
+            {languages.map((l) => (
+              <span className="dchip" key={l}>
+                {l}
+              </span>
+            ))}
+            {dressLabel && <span className="dchip">{dressLabel}</span>}
+            {flagLabels.map((f) => (
+              <span className="dchip" key={f}>
+                {f}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isPooled && (
+        <p className="dlock">
+          <Lock size={15} strokeWidth={1.75} aria-hidden="true" />
+          <span>Guest name, the name board and any private message unlock once you accept.</span>
         </p>
-      </div>
+      )}
 
       {isPooled ? (
         <AcceptButton missionId={mission.id} />
       ) : isMine ? (
-        <Link href="/rides" className="btn secondary">
+        <Link href="/rides" className="dcta dcta--ghost">
           You’ve accepted this — open My Rides
         </Link>
       ) : (

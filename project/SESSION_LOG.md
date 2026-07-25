@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-07-25 — Session 45 — the two remaining Driver cards (pre-accept + accepted), redesigned
+
+**Scope.** Carry the S43 Pool-card design language onto the last two un-redesigned Driver screens. No schema, no
+migration, no behaviour change — presentation only. Same data, same server actions, same RPCs, same copy strings,
+same gating conditions. D25 loop: one preview covering both cards → founder sign-off with two notes (drop the fare
+beside the Accept CTA; give the accepted card real breathing room, scrolling is fine) → built to match.
+
+**Approach — the cards REUSE the Pool card's classes rather than copy them.** `.pcard__head/__fare/__when/__day/
+__time/__body/__badges`, `.pbadge--type/--speed/--run` and the whole `.proute*` rail are plain (unnested) selectors,
+so both screens now render an opened mission out of the *same* vocabulary as its Pool card. Only a roomier container
+(`.dcard`) and the pieces the Pool card has no equivalent for are new (~230 lines appended to `app/globals.css`):
+`.dcard__label`, `.dfact*`, `.dchips/.dchip`, `.dlock`, `.dpill--neutral/info/go/warn`, `.dprog*`, `.dcall*`,
+`.dnote*`, `.dreached/.dnext` + `.proute__dot--done/--now`, `.dmeter*`, `.dcta/.dcta--done/--ghost`, `.dquiet*`,
+`.dstack`. Nothing at weight 700 (the S43 rule). `.dcard` overrides give the Pool-card pieces more air — a detail
+screen is *read*, a Pool card is *scanned*.
+
+**1. Pre-accept — `/missions/[id]` (`page.tsx` + `accept-button.tsx`).** Now reads as "the Pool card, opened":
+fare + `formatPoolWhen` head, badges, then the route rail **uncollapsed** — every waypoint shown with its full
+address instead of the Pool card's `+N` (the one thing a Driver opens the screen for). `zone` rides on the facts
+line. The `.kv` dt/dd list became a `Service` card of `.dfact` rows (Passengers / Luggage / Flight) plus `.dchip`s
+for languages, dress code and request flags. The "revealed once you accept" sentence became a `.dlock` row with a
+Lock icon, and is now shown **only while the mission is still pooled** (it was previously shown even to the Driver
+who already owned the trip). Action is a full-width `.dcta` in normal flow — **no sticky bar, no fare beside it**
+(founder's call); the `isMine` state is a `.dcta--ghost` link, the gone state keeps its `.notice.warn`.
+
+**2. Accepted — My Rides (`rides/page.tsx`, `status-control.tsx`, `cancel-noshow.tsx`).** The card is a working
+tool now, so **state leads and the fare stops being the headline**: a `.dpill` status pill (tone-mapped
+info/go/neutral/warn) + day/time head, then progress, route, contacts, prep. The fare moved down to `.pcard__foot`
+beside the Business name. `StatusSteps`' five cramped labels became one `.dprog` segment bar + a plain-words caption
+("Not started" / "On the way" / "Waiting for the Guest" / "On board · 1/2 stops" / "Completed"), with an aria-label
+so the bar isn't colour-only — it reuses the exported `progressSegments`/`progressDone` maths, and
+**`components/status-steps.tsx` was left untouched** because Dispatch still renders it. Stop progress moved from
+`.leg-tag` pills onto the rail itself (`--done` / `--now` dots + `.dreached` / `.dnext`). Contacts became
+`.dcall` tap-to-call chips (Guest / Dispatcher) instead of `.contact-row`/`.kv` rows — same privacy gating, an
+unshared number is still never rendered. Name board + private message became a `.dnote` prep box. The duplicated
+Business row was dropped (it's in the card foot).
+
+**3. One filled button per screen.** `StatusControl` is a `.dcta` (`.dcta--done` for "Complete ride" — that also
+fixes the long-standing `success-btn` fall-through to navy, so **Complete ride is finally green**, one of the
+open "navy polish" items). "Report a no-show" and "Cancel this trip" dropped to `.dquiet` text actions, so the pro
+path is the loud one; the no-show **confirm** step keeps its filled amber button, because at that point it *is*
+the action. `DriverCancel`'s hand-rolled sheet is now a `.dcard`. The D48 waiting meter kept every number, gate and
+copy string and was restyled to `.dmeter` (amber accruing → `.dmeter--capped` neutral), fee at weight 600 not 700.
+
+**Verified.** `tsc --noEmit` clean · `next build` green (24 routes) · both screens loaded in-browser at 375×812
+against the **real Supabase DB** as a real authenticated Driver (Pool → mission detail → My Rides), 0 console errors.
+
+**⚑ Not covered by live verification:** the `arrived` + waiting-meter and no-show confirm states, and the
+release/amendment overlays, were not reachable with the demo data on hand — their logic is byte-for-byte unchanged
+(class swaps only) and `tsc`/`build` are green, but the *visual* result of `.dmeter` is unproven against real data.
+Worth a look next session, or the moment a real trip reaches `arrived`.
+
+**Still open on the Driver side:** the Pool empty + loading states; the discreet-vehicle keep/drop call; the
+Earnings screen; guidance Tier-2 tooltips.
+
+---
+
 ## 2026-07-25 — Session 44 — PickUp → Kavenue rename (brand only, no behaviour change)
 **Branch:** `rename/kavenue` → merged to `main`. **No migration. No schema, dependency or behaviour change.** Executes
 [[d50]]; the full rationale + the never-rename list is **[[d51]]**.

@@ -1,12 +1,25 @@
+import { Fragment } from "react";
 import Link from "next/link";
+import {
+  Building2,
+  Car,
+  CircleCheck,
+  Clock,
+  MapPin,
+  Navigation,
+  Phone,
+  UserRound,
+  UserX,
+  type LucideIcon,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { currentFare } from "@/lib/pdp";
 import {
-  categoryLabel,
   formatDateTime,
   formatMoney,
+  formatPoolWhen,
   missionStatusLabel,
   shortPlaceLabel,
 } from "@/lib/format";
@@ -16,7 +29,7 @@ import type {
   MissionAmendmentRow,
   MissionReleaseRow,
 } from "@/lib/database.types";
-import { isExecutable } from "@/lib/mission-flow";
+import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
@@ -27,7 +40,6 @@ import {
   noShowWaitMinutes,
   waitingAt,
 } from "@/lib/cancellation";
-import { StatusSteps } from "@/components/status-steps";
 import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard, type AmendmentLeg } from "@/components/amendment-card";
 import { ReleaseCard } from "@/components/release-card";
@@ -61,6 +73,50 @@ interface Contact {
   dispatcherName: string | null;
   dispatcherPhone: string | null;
   businessName: string | null;
+}
+
+// The card leads with STATE, not price. Tone follows the trip's phase: blue while
+// it's held but not moving, green once it's under way, grey when done, amber for a
+// no-show (which pays the Driver — a warning, never a failure).
+function statusPill(m: MissionRow): { tone: string; Icon: LucideIcon } {
+  if (m.no_show) return { tone: "warn", Icon: UserX };
+  switch (m.status) {
+    case "en_route":
+      return { tone: "go", Icon: Navigation };
+    case "arrived":
+      return { tone: "go", Icon: MapPin };
+    case "on_board":
+      return { tone: "go", Icon: Car };
+    case "completed":
+      return { tone: "neutral", Icon: CircleCheck };
+    case "confirmed":
+      return { tone: "info", Icon: CircleCheck };
+    default:
+      return { tone: "info", Icon: Clock }; // accepted — awaiting Lock-in
+  }
+}
+
+// Plain words for where the trip is, read next to the segment bar (which is
+// colour-only otherwise). The maths lives in progressSegments/progressDone.
+function progressCaption(
+  status: MissionStatus,
+  stopsCount: number,
+  stopsReached: number,
+): string {
+  switch (status) {
+    case "en_route":
+      return "On the way";
+    case "arrived":
+      return "Waiting for the Guest";
+    case "on_board":
+      return stopsReached < stopsCount
+        ? `On board · ${stopsReached}/${stopsCount} stops`
+        : "On board";
+    case "completed":
+      return "Completed";
+    default:
+      return "Not started"; // confirmed
+  }
 }
 
 // Precompute the "accept this change" card's props for a pending amendment: the
@@ -298,193 +354,244 @@ export default async function RidesPage() {
         const languages = parseLanguages(m.required_languages);
         const dressLabel = dressCodeLabel(m.dress_code);
         const flagLabels = activeFlagLabels(m.driver_flags);
-        const hasService =
-          languages.length > 0 ||
-          !!dressLabel ||
-          flagLabels.length > 0 ||
-          !!m.board_name ||
-          !!m.board_file_path ||
-          !!m.driver_message;
+        const hasChips = languages.length > 0 || !!dressLabel || flagLabels.length > 0;
+        const hasPrep = !!m.board_name || !!m.board_file_path || !!m.driver_message;
+
+        const when = formatPoolWhen(m.pickup_at);
+        const { tone, Icon: PillIcon } = statusPill(m);
+        const showProgress = isExecutable(m.status) || m.status === "completed";
+        const segments = progressSegments(stops.length);
+        const done = progressDone(m.status, stops.length, stopsReached);
+        const caption = progressCaption(m.status, stops.length, stopsReached);
+        const phones = guestPhones.get(m.id) ?? [];
+
         return (
-          <div className="card" key={m.id}>
-            <div className="card-row">
-              <span className="fare">{formatMoney(currentFare(m))}</span>
-              <span className="badge status">{m.no_show ? "No-show" : missionStatusLabel(m.status)}</span>
-            </div>
-            <div className="muted small" style={{ marginTop: 4 }}>
-              {formatDateTime(m.pickup_at)} · {categoryLabel(m.category)}
-            </div>
-
-            {amendmentData.has(m.id) && <AmendmentCard {...amendmentData.get(m.id)!} />}
-            {releaseData.has(m.id) && <ReleaseCard {...releaseData.get(m.id)!} />}
-
-            <div className="route">
-              <div className="leg">
-                <span className="dot" />
-                <span>{m.pickup_address}</span>
-              </div>
-              {stops.map((w, i) => {
-                const reached = i < stopsReached;
-                const current = m.status === "on_board" && i === stopsReached;
-                return (
-                  <div
-                    className={`leg leg--stop${reached ? " leg--done" : ""}${current ? " leg--now" : ""}`}
-                    key={i}
-                  >
-                    <span className="dot mid" />
-                    <span className="leg-addr">{w.address}</span>
-                    {reached && <span className="leg-tag leg-tag--done">reached</span>}
-                    {current && <span className="leg-tag leg-tag--now">next stop</span>}
-                  </div>
-                );
-              })}
-              <div className="leg">
-                <span className="dot end" />
-                <span>{m.dropoff_address ?? "—"}</span>
-              </div>
-            </div>
-
-            {/* Unlocked contacts */}
-            <div style={{ marginTop: 12 }}>
-              {m.passenger_name && (
-                <div className="contact-row">
-                  <span className="muted small">Guest</span>
-                  <span>{m.passenger_name}</span>
-                </div>
-              )}
-              {(guestPhones.get(m.id) ?? []).map((g) => (
-                <div className="contact-row" key={g.index}>
-                  <span className="muted small">
-                    {g.name ? `${g.name}${g.main ? " (main)" : ""}` : "Guest phone"}
+          <Fragment key={m.id}>
+            <article className="dcard">
+              {/* State leads; the fare moved down to the footer. */}
+              <div className="pcard__head">
+                <span className={`dpill dpill--${tone}`}>
+                  <PillIcon size={13} strokeWidth={1.75} aria-hidden="true" />
+                  {m.no_show ? "No-show" : missionStatusLabel(m.status)}
+                </span>
+                <span className="pcard__when">
+                  <span className={when.today ? "pcard__day pcard__day--today" : "pcard__day"}>
+                    {when.day}
                   </span>
-                  <a
-                    href={`tel:${g.phone}`}
-                    style={{ color: "var(--accent)", fontWeight: 600 }}
-                  >
-                    {g.phone}
-                  </a>
+                  <span className="pcard__time">{when.time}</span>
+                </span>
+              </div>
+
+              <div className="pcard__body">
+                {/* Trip progress: one bar + plain words (the bar alone is colour-only). */}
+                {showProgress && (
+                  <div>
+                    <div className="dprog__row">
+                      <span>Trip progress</span>
+                      <span className="dprog__now">{caption}</span>
+                    </div>
+                    <div className="dprog__bar" role="img" aria-label={`Trip progress: ${caption}`}>
+                      {segments.map((seg, i) => (
+                        <span
+                          key={seg.key}
+                          className={i < done ? "dprog__seg dprog__seg--on" : "dprog__seg"}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {amendmentData.has(m.id) && <AmendmentCard {...amendmentData.get(m.id)!} />}
+                {releaseData.has(m.id) && <ReleaseCard {...releaseData.get(m.id)!} />}
+
+                {/* Route rail, full addresses. Live progress rides the dots: a reached
+                    stop turns green, the next one is ringed while the Guest is on board. */}
+                <div className="proute">
+                  <div className="proute__leg">
+                    <span className="proute__rail">
+                      <span className="proute__line" />
+                      <span className="proute__dot proute__dot--from" />
+                    </span>
+                    <span className="proute__addr proute__addr--from proute__addr--pad">
+                      {m.pickup_address}
+                    </span>
+                  </div>
+                  {stops.map((w, i) => {
+                    const reached = i < stopsReached;
+                    const current = m.status === "on_board" && i === stopsReached;
+                    const dot = reached ? "done" : current ? "now" : "stop";
+                    return (
+                      <div className="proute__leg" key={i}>
+                        <span className="proute__rail">
+                          <span className="proute__line" />
+                          <span className={`proute__dot proute__dot--${dot}`} />
+                        </span>
+                        <span className="proute__addr proute__addr--stop proute__addr--pad">
+                          {w.address}
+                          {reached && <span className="dreached">Reached</span>}
+                          {current && <span className="dnext">Next stop</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div className="proute__leg proute__leg--last">
+                    <span className="proute__rail">
+                      <span className="proute__dot proute__dot--to" />
+                    </span>
+                    <span className="proute__addr proute__addr--to">{m.dropoff_address ?? "—"}</span>
+                  </div>
                 </div>
-              ))}
-              <div className="contact-row">
-                <span className="muted small">Business</span>
-                <span>{c?.businessName ?? "—"}</span>
-              </div>
-              <div className="contact-row">
-                <span className="muted small">Dispatcher</span>
-                <span>{c?.dispatcherName ?? "—"}</span>
-              </div>
-              <div className="contact-row">
-                <span className="muted small">Phone</span>
-                {c?.dispatcherPhone ? (
-                  <a href={`tel:${c.dispatcherPhone}`} style={{ color: "var(--accent)", fontWeight: 600 }}>
-                    {c.dispatcherPhone}
-                  </a>
-                ) : (
-                  <span>—</span>
+
+                {/* Unlocked contacts, as tap targets. Only SHARED Guest numbers reach
+                    here (filtered server-side); a contact without a number is a fact row. */}
+                {(phones.length > 0 || c?.dispatcherPhone) && (
+                  <div className="dcall">
+                    {phones.map((g) => (
+                      <a className="dcall__btn" href={`tel:${g.phone}`} key={g.index}>
+                        <Phone size={17} strokeWidth={1.75} aria-hidden="true" />
+                        <span className="dcall__txt">
+                          <span className="dcall__l">Guest</span>
+                          <span className="dcall__v">{g.name || "Guest"}</span>
+                        </span>
+                      </a>
+                    ))}
+                    {c?.dispatcherPhone && (
+                      <a className="dcall__btn" href={`tel:${c.dispatcherPhone}`}>
+                        <Phone size={17} strokeWidth={1.75} aria-hidden="true" />
+                        <span className="dcall__txt">
+                          <span className="dcall__l">Dispatcher</span>
+                          <span className="dcall__v">{c.dispatcherName ?? "Dispatcher"}</span>
+                        </span>
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  {m.passenger_name && (
+                    <div className="dfact">
+                      <span className="dfact__l">
+                        <UserRound size={16} strokeWidth={1.75} aria-hidden="true" />
+                        Guest
+                      </span>
+                      <span className="dfact__v">{m.passenger_name}</span>
+                    </div>
+                  )}
+                  {/* The Business itself lives in the card foot — no need to say it twice. */}
+                  {!c?.dispatcherPhone && (
+                    <div className="dfact">
+                      <span className="dfact__l">
+                        <UserRound size={16} strokeWidth={1.75} aria-hidden="true" />
+                        Dispatcher
+                      </span>
+                      <span className="dfact__v">{c?.dispatcherName ?? "—"}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* What to have ready: the board + the Business's private message (S19). */}
+                {hasPrep && (
+                  <div className="dnote">
+                    {(m.board_name || m.board_file_path) && (
+                      <div className="dnote__row">
+                        <span className="dnote__l">Name board</span>
+                        {m.board_name || "—"}
+                        {m.board_file_path && (
+                          <>
+                            {" · "}
+                            <BoardFileLink missionId={m.id} />
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {m.driver_message && (
+                      <div className="dnote__row">
+                        <span className="dnote__l">Message</span>
+                        {m.driver_message}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Soft requirements — languages, dress code, request flags. */}
+                {hasChips && (
+                  <div className="dchips">
+                    {languages.map((l) => (
+                      <span className="dchip" key={l}>
+                        {l}
+                      </span>
+                    ))}
+                    {dressLabel && <span className="dchip">{dressLabel}</span>}
+                    {flagLabels.map((f) => (
+                      <span className="dchip" key={f}>
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {m.status === "accepted" && (
+                  <p className="muted small" style={{ marginTop: 14, marginBottom: 0 }}>
+                    Awaiting readiness confirmation (Lock-in at T-180). Trip controls
+                    appear once confirmed.
+                  </p>
                 )}
               </div>
+
+              <div className="pcard__foot">
+                <span className="pcard__facts">
+                  <Building2 size={13} aria-hidden="true" />
+                  {c?.businessName ?? "—"}
+                  <span className="pcard__veh">{formatMoney(currentFare(m))}</span>
+                </span>
+              </div>
+            </article>
+
+            {/* Actions live below the card: exactly one filled button, the rest quiet. */}
+            <div className="dstack">
+              {isExecutable(m.status) && (
+                <StatusControl
+                  missionId={m.id}
+                  status={m.status}
+                  stops={stops}
+                  stopsReached={stopsReached}
+                />
+              )}
+
+              {/* No-show (O7): once on-site, the amber report flow after the wait window.
+                  The window runs from when the GUEST was due — the ordered pickup time, or a
+                  tracked landing instant — never from the Driver's arrival. */}
+              {m.status === "arrived" && arrivedAt.get(m.id) && (
+                <NoShowControl
+                  missionId={m.id}
+                  fare={currentFare(m)}
+                  guestDueIso={guestDueAt(m).toISOString()}
+                  availableAtIso={noShowAvailableAt(m, arrivedAt.get(m.id)!).toISOString()}
+                  waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
+                  waitingFromIso={waitingAt(m).from.toISOString()}
+                  waitingUntilIso={waitingAt(m).until.toISOString()}
+                  guestPhone={
+                    (guestPhones.get(m.id) ?? []).find((g) => g.main)?.phone ??
+                    (guestPhones.get(m.id) ?? [])[0]?.phone ??
+                    null
+                  }
+                />
+              )}
+
+              {/* Cancel (O7): available while the Driver holds the trip, before boarding. */}
+              {(m.status === "accepted" ||
+                m.status === "confirmed" ||
+                m.status === "en_route" ||
+                m.status === "arrived") && (
+                <DriverCancel
+                  missionId={m.id}
+                  fare={currentFare(m)}
+                  businessPhone={c?.dispatcherPhone ?? null}
+                  businessName={c?.businessName ?? null}
+                />
+              )}
             </div>
-
-            {/* Driver & service requirements + revealed board / message (S19) */}
-            {hasService && (
-              <dl className="kv" style={{ marginTop: 12 }}>
-                {languages.length > 0 && (
-                  <>
-                    <dt>Languages</dt>
-                    <dd>{languages.join(", ")}</dd>
-                  </>
-                )}
-                {dressLabel && (
-                  <>
-                    <dt>Dress code</dt>
-                    <dd>{dressLabel}</dd>
-                  </>
-                )}
-                {flagLabels.length > 0 && (
-                  <>
-                    <dt>Requests</dt>
-                    <dd>{flagLabels.join(" · ")}</dd>
-                  </>
-                )}
-                {(m.board_name || m.board_file_path) && (
-                  <>
-                    <dt>Name board</dt>
-                    <dd>
-                      {m.board_name || "—"}
-                      {m.board_file_path && (
-                        <>
-                          {" · "}
-                          <BoardFileLink missionId={m.id} />
-                        </>
-                      )}
-                    </dd>
-                  </>
-                )}
-                {m.driver_message && (
-                  <>
-                    <dt>Message</dt>
-                    <dd>{m.driver_message}</dd>
-                  </>
-                )}
-              </dl>
-            )}
-
-            {/* Trip execution: progress + the next status button */}
-            {(isExecutable(m.status) || m.status === "completed") && (
-              <StatusSteps
-                status={m.status}
-                stopsCount={stops.length}
-                stopsReached={stopsReached}
-              />
-            )}
-            {m.status === "accepted" && (
-              <p className="muted small" style={{ marginTop: 12 }}>
-                Awaiting readiness confirmation (Lock-in at T-180). Trip controls
-                appear once confirmed.
-              </p>
-            )}
-            {isExecutable(m.status) && (
-              <StatusControl
-                missionId={m.id}
-                status={m.status}
-                stops={stops}
-                stopsReached={stopsReached}
-              />
-            )}
-
-            {/* No-show (O7): once on-site, the amber report flow after the wait window.
-                The window runs from when the GUEST was due — the ordered pickup time, or a
-                tracked landing instant — never from the Driver's arrival. */}
-            {m.status === "arrived" && arrivedAt.get(m.id) && (
-              <NoShowControl
-                missionId={m.id}
-                fare={currentFare(m)}
-                guestDueIso={guestDueAt(m).toISOString()}
-                availableAtIso={noShowAvailableAt(m, arrivedAt.get(m.id)!).toISOString()}
-                waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
-                waitingFromIso={waitingAt(m).from.toISOString()}
-                waitingUntilIso={waitingAt(m).until.toISOString()}
-                guestPhone={
-                  (guestPhones.get(m.id) ?? []).find((g) => g.main)?.phone ??
-                  (guestPhones.get(m.id) ?? [])[0]?.phone ??
-                  null
-                }
-              />
-            )}
-
-            {/* Cancel (O7): available while the Driver holds the trip, before boarding. */}
-            {(m.status === "accepted" ||
-              m.status === "confirmed" ||
-              m.status === "en_route" ||
-              m.status === "arrived") && (
-              <DriverCancel
-                missionId={m.id}
-                fare={currentFare(m)}
-                businessPhone={c?.dispatcherPhone ?? null}
-                businessName={c?.businessName ?? null}
-              />
-            )}
-          </div>
+          </Fragment>
         );
       })}
     </>

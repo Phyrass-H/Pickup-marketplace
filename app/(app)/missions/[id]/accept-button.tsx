@@ -25,7 +25,7 @@ export function AcceptButton({ missionId }: { missionId: string }) {
   return (
     <div className="stack">
       {error && <div className="notice error">{error}</div>}
-      <button className="btn" onClick={onAccept} disabled={pending}>
+      <button className="dcta" onClick={onAccept} disabled={pending}>
         {pending ? "Accepting…" : "Accept mission"}
       </button>
     </div>

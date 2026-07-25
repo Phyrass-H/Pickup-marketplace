@@ -2144,3 +2144,232 @@ textarea::placeholder {
 .dx-amend__btn { font-size: 12.5px; font-weight: 600; text-decoration: none; border-radius: var(--radius-md); padding: 8px 12px; border: 1px solid var(--border-strong); color: #334155; background: #fff; cursor: pointer; font-family: inherit; }
 .dx-amend__btn--primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .dx-amend__link { background: none; border: none; color: var(--text-muted); font-size: 12.5px; cursor: pointer; text-decoration: underline; font-family: inherit; padding: 0; }
+
+/* ============================================================================
+   Driver — mission detail (pre-accept) + accepted trip card (S45).
+   Carries the S43 Pool-card language forward: it deliberately REUSES
+   .pcard__head/__fare/__when/__day/__time/__body/__badges, .pbadge* and .proute*
+   so an opened mission reads as the same object as its Pool card. Only the
+   container (.dcard, roomier than the tappable .pcard) and the pieces the Pool
+   card has no equivalent for live here. Nothing at weight 700; the page is free
+   to scroll — breathing room over fitting a viewport.
+   ========================================================================== */
+.dcard {
+  background: var(--surface);
+  border: 1px solid #ebedf1;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+}
+.dcard__label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+}
+/* A little more air than the Pool card, which is scanned rather than read. */
+.dcard .pcard__body { margin-top: 16px; padding-top: 16px; }
+.dcard .proute { margin-top: 15px; }
+.dcard .proute__addr--pad { padding-bottom: 16px; }
+.dcard .pcard__foot { margin-top: 16px; padding-top: 14px; }
+
+/* ---- Fact rows: the old .kv dt/dd list, spaced for a thumb ---- */
+.dfact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 13.5px;
+}
+.dfact + .dfact { border-top: 1px solid #f4f5f8; }
+.dfact__l {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.dfact__l svg { width: 16px; height: 16px; flex: none; }
+.dfact__v { font-weight: 500; color: var(--text); text-align: right; min-width: 0; }
+.dfact__v a { color: var(--accent); font-weight: 500; text-decoration: none; }
+
+/* ---- Soft requirements as chips (mirrors the Dispatch S36 vocabulary) ---- */
+.dchips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.dchip {
+  font-size: 11.5px;
+  color: #475569;
+  background: #f4f6f9;
+  border-radius: var(--radius-pill);
+  padding: 5px 11px;
+}
+
+/* ---- What accepting unlocks: a discreet row, not a sentence in the flow ---- */
+.dlock {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #f6f7f9;
+  border-radius: 12px;
+  padding: 13px 14px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.dlock svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+
+/* ---- Status pill (the accepted card leads with state, not price) ---- */
+.dpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: 5px 11px;
+}
+.dpill svg { width: 13px; height: 13px; }
+.dpill--neutral { background: var(--tone-neutral-bg); color: var(--tone-neutral-fg); }
+.dpill--info { background: var(--tone-info-bg); color: var(--tone-info-fg); }
+.dpill--go { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+.dpill--warn { background: var(--tone-warn-bg); color: var(--tone-warn-fg); }
+
+/* ---- Progress: one segment bar + plain words, replacing 5 cramped labels ---- */
+.dprog__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.dprog__now { color: var(--text); font-weight: 500; }
+.dprog__bar { display: flex; gap: 5px; }
+.dprog__seg { height: 5px; flex: 1; border-radius: var(--radius-pill); background: #e6e9ef; }
+.dprog__seg--on { background: var(--success); }
+
+/* ---- Tap-to-call chips: contacts as targets, not table rows ---- */
+.dcall { display: flex; gap: 9px; margin-top: 16px; flex-wrap: wrap; }
+.dcall__btn {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 12px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+}
+.dcall__btn:active { background: var(--surface-2); }
+.dcall__btn svg { width: 17px; height: 17px; flex: none; color: var(--accent); }
+.dcall__txt { min-width: 0; line-height: 1.25; }
+.dcall__l { display: block; font-size: 11px; color: var(--text-faint); }
+.dcall__v {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Prep box: name board + the Business's private message ---- */
+.dnote {
+  margin-top: 16px;
+  background: #f8f9fb;
+  border-radius: 12px;
+  padding: 13px 14px;
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.55;
+}
+.dnote__row + .dnote__row { margin-top: 9px; }
+.dnote__l { color: var(--text-faint); margin-right: 7px; }
+.dnote a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+/* ---- Reached-stop timestamp under a route leg ---- */
+.dreached { display: block; font-size: 11.5px; font-weight: 400; color: var(--tone-success-fg); margin-top: 3px; }
+.dnext { display: block; font-size: 11.5px; font-weight: 400; color: var(--accent); margin-top: 3px; }
+.proute__dot--done { width: 10px; height: 10px; background: var(--tone-success-fg); }
+.proute__dot--now { width: 11px; height: 11px; background: var(--accent); box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-soft); }
+
+/* ---- D48 waiting meter, in the card's own vocabulary ---- */
+.dmeter {
+  margin-top: 16px;
+  border: 1px solid #f2ddc6;
+  background: var(--tone-warn-bg);
+  border-radius: 14px;
+  padding: 14px;
+}
+.dmeter--capped { border-color: var(--border); background: var(--tone-neutral-bg); }
+.dmeter__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dmeter__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tone-warn-fg);
+}
+.dmeter__label svg { width: 14px; height: 14px; }
+.dmeter__fee {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--tone-warn-fg);
+}
+.dmeter--capped .dmeter__label { color: var(--text-muted); }
+.dmeter--capped .dmeter__fee { color: var(--text); }
+.dmeter__bar { height: 4px; border-radius: var(--radius-pill); background: #f0dcc6; margin: 12px 0 9px; overflow: hidden; }
+.dmeter--capped .dmeter__bar { background: var(--border); }
+.dmeter__fill { height: 4px; border-radius: var(--radius-pill); background: var(--tone-warn-fg); }
+.dmeter--capped .dmeter__fill { background: var(--text-muted); }
+.dmeter__note { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--tone-warn-fg); }
+.dmeter--capped .dmeter__note { color: var(--text-muted); }
+
+/* ---- Actions: exactly ONE filled button per screen; the rest go quiet ---- */
+.dcta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 12px 16px;
+}
+.dcta:disabled { opacity: 0.55; cursor: not-allowed; }
+.dcta--done { background: var(--success); }
+.dcta--ghost { background: var(--surface); color: var(--accent); border: 1px solid var(--border-strong); min-height: 46px; font-size: 14px; }
+.dquiet {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 13px 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  cursor: pointer;
+}
+.dquiet:disabled { color: var(--text-faint); cursor: not-allowed; }
+.dquiet--warn { color: var(--tone-warn-fg); }
+.dquiet--danger { color: var(--tone-danger-fg); }
+.dstack { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
