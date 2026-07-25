@@ -48,6 +48,13 @@ and it loses nothing — the docs are all still here, just read when relevant):
    founder green-lights the integration phase explicitly. **Additive DB migrations are fine** (see below).
 3. **No "dirty routes."** Fix the real root cause in the codebase's idiom — never a hidden hack. Pragmatic
    MVP shortcuts are OK *only if flagged* so the founder can accept the debt; surface anything you cut.
+4. **⚠️ ASK BEFORE YOU START.** Do NOT read this file and launch straight into the listed priority — it records what *was*
+   planned, not what the founder wants today. Orient, propose the scope in 1–2 lines, wait for a yes. (S44: the rename was
+   started unprompted and the Driver-card prep had to be halted mid-turn.)
+5. **⚠️ BE BRIEF — context is a real budget.** In S44 ~**83% of the context window went to Claude's own chat messages.**
+   Report results, not narration. **Never post "still working / still waiting" turns** — background tasks re-invoke you
+   automatically, so wait silently. Don't restate plans or re-explain finished work. Push big reads into a **subagent**
+   that returns just the answer. Long-form detail belongs in `project/SESSION_LOG.md`, not the chat.
 
 ## DB MIGRATIONS — Claude can't run them; the founder does
 The schema is already applied (hard-rule #4). For an **additive** column/enum: write the SQL to
@@ -309,8 +316,11 @@ happened), the `Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev
 `*@pickup.local` dev-login/seed identities (they map to REAL Supabase auth rows — renaming the string alone breaks
 dev-login). See the founder-action list at the end of this file.
 
-**★ 2. Redesign the two remaining Driver cards (D25 preview loop → sign-off → build to match) — NOW THE TOP PRIORITY.**
-The Pool card is done (S43);
+**★ 2. Redesign the two remaining Driver cards — THE SESSION-45 PRIORITY (ask first, then D25 preview → sign-off → build).**
+The founder **deferred these out of S44** ("don't do the card now") — so confirm they still want it before starting.
+A design brief was already gathered in S44 and is worth re-deriving cheaply: the shipped `.pcard`/`.proute`/`.pbadge` CSS
+and tokens live in `app/globals.css` (~lines 6–127 for `:root`, ~1636–1838 for the Pool card); the Pool card DOM is
+`components/mission-card.tsx`. Read those two, not the whole repo. The Pool card is done (S43);
 these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refined weights, route rail, service icons):
    1. **The extended pre-accept mission card** — what a Driver sees on **`/missions/[id]` BEFORE accepting** (today it's still
       the old `.card`/`.route`/`.kv` style; `app/(app)/missions/[id]/page.tsx` + `accept-button.tsx`).
