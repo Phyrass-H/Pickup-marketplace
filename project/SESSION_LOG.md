@@ -5,6 +5,27 @@
 
 ---
 
+## 2026-07-25 — Session 46 — My Rides restructure + Pool empty/loading states + waiting-meter verification
+
+**Part C — Pool empty + loading states (founder-approved, D25 preview signed off).** The un-designed parts S43 left.
+- **New `app/(app)/pool/loading.tsx`** — a route-level Suspense fallback: the `pool-head` shell + three `.pcard--skel`
+  card skeletons in the real Pool-card shape (fare/when/badge/route-rail/foot placeholders) that pulse via the existing
+  `dx-pulse` keyframe, staggered `animation-delay 0 / 0.15 / 0.3s`. So navigating to the (force-dynamic) Pool shows
+  structure, not a blank flash.
+- **Both empty states redesigned** from the plain `.empty` text into a calm `.pempty` block (soft rounded icon tile +
+  headline + muted subtext): the **no-trips** state names the filter in bold ("New **Business · Sedan** trips within
+  **15 km of Paris** land here…") with a `ti`-less Radar icon + a quiet "Checking your area · pull to refresh" pulse
+  line; the **no-service-area** state is a setup prompt (MapPin) with one filled navy CTA into Settings. New `.pempty*`
+  + `.pskel*` CSS; no new keyframe (reuses `dx-pulse`).
+- Files: `app/(app)/pool/page.tsx` (two empty states), `app/(app)/pool/loading.tsx` (new), `app/globals.css`. No schema,
+  no data change.
+- **Verified live** (localhost, real DB, mobile): both empty states screenshotted pixel-matching the preview (via a
+  throwaway driver flipped null-base → Paris/15km); the loading skeleton **proven in the streamed `/pool` HTML** (the
+  Suspense fallback ships the full `.pcard--skel` markup with the staggered delays — it renders correctly, just flashes
+  too fast to screenshot on a local render). `tsc` clean.
+
+---
+
 ## 2026-07-25 — Session 46 — My Rides restructure (tap-through list + dedicated mission page) + waiting-meter verification
 
 **Part B — My Rides restructure (founder-approved, D25 preview signed off).** The complaint: `/rides` dumped every

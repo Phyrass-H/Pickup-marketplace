@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { MapPin, Radar, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
 import { MissionCard } from "@/components/mission-card";
@@ -53,11 +54,18 @@ export default async function PoolPage({
     return (
       <>
         <PoolHead sub="Set your service area to see trips" />
-        <div className="empty">
-          Set your base and service radius to see matching missions.
-          <br />
-          <Link href="/settings" style={{ textDecoration: "underline" }}>
-            Go to Settings →
+        <div className="pempty">
+          <div className="pempty__ic">
+            <MapPin size={26} strokeWidth={1.75} aria-hidden="true" />
+          </div>
+          <p className="pempty__t">Set your base and radius</p>
+          <p className="pempty__s">
+            The Pool matches trips near you. Tell us where you’re based and how far you’ll
+            drive, and matching trips appear here.
+          </p>
+          <Link href="/settings" className="pempty__cta">
+            <Settings size={16} strokeWidth={1.9} aria-hidden="true" />
+            Set your service area
           </Link>
         </div>
       </>
@@ -143,17 +151,28 @@ export default async function PoolPage({
       )}
 
       {!error && missions.length === 0 && (
-        <div className="empty">
-          No missions available right now.
-          <br />
-          {seeAll ? (
-            <>No pooled trips exist right now.</>
-          ) : (
-            <>
-              New {serviceClassLabel(vehicle.category, vehicle.body_type)} missions within {radius} km of your
-              base will appear here.
-            </>
-          )}
+        <div className="pempty">
+          <div className="pempty__ic">
+            <Radar size={26} strokeWidth={1.75} aria-hidden="true" />
+          </div>
+          <p className="pempty__t">No trips in your Pool right now</p>
+          <p className="pempty__s">
+            {seeAll ? (
+              <>No pooled trips exist right now.</>
+            ) : (
+              <>
+                New <strong>{serviceClassLabel(vehicle.category, vehicle.body_type)}</strong> trips within{" "}
+                <strong>
+                  {radius} km of {driver.base_label ?? "your base"}
+                </strong>{" "}
+                land here as Businesses post them.
+              </>
+            )}
+          </p>
+          <span className="pempty__watch">
+            <span className="pempty__pulse" />
+            Checking your area · pull to refresh
+          </span>
         </div>
       )}
 

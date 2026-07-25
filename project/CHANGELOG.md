@@ -6,6 +6,11 @@
 ---
 
 ## 25 July 2026
+- **The Pool's quiet moments got designed.** When there are no trips for you yet, the Pool no longer shows a bare
+  line of grey text — it's a calm little state that tells you *why* it's empty ("New Business · Sedan trips within
+  15 km of Nice land here…"), so you know it's working, not broken. If you haven't set your driving area yet, it
+  points you to Settings with one clear button. And while trips are loading, you now see placeholder cards shaped
+  like the real ones, gently pulsing, instead of a blank screen.
 - **My Rides is a clean list now — and each trip opens on its own page.** Your accepted trips used to pile up in
   one long scroll with every button — start, complete, cancel, the waiting meter — crammed under each card, so your
   live trip's controls sat squeezed between other trips above and below. Confusing. Now **My Rides is just a tidy
