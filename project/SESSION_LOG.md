@@ -49,7 +49,10 @@ the Today/Tomorrow accent.
 **⚑ Parked (founder to decide):** the **discreet vehicle** in the footer — keep (it truncates to "Business · Se…" on a
 narrow card) or drop it (it's redundant); the **"Both"** mission type (needs a new enum value + the model). **Not yet
 redesigned:** My Rides / mission detail / Settings cards (Pool-first); the Earnings screen; the Pool empty + loading
-states. **Next:** founder tests on phone (deploy `main`), then the follow-ons.
+states. **Deployed `56211e7` → Vercel `success`; founder tested on phone + approved ("I like it, good job").**
+**Next session (founder-set, in order):** (1) full **rename PickUp → Kavenue** everywhere — docs, code, folders, copy,
+config ([[d50]]); (2) redesign the **extended pre-accept mission card** (`/missions/[id]`) + the **accepted mission card**
+(My Rides run-flow, incl. the `arrived`/waiting-meter screen) via the D25 preview loop.
 
 ## 2026-07-23 — Session 42 — Waiting fees + a hard end-to-end stress test ([[d48]])
 **Branch:** `main`. **Migrations (founder RAN all):** `2026-07-22_waiting_fee.sql`, `2026-07-22_airport_accent_fix.sql`,

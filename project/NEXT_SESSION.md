@@ -252,29 +252,56 @@ CURRENT STATE (live, deployed from `main`):
     paths · no-show clock · waiting math · money conservation · **concurrency race x5, exactly one winner** · release · amendment ·
     reclaim · RLS/privacy · guards) → **49/49 GREEN, 0 real bugs**, DB restored to baseline 34 missions. Fleet lib +
     test scripts live in the **session scratchpad only** (never the repo).
+- **Shipped 2026-07-24 (Session 43) — DRIVER POOL REDESIGN + bottom tab bar, LIVE ([[d49]]; NO migration —
+  `mission_type` `'transfer'|'hourly'` + a nullable `dropoff_address` already exist in the schema; deployed `56211e7`):**
+  the Driver app finally gets a layout redesign (**Pool first**). Decided via the D25 preview loop (v1→v9 mockups), built to match.
+  - **Bottom tab bar** (`components/driver-tabbar.tsx`) replaces the old top text-nav (`components/app-header.tsx` DELETED):
+    Pool (stack / Lucide `Layers`) · My Rides · **Earnings (net-new 4th tab)** · Settings. **Sign out** moved into Settings
+    (`components/driver-signout.tsx`). Content in `<main class="dapp-main">`.
+  - **Pool card rewrite** (`components/mission-card.tsx`) to the approved v9 mockup — uniform, refined weights (**nothing
+    700**): fare+when head, a gentle divider, **mission-only badges** (Transfer / At disposal / SPEED WIN / Luggage run — the
+    vehicle class is **demoted** to a discreet footer note, it's the Driver's own car), a **Dispatch-style route rail** (navy
+    dot → line → grey mid-dot **"+N"** → hollow ring), **full 2-line addresses**, and a **one-line footer** (distance·duration
+    + discreet vehicle | service icons **capped 3 + N by priority**: child seat>pets>luggage>meet&greet>greeter>dress>
+    language>quiet>flight). New `formatPoolWhen()` (Today/Tomorrow/weekday + date). New CSS `.dtabbar/.pcard/.proute/.pbadge`
+    (the shared `.card/.route/.badge` untouched — still used by the un-redesigned Driver screens).
+  - **Earnings** = honest "coming soon" placeholder (its own screen = a later D25 pass). Verified in-browser vs the real DB;
+    **3-lens adversarial review (13 agents) → 6 fixes** (DST "Tomorrow", iOS safe-area `viewportFit:'cover'`, `.ac-list`
+    z-index above the tab bar, icon a11y, muted-grey **WCAG-AA contrast**, real `<h1>`s). `tsc` clean.
+  - **⚑ Parked:** the discreet **vehicle** footer note — keep (truncates to "Business · Se…" on a narrow card) or drop
+    (redundant). **NOT redesigned yet:** My Rides / mission detail / Settings / the Earnings screen / Pool empty+loading.
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-RECOMMENDED NEXT STEP:
+RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — do these two, in this order):
 
-**★ THE LIVE FRONT (2026-07-23, after Sessions 41–42): the Driver app redesign.** The whole money-and-state engine (O7
-cancellation · D47 clock · D48 waiting fees) is **shipped, deployed, and verified end-to-end (49/49 live)** — so the freshest
-open build is the **Driver app layout redesign**. Two decisions are already **half-made and waiting on the founder** (a preview
-loop was in flight when Session 41 pivoted to the clock fix):
-   1. **The `arrived` screen needs a v3.** The approved-in-principle v2 preview predates the D48 **running waiting meter**, which
-      now lives on that exact screen — so redraw the `arrived` state against the shipped meter before building.
-   2. **Pool filter chips — keep or drop?** The v1 preview invented `All / SPEED WIN / Today` filter chips at the top of the
-      Pool; they are NOT in the app today (the Pool is an unsectioned list). Founder to decide.
-   Use the D25 preview loop (inline mockup → sign-off → build matching the preview). Bundle the small navy polish: Driver
-   **"Complete ride" → green** (`success-btn` still falls through to navy) + re-export the **logo** to harmonise its sky-blue.
-   Also open, smaller: **guidance Tier 2** (glossary "?" tooltips) and the **saved-addresses book**.
-   **Parked, founder-gated:** Google Places for POI ranking (⚠️ NOT the airport-accent bug — that was Postgres, fixed S42; Google
-   fixes *ranking*, and it waits on the RED domain registration) · the €1/min **waiting-rate research** + cap review (pricing
-   model) · **§ H2** the `pickup_at` column-grant audit (still Business-writable) + **automated tests** (S42 made the case — 3 of
-   its bugs looked correct in code and only fell to live probing).
+**★ 1. RENAME the project PickUp → `Kavenue` — EVERYWHERE ([[d50]], the founder's explicit Session-44 priority).** The brand
+name is now **Kavenue** (supersedes "RED Executive"). This is a **full rename across docs, code, folders, copy, and config** —
+not just a label swap. Work through carefully: the repo/dir name (`PickUp_project_dev`), the package name + `metadata.title` /
+`appleWebApp.title` (`app/layout.tsx` — "PickUp"), the **Dispatch topbar wordmark** ("PickUp Dispatch"), the Driver header,
+`public/manifest.webmanifest`, and **every `docs/` + `project/` mention**. **Do NOT touch** the product hard-rule glossary
+(Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN), and **Kavenue ≠ PickUp Go**. The **domain** move
+(`pickupbedriven.com` → a Kavenue domain: DNS + Vercel + Supabase redirect allowlist + `lib/hosts.ts`) and the **Google
+Places** key restriction still **wait on the founder registering the Kavenue domain** (do those AFTER the DNS move; restrict
+the key ONCE). Suggest: do the rename on a branch, keep `tsc` + `next build` green, then deploy.
+
+**★ 2. Redesign the two remaining Driver cards (D25 preview loop → sign-off → build to match).** The Pool card is done (S43);
+these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refined weights, route rail, service icons):
+   1. **The extended pre-accept mission card** — what a Driver sees on **`/missions/[id]` BEFORE accepting** (today it's still
+      the old `.card`/`.route`/`.kv` style; `app/(app)/missions/[id]/page.tsx` + `accept-button.tsx`).
+   2. **The accepted mission card** — the **My Rides** trip card + run-flow once a trip is the Driver's
+      (`app/(app)/rides/page.tsx`, `status-control.tsx`, `status-steps.tsx`, and the **`arrived`/waiting-meter** screen
+      `cancel-noshow.tsx`). The `arrived` state **must be drawn against the shipped D48 waiting meter** (the old S41 v2
+      preview predates it).
+
+Smaller open, once the above land: the **Pool empty + loading states**; the discreet-**vehicle** keep/drop call; the
+**Earnings screen** design; Driver **"Complete ride" → green** (`success-btn` falls through to navy today); **guidance Tier-2**
+tooltips; the **saved-addresses book**. **Parked, founder-gated:** the €1/min **waiting-rate** research + cap review (pricing);
+**§ H2** the `pickup_at` column-grant audit (still Business-writable) + **automated tests** (S42 made the case — 3 of its bugs
+looked correct in code and only fell to live probing); the **"Both"** mission type (needs a new `mission_type` enum value).
 
 **A. ✅ Mission-edit Phase 2 — SHIPPED + DEPLOYED (S35, 2026-07-07, [[d40]]; migration applied, full loop verified live).**
    The amendment/consent flow is live: a Business **Propose a change** screen (`/dispatch/[id]/amend` — route incl. pickup
@@ -291,15 +318,14 @@ loop was in flight when Session 41 pivoted to the clock fix):
    app redesign**, the **guidance tooltips (Tier 2)**, the **saved-addresses book**, and the parked **Google Places switch
    + domain migration** (below).
 
-**⚠️ BRAND / DOMAIN (new — [[d44]]):** the product's name is now **RED Executive** (RED = **R**iviera **E**xecutive
-   **D**river) — the rebrand away from "PickUp" (La Poste's EU transport trademark). **The repo/docs stay codenamed
-   "PickUp" for now** — DON'T assume a rename has happened; the topbar still says "PickUp Dispatch", the live domain is
-   still `*.pickupbedriven.com`. Three separate future tasks, all waiting on the founder registering the final name/domain:
-   (1) **Google Places** swap for address search (the real POI fix — key + billing the founder sets up; a "RED Executive"
-   Google Cloud project already exists); (2) **domain migration** `pickupbedriven.com` → a RED domain (DNS + Vercel +
-   Supabase redirect allowlist + `lib/hosts.ts` + the Google key restriction — that's why Google waits: restrict the key
-   ONCE, after the DNS move); (3) **code/copy rebrand** PickUp → RED Executive. ≠ **PickUp Go** (separate product, hard
-   rule). For now: **stay on Mapbox** for search. See [[d43]] [[d44]] + IDEAS.md.
+**⚠️ BRAND / DOMAIN — name is now `Kavenue` ([[d50]], supersedes RED Executive [[d44]]):** the product's name is
+   **Kavenue** — the rebrand away from "PickUp" (La Poste's EU transport trademark). **As of end-of-Session-43 the repo/docs
+   are STILL codenamed "PickUp"** — the full rename is the **Session 44 priority** (see RECOMMENDED NEXT STEP #1); DON'T
+   assume it's happened — the topbar still says "PickUp Dispatch", the live domain is still `*.pickupbedriven.com`. Waiting
+   on the founder registering the Kavenue domain: (1) **domain migration** `pickupbedriven.com` → a Kavenue domain (DNS +
+   Vercel + Supabase redirect allowlist + `lib/hosts.ts`); (2) **Google Places** swap for address search — restrict the key
+   ONCE, after the DNS move. ≠ **PickUp Go** (separate product, hard rule). For now: **stay on Mapbox** for search. See
+   [[d43]] [[d50]] + IDEAS.md.
 
 **PRICING is IN PROGRESS — the founder is working on the model themselves** (how a Ceiling / base-fare is estimated;
 one-way vs round-trip). Respect **[[d37]] — NO empty-return charge** (a smart trajectory Pool solves the deadhead). Don't

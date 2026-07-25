@@ -678,6 +678,35 @@ fee). The founder cut the knot: **a booked trip's time never moves.**
   lose-lose no-show into a billable, useful outcome — needs O12 first, and it is a *scope* change so it stays amendable);
   and a **Driver-initiated "ask to be released"** button, because today nothing records that a Driver ever asked.
 
+### D49 — Driver Pool redesign + bottom tab bar; the Driver app's first layout pass (2026-07-24)
+The Driver app had inherited the navy palette ([[d24]]) but never a structural redesign the way Dispatch did. Session 43
+did the shell + the Pool card (Pool-first), decided via the D25 preview loop (v1→v9 inline mockups) then built to match.
+- **Shell:** a fixed **bottom tab bar** (Pool = stack · My Rides · Earnings · Settings) replaces the old top text-nav
+  (which the founder called "cheap / WordPress-like"); Sign out moved into Settings. **Earnings** is a net-new 4th tab
+  (honest placeholder screen; payouts settle manually in beta).
+- **Pool card:** uniform, quiet, **refined weights (nothing 700)** — the founder rejected the first bold/large draft
+  ("looks made for old people who can't see properly"). Badges are **mission-only** (Transfer / At disposal =
+  `mission_type 'hourly'` / SPEED WIN / Luggage run); the **vehicle class is demoted** to a discreet footer note because
+  the Pool is filtered to the Driver's own single car, so it's redundant on every card. A **Dispatch-style route rail**
+  (navy dot → grey mid-dot "+N" → hollow ring), **full 2-line addresses**, and a **one-line footer** (distance + discreet
+  vehicle | service icons **capped 3 + N** by a fixed priority: child seat > pets > luggage > meet&greet > greeter >
+  dress > language > quiet > flight).
+- **No migration** — `mission_type` + a nullable `dropoff_address` already exist. **Adversarial review (13 agents) → 6
+  fixes**, incl. a DST "Tomorrow" drift and muted-grey **WCAG-AA contrast** (the one caveat that overrides "lighter":
+  keep small text legible for on-road, outdoor use). **Parked:** the discreet-vehicle keep/drop; the "Both"
+  `mission_type` (needs a new enum value). My Rides / mission detail / Settings / the Earnings screen / empty+loading =
+  later passes. Deployed `56211e7`.
+
+### D50 — Brand name = `Kavenue` (supersedes RED Executive) (2026-07-25)
+The product name is now **Kavenue** — the founder's final choice, superseding "RED Executive" ([[d44]]). Still the
+rebrand away from "PickUp" (La Poste's EU transport trademark; **Kavenue ≠ PickUp Go**). **Session 44 will do the full
+rename across docs, code, folders, copy, and config** (repo dir, package name, `metadata.title`/`appleWebApp.title`, the
+Dispatch/Driver wordmarks, `manifest.webmanifest`, every `docs/` + `project/` mention) — but NOT the product hard-rule
+glossary (Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN). The **domain** move (`pickupbedriven.com` → a
+Kavenue domain) + the **Google Places** key restriction still wait on the founder registering the Kavenue domain
+(restrict the key once, after the DNS move). Legal (INPI/EUIPO trademark search classes 39/35/42) stays the founder's
+track — flag, don't gate ([[legal-not-mvp-blocker]]).
+
 ---
 
 ## Open decisions inherited from the spec (not ours to close — track only)
