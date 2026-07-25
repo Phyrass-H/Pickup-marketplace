@@ -316,7 +316,19 @@ happened), the `Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev
 `*@pickup.local` dev-login/seed identities (they map to REAL Supabase auth rows — renaming the string alone breaks
 dev-login). See the founder-action list at the end of this file.
 
-**★ 2. Redesign the two remaining Driver cards — THE SESSION-45 PRIORITY (ask first, then D25 preview → sign-off → build).**
+**★ 2. ✅ Driver cards redesign — SHIPPED (S45, [[d52]]; deployed `1a1e5b6`, Vercel `success`).** Both remaining Driver
+screens now carry the S43 Pool-card language: `/missions/[id]` reads as "the Pool card, opened" (uncollapsed route rail,
+a `Service` card of `.dfact` rows + `.dchip`s, a `.dlock` reveal row, a plain full-width `Accept mission` — no sticky
+bar, no fare beside it), and the My Rides card leads with **state not price** (`.dpill` + a `.dprog` segment bar with a
+plain-words caption, stop progress on the rail, `.dcall` tap-to-call chips, a `.dnote` prep box, fare in the foot).
+**One filled button per screen** — no-show + cancel dropped to `.dquiet` text actions; `Complete ride` is finally green.
+No schema, no behaviour change. **⚑ Not verified live:** the `arrived`/waiting-meter + no-show-confirm visuals (no trip
+was in that state) — logic is unchanged, but give `.dmeter` a look when a real trip reaches `arrived`.
+**Founder preference recorded:** these pages **scroll by design** — breathing room beats fitting one viewport.
+
+<details><summary>Original S45 brief (kept for reference)</summary>
+
+**Redesign the two remaining Driver cards (ask first, then D25 preview → sign-off → build).**
 The founder **deferred these out of S44** ("don't do the card now") — so confirm they still want it before starting.
 A design brief was already gathered in S44 and is worth re-deriving cheaply: the shipped `.pcard`/`.proute`/`.pbadge` CSS
 and tokens live in `app/globals.css` (~lines 6–127 for `:root`, ~1636–1838 for the Pool card); the Pool card DOM is
@@ -328,6 +340,8 @@ these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refi
       (`app/(app)/rides/page.tsx`, `status-control.tsx`, `status-steps.tsx`, and the **`arrived`/waiting-meter** screen
       `cancel-noshow.tsx`). The `arrived` state **must be drawn against the shipped D48 waiting meter** (the old S41 v2
       preview predates it).
+
+</details>
 
 Smaller open, once the above land: the **Pool empty + loading states**; the discreet-**vehicle** keep/drop call; the
 **Earnings screen** design; Driver **"Complete ride" → green** (`success-btn` falls through to navy today); **guidance Tier-2**
