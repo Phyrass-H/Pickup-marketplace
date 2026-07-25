@@ -770,7 +770,53 @@ the whole sticky bar went with it); and give the accepted card real breathing ro
 fit in a fixed screen… it always needs to be easy to read fast and comfortably"*, so these pages scroll by design.
 
 **Not verified live:** the `arrived`/waiting-meter and no-show-confirm visuals (no trip in that state to hand).
-Logic unchanged; only classes moved.
+Logic unchanged; only classes moved. **(Closed S46: verified live — see [[d53]] context.)**
+
+### D53 — My Rides is a tap-through LIST; `/missions/[id]` is the single "mission, opened" screen (2026-07-25)
+The old `/rides` dumped every trip in one scroll AND hung each mission's actions (status advance, waiting meter,
+cancel, amendment/release) inline under its card — so a live trip's controls sat sandwiched between unrelated rides.
+Restructured (founder complaint → D25 preview → build):
+- **`/rides` = a clean list of tap-through cards** (state pill · when · progress · route · fare), current + upcoming
+  only (`accepted/confirmed/en_route/arrived/on_board`); completed & cancelled move to **History**. No inline actions;
+  a small amber flag surfaces when a change/release is waiting an answer.
+- **`/missions/[id]` branches by ownership** — the same URL is "the mission, opened" for both sides: OWNED → the full
+  run view (`components/mission-run-view.tsx`) + a `← My Rides` back link + every action; OWNED+terminal → read-only +
+  `← History`; POOLED → the unchanged pre-accept view + Accept + `← Back to Pool`.
+
+**Why one page, not inline controls:** one trip, one screen — the run controls belong to the trip you opened, not
+stacked among others. The pre-accept view already lived at `/missions/[id]`; extending it to the owned/run case keeps a
+single "opened mission" object. **Trade:** the contact/phone reveal (dispatcher/business/shared-guest) moved from the
+batch list into the per-mission page, but stays gated to `isMine` exactly as before; `statusPill`/`progressCaption` are
+now exported from `mission-run-view` so the list + run view can't drift. Also this session: the "pro move" no-show
+nudge cut to one generic line (no "bags"), the report button dropped "you're paid". 3-lens adversarial review → 3 fixes
+(amendment/release not gated to the answerable window; a swallowed `arrived`-read error; a `UserX`→`UserRound` drift).
+
+### D54 — Pool loading skeleton + designed empty states (2026-07-25)
+The un-designed parts S43 left. **Loading:** a route-level `pool/loading.tsx` — three skeleton cards in the real
+Pool-card shape (`.pcard--skel` + `.pskel*`), pulsing via the existing `dx-pulse` keyframe, staggered, so the
+force-dynamic Pool shows structure not a blank flash. **Empty:** both states rebuilt from the plain `.empty` text into
+a calm `.pempty` block (soft icon tile + headline + muted subtext) — the *no-trips* state **names the filter in bold**
+("New Business · Sedan trips within 50 km of Nice land here…") so it's clear WHY it's empty, plus a quiet "checking your
+area · pull to refresh" line; the *no-service-area* state is a setup prompt with one navy CTA into Settings. **Why:** an
+empty/loading screen is where a Driver decides the app is broken or just quiet — naming the filter + card-shaped
+skeletons say "working". Presentational only; no new keyframe.
+
+### D55 — Accept always confirms immediately (Option A); pre-accept card polish (2026-07-25)
+Three founder-flagged items. Two are polish: **removed the redundant zone** from the pre-accept footer (the city is
+already in the pickup address; the Pool card never showed it), and **shortened the unlock line** to "Private details
+unlock once you accept."
+
+The third is a model call. `accept_mission` auto-confirmed a trip **only** when pickup was <3h away; otherwise it left
+the trip `accepted` to await the **Lock-in at T-180** (3h before pickup). But nothing flips `accepted` → `confirmed` at
+T-180 — that auto-confirm needs the deferred cron/notifications phase — so a trip accepted 3h+ out sat in limbo with
+**no Driver controls** and a dead-end "awaiting readiness confirmation (Lock-in at T-180)" message. **Founder chose
+Option A: accept ALWAYS confirms immediately.** (Weighed: A drop the gate; B a manual "I'm ready" confirm; C keep it +
+build the T-180 cron.) **Why A:** simplest, no stuck trips; the O7 reclaim / no-show paths already cover a Driver who
+goes silent, so nothing depended on the never-fired Lock-in transition. Done via a create-or-replace of the RPC
+(migration `2026-07-25_accept_always_confirms`, + a backfill of existing `accepted` → `confirmed`), NOT by touching the
+shared `mission-flow` helpers (the Dispatch `trip-row` uses those). App removed the T-180 message + the dead "Awaiting
+Lock-in" list caption. **The Lock-in / `accepted` status is now vestigial** — kept in the enum + RPC IN-lists for
+safety, but no path produces it. Verified live: accepting a >3h pooled trip lands at `confirmed`, controls immediately.
 
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:

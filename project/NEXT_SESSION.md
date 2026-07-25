@@ -14,7 +14,7 @@ START BY READING — **just these four**; they get you fully up to date without 
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
   `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 40–42)** for recent technical detail. Older sessions
+- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 44–46)** for recent technical detail. Older sessions
   (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
@@ -32,8 +32,8 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`, `2026-07-13_o7_cancellation`,
   `2026-07-19_agreed_release`, `2026-07-19_repool_speedwin_window`, `2026-07-19_no_show_clock_origin`,
   `2026-07-19_no_show_airport_label`, `2026-07-19_guest_ready_at_guard`, `2026-07-22_waiting_fee`,
-  `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`) — **ONLY** for
-  schema/data work. (All applied to the live DB.)
+  `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`, `2026-07-25_accept_always_confirms`) —
+  **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
 
@@ -298,26 +298,53 @@ CURRENT STATE (live, deployed from `main`):
     touched: `.claude/settings.local.json` line 42 mentions the old brand inside a permission rule and line 32 has a stale
     `pickup_schema.sql` path (a dead entry — that path was already wrong pre-rename) — it's your permissions config, so
     edit it yourself if you want it tidy.
+- **Shipped 2026-07-25 (Session 45) — the two remaining Driver cards redesigned, LIVE ([[d52]]; deployed `1a1e5b6`; NO
+  migration):** `/missions/[id]` pre-accept reads as "the Pool card, opened" (uncollapsed route rail + a Service card +
+  a `.dlock` reveal + a plain `Accept mission`); the My Rides card leads with STATE not price (`.dpill` + `.dprog` bar +
+  `.dcall` tap-to-call + `.dnote` prep box, fare in the foot). One filled button per screen; no-show + cancel are
+  `.dquiet`; Complete ride is green. Both reuse `.pcard*`/`.proute*`. **These Driver pages scroll by design.**
+- **Shipped 2026-07-25 (Session 46) — My Rides restructure + Pool empty/loading + pre-accept polish + Option A, LIVE
+  ([[d53]]–[[d55]]; migration `2026-07-25_accept_always_confirms` applied; deployed `7dd4c34` · `950612f` · `ea33515`):**
+  - **D53 — My Rides is a tap-through LIST, and each trip opens its own page.** `/rides` = a clean list of `<Link>`
+    cards (state · when · progress · route · fare), **current + upcoming only** (completed → History); a "change/release
+    is waiting" flag when one is answerable. **`/missions/[id]` now branches by ownership:** OWNED → the full run view
+    (new `components/mission-run-view.tsx`) + `← My Rides` + every action (status advance · waiting meter · no-show ·
+    cancel · amendment/release cards); OWNED + terminal → read-only + `← History`; POOLED → the unchanged pre-accept +
+    Accept + `← Back to Pool`. Contact/phone reveal moved into the per-mission page, still gated to `isMine`. Amendment/
+    release builders extracted to `lib/mission-cards.ts`. Copy: shorter generic "pro move" nudge; report button drops
+    "you're paid". 3-lens adversarial review → 3 fixes (amendment/release gating · swallowed arrived-read error · icon).
+  - **D54 — Pool loading + empty states.** New `pool/loading.tsx` (skeleton cards, `dx-pulse`, staggered); both empty
+    states rebuilt into a calm `.pempty` block (no-trips **names the filter**; no-service-area = a setup CTA to Settings).
+  - **D55 — pre-accept polish + Option A.** Removed the redundant zone from the pre-accept footer; shortened the unlock
+    line to "Private details unlock once you accept."; and **accept now ALWAYS confirms immediately** (dropped the
+    Lock-in <3h gate that left 3h+ trips stuck `accepted` with no controls — nothing fired the T-180 auto-confirm). The
+    migration replaces `accept_mission` + backfills existing `accepted` → `confirmed`. **The `accepted` status is now
+    vestigial** (no path produces it). Verified live: accept → `confirmed`, controls immediately.
 
 LEGAL — **not a build blocker.** The founder (Céline) owns the legal track personally; a lawyer writes the real
 Terms/Privacy/positioning later. Do **not** gate work on legal or add "needs a lawyer" flags. Keep the glossary
 + agent/intermediary framing in code/copy (a product rule, not a legal gate). Sharing the Guest phone is fine for
 the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate), kept private from Drivers until shared.
 
-**★ SESSION-46 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4) — this is a suggestion, not a mandate.**
-The Driver app's three main screens are redesigned (Pool S43 · pre-accept + accepted S45). What's left on that track is
-small and finishable in one session; the D25 preview loop applies to every item.
-1. **✅ S45 verification gap — CLOSED (S46, 2026-07-25).** The `arrived` waiting-meter (`.dmeter`), its capped state,
-   and the no-show confirm nudge were all verified live vs the real DB (mobile 375×812) by seeding 3 tagged `arrived`
-   test missions with past `pickup_at` under a dedicated dev driver. Amber running meter (city €40 / airport €60 cap,
-   €1/min), neutral "Waiting closed" capped state, and the "The pro move" confirm with the paid-sum button all render
-   correctly, no console errors. No code change warranted (a *look*, not a rebuild). Test missions removed after.
-2. **Pool empty + loading states** — the only un-designed part of the Pool screen (S43 left them).
-3. **The Earnings tab** — today an honest "coming soon" placeholder (S43). Needs its own D25 pass, and a decision on
-   what it can even show before payments exist (completed trips + fares + waiting fees are all in the DB already).
-4. **The discreet-vehicle keep/drop call** (parked since S43): the muted "Business · Se…" footer note on the Pool card —
-   keep it or drop it as redundant (it's the Driver's own car).
-5. Then the non-Driver items below (**guidance Tier-2 tooltips**, the **saved-addresses book**).
+**★ SESSION-46 — SHIPPED (2026-07-25).** Everything on the Driver track this session is done + deployed (see the S46
+CURRENT STATE block above). What each proposed item became:
+1. **✅ S45 verification gap — CLOSED.** The `arrived` waiting-meter + capped state + no-show confirm verified live.
+2. **✅ Pool empty + loading states — SHIPPED ([[d54]]).**
+3. **Earnings tab — DEFERRED to its own session (founder's call).** See Session-47 below.
+4. **✅ Discreet-vehicle note — DECIDED: KEEP** (founder). Left on the Pool card as-is; only the redundant **zone** was
+   removed from the *pre-accept* footer ([[d55]]).
+5. **✅ Also shipped, unplanned:** the My Rides restructure ([[d53]]) + Option A "accept always confirms" ([[d55]]).
+
+**★ SESSION-47 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4).**
+1. **The Earnings screen** — the founder's chosen next dedicated session. Turn the 4th Driver tab from a "coming soon"
+   placeholder into a real screen. **D25 preview first.** It can show real data with NO payments wired: completed trips
+   + their fares + waiting fees are all already in the DB (query `mission` where `status='completed'` / `no_show=true`).
+   Decide the shape *with the founder* — running total vs per-trip list, this-week vs all-time, how to surface waiting-fee
+   and no-show earnings. Files: `app/(app)/earnings/`. Remember: euro **settlement** is MANUAL in beta (rules only).
+2. Then the non-Driver items: **guidance Tier-2 tooltips** (`project/GUIDANCE_AUDIT.md` — a "?" glossary tooltip for
+   Ceiling/Pool/SPEED WIN/Lock-in/status pills, a Dispatch status legend, Lock-in in plain words) and the
+   **saved-addresses book** (BACKLOG § L — the Business's own address + pre-fill/swap plumbing already exists; next is a
+   small additive table for *multiple* saved places + a one-tap picker on both ends of the new-mission Route card).
 
 RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — ★1 and ★2 are now both SHIPPED):
 
@@ -359,9 +386,9 @@ these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refi
 
 </details>
 
-Smaller open, once the above land: the **Pool empty + loading states**; the discreet-**vehicle** keep/drop call; the
-**Earnings screen** design; Driver **"Complete ride" → green** (`success-btn` falls through to navy today); **guidance Tier-2**
-tooltips; the **saved-addresses book**. **Parked, founder-gated:** the €1/min **waiting-rate** research + cap review (pricing);
+Smaller open: the **Earnings screen** design; **guidance Tier-2** tooltips; the **saved-addresses book**. (✅ done since:
+**Pool empty/loading** [[d54]]; the **discreet-vehicle** note — KEPT (founder); Driver **"Complete ride" → green** [[d52]];
+the pre-accept **zone** removed [[d55]].) **Parked, founder-gated:** the €1/min **waiting-rate** research + cap review (pricing);
 **§ H2** the `pickup_at` column-grant audit (still Business-writable) + **automated tests** (S42 made the case — 3 of its bugs
 looked correct in code and only fell to live probing); the **"Both"** mission type (needs a new `mission_type` enum value).
 

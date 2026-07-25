@@ -45,11 +45,7 @@ pre-accept / accepted Driver cards.
   Suspense fallback ships the full `.pcard--skel` markup with the staggered delays — it renders correctly, just flashes
   too fast to screenshot on a local render). `tsc` clean.
 
----
-
-## 2026-07-25 — Session 46 — My Rides restructure (tap-through list + dedicated mission page) + waiting-meter verification
-
-**Part B — My Rides restructure (founder-approved, D25 preview signed off).** The complaint: `/rides` dumped every
+**Part B — My Rides restructure (founder-approved, D25 preview signed off) [[d53]].** The complaint: `/rides` dumped every
 active/completed trip in one scroll AND hung each mission's action buttons (Guest on board, the waiting meter, cancel,
 amendment/release cards) inline under its card — so a live mission's controls sat sandwiched between unrelated rides.
 The fix, per the approved 3-frame preview:
@@ -79,11 +75,8 @@ The fix, per the approved 3-frame preview:
   card on the detail page; a pooled trip still shows the pre-accept Accept view. `tsc` clean; no console errors. 3-lens
   adversarial review (privacy-gating · parity · branching).
 
----
-
-## 2026-07-25 — Session 46 (Part A) — Verified the S45 waiting-meter visuals against live data (no code change)
-
-**Scope (founder-approved, item #1 only).** Close the one gap S45 left open: the `arrived` waiting-meter (`.dmeter`),
+**Part A — verified the S45 waiting-meter visuals against live data (no code change, item #1).** Close the one gap S45
+left open: the `arrived` waiting-meter (`.dmeter`),
 its capped state, and the no-show confirm nudge were never seen against real data (no trip was in that state when S45
 shipped). A *look*, not a rebuild — D48 logic is unchanged. No code, no schema, no migration.
 
