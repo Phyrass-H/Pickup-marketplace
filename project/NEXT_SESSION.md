@@ -335,7 +335,25 @@ CURRENT STATE block above). What each proposed item became:
    removed from the *pre-accept* footer ([[d55]]).
 5. **✅ Also shipped, unplanned:** the My Rides restructure ([[d53]]) + Option A "accept always confirms" ([[d55]]).
 
-**★ SESSION-47 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4).**
+- **Shipped 2026-07-26 (Session 47) — MY RIDES: Upcoming | Past tabs + day separators + the Past archive, LIVE
+  ([[d56]]; NO migration; deployed `0fcb831` → Vercel `success`):** the founder re-ordered S47 — My Rides before
+  Earnings ("the history is an ugly link in the header").
+  - **Tabs** (`components/rides-tabs.tsx`): a segmented **Upcoming | Past** control (founder picked style A over
+    underline) with counts, replacing the `History →` corner link. Deliberately still **two routes** (`/rides` +
+    `/rides/history`) — each keeps its own server query and every deep link still lands.
+  - **Upcoming:** **day separators** (Today / Tomorrow / Friday 31 July + a ride count) from consecutive `parisDayKey`
+    runs; new DST-safe `formatDayGroup()`. The card now shows **only the time** (the day is written above it).
+  - **Past:** rebuilt off the old `.card`/`.route` markup onto a lighter **`.pastcard`** (date, small pill,
+    single-line route, Business + fare), month groups, and server-side **All | Completed | Cancelled** filter chips
+    (a filter row, NOT a third tab). **No money totals** (Earnings owns money). A **cancelled trip shows "—", not €0**
+    — its payout depends on who cancelled and when ([[d45]]) and settles manually in beta.
+  - **⚑ The privacy rule:** a **Guest's data leaves the Driver's app once the trip closes** — name, phones, name board
+    and the Business's private message, enforced **server-side** (`mission_guest_contact` is never queried for a
+    terminal mission). Kept: date/route/fare/status + **Business & Dispatcher** (dispute route). **Dispatch untouched.**
+  - Designed **empty states per tab**; `formatMonth` fixed `fr-FR` → `en-GB` (month headings read "July 2026" now, both
+    Driver and Dispatch history). Verified live on a tagged 8-mission set, DB restored to its 34-mission baseline.
+
+**★ SESSION-48 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4).**
 1. **The Earnings screen** — the founder's chosen next dedicated session. Turn the 4th Driver tab from a "coming soon"
    placeholder into a real screen. **D25 preview first.** It can show real data with NO payments wired: completed trips
    + their fares + waiting fees are all already in the DB (query `mission` where `status='completed'` / `no_show=true`).
