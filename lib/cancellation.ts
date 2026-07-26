@@ -126,3 +126,18 @@ export function businessCancelPct(hoursToPickup: number, hasDriver: boolean): nu
   if (hoursToPickup < 0) return 100;
   return Math.min(100, Math.max(50, 50 + 10 * (5 - hoursToPickup)));
 }
+
+// What a Driver is owed on a trip that ended cancelled: the policy fee (50–100% of
+// the fare at the time) PLUS any waiting already accrued — business_cancel_mission
+// settles both onto the mission row, so this is the stored truth, not a re-derivation.
+//
+// A Driver only ever SEES a cancelled trip that the Business cancelled: every other
+// path (driver cancel · agreed release · T-60 reclaim) re-pools the mission and clears
+// driver_id, so it leaves their app instead of ending terminal.
+//
+// null on a legacy row stamped before 2026-07-13 — show nothing rather than a wrong
+// number. PostgREST returns `numeric` as a STRING, hence the coercion.
+export function cancelCompensation(m: MissionRow): number | null {
+  if (m.status !== "cancelled" || m.cancellation_fee == null) return null;
+  return Number(m.cancellation_fee) + Number(m.waiting_fee ?? 0);
+}

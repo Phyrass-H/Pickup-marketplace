@@ -29,9 +29,17 @@ three segments crowd a phone and a cancelled trip is rare).
   **`.pastcard`** — a record, not work: date + time, a small status pill, a 2-dot rail with **single-line** addresses,
   Business + fare in the foot. No progress bar, no state-first lead. Month groups reuse the same `.dday` separator.
   Filter chips `All | Completed | Cancelled` are server-side (`?filter=`), hidden when the archive is empty.
-  A **no-show ends as `completed` + `no_show=true`** (mark_no_show pays the Driver), so it correctly files under
-  Completed. **A cancelled trip shows "—", not €0** — the payout depends on who cancelled and when (O7/D45: a Business
-  cancel pays the Driver a %) and settles manually in beta, so a number here would be a lie. Earnings owns the money.
+  A **no-show ends as `completed` + `no_show=true`** (mark_no_show pays the Driver the FULL fare), so it correctly files
+  under Completed — the founder chose to leave it there rather than add a 4th chip.
+- **Cancelled trips: who + how much (founder follow-up, same session).** Traced a structural fact worth writing down:
+  **a Driver only ever sees a cancelled trip that the BUSINESS cancelled.** `driver_cancel_mission` / `respond_to_release`
+  / `reclaim_mission` all re-pool (`status='pooled'`, `driver_id=null`), so those leave the Driver's app entirely; only
+  `business_cancel_mission` goes terminal with `driver_id` intact. So the card now says **"Cancelled by the Business"**
+  and shows **real money** — `mission.cancellation_fee` (the 50–100% curve) + any `waiting_fee`, both already stamped on
+  the row by the RPC — labelled **"Compensation"** so it can't be read as the trip fare. Shared
+  `cancelCompensation()` in `lib/cancellation.ts` (list + detail can't drift); a legacy pre-2026-07-13 row with no
+  stamped fee still shows "—". **This replaced the blanket "—" shipped hours earlier** — that caution was unnecessary
+  once the asymmetry was understood.
 - **Guest data leaves a closed trip (the privacy rule).** Enforced **server-side**, not hidden in CSS: for a terminal
   owned mission `missions/[id]/page.tsx` **never queries `mission_guest_contact`** and passes `archived` to
   `MissionRunView`, which drops the Guest name row, the name board and the Business's private message (both can quote

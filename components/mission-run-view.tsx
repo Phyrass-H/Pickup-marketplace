@@ -19,6 +19,7 @@ import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow
 import { parseWaypoints } from "@/lib/waypoints";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import {
+  cancelCompensation,
   guestDueAt,
   isAirportPickup,
   noShowAvailableAt,
@@ -121,6 +122,7 @@ export function MissionRunView({
   const done = progressDone(m.status, stops.length, stopsReached);
   const caption = progressCaption(m.status, stops.length, stopsReached);
   const phones = guestPhones;
+  const comp = cancelCompensation(m);
 
   return (
     <>
@@ -156,6 +158,10 @@ export function MissionRunView({
                 ))}
               </div>
             </div>
+          )}
+
+          {m.status === "cancelled" && (
+            <p className="dcancel-note">Cancelled by the Business</p>
           )}
 
           {amendment && <AmendmentCard {...amendment} />}
@@ -302,7 +308,11 @@ export function MissionRunView({
           <span className="pcard__facts">
             <Building2 size={13} aria-hidden="true" />
             {businessName ?? "—"}
-            <span className="pcard__veh">{formatMoney(currentFare(m))}</span>
+            {/* On a cancelled trip the trip fare is NOT what the Driver is owed —
+                the O7 compensation is (labelled, so it can't be misread as the fare). */}
+            <span className="pcard__veh">
+              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(currentFare(m))}
+            </span>
           </span>
         </div>
       </article>

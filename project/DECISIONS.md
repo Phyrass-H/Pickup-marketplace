@@ -826,10 +826,19 @@ and every existing deep link still lands. Day separators (**Today / Tomorrow / F
 list; the card then shows only the time, since the day is written above it.
 
 **Past is a record, not work** — its own lighter `.pastcard` (date, small pill, single-line route, Business + fare); no
-progress bar, no state-first lead. **No money totals** on Past (founder): the Earnings tab owns money. A **cancelled
-trip shows "—", never €0** — the payout depends on who cancelled and how late ([[d45]]) and settles manually in beta,
-so a number would be a lie. Cancelled trips get a **filter row inside Past (All | Completed | Cancelled), not a third
-tab** — three segments crowd a phone and a cancelled trip is rare.
+progress bar, no state-first lead. **No money totals** on Past (founder): the Earnings tab owns money. Cancelled trips
+get a **filter row inside Past (All | Completed | Cancelled), not a third tab** — three segments crowd a phone and a
+cancelled trip is rare. **No-shows stay under Completed** (founder): `mark_no_show` files them as `completed` +
+`no_show=true` because they pay the Driver the FULL fare, and the amber pill already makes them stand out.
+
+**A cancelled trip in a Driver's Past was always cancelled BY THE BUSINESS** — structural, not a heuristic: driver
+cancel · agreed release · T-60 reclaim all re-pool the mission and clear `driver_id`, so only `business_cancel_mission`
+ends terminal with the Driver still attached. Two consequences: the card **says "Cancelled by the Business"**, and it
+shows **real money, not a dash** — `mission.cancellation_fee` (50–100% per [[d45]]) plus any `waiting_fee` accrued,
+both stamped on the row by the RPC. Shared helper `cancelCompensation()` in `lib/cancellation.ts` so the list and the
+detail can't drift. The amount is **labelled "Compensation"** so it can't be misread as the trip fare, and a legacy row
+stamped before 2026-07-13 (no fee) still shows "—" rather than a wrong €0. (First shipped as a blanket "—"; corrected
+same session once the re-pool asymmetry was traced — the caution was unnecessary.)
 
 **The privacy rule: a Guest's data leaves the Driver's app when the trip closes.** Guest names, phone numbers, the name
 board and the Business's private message are all dropped from a terminal mission — enforced **server-side** (the

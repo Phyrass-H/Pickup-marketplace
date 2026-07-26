@@ -11,6 +11,7 @@ import {
   formatTime,
   missionStatusLabel,
 } from "@/lib/format";
+import { cancelCompensation } from "@/lib/cancellation";
 import { parisDayKey } from "@/lib/dispatch-status";
 import type { MissionRow, MissionStatus } from "@/lib/database.types";
 import { statusPill } from "@/components/mission-run-view";
@@ -141,7 +142,7 @@ export default async function RideHistoryPage({
           </p>
           <p className="pempty__s">
             {active === "all"
-              ? "A trip moves here once it’s completed or cancelled. Guest details are removed when it does."
+              ? "A trip moves here once it’s completed or cancelled."
               : "Nothing in your archive matches this filter."}
           </p>
         </div>
@@ -158,11 +159,13 @@ export default async function RideHistoryPage({
 
           {g.items.map((m) => {
             const { tone, Icon: PillIcon } = statusPill(m);
-            // A cancelled trip's payout depends on WHO cancelled and how late
-            // (O7/D45: a Business cancel pays the Driver a %, a Driver cancel
-            // pays nothing), and that settles manually in beta — so show no
-            // number rather than a wrong one. Earnings owns the money truth.
+            // A cancelled trip a Driver can still see was cancelled BY THE BUSINESS
+            // — every other cancel path re-pools and drops the Driver. So it isn't a
+            // €0 row: it carries the O7 compensation (fee + any waiting accrued),
+            // which is stamped on the mission. Labelled, so the amount can't be
+            // mistaken for the trip fare.
             const cancelled = m.status === "cancelled";
+            const comp = cancelCompensation(m);
 
             return (
               <Link href={`/missions/${m.id}`} className="pastcard" key={m.id}>
@@ -176,6 +179,8 @@ export default async function RideHistoryPage({
                     {m.no_show ? "No-show" : missionStatusLabel(m.status)}
                   </span>
                 </div>
+
+                {cancelled && <p className="dcancel-note">Cancelled by the Business</p>}
 
                 <div className="pastcard__route">
                   <span className="pastcard__rail">
@@ -197,11 +202,14 @@ export default async function RideHistoryPage({
                     <Building2 size={13} aria-hidden="true" />
                     {bizNames.get(m.business_id) ?? "—"}
                   </span>
-                  <span
-                    className={cancelled ? "pastcard__fare pastcard__fare--none" : "pastcard__fare"}
-                  >
-                    {cancelled ? "—" : formatMoney(currentFare(m))}
-                  </span>
+                  {cancelled && comp == null ? (
+                    <span className="pastcard__fare pastcard__fare--none">—</span>
+                  ) : (
+                    <span className="pastcard__fare">
+                      {cancelled && <span className="pastcard__farel">Compensation</span>}
+                      {formatMoney(cancelled ? comp : currentFare(m))}
+                    </span>
+                  )}
                 </div>
               </Link>
             );

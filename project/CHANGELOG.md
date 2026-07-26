@@ -15,8 +15,12 @@
 - **Past trips got their own, lighter design.** A finished trip is a record, not work, so it's drawn simply: the date
   and time, a status badge, the route on one line each, the Business and the fare. They're grouped by month, and a small
   **All / Completed / Cancelled** filter sits at the top so a cancelled trip is one tap away instead of a scroll.
-  A cancelled trip deliberately shows no amount — what it pays depends on who cancelled and when, and that's settled by
-  hand for now, so showing "0" would be misleading. The Earnings tab will handle the money properly.
+- **A cancelled trip now says who cancelled it, and what the Driver is owed.** It turns out a Driver only ever *sees* a
+  trip you cancelled — if a Driver drops a trip, or you both agree to release it, it goes straight back into the Pool
+  and disappears from their app. So the card says **"Cancelled by the Business"** and shows the real compensation
+  (50–100% of the fare depending on how late, plus any waiting already running), labelled "Compensation" so it can't be
+  mistaken for the trip fare. **No-shows stay under Completed** — they pay the Driver the full fare, so that's where
+  they belong; the amber badge already makes them easy to spot.
 - **A Guest's details disappear from a Driver's app once the trip is over.** Names, phone numbers, the name board and
   your private message to the Driver are all removed the moment a trip closes — the Driver keeps only the date, route,
   fare, status and who the trip was for. **Nothing changes on your side: Dispatch keeps the complete record.** The
