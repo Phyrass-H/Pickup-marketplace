@@ -818,6 +818,26 @@ shared `mission-flow` helpers (the Dispatch `trip-row` uses those). App removed 
 Lock-in" list caption. **The Lock-in / `accepted` status is now vestigial** — kept in the enum + RPC IN-lists for
 safety, but no path produces it. Verified live: accepting a >3h pooled trip lands at `confirmed`, controls immediately.
 
+### D56 — My Rides = Upcoming | Past tabs, and Guest data leaves a closed trip (2026-07-26)
+**Tabs, not a corner link.** The archive was reachable only via an underlined `History →` in the header. Now a
+**segmented control** (founder picked style A over underline tabs) labelled **Upcoming / Past**, with counts. Kept as
+**two routes** (`/rides` + `/rides/history`) rather than one route with a query param: each keeps its own server query,
+and every existing deep link still lands. Day separators (**Today / Tomorrow / Friday 31 July**) group the Upcoming
+list; the card then shows only the time, since the day is written above it.
+
+**Past is a record, not work** — its own lighter `.pastcard` (date, small pill, single-line route, Business + fare); no
+progress bar, no state-first lead. **No money totals** on Past (founder): the Earnings tab owns money. A **cancelled
+trip shows "—", never €0** — the payout depends on who cancelled and how late ([[d45]]) and settles manually in beta,
+so a number would be a lie. Cancelled trips get a **filter row inside Past (All | Completed | Cancelled), not a third
+tab** — three segments crowd a phone and a cancelled trip is rare.
+
+**The privacy rule: a Guest's data leaves the Driver's app when the trip closes.** Guest names, phone numbers, the name
+board and the Business's private message are all dropped from a terminal mission — enforced **server-side** (the
+`mission_guest_contact` query never runs for a closed trip), not hidden in the markup. **Kept:** date, route, fare,
+status, and the **Business + its Dispatcher** — a business counterparty and the Driver's only route to a dispute, not
+Guest data. **Dispatch is untouched: the Business keeps the full record**, which is what makes the removal safe rather
+than lossy. A single `.dlock` line tells the Driver so, so it reads as a rule instead of a loading failure.
+
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:
 - Commission split exact numbers (~12.5% Business / ~10% Driver, teaser).

@@ -5,6 +5,25 @@
 
 ---
 
+## 26 July 2026
+- **My Rides has proper tabs now — Upcoming and Past.** The ride history used to be a small underlined link tucked in
+  the corner of the header. It's now a real two-tab switch at the top of the screen, each tab showing how many trips
+  are in it, so a Driver can move between "what I'm driving" and "what I've driven" without hunting for a link.
+- **The upcoming list is split by day.** Trips are grouped under **Today**, **Tomorrow** and then the date ("Friday 31
+  July"), with a count beside each. Because the day is written above the group, each card now shows just the pickup
+  time — one clean number instead of the date repeated on every card.
+- **Past trips got their own, lighter design.** A finished trip is a record, not work, so it's drawn simply: the date
+  and time, a status badge, the route on one line each, the Business and the fare. They're grouped by month, and a small
+  **All / Completed / Cancelled** filter sits at the top so a cancelled trip is one tap away instead of a scroll.
+  A cancelled trip deliberately shows no amount — what it pays depends on who cancelled and when, and that's settled by
+  hand for now, so showing "0" would be misleading. The Earnings tab will handle the money properly.
+- **A Guest's details disappear from a Driver's app once the trip is over.** Names, phone numbers, the name board and
+  your private message to the Driver are all removed the moment a trip closes — the Driver keeps only the date, route,
+  fare, status and who the trip was for. **Nothing changes on your side: Dispatch keeps the complete record.** The
+  Driver sees a one-line explanation so it reads as a rule, not as missing information.
+- **Both tabs now have a proper empty screen** instead of a bare line of text — the Upcoming one points you to the Pool.
+- **Month headings are in English again** ("July 2026", not "Juillet 2026") on both the Driver and Business history.
+
 ## 25 July 2026
 - **Accepting a trip now works right away.** Before, if you grabbed a trip more than 3 hours ahead, it sat in a
   half-accepted state — no "Start" button, and a confusing "Lock-in at T-180" note — and nothing ever un-stuck it.

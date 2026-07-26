@@ -76,26 +76,36 @@ export default async function MissionDetailPage({
   if (isMine && driver) {
     const isActive = ACTIVE_STATUSES.includes(mission.status);
     const backHref = isActive ? "/rides" : "/rides/history";
-    const backLabel = isActive ? "← My Rides" : "← History";
+    const backLabel = isActive ? "← My Rides" : "← Past rides";
 
     // Reveal the contact + shared Guest phones via the service role (a Driver can't
     // read the Dispatcher / mission_guest_contact rows under RLS) — gated to THIS
     // mission, which the RLS query above already proved is the Driver's.
+    //
+    // A CLOSED trip gets no Guest data at all: the numbers are never fetched, so
+    // the removal is a server fact, not a hidden div. The Business side is
+    // untouched — Dispatch keeps the full record. The Business + its Dispatcher
+    // stay here (a business counterparty, and the Driver's only route to a
+    // dispute), only the Guest goes.
     const admin = createAdminClient();
     const [{ data: disp }, { data: biz }, { data: gc }] = await Promise.all([
       admin.from("dispatcher").select("name, phone").eq("id", mission.dispatcher_id).maybeSingle(),
       admin.from("business").select("name").eq("id", mission.business_id).maybeSingle(),
-      admin
-        .from("mission_guest_contact")
-        .select("contacts")
-        .eq("mission_id", mission.id)
-        .maybeSingle(),
+      isActive
+        ? admin
+            .from("mission_guest_contact")
+            .select("contacts")
+            .eq("mission_id", mission.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
-    const guestPhones: GuestPhone[] = zipGuestContacts(
-      parsePassengers(mission.passenger_names),
-      parseGuestContacts(gc?.contacts),
-    ).filter((g) => g.shared);
+    const guestPhones: GuestPhone[] = isActive
+      ? zipGuestContacts(
+          parsePassengers(mission.passenger_names),
+          parseGuestContacts(gc?.contacts),
+        ).filter((g) => g.shared)
+      : [];
 
     // Arrival attestation: the latest 'arrived' status_event is the precondition to
     // report a no-show (and the basis of the 5-min on-site floor). NOT the clock
@@ -176,6 +186,7 @@ export default async function MissionDetailPage({
           arrivedAtIso={arrivedAtIso}
           amendment={amendment}
           release={release}
+          archived={!isActive}
         />
       </>
     );

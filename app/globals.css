@@ -1741,6 +1741,9 @@ textarea::placeholder {
   font-variant-numeric: tabular-nums;
   margin-top: 1px;
 }
+/* My Rides: the time stands alone (the day separator carries the date), so it
+   takes back the weight the day line was using. */
+.pcard__time--lg { font-size: 15.5px; margin-top: 0; }
 
 /* Gentle divider: price + when above; badges + route grouped below. */
 .pcard__body {
@@ -2245,6 +2248,8 @@ textarea::placeholder {
   line-height: 1.5;
 }
 .dlock svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+/* Same block, closing a card instead of opening one. */
+.dlock--foot { margin: 16px 0 0; }
 
 /* ---- Status pill (the accepted card leads with state, not price) ---- */
 .dpill {
@@ -2261,6 +2266,10 @@ textarea::placeholder {
 .dpill--info { background: var(--tone-info-bg); color: var(--tone-info-fg); }
 .dpill--go { background: var(--tone-success-bg); color: var(--tone-success-fg); }
 .dpill--warn { background: var(--tone-warn-bg); color: var(--tone-warn-fg); }
+.dpill--danger { background: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+/* Archive rows are read, not acted on — one notch quieter than a live pill. */
+.dpill--sm { font-size: 11px; padding: 4px 10px; }
+.dpill--sm svg { width: 12px; height: 12px; }
 
 /* ---- Progress: one segment bar + plain words, replacing 5 cramped labels ---- */
 .dprog__row {
@@ -2399,6 +2408,161 @@ textarea::placeholder {
 .dquiet--warn { color: var(--tone-warn-fg); }
 .dquiet--danger { color: var(--tone-danger-fg); }
 .dstack { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+
+/* ============================================================================
+   My Rides — screen title, the Upcoming|Past segmented tabs, day separators,
+   the Past filter chips, and the compact archive card.
+   ========================================================================== */
+.rhead {
+  margin: 0 0 12px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Segmented control: a sunken track with one raised active pill. */
+.rtabs {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  background: #eef1f5;
+  border-radius: 11px;
+}
+.rtab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 8px 4px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.rtab--active {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+.rtab__n { color: var(--text-muted); font-weight: 400; }
+.rtab:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* Day (Upcoming) / month (Past) separator — the list's only structure. */
+.dday {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 22px 0 9px;
+}
+.dday--first { margin-top: 18px; }
+.dday__l { margin: 0; font-size: 13px; font-weight: 500; color: var(--text); }
+.dday--today .dday__l { color: var(--accent); }
+.dday__n { flex: none; font-size: 11.5px; color: var(--text-muted); }
+
+/* Past filter chips — All | Completed | Cancelled, server-side via ?filter=. */
+.rfilter { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.rchip {
+  padding: 6px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid #e2e6ec;
+  background: var(--surface);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.rchip--on {
+  background: var(--accent-soft);
+  border-color: var(--blue-100);
+  color: var(--accent);
+  font-weight: 500;
+}
+.rchip:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* The archive card: a record, not work. No state-first pill, no progress bar,
+   single-line addresses — deliberately lighter than the Upcoming card. */
+.pastcard {
+  display: block;
+  background: var(--surface);
+  border: 1px solid #ebedf1;
+  border-radius: 14px;
+  padding: 13px 14px;
+  margin-bottom: 8px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.12s ease;
+}
+.pastcard:hover { border-color: var(--border-strong); }
+.pastcard:active { background: var(--surface-2); }
+.pastcard:focus-visible { outline: none; box-shadow: var(--ring); }
+.pastcard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.pastcard__when { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.pastcard__time { font-weight: 400; color: var(--text-muted); }
+.pastcard__time::before { content: "·"; color: #c3c9d2; margin: 0 6px; }
+
+.pastcard__route { display: flex; align-items: flex-start; gap: 10px; }
+.pastcard__rail { position: relative; width: 12px; flex: none; align-self: stretch; }
+.pastcard__line {
+  position: absolute;
+  left: 5.25px;
+  top: 8px;
+  bottom: 8px;
+  width: 1.5px;
+  background: #e2e6ec;
+}
+.pastcard__dot {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+}
+.pastcard__dot--from { top: 4px; background: #98a2b3; }
+.pastcard__dot--to {
+  bottom: 4px;
+  background: var(--surface);
+  border: 1.5px solid #b6bdc9;
+  box-sizing: border-box;
+}
+.pastcard__addrs { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.55; color: #475569; }
+.pastcard__addr { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pastcard__chev { flex: none; align-self: center; color: var(--text-faint); }
+
+.pastcard__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid #f2f3f6;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.pastcard__biz { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pastcard__biz svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 5px; }
+.pastcard__fare {
+  flex: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #1a2233;
+  font-variant-numeric: tabular-nums;
+}
+/* A cancelled trip's payout depends on who cancelled and when, and settles
+   manually in beta — so show no number at all rather than a wrong one. */
+.pastcard__fare--none { font-size: 13px; font-weight: 400; color: var(--text-muted); }
 
 /* ---- My Rides list: the whole card is a tap target into /missions/[id] ---- */
 .ridecard { display: block; text-decoration: none; color: inherit; transition: border-color 0.12s ease; }

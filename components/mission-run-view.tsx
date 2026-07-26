@@ -2,7 +2,9 @@ import {
   Building2,
   Car,
   CircleCheck,
+  CircleX,
   Clock,
+  Lock,
   MapPin,
   Navigation,
   Phone,
@@ -45,6 +47,8 @@ export function statusPill(m: MissionRow): { tone: string; Icon: LucideIcon } {
       return { tone: "go", Icon: Car };
     case "completed":
       return { tone: "neutral", Icon: CircleCheck };
+    case "cancelled":
+      return { tone: "danger", Icon: CircleX };
     case "confirmed":
       return { tone: "info", Icon: CircleCheck };
     default:
@@ -87,6 +91,7 @@ export function MissionRunView({
   arrivedAtIso,
   amendment,
   release,
+  archived = false,
 }: {
   mission: MissionRow;
   businessName: string | null;
@@ -96,6 +101,8 @@ export function MissionRunView({
   arrivedAtIso: string | null;
   amendment: AmendmentCardData | null;
   release: ReleaseCardData | null;
+  /** The trip is closed (Past tab): Guest data is gone, the card is a record. */
+  archived?: boolean;
 }) {
   const stops = parseWaypoints(m.waypoints);
   const stopsReached = m.stops_reached ?? 0;
@@ -103,7 +110,9 @@ export function MissionRunView({
   const dressLabel = dressCodeLabel(m.dress_code);
   const flagLabels = activeFlagLabels(m.driver_flags);
   const hasChips = languages.length > 0 || !!dressLabel || flagLabels.length > 0;
-  const hasPrep = !!m.board_name || !!m.board_file_path || !!m.driver_message;
+  // The name board carries the Guest's name and the private message can quote
+  // them, so both go with the rest of the Guest data once the trip is closed.
+  const hasPrep = !archived && (!!m.board_name || !!m.board_file_path || !!m.driver_message);
 
   const when = formatPoolWhen(m.pickup_at);
   const { tone, Icon: PillIcon } = statusPill(m);
@@ -216,7 +225,7 @@ export function MissionRunView({
           )}
 
           <div>
-            {m.passenger_name && (
+            {!archived && m.passenger_name && (
               <div className="dfact">
                 <span className="dfact__l">
                   <UserRound size={16} strokeWidth={1.75} aria-hidden="true" />
@@ -278,6 +287,15 @@ export function MissionRunView({
             </div>
           )}
 
+          {/* Why the Guest is missing from a finished trip — said once, plainly,
+              so it reads as a rule rather than as data that failed to load. */}
+          {archived && (
+            <div className="dlock dlock--foot">
+              <Lock aria-hidden="true" />
+              Guest details are removed once a trip closes. The Business keeps the
+              full record.
+            </div>
+          )}
         </div>
 
         <div className="pcard__foot">

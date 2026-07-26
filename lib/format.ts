@@ -28,13 +28,15 @@ const dateOnly = new Intl.DateTimeFormat("fr-FR", {
   timeZone: "Europe/Paris",
 });
 
-const monthLong = new Intl.DateTimeFormat("fr-FR", {
+// Month headings follow the UI language (English), not the locale of the money
+// and dates — "Juillet 2026" over "Fri 24 July" rows read as a bug.
+const monthLong = new Intl.DateTimeFormat("en-GB", {
   month: "long",
   year: "numeric",
   timeZone: "Europe/Paris",
 });
 
-// "2026-06" → "juin 2026". Input is a Paris year-month key (YYYY-MM).
+// "2026-06" → "June 2026". Input is a Paris year-month key (YYYY-MM).
 export function formatMonth(monthKey: string): string {
   return monthLong.format(new Date(`${monthKey}-01T12:00:00`));
 }
@@ -198,6 +200,41 @@ export function formatPoolWhen(iso: string | null | undefined): {
   else prefix = poolWeekday.format(d);
 
   return { day: `${prefix} · ${poolDayMonth.format(d)}`, time: timeOnly.format(d), today };
+}
+
+// My Rides day separator: "Today" / "Tomorrow" / "Friday 31 July" (+ the year when
+// it isn't the current one). Same DST-safe Paris calendar arithmetic as
+// formatPoolWhen — a Paris day is 23h/25h twice a year, so a fixed +24h offset
+// lands on the wrong date in those windows.
+const groupWeekday = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "Europe/Paris",
+});
+const groupWeekdayYear = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Paris",
+});
+
+export function formatDayGroup(iso: string | null | undefined): {
+  label: string;
+  today: boolean;
+} {
+  if (!iso) return { label: "—", today: false };
+  const d = new Date(iso);
+  const dCal = parisCalDate.format(d);
+  const todayCal = parisCalDate.format(new Date());
+  const [ty, tm, td] = todayCal.split("-").map(Number);
+  const tomorrowCal = parisCalDate.format(new Date(Date.UTC(ty, tm - 1, td + 1, 12)));
+
+  if (dCal === todayCal) return { label: "Today", today: true };
+  if (dCal === tomorrowCal) return { label: "Tomorrow", today: false };
+  const sameYear = dCal.slice(0, 4) === todayCal.slice(0, 4);
+  return { label: (sameYear ? groupWeekday : groupWeekdayYear).format(d), today: false };
 }
 
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {

@@ -79,7 +79,7 @@ export default async function DispatchHistory() {
       {[...groups.entries()].map(([monthKey, list]) => (
         <section key={monthKey} className="dx-sched">
           <div className="dx-day">
-            <h2 style={{ textTransform: "capitalize" }}>{formatMonth(monthKey)}</h2>
+            <h2>{formatMonth(monthKey)}</h2>
             <span className="dx-count">
               {list.length} trip{list.length === 1 ? "" : "s"}
             </span>

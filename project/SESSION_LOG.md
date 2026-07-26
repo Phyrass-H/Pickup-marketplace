@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-07-26 — Session 47 — My Rides tabs + day separators + the Past archive (Guest data leaves a closed trip) ([[d56]])
+
+**Scope (founder-set, ask-first honoured).** The Earnings screen was deferred again; the founder asked for My Rides
+first: "the history is an ugly link in the header, I want proper tabs and a clean page", plus **date separators** on
+the current list and **Guest details gone from past rides** (Dispatch keeps them). D25 loop: two previews
+(v1 tabs+separators+past card, v2 empty states + the cancelled question) → signed off before any code.
+
+**Founder decisions:** tab style **A** (segmented pill, not underline) · labels **Upcoming / Past** · **no money
+totals** on Past (that's Earnings' job) · a **filter row inside Past**, NOT a third tab (Claude's recommendation:
+three segments crowd a phone and a cancelled trip is rare).
+
+- **Tabs (`components/rides-tabs.tsx`, new).** A segmented control replacing the `History →` corner link. Deliberately
+  still **two routes** (`/rides` + `/rides/history`) so each keeps its own server query and every deep link (the
+  `← History` back link on a finished trip) still lands — the tabs are `<Link>`s, no client state. Counts render only
+  when > 0; the Past count is always the **whole archive**, never the filtered slice.
+- **Upcoming (`app/(app)/rides/page.tsx`).** Day separators from consecutive runs of `parisDayKey` (single pass, the
+  query is already ordered): **Today** (navy) / **Tomorrow** / **Friday 31 July**, each with a ride count. New
+  `formatDayGroup()` in `lib/format.ts` reuses the DST-safe Paris calendar arithmetic from `formatPoolWhen` (a Paris
+  day is 23h/25h twice a year). **Found in the browser, not in the mockup:** every card repeated "Today · 26 Jul"
+  under a separator already saying Today — the card now shows **only the time**, at 15.5px (`.pcard__time--lg`).
+- **Past (`app/(app)/rides/history/page.tsx`).** Rebuilt off the old `.card`/`.route`/`.fare` markup onto a new
+  **`.pastcard`** — a record, not work: date + time, a small status pill, a 2-dot rail with **single-line** addresses,
+  Business + fare in the foot. No progress bar, no state-first lead. Month groups reuse the same `.dday` separator.
+  Filter chips `All | Completed | Cancelled` are server-side (`?filter=`), hidden when the archive is empty.
+  A **no-show ends as `completed` + `no_show=true`** (mark_no_show pays the Driver), so it correctly files under
+  Completed. **A cancelled trip shows "—", not €0** — the payout depends on who cancelled and when (O7/D45: a Business
+  cancel pays the Driver a %) and settles manually in beta, so a number here would be a lie. Earnings owns the money.
+- **Guest data leaves a closed trip (the privacy rule).** Enforced **server-side**, not hidden in CSS: for a terminal
+  owned mission `missions/[id]/page.tsx` **never queries `mission_guest_contact`** and passes `archived` to
+  `MissionRunView`, which drops the Guest name row, the name board and the Business's private message (both can quote
+  the Guest). Kept: date, route, fare, status, **Business + Dispatcher** — a business counterparty and the Driver's
+  only route to a dispute, not Guest data. A `.dlock` line says so once, plainly. **Dispatch is untouched.**
+- **Also fixed at the root:** `formatMonth` was `fr-FR`, so month headings read "Juillet 2026" above "Fri 24 July"
+  rows. Now `en-GB` — matches the rest of the (English) UI; the two `textTransform: capitalize` hacks it needed are
+  gone, including in Dispatch history.
+- **New CSS** (`app/globals.css`): `.rhead` `.rtabs/.rtab` `.dday` `.rfilter/.rchip` `.pastcard*` `.dpill--danger`
+  `.dpill--sm` `.dlock--foot` `.pcard__time--lg`. `statusPill()` gained a **`cancelled`** case (danger + `CircleX`).
+  Muted greys held at `--text-muted` (AA on both the sunken track and the page) per the founder's contrast note.
+
+**Verified live** (localhost, real Supabase DB, 375×812): a tagged 8-mission set (`reference='S47QA'`) on the
+dev-login Driver exercised Today/Tomorrow/weekday separators, both empty states, all three filters, the cancelled
+"—", and the no-show pill; the archived detail showed **no Guest name / phone / board / message** while the same data
+on an `en_route` trip still renders in full (no regression). No console errors. **DB restored to the exact 34-mission
+baseline** (same status distribution) — the fleet + scripts live in the session scratchpad only, never the repo.
+`tsc --noEmit` clean · `next build` green (24 routes).
+
+**Next:** the **Earnings screen** (the founder's chosen dedicated session — D25 preview first; real data with no
+payments wired). Then guidance Tier-2 tooltips / the saved-addresses book.
+
+---
+
 ## 2026-07-25 — Session 46 — My Rides restructure + Pool empty/loading states + pre-accept polish + waiting-meter verification
 
 **Part D — pre-accept card polish + Option A: accept always confirms (founder).** Three founder-flagged items on the
