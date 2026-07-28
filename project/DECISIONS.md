@@ -912,6 +912,43 @@ Deep links are **https universal links**, not `waze://` schemes: a missing app m
 these open the app when present and the website when not. A web app **cannot** detect installed apps — that check is a
 native-build feature (founder: fine, do it at the native migration).
 
+### D59 — Earnings, and the fare that wouldn't stop climbing (2026-07-28)
+**The bug found while designing it.** `currentFare()` computes the PDP climb up to *now*. That is right while a mission
+sits in the Pool and wrong the instant someone takes it: a demo trip accepted at **€70 read €100** — the ceiling —
+weeks later, because the clock kept running. Every archive read had it, so the Past tab was overstating that trip by
+43%, and an Earnings screen built on the same call would have inflated a Driver's income. New **`settledFare(m)`**:
+the same curve frozen at `accepted_at`, falling back to the live fare when a mission was never accepted — so it is a
+drop-in for display everywhere, including a still-pooled trip. Applied to every **display** read of an assigned trip
+(My Rides, Past, the run view, the Dispatch row + calendar).
+**Deliberately NOT applied to the fee snapshots** (`p_fare_snapshot` on cancel/no-show, the amendment's from-fare):
+those choose the euro BASIS of a penalty, which is a pricing decision the founder owns — it stays flagged in
+BACKLOG § H2. Consequence to keep in view: a cancellation fee is still computed off the inflated number.
+
+**Commission: the fare shown in the Pool is the Driver's fare.** The preview carried a line saying the total was what
+the Business pays with commission not yet deducted; the founder cut it — "it has to be like the other apps, the price
+shown in the Pool and paid to the Driver should be commission-taken". So Earnings is a straight sum of accepted fares,
+with **no gross/net language anywhere** — inventing a percentage that hasn't been designed only creates a promise to
+walk back. Provisional until the pricing model lands, but it is now the working assumption the pricing work inherits.
+
+**No charts** (founder). The week-by-week and day-by-day rows carry what a bar chart would, in numbers that survive a
+phone screen. Restraint, not a limitation.
+
+**The filter is granularity + a step + a jump.** Day / Week / Month / Year, ‹ › to move one unit, and the label itself
+opens the phone's native date picker — the selected granularity decides what the picked date *means* (that day, its
+week, its month, its year). No custom ranges, no second picker. State lives in the URL (`?p=week&d=2026-07-28`) so
+reload and Back land on the same view. Weeks start Monday and every bucket is **Europe/Paris**, not UTC: a 00:30
+pickup belongs to the night that was worked.
+
+**Comparison is the PREVIOUS period, not last year.** The founder asked for same-period-last-year; the first mission in
+the database is 16 June 2026, so that line would have read "no data" for eleven months. The headline chip compares to
+the period before (works from day one) and the year-ago line **renders only when there is something to show** — it
+turns itself on. A permanent empty comparison is worse than none.
+
+**The breakdown includes money that isn't a trip**, because a Driver can't otherwise reconcile the total: waiting time,
+a no-show (which pays them the full fare), a Business cancelling on them — and **their own cancellation as a red
+negative**. The founder was asked whether penalties belong in Earnings and kept them: it's the only place a Driver sees
+what walking away cost.
+
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:
 - Commission split exact numbers (~12.5% Business / ~10% Driver, teaser).

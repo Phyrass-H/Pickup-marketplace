@@ -387,9 +387,25 @@ https universal links. Tab renamed **Settings → Account**. Languages are chips
   but a paper stays "with us for review" forever); and the expiry copy **promises reminders** ("a month before, and
   again the week it lapses") that need the notifications phase to become true.
 
+**★ ALSO SHIPPED 2026-07-28 — EARNINGS ([[d59]]; no migration).** The 4th tab is real: total · what it's made of ·
+trip-by-trip, with a **Day/Week/Month/Year** filter (‹ › steps, and the label opens the phone's date picker to jump
+anywhere; state in the URL `?p=&d=`). **No charts** (founder). Comparison is the **previous period** — the founder asked
+for same-period-last-year, but the oldest mission is 2026-06-16, so that line renders **only once it's non-zero** and
+turns itself on. Non-trip money is included (waiting · no-show · cancelled-on-you · own cancellations in red).
+- **⚑ Money bug fixed on the way:** `currentFare()` climbs to `now`, so a COMPLETED trip kept getting more expensive —
+  one accepted at €70 displayed €100. New `settledFare()` freezes the curve at `accepted_at`; swapped into every display
+  read of an assigned trip (both apps). **NOT swapped into `p_fare_snapshot` / the amendment from-fare** — those set the
+  euro basis of a penalty, which is founder-owned pricing (**BACKLOG § H2, still open**: a cancellation fee is computed
+  off the inflated number).
+- **⚑ Founder ruling to carry into the pricing model:** *the fare shown in the Pool is the Driver's fare* — "like the
+  other apps, the price shown in the Pool and paid to the Driver should be commission-taken". So no gross/net language
+  anywhere in the app. Provisional until the pricing work lands.
+
 **★ SESSION-49 — pick with the founder. Parked, in priority order:**
-- **The Earnings screen** — the 4th tab is still a "coming soon" placeholder and is now the last unbuilt Driver screen.
-  Real data exists with no payments wired (completed missions + fares + waiting fees + no-shows). **D25 preview first.**
+- **The back-office** (`/admin`) — founder-confirmed 2026-07-28 as one product: **document review + disputes + support**.
+  Half-built already: the `admin` role exists and RLS grants admins read on every table; what's missing is a **write**
+  path (service role). S48 fixed the write contract (`status` · `review_note` · `expires_at`, one row per `side`), and
+  the **expiry-reminder job belongs here too**. See BACKLOG § F2.
 - **⚑ The T-60 replacement + the "check in" rename** — see the dedicated block below; the founder **deferred it in S47**
   as not worth building before notifications exist.
 - **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently

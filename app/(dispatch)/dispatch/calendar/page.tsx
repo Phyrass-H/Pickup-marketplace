@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { serviceClassLabel, formatTime } from "@/lib/format";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { missionTone, parisDayKey } from "@/lib/dispatch-status";
 import { parseWaypoints } from "@/lib/waypoints";
 import { DispatchCalendar, type CalEntry, type CalendarData } from "@/components/dispatch-calendar";
@@ -80,7 +80,7 @@ export default async function DispatchCalendarPage({
       body: m.required_body_type ?? null,
       tone: t.tone,
       label: t.label,
-      fare: currentFare(m),
+      fare: settledFare(m),
       ceiling: Number(m.ceiling ?? 0),
       from: m.pickup_address,
       to: m.dropoff_address ?? "—",

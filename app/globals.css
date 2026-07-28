@@ -2840,3 +2840,78 @@ label.field > span.dhint {
   background: var(--surface);
 }
 .dnav:active { background: var(--surface-2); }
+
+/* ============================================================================
+   Earnings (S48b) — the 4th tab, finally real. Deliberately no chart: the week
+   and day rows carry the same information as bars, in numbers you can read on a
+   phone. Period filter = granularity + a step either way + a jump to any date.
+   ========================================================================== */
+.eper { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; position: relative; }
+.eper.is-busy { opacity: 0.55; }
+.eper__arw {
+  width: 34px; height: 34px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text-muted); cursor: pointer;
+}
+.eper__arw:active { background: var(--surface-2); }
+.eper__arw:disabled { opacity: 0.35; cursor: default; }
+.eper__lab {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px; border: 0; border-radius: 10px; background: transparent;
+  font-family: inherit; font-size: 13px; font-weight: 500; color: var(--text);
+  cursor: pointer;
+}
+.eper__lab:active { background: var(--surface-2); }
+.eper__lab svg { color: var(--text-muted); flex: none; }
+/* Real and focusable (showPicker() refuses a display:none input), just invisible. */
+.eper__date {
+  position: absolute; bottom: 0; left: 50%; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none; border: 0; padding: 0;
+}
+
+.etotal { font-size: 33px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+.etotal__sub { font-size: 12.5px; color: var(--text-muted); margin-top: 5px; }
+.ecmp {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 12px;
+  font-size: 12px; font-weight: 500; padding: 5px 11px; border-radius: var(--radius-pill);
+}
+.ecmp--up { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+.ecmp--down { background: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+.ecmp--flat { background: var(--tone-neutral-bg); color: var(--tone-neutral-fg); }
+.eyear { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 9px; }
+
+.ebreak {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 0; font-size: 13.5px; border-top: 1px solid #f4f5f8;
+}
+.ebreak:first-of-type { border-top: 0; }
+.ebreak__l { display: inline-flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; }
+.ebreak__l svg { flex: none; color: var(--text-faint); }
+.ebreak b { font-weight: 500; }
+.ebreak--neg b { color: var(--tone-danger-fg); }
+
+.eday {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 11.5px; color: var(--text-muted); margin: 18px 0 6px;
+}
+/* Only the FIRST day group hugs the card label — each group is its own wrapper
+   div, so :first-child would have matched every one of them. */
+.dcard__label + div > .eday { margin-top: 0; }
+.eday b { color: var(--text); font-weight: 500; font-size: 12px; }
+.etrip {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 0; border-top: 1px solid #f4f5f8;
+}
+.etrip__t { flex: 1; min-width: 0; }
+/* Two lines rather than an ellipsis: "Cannes -> 16..." tells a Driver nothing. */
+.etrip__t b {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; font-size: 13px; font-weight: 400; line-height: 1.35;
+}
+.etrip__t span { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+.etrip__a { font-size: 13.5px; font-weight: 500; flex: none; }
+
+.ejump { text-align: center; margin: 4px 0 0; }
+.ejump a { font-size: 12.5px; color: var(--accent); font-weight: 500; text-decoration: none; }

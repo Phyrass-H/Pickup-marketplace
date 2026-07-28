@@ -3,7 +3,7 @@ import { Building2, Car, ChevronRight, Layers, Route, Handshake } from "lucide-r
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import {
   formatDayGroup,
   formatMoney,
@@ -223,7 +223,7 @@ export default async function RidesPage() {
                   <span className="pcard__facts">
                     <Building2 size={13} aria-hidden="true" />
                     {bizNames.get(m.business_id) ?? "—"}
-                    <span className="pcard__veh">{formatMoney(currentFare(m))}</span>
+                    <span className="pcard__veh">{formatMoney(settledFare(m))}</span>
                   </span>
                 </div>
               </Link>

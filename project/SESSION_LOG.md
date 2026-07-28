@@ -5,6 +5,42 @@
 
 ---
 
+## 2026-07-28 — Session 48b — EARNINGS, and the fare freeze it exposed ([[d59]])
+
+**Scope (founder-set).** "Simple but efficient", one-car independent Driver, **no charts**, filters by period, and a
+comparison against the same period last year. D25 loop: mockup (week / month / quiet week) → founder feedback → a
+second mockup for the date picker → sign-off → build.
+
+**The bug found before building.** Probing the real DB showed a completed trip reading **€100** whose fare at accept was
+**€70**: `currentFare()` climbs to `now`, so a finished trip keeps getting more expensive. New `settledFare()` freezes
+the curve at `accepted_at` (falls back to the live fare when never accepted, so it's a safe drop-in). Swapped into every
+**display** read of an assigned trip — `rides/page.tsx`, `rides/history/page.tsx`, `mission-run-view.tsx`,
+`trip-row.tsx` (the Dispatch scan value), `dispatch/calendar/page.tsx`. **Left alone on purpose:** `p_fare_snapshot` on
+cancel/no-show and the amendment from-fare — those set the euro basis of a penalty, which is founder-owned pricing
+(BACKLOG § H2). Verified live: the Past tab now renders 70,00 € and no longer contains 100,00 €.
+
+**Files.** New `lib/earnings.ts` (Paris-correct period maths — `parisMidnight` via a two-pass offset read so a DST
+boundary can't shift a bucket, Monday-first weeks, `periodRange` returning label + prev/next/last-year anchors +
+`isCurrent` — and the money: `totalsFor` / `missionAmount`), new `components/earnings-period.tsx` (segmented Day/Week/
+Month/Year + ‹ › + the label opening a real-but-invisible `<input type=date>` via `showPicker()`; `display:none` would
+make showPicker throw), rewritten `app/(app)/earnings/page.tsx` (was a "coming soon" placeholder), `lib/pdp.ts`
+(`settledFare`), `app/globals.css` (`.eper*`, `.etotal*`, `.ecmp`, `.eyear`, `.ebreak*`, `.eday`, `.etrip*`, `.ejump`).
+
+**Three queries per view** — the period, the one before it, the same one a year ago. The year-ago line renders only when
+it's non-zero, so it activates by itself once there's a year of history instead of reading "no data" until mid-2027.
+
+**Verified live vs the real DB** (3 completed missions, the only money in the fleet): month June = **265,00 € = 70 + 120
++ 75** (the settled fares, not the ceilings) · day 18 June = 120,00 € / 19 June = empty · year 2026 = 265,00 € · current
+week = the empty state with › disabled and no comparison chip. The segmented control, both arrows and the date input all
+navigate and carry `?p=&d=` into the URL. No console errors. `tsc` + `next build` clean (the two build warnings are
+pre-existing: supabase-js on the edge runtime, webpack cache).
+
+**Copy corrections during the build:** the preview's commission line was cut on the founder's instruction (the Pool price
+IS the Driver's price — see [[d59]]); "No trips this week" becomes "that week" once you step away from now; and the trip
+route wraps to two lines rather than truncating to "Cannes → 16…".
+
+---
+
 ## 2026-07-28 — Session 48 — the Driver ACCOUNT rebuilt: hub + sub-pages, documents with a lifecycle ([[d58]])
 
 **Scope (founder-set).** "Make a real and complete settings page like a real app" — research driver apps, do documents

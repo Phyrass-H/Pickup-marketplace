@@ -51,6 +51,20 @@ export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   return round2(Math.min(ceiling, fare));
 }
 
+/**
+ * The fare a Driver actually earned on a trip they took: the PDP climb FROZEN at
+ * the moment of accept.
+ *
+ * `currentFare(m)` climbs to `now`, which is right while a mission sits in the Pool
+ * and wrong the instant someone takes it — a trip accepted at €70 reads €100 (the
+ * ceiling) a week later, because the clock kept running. Every archive and earnings
+ * read must use this instead. Falls back to the live fare when there's no
+ * `accepted_at` (a mission still pooled, or a legacy row).
+ */
+export function settledFare(m: PdpInputs & { accepted_at?: string | null }): number {
+  return currentFare(m, m.accepted_at ? new Date(m.accepted_at) : new Date());
+}
+
 /** Whether the fare has reached the ceiling (climb is done). */
 export function isAtCeiling(m: PdpInputs, now: Date = new Date()): boolean {
   return currentFare(m, now) >= round2(Number(m.ceiling));

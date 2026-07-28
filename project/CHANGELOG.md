@@ -5,6 +5,24 @@
 
 ---
 
+## 28 July 2026 (evening) — Earnings
+- **The Earnings tab is real.** Big total for the period, what it's made of, and every trip listed underneath grouped
+  by day. No charts — you didn't want them, and the day and week rows say the same thing in numbers you can read.
+- **Look at any period you like.** Day, week, month or year, ‹ › to step back one at a time, and tapping the dates
+  opens your phone's own calendar to jump anywhere. Whichever of the four is selected decides what the date you pick
+  means — 18 July in "month" mode shows you July.
+- **It compares.** A green or red chip shows how the period did against the one before it. The same-period-last-year
+  line will appear on its own once there's a year of history — right now the oldest trip is 16 June, so there's
+  nothing to compare to yet.
+- **It counts the money that isn't a trip fare**: waiting time, a no-show (which pays you in full), a Business
+  cancelling on you — and your own cancellations in red, so the total actually adds up.
+- **⚠️ A real money bug, found and fixed.** A trip's price rises while it waits in the Pool for a Driver — but the
+  clock was never stopped when someone took it. So a finished trip kept getting more expensive in the app: one demo
+  ride was accepted at **70 €** and was showing **100 €** weeks later. Every screen now shows the price as it was at
+  the moment the Driver accepted. You'll see a few historic trips drop to their correct, lower number. **Note:** the
+  cancellation fees still calculate off the old inflated figure — that's a pricing decision waiting on you, not
+  something I changed on my own.
+
 ## 28 July 2026 (later) — the Driver's account, rebuilt
 - **A Driver's settings is now a proper account area.** It used to be one very long scroll with a single Save button
   that quietly saved your car as well as your phone number. Now there's an **Account** screen — your photo, your name,

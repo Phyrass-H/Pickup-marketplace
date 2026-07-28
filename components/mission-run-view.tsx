@@ -12,7 +12,7 @@ import {
   UserX,
   type LucideIcon,
 } from "lucide-react";
-import { currentFare } from "@/lib/pdp";
+import { currentFare, settledFare } from "@/lib/pdp";
 import { formatMoney, formatPoolWhen, missionStatusLabel } from "@/lib/format";
 import type { MissionRow, MissionStatus, PreferredGps } from "@/lib/database.types";
 import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
@@ -343,7 +343,7 @@ export function MissionRunView({
             {/* On a cancelled trip the trip fare is NOT what the Driver is owed —
                 the O7 compensation is (labelled, so it can't be misread as the fare). */}
             <span className="pcard__veh">
-              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(currentFare(m))}
+              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(settledFare(m))}
             </span>
           </span>
         </div>

@@ -3,7 +3,7 @@ import { Pencil, GitPullRequestArrow, Lock, Phone, Car, Clock, Star } from "luci
 import type { MissionRow, AmendmentStatus, ReleaseStatus } from "@/lib/database.types";
 import { closeAmendment } from "@/app/(dispatch)/dispatch/[id]/amend/actions";
 import { closeRelease } from "@/app/(dispatch)/dispatch/actions";
-import { currentFare } from "@/lib/pdp";
+import { currentFare, settledFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
@@ -552,7 +552,7 @@ export function TripRow({
           )}
           <div className="dx-scan__c dx-scan__c--fare">
             <div className="dx-scan__cap">Fare now</div>
-            <div className="dx-scan__v dx-scan__v--big">{formatMoney(currentFare(mission))}</div>
+            <div className="dx-scan__v dx-scan__v--big">{formatMoney(settledFare(mission))}</div>
             <div className="dx-scan__s">ceiling {formatMoney(mission.ceiling)}</div>
           </div>
         </div>

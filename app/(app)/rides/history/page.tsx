@@ -3,7 +3,7 @@ import { Building2, ChevronRight, Handshake, History, MessageSquare } from "luci
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import {
   addressLine,
   formatMoney,
@@ -154,7 +154,7 @@ export default async function RideHistoryPage({
         ? comp == null
           ? { label: null, value: "—", tone: "muted" }
           : { label: "Compensation", value: formatMoney(comp), tone: "plain" }
-        : { label: null, value: formatMoney(currentFare(m)), tone: "plain" },
+        : { label: null, value: formatMoney(settledFare(m)), tone: "plain" },
       href: `/missions/${m.id}`,
       pill: null,
     });
