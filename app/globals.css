@@ -2565,11 +2565,37 @@ textarea::placeholder {
    fee was stamped) show nothing rather than a wrong number. */
 .pastcard__farel { font-size: 11px; font-weight: 400; color: var(--text-muted); margin-right: 6px; }
 .pastcard__fare--none { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+/* Money the Driver OWES (their own cancel is always 100%), not money they earned —
+   same slot, opposite direction, so it must not read as a fare. */
+.pastcard__fare--pen { color: var(--tone-danger-fg); }
+.pastcard__farel--pen { color: var(--tone-danger-fg); }
 
-/* Who ended the trip. A Driver only ever sees a Business cancel — every other
-   path re-pools the mission and drops them — so the line can state it plainly. */
-.dcancel-note { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }
-.pcard__body > .dcancel-note:first-child { margin-top: 0; }
+/* How the trip ended, in plain words, under the pill: cancelled by the Business,
+   cancelled by the Driver (re-pooled), or released by agreement. */
+.dend-note { margin: 9px 0 0; font-size: 12px; color: var(--text-muted); }
+.pcard__body > .dend-note:first-child { margin-top: 0; }
+
+/* The free text from whoever ended it — the Business's reason, or the Driver's
+   own words read back to them. */
+.dreason {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: #f6f7f9;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #475569;
+}
+.dreason svg { width: 15px; height: 15px; flex: none; color: #8a94a6; margin-top: 1px; }
+.dreason__l { color: var(--text-muted); margin-right: 4px; }
+
+/* A re-pooled ending isn't tappable — the mission may belong to another Driver
+   now, so no detail page would still be true. */
+.pastcard--flat { cursor: default; }
+.pastcard--flat:hover { border-color: #ebedf1; }
 
 /* ---- My Rides list: the whole card is a tap target into /missions/[id] ---- */
 .ridecard { display: block; text-decoration: none; color: inherit; transition: border-color 0.12s ease; }

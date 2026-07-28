@@ -158,14 +158,28 @@ export function BusinessCancel({
               </>
             )}
 
+            {/* The Driver reads this in their history, so say so HERE — writing it
+                under one expectation and showing it under another isn't ours to do. */}
+            <label
+              htmlFor="cancel-reason"
+              style={{
+                display: "block",
+                marginTop: 12,
+                marginBottom: 6,
+                fontSize: 11.5,
+                color: "var(--text-muted)",
+              }}
+            >
+              Reason (optional) — your Driver will see this
+            </label>
             <input
+              id="cancel-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Reason (optional)"
+              placeholder="Guest’s flight was cancelled…"
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                marginTop: 12,
                 padding: "9px 10px",
                 border: "0.5px solid var(--border-strong)",
                 borderRadius: 8,

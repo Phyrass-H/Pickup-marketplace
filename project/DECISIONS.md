@@ -847,6 +847,29 @@ status, and the **Business + its Dispatcher** — a business counterparty and th
 Guest data. **Dispatch is untouched: the Business keeps the full record**, which is what makes the removal safe rather
 than lossy. A single `.dlock` line tells the Driver so, so it reads as a rule instead of a loading failure.
 
+### D57 — A Driver's archive shows every ending, and both sides' reasons (2026-07-28)
+**The gap.** Only two of the four ways a trip can end leave the mission attached to the Driver. A **driver cancel** and
+an **agreed release** re-pool it (`status='pooled'`, `driver_id=null`), so they vanished from the Driver's app —
+a Driver could pay a 100% penalty and take a reliability mark with **no record anywhere**. Fixed by building Past from
+a union of missions + those two event tables (`mission_cancellation.actor_driver_id`, `mission_release.driver_id`),
+which their own RLS already permits. No migration. Re-pooled cards are **not tappable** — the mission may belong to
+another Driver now, so no detail page would still be true. Money reads in the Driver's direction: Compensation ·
+**Penalty in red** · Free · —.
+
+**Reasons are shown both ways.** The Business's `cancellation_reason` now reaches the Driver — a **deliberate reversal
+of the S39 review decision**, which hid it. That was a reviewer's judgment, not a founder call; the founder overrode it
+on the grounds that a Driver who just lost a job is owed the why. **Condition:** the Dispatch field promised nothing
+("Reason (optional)"), so it now says **"— your Driver will see this"** at the point of writing. Never republish text
+written under a different expectation; change the promise first. The Driver's own reason is read back as "You said: …".
+
+**Cancelled pill has no icon** (founder): a bare × reads as a dismiss control, not a state.
+
+**Not built: a T-60 reclaim card — the reclaim is dead code.** `reclaim_mission` requires `status='accepted'`, which
+[[d55]] (accept always confirms) made unreachable; the Business UI gate is the same condition, so nothing renders and
+nothing errors. **Open consequence:** a Business no longer has a free remedy for a Driver who goes silent near pickup.
+Deferred with notifications. Founder also rejected **"Lock-in" / "T-180"** as jargon — the agreed plain-words
+replacement, when that step returns, is **"check in"** ("check in 3 hours before pickup" / "not checked in yet").
+
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:
 - Commission split exact numbers (~12.5% Business / ~10% Driver, teaser).

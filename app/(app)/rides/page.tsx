@@ -149,7 +149,7 @@ export default async function RidesPage() {
               <Link href={`/missions/${m.id}`} className="dcard ridecard" key={m.id}>
                 <div className="pcard__head">
                   <span className={`dpill dpill--${tone}`}>
-                    <PillIcon size={13} strokeWidth={1.75} aria-hidden="true" />
+                    {PillIcon && <PillIcon size={13} strokeWidth={1.75} aria-hidden="true" />}
                     {m.no_show ? "No-show" : missionStatusLabel(m.status)}
                   </span>
                   {/* Just the time: the day separator above already says which

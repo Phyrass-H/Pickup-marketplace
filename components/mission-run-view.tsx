@@ -2,10 +2,10 @@ import {
   Building2,
   Car,
   CircleCheck,
-  CircleX,
   Clock,
   Lock,
   MapPin,
+  MessageSquare,
   Navigation,
   Phone,
   UserRound,
@@ -37,7 +37,9 @@ import { DriverCancel, NoShowControl } from "@/app/(app)/rides/cancel-noshow";
 // The card leads with STATE, not price. Tone follows the trip's phase: blue while
 // it's held but not moving, green once it's under way, grey when done, amber for a
 // no-show (which pays the Driver — a warning, never a failure).
-export function statusPill(m: MissionRow): { tone: string; Icon: LucideIcon } {
+// Cancelled gets NO icon: a bare × reads as a dismiss control, not a state
+// (founder, S47) — the line under the pill says who cancelled instead.
+export function statusPill(m: MissionRow): { tone: string; Icon: LucideIcon | null } {
   if (m.no_show) return { tone: "warn", Icon: UserX };
   switch (m.status) {
     case "en_route":
@@ -49,7 +51,7 @@ export function statusPill(m: MissionRow): { tone: string; Icon: LucideIcon } {
     case "completed":
       return { tone: "neutral", Icon: CircleCheck };
     case "cancelled":
-      return { tone: "danger", Icon: CircleX };
+      return { tone: "danger", Icon: null };
     case "confirmed":
       return { tone: "info", Icon: CircleCheck };
     default:
@@ -130,7 +132,7 @@ export function MissionRunView({
         {/* State leads; the fare moved down to the footer. */}
         <div className="pcard__head">
           <span className={`dpill dpill--${tone}`}>
-            <PillIcon size={13} strokeWidth={1.75} aria-hidden="true" />
+            {PillIcon && <PillIcon size={13} strokeWidth={1.75} aria-hidden="true" />}
             {m.no_show ? "No-show" : missionStatusLabel(m.status)}
           </span>
           <span className="pcard__when">
@@ -161,7 +163,18 @@ export function MissionRunView({
           )}
 
           {m.status === "cancelled" && (
-            <p className="dcancel-note">Cancelled by the Business</p>
+            <>
+              <p className="dend-note">Cancelled by the Business</p>
+              {/* The Business's own words. Shown deliberately (founder, S47): a
+                  Driver who just lost a job is owed the why, and the Business is
+                  told at the point of writing that the Driver reads it. */}
+              {m.cancellation_reason && (
+                <div className="dreason">
+                  <MessageSquare aria-hidden="true" />
+                  <span>“{m.cancellation_reason}”</span>
+                </div>
+              )}
+            </>
           )}
 
           {amendment && <AmendmentCard {...amendment} />}

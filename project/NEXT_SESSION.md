@@ -353,8 +353,16 @@ CURRENT STATE block above). What each proposed item became:
   - Designed **empty states per tab**; `formatMonth` fixed `fr-FR` → `en-GB` (month headings read "July 2026" now, both
     Driver and Dispatch history). Verified live on a tagged 8-mission set, DB restored to its 34-mission baseline.
 
-**★ SESSION-48 — PROPOSED, NOT YET APPROVED. ⚠️ Ask the founder first (rule #4).**
-1. **The Earnings screen** — the founder's chosen next dedicated session. Turn the 4th Driver tab from a "coming soon"
+**★ SESSION-48 — the founder ALREADY SET items 1 and 2 at the end of S47. Still confirm scope before starting (rule #4).**
+1. **⚑ The T-60 replacement + the "check in" rename.** The T-60 reclaim is **dead code**: it fires only on
+   `status='accepted'`, which [[d55]] (accept always confirms) made unreachable — so **a Business has no free remedy for
+   a Driver who goes silent near pickup**. Decide the replacement (a short unconfirmed window again? re-gate on "hasn't
+   started by T-60"?). Pairs with notifications. The founder **rejected "Lock-in" / "T-180"** as jargon — use
+   **"check in"** ("check in 3 hours before pickup" / "not checked in yet") wherever that step returns.
+2. **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently
+   (`driver.reliability_marks`). The founder wants to discuss whether a Driver sees their own before any UI ships.
+   S47 deliberately shipped the cancel cards WITHOUT them.
+3. **The Earnings screen** — the founder's chosen dedicated session. Turn the 4th Driver tab from a "coming soon"
    placeholder into a real screen. **D25 preview first.** It can show real data with NO payments wired: completed trips
    + their fares + waiting fees are all already in the DB (query `mission` where `status='completed'` / `no_show=true`).
    Decide the shape *with the founder* — running total vs per-trip list, this-week vs all-time, how to surface waiting-fee

@@ -5,6 +5,21 @@
 
 ---
 
+## 28 July 2026
+- **A Driver's history now shows every trip that ended — including the ones they walked away from.** Until now, if a
+  Driver cancelled a trip or you both agreed to release it, the trip went back into the Pool and **disappeared from
+  their app completely** — even though a cancel costs them a 100% penalty. Their Past tab now shows those too:
+  "You cancelled this trip · it went back to the Pool" with the penalty in red, and "Released by agreement · no fee,
+  no mark". Neither is clickable, because the trip may belong to another Driver by then.
+- **A Driver can now read why you cancelled.** If you write a reason when cancelling, the Driver sees it in their
+  history. The reason box on your side now says **"your Driver will see this"** so there's no surprise. Their own
+  reason is shown back to them the same way.
+- **The "Cancelled" badge lost its little ×** — it looked like a button you could press.
+- **Noticed while doing this:** the feature that let you take a trip back for free when a Driver never confirmed can no
+  longer trigger — accepting now confirms instantly, so there's no "not confirmed yet" state left for it to catch. It
+  isn't broken, just unreachable. That means you currently have **no free way to replace a Driver who goes quiet close
+  to pickup** — first thing on the list for next session.
+
 ## 26 July 2026
 - **My Rides has proper tabs now — Upcoming and Past.** The ride history used to be a small underlined link tucked in
   the corner of the header. It's now a real two-tab switch at the top of the screen, each tab showing how many trips

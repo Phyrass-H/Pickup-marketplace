@@ -59,8 +59,40 @@ on an `en_route` trip still renders in full (no regression). No console errors. 
 baseline** (same status distribution) — the fleet + scripts live in the session scratchpad only, never the repo.
 `tsc --noEmit` clean · `next build` green (24 routes).
 
-**Next:** the **Earnings screen** (the founder's chosen dedicated session — D25 preview first; real data with no
-payments wired). Then guidance Tier-2 tooltips / the saved-addresses book.
+- **Part B — the archive tells the WHOLE truth ([[d57]]).** The founder pushed back on "a cancelled trip in Past was
+  always cancelled by the Business": a Driver can obviously cancel too (accident, breakdown). Both are true, and the
+  gap between them was the bug — **a Driver cancel / agreed release RE-POOLS the trip and clears `driver_id`, so it
+  vanished from the Driver's app entirely.** A Driver could pay a 100% penalty and take a reliability mark with **no
+  record anywhere**. Both events are already recorded in side tables their own RLS lets them read
+  (`mission_cancellation.actor_driver_id` / `mission_release.driver_id`) — never queried until now. No migration.
+  - Past is now built from a `PastItem[]` union — missions (completed / Business-cancelled) + the two re-pooled
+    endings — sorted together by `pickup_at` and grouped by month. The events' missions come via the **service role**,
+    gated to exactly the ids the Driver's own event rows point at (after a re-pool they usually can't read them any
+    more). Re-pooled cards are **not tappable** (`.pastcard--flat`, no chevron): the mission may belong to another
+    Driver now, so no detail page would still be true.
+  - Money reads in the Driver's direction: `Compensation` (owed to them) · **`Penalty` in red** (their own cancel is
+    always 100%, D45 — founder chose to show it plainly) · `Free` · `—`.
+  - **Reasons both ways.** The Business's `cancellation_reason` is now shown to the Driver — a **deliberate reversal of
+    the S39 review**, which had hidden it; the founder's call. Condition attached: the Dispatch cancel field was a bare
+    "Reason (optional)" promising nothing, so it now reads **"Reason (optional) — your Driver will see this"**, said at
+    the point of writing rather than republished after the fact. The Driver's own reason is read back as *"You said: …"*.
+  - **Cancelled pill lost its × icon** (founder: it reads as a dismiss control) — `statusPill` returns `Icon: null` for
+    `cancelled`, both call sites handle it. `.dcancel-note` → `.dend-note`; new `.dreason`, `.pastcard__fare--pen`.
+  - **⚑ Dead code found: the T-60 reclaim can never fire.** It requires `status='accepted'`, which Option A ([[d55]])
+    made unreachable — accept now confirms instantly and existing rows were backfilled. The Business UI gate is the
+    same condition, so the card simply never renders (dead, not broken — no failing button). **Deliberately NOT built
+    a card for it.** Real consequence for next session: **a Business has lost its free remedy for a Driver who goes
+    silent near pickup** — pairs with notifications. Founder also rejected "Lock-in"/"T-180" as jargon; agreed
+    replacement when it returns: **"check in"** / "3 hours before pickup".
+  - **Verified live** on 4 seeded endings (completed · Business cancel + reason + €130,40 compensation · own cancel +
+    "You said" + €260 penalty, no chevron · agreed release + Free, no chevron), all three filters, and the relabelled
+    Dispatch field. DB restored to the 34-mission baseline (missions + both event tables).
+
+**Next:** (1) the **T-60 replacement** + the "check in" rename — how a Business handles a silent Driver now that every
+accept is a commitment; (2) **reliability marks** — whether a Driver sees their own (founder wants to discuss);
+(3) the **Earnings screen** (D25 preview first). Also open: the spawned task on whether `mission.cancellation_reason`
+is Driver-readable at the row level — partly moot now that showing it is intended, but the `mission_cancellation`
+scoping should still be checked for coherence.
 
 ---
 
