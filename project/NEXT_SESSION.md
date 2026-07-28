@@ -330,7 +330,7 @@ the MVP — and is now an explicit **per-phone Business choice** (S20 Share gate
 CURRENT STATE block above). What each proposed item became:
 1. **✅ S45 verification gap — CLOSED.** The `arrived` waiting-meter + capped state + no-show confirm verified live.
 2. **✅ Pool empty + loading states — SHIPPED ([[d54]]).**
-3. **Earnings tab — DEFERRED to its own session (founder's call).** See Session-47 below.
+3. **Earnings tab — DEFERRED, and deferred AGAIN in S47** (the founder chose My Rides, then Driver Settings ahead of it).
 4. **✅ Discreet-vehicle note — DECIDED: KEEP** (founder). Left on the Pool card as-is; only the redundant **zone** was
    removed from the *pre-accept* footer ([[d55]]).
 5. **✅ Also shipped, unplanned:** the My Rides restructure ([[d53]]) + Option A "accept always confirms" ([[d55]]).
@@ -352,17 +352,70 @@ CURRENT STATE block above). What each proposed item became:
     terminal mission). Kept: date/route/fare/status + **Business & Dispatcher** (dispute route). **Dispatch untouched.**
   - Designed **empty states per tab**; `formatMonth` fixed `fr-FR` → `en-GB` (month headings read "July 2026" now, both
     Driver and Dispatch history). Verified live on a tagged 8-mission set, DB restored to its 34-mission baseline.
+- **Shipped 2026-07-28 (Session 47, part B) — the archive tells the WHOLE truth, LIVE ([[d57]]; NO migration; deployed
+  `3025c4a` → Vercel `success`):** a **driver cancel** and an **agreed release** re-pool the trip and clear `driver_id`,
+  so they had **vanished from the Driver's app entirely** — a Driver could pay a 100% penalty and take a reliability
+  mark with no record anywhere. Past is now a union of missions + those two events (read from
+  `mission_cancellation.actor_driver_id` / `mission_release.driver_id`, which their own RLS already allows), sorted
+  together; the events' missions come via the service role gated to those ids, and their cards are **not tappable**
+  (the mission may belong to another Driver now). Money reads in the Driver's direction: **Compensation · Penalty (red)
+  · Free · —**. **The Business's cancellation reason is now shown to the Driver** — a deliberate reversal of the S39
+  review, the founder's call — with the Dispatch field relabelled **"Reason (optional) — your Driver will see this"**
+  so the promise changes before the text does; the Driver's own reason reads back as *"You said: …"*. The **Cancelled
+  pill lost its × icon** (it read as a dismiss control). **Six possible endings** now exist in the model: no-show ·
+  Business cancel · Driver cancel · agreed release · T-60 take-back (dead, see below) · **copilote hand-over (NOT
+  BUILT — needs the community layer, shows "Soon")**.
 
-**★ SESSION-48 — the founder ALREADY SET items 1 and 2 at the end of S47. Still confirm scope before starting (rule #4).**
-1. **⚑ The T-60 replacement + the "check in" rename.** The T-60 reclaim is **dead code**: it fires only on
-   `status='accepted'`, which [[d55]] (accept always confirms) made unreachable — so **a Business has no free remedy for
-   a Driver who goes silent near pickup**. Decide the replacement (a short unconfirmed window again? re-gate on "hasn't
-   started by T-60"?). Pairs with notifications. The founder **rejected "Lock-in" / "T-180"** as jargon — use
-   **"check in"** ("check in 3 hours before pickup" / "not checked in yet") wherever that step returns.
-2. **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently
-   (`driver.reliability_marks`). The founder wants to discuss whether a Driver sees their own before any UI ships.
-   S47 deliberately shipped the cancel cards WITHOUT them.
-3. **The Earnings screen** — the founder's chosen dedicated session. Turn the 4th Driver tab from a "coming soon"
+**★ SESSION-48 — DRIVER SETTINGS. Set by the founder at the end of S47 (they chose Settings over Earnings).**
+Confirm the scope in 1–2 lines before starting (rule #4), then **D25 preview → sign-off → build**.
+
+**1. Redesign the Driver Settings screen** — the LAST un-redesigned Driver screen (Pool S43 · both mission cards S45 ·
+My Rides S46–S47 are all done; only Settings + the Earnings placeholder remain). It still uses the old generic
+`.card` / `<h1>Settings` styling, not the shipped `.pcard`/`.dcard` language.
+- **Files:** `app/(app)/settings/page.tsx` (163 lines — the whole screen) + `app/(app)/settings/actions.ts`
+  (`updateDriverSettings`), and the components it composes: `components/avatar-editor.tsx`,
+  `components/driver-vehicle-fields.tsx`, `components/address-autocomplete.tsx`,
+  `components/document-section.tsx`, `components/help-legal-card.tsx`, `components/driver-signout.tsx`.
+- **What's on it today** (one long scroll of `.card` blocks): **Profile** (photo · first/last name · phone, revealed to
+  the Business on accept · languages as a comma-separated string · preferred GPS: Waze/Google/Apple) · **Where you
+  work** (base address via Mapbox autocomplete + a service radius 25–300 km, with the "pickup OR drop-off within this
+  distance" explainer) · **Vehicle** (make · model · service tier, set automatically from the car · body sedan/van ·
+  colour · plate · seats · the `accepts_luggage_runs` opt-in from [[d38]]) · one **Save changes** · **Documents**
+  (licence · VTC card · VTC registration…, PDF/image ≤10 MB, "we review each document") · Help/legal · Sign out.
+- **Worth deciding with the founder:** whether it becomes **grouped sections or a left-nav/sub-page account area**
+  (Dispatch went sub-pages in S28 — but this is a phone, so sections + anchors probably beat routes); whether
+  **Documents** gets a real verification state (today it's a stub — the admin verification workspace is a DEFERRED
+  integration, so show honest states, don't build review); the **languages** free-text field is the weakest input on
+  the screen (a chip picker would match the `.dchip` vocabulary); and whether **phone** deserves the same "who sees
+  this, and when" line the Guest-privacy work established ([[d56]]).
+- Probably **no migration** — every field already exists. Confirm before assuming.
+
+**2. Parked, in priority order, for after Settings:**
+- **⚑ The T-60 replacement + the "check in" rename** — see the dedicated block below; the founder **deferred it in S47**
+  as not worth building before notifications exist.
+- **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently
+  (`driver.reliability_marks`). The founder wants to discuss whether a Driver sees their own before any UI ships.
+  S47 deliberately shipped the cancel cards WITHOUT them.
+- **The Earnings screen** — still wanted, just not next.
+
+**★ T-60 / silent-Driver remedy — DESIGNED IN S47, DELIBERATELY NOT BUILT.** Keep this whole block; it's the decision
+trail so the next attempt doesn't restart from zero.
+- **The state today:** a Driver can still advance a trip and the Business sees it on the schedule (on refresh, not
+  pushed). But **there is no T-60 unlock** — `reclaim_mission` requires `status='accepted'`, which [[d55]] made
+  unreachable, and the Business UI gate is the same condition, so the card never renders. Dead, not broken.
+- **The gap:** at T-60 with a silent Driver, a Business's only working option is a **cancel at ~90% of the fare**
+  (the [[d45]] curve at 1h). The agreed release is free but needs the Driver to accept — and they're not answering.
+- **The design that was agreed** (founder, S47): the take-back must **not** auto-re-pool — a confirm step offering
+  **two** outcomes, back to the Pool as SPEED WIN *or* a plain free cancel. Trigger: **the Driver hasn't started the
+  trip** (not `en_route`) inside the hour. Reliability mark **only on a real no-response**, which needs a response test:
+  take-back is instant, the mark waits ~10 min and is dropped if the Driver touches the trip.
+- **Why it was deferred:** the response test is meaningless without push (we have **no service worker and no Web Push** —
+  a Driver "enabling notifications" on their phone does nothing today), and fees settle **MANUAL** in beta, so the unfair
+  90% charge exists only on paper. Building now would mean shipping the weakest trigger and redoing it later.
+- **Optional 10-minute stopgap the founder did NOT decide on:** a line in the Business cancel modal for the
+  under-an-hour case — *"Driver unreachable? Call us before cancelling."*
+- **Terminology (founder, S47): "Lock-in" and "T-180" are jargon — do not ship them.** When the confirmation step
+  returns, call it **"check in"** ("check in 3 hours before pickup" / "not checked in yet"). Turn the 4th Driver tab from a "coming soon"
    placeholder into a real screen. **D25 preview first.** It can show real data with NO payments wired: completed trips
    + their fares + waiting fees are all already in the DB (query `mission` where `status='completed'` / `no_show=true`).
    Decide the shape *with the founder* — running total vs per-trip list, this-week vs all-time, how to surface waiting-fee

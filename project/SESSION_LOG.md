@@ -88,11 +88,25 @@ baseline** (same status distribution) — the fleet + scripts live in the sessio
     "You said" + €260 penalty, no chevron · agreed release + Free, no chevron), all three filters, and the relabelled
     Dispatch field. DB restored to the 34-mission baseline (missions + both event tables).
 
-**Next:** (1) the **T-60 replacement** + the "check in" rename — how a Business handles a silent Driver now that every
-accept is a commitment; (2) **reliability marks** — whether a Driver sees their own (founder wants to discuss);
-(3) the **Earnings screen** (D25 preview first). Also open: the spawned task on whether `mission.cancellation_reason`
-is Driver-readable at the row level — partly moot now that showing it is intended, but the `mission_cancellation`
-scoping should still be checked for coherence.
+- **Part C — the T-60 remedy: designed, then deliberately NOT built (founder).** Worked the replacement through with
+  the founder and stopped short of code, on purpose. Agreed shape: the take-back must **not** auto-re-pool — a confirm
+  step offering **two** outcomes (back to the Pool as SPEED WIN, or a plain free cancel); trigger = the Driver hasn't
+  started the trip (not `en_route`) inside the hour; a reliability mark only on a **real** no-response, which needs a
+  response test (take-back instant, mark deferred ~10 min, dropped if the Driver touches the trip).
+  **Why it stopped:** the founder asked whether any of it is necessary before notifications — correct. The response test
+  is meaningless without push (**no service worker, no Web Push exists** — "enabling notifications on the phone" does
+  nothing today), and fees settle MANUAL in beta, so the unfair ~90% charge exists only on paper. Building now = ship
+  the weakest trigger, redo it later. Full decision trail parked in `project/NEXT_SESSION.md` so the next attempt
+  doesn't restart from zero. An optional 10-min stopgap (a "Driver unreachable? Call us before cancelling." line in the
+  Business modal) was offered and left undecided.
+- **Housekeeping:** the spawned task on `mission.cancellation_reason` readability was **dismissed as superseded** —
+  showing that reason to the Driver is now intended ([[d57]]), so the "leak" it was going to chase is the feature. The
+  residual `mission_cancellation` actor-scoping inconsistency is harmless and noted here rather than tracked.
+
+**Next (founder chose Driver Settings over Earnings):** (1) **redesign the Driver Settings screen** — the last
+un-redesigned Driver screen, still on the generic `.card` styling; (2) the **T-60 replacement** + the "check in"
+rename, once notifications exist; (3) **reliability marks** — whether a Driver sees their own; (4) the **Earnings
+screen**. See `project/NEXT_SESSION.md` for the Settings brief and the full T-60 trail.
 
 ---
 
