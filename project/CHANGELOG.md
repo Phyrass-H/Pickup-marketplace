@@ -16,12 +16,19 @@
   nothing to compare to yet.
 - **It counts the money that isn't a trip fare**: waiting time, a no-show (which pays you in full), a Business
   cancelling on you — and your own cancellations in red, so the total actually adds up.
-- **⚠️ A real money bug, found and fixed.** A trip's price rises while it waits in the Pool for a Driver — but the
-  clock was never stopped when someone took it. So a finished trip kept getting more expensive in the app: one demo
-  ride was accepted at **70 €** and was showing **100 €** weeks later. Every screen now shows the price as it was at
-  the moment the Driver accepted. You'll see a few historic trips drop to their correct, lower number. **Note:** the
-  cancellation fees still calculate off the old inflated figure — that's a pricing decision waiting on you, not
-  something I changed on my own.
+- **⚠️ A real money bug, found and fixed — and it was worse than it first looked.** A trip's price rises while it waits
+  in the Pool for a Driver, but the clock was never stopped when someone took it. So a finished trip kept getting more
+  expensive: one demo ride was accepted at **70 €** and was showing **100 €** weeks later. Worse, **cancellation fees
+  were being calculated off that inflated number** — a Driver walking away from a 70 € job was charged 100 €, and a
+  Business cancelling was billed too much too.
+- **Now the rule is simple and applies everywhere: the final price is the price the Driver accepted.** Every screen and
+  every fee on both sides uses it. Tested for real on the live database: a Driver cancelling a 70 € trip is now charged
+  **70 €** (was 100 €), and a Business cancelling the same trip at 83% is charged **58,17 €** (would have been 83 €).
+  A few historic trips will show their correct, lower number. The schedule also stops saying "Fare now" once a Driver
+  has the trip — it says **"Agreed fare"**.
+- **Still to decide (noted for you):** now that the fee is based on the real fare, **100% may not be enough of a
+  deterrent on cheap trips** — a 50 € job only costs 50 € to abandon. Written into the backlog with some options; no
+  rule changed.
 
 ## 28 July 2026 (later) — the Driver's account, rebuilt
 - **A Driver's settings is now a proper account area.** It used to be one very long scroll with a single Save button

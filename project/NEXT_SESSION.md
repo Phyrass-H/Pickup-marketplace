@@ -392,11 +392,17 @@ trip-by-trip, with a **Day/Week/Month/Year** filter (‹ › steps, and the labe
 anywhere; state in the URL `?p=&d=`). **No charts** (founder). Comparison is the **previous period** — the founder asked
 for same-period-last-year, but the oldest mission is 2026-06-16, so that line renders **only once it's non-zero** and
 turns itself on. Non-trip money is included (waiting · no-show · cancelled-on-you · own cancellations in red).
-- **⚑ Money bug fixed on the way:** `currentFare()` climbs to `now`, so a COMPLETED trip kept getting more expensive —
-  one accepted at €70 displayed €100. New `settledFare()` freezes the curve at `accepted_at`; swapped into every display
-  read of an assigned trip (both apps). **NOT swapped into `p_fare_snapshot` / the amendment from-fare** — those set the
-  euro basis of a penalty, which is founder-owned pricing (**BACKLOG § H2, still open**: a cancellation fee is computed
-  off the inflated number).
+- **⚑ Money bug fixed on the way, then fixed properly:** `currentFare()` climbs to `now`, so a COMPLETED trip kept
+  getting more expensive — one accepted at €70 displayed €100. New `settledFare()` freezes the curve at `accepted_at`.
+  The founder then ruled that it applies to **fees as well** ("the final fare … is the price that the Driver accepted"),
+  so `p_fare_snapshot` on all four cancel/no-show RPCs and the amendment from-fare use it too. **BACKLOG § H2's
+  fee-basis flag is RESOLVED.** Verified live both ways (driver cancel €70 not €100; business cancel 58,17 € off a €70
+  basis). **The trap to remember:** `settledFare` needs `accepted_at`, and the actions select a narrow `FARE_COLS` list
+  — it was omitted, so the fix silently did nothing until a live probe caught it. The parameter is **required** now, so
+  that failure is a compile error.
+- **⚑ Founder's next pricing question, logged in § H2, nothing decided:** with the basis correct, **100% may be too weak
+  a penalty on cheap trips** ("a €50 trip … a driver would be tempted to cancel"). Options sketched: a floor, a
+  multiplier near pickup, or visible reliability marks.
 - **⚑ Founder ruling to carry into the pricing model:** *the fare shown in the Pool is the Driver's fare* — "like the
   other apps, the price shown in the Pool and paid to the Driver should be commission-taken". So no gross/net language
   anywhere in the app. Provisional until the pricing work lands.

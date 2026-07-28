@@ -920,9 +920,22 @@ weeks later, because the clock kept running. Every archive read had it, so the P
 the same curve frozen at `accepted_at`, falling back to the live fare when a mission was never accepted — so it is a
 drop-in for display everywhere, including a still-pooled trip. Applied to every **display** read of an assigned trip
 (My Rides, Past, the run view, the Dispatch row + calendar).
-**Deliberately NOT applied to the fee snapshots** (`p_fare_snapshot` on cancel/no-show, the amendment's from-fare):
-those choose the euro BASIS of a penalty, which is a pricing decision the founder owns — it stays flagged in
-BACKLOG § H2. Consequence to keep in view: a cancellation fee is still computed off the inflated number.
+**Then applied to the fee snapshots too, same day, on the founder's ruling.** It was raised as a pricing decision rather
+than fixed silently; the founder's answer closed it: *"If a driver accepted a trip why would the fare keep climbing? The
+final fare, whatever it is on the Business side or on the Driver side, is the price that the Driver accepted."* So
+`p_fare_snapshot` (driver cancel · no-show · business cancel · business no-show) and the amendment from-fare all read
+`settledFare` now. **The climb exists to fill a mission; it has no business running afterwards.**
+
+**⚑ The live test earned its keep.** After the change the UI quoted €70 and the database still recorded **€100**:
+`settledFare` typed `accepted_at` as optional, and the actions' narrow `FARE_COLS` select didn't include it, so it fell
+straight back to the live fare. Reading the diff would never have shown this. Fixed by selecting the column *and* making
+the parameter **required**, so the next narrow select is a compile error instead of a wrong penalty. Re-verified live:
+driver cancel on a €70-accepted / €100-ceiling trip → €70 recorded; business cancel at 83% → 58,17 € off a €70 basis
+(€83 before). Dispatch also stops calling it **"Fare now"** once a Driver holds the trip — it reads **"Agreed fare"**.
+
+**Still open, founder-owned:** with the basis correct, **100% may be too weak a penalty on cheap trips** — a €50 job
+costs €50 to abandon. Founder: *"100% is not enough … we need to fix rules later."* Logged in BACKLOG § H2 with a sketch
+of the options (a floor, a multiplier near pickup, or visible reliability marks); nothing decided.
 
 **Commission: the fare shown in the Pool is the Driver's fare.** The preview carried a line saying the total was what
 the Business pays with commission not yet deducted; the founder cut it — "it has to be like the other apps, the price

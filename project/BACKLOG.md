@@ -174,10 +174,22 @@
     PostgREST UPDATE on its own mission (set `status='cancelled'` skipping the fee, or unpool a *confirmed* trip). Fix with
     column-level grants (`REVOKE UPDATE … ; GRANT UPDATE (info cols) …`) once the legit business-write paths
     (updateMissionInfo, PhoneShareToggle, drafts) are audited. **HIGH for prod**; ~nil in beta (key-gated, no payments).
-  - 💶 **Fee BASIS: `currentFare` never freezes at `accepted_at`** → the recorded cancellation fee basis climbs to the
-    ceiling instead of the fare the Driver agreed at accept (e.g. a SPEED WIN accepted at €78 records €100). Pre-existing
-    pricing behaviour; a clean fix caps the climb at `accepted_at` in `lib/pdp.ts` — but it changes fare *display*
-    app-wide, so it's a **pricing-engine decision for the founder**. MANUAL settlement backstops it for now.
+  - ✅ **Fee BASIS: `currentFare` never freezes at `accepted_at` — RESOLVED 2026-07-28 ([[d59]]).** Founder ruling:
+    *"the final fare, whatever it is on the Business side or on the Driver side, is the price that the Driver accepted."*
+    New `settledFare()` in `lib/pdp.ts` freezes the climb at `accepted_at`; applied to every display AND to the fee
+    snapshots (`p_fare_snapshot` on driver cancel / no-show / business cancel / business no-show, and the amendment
+    from-fare). Verified live both ways: a driver cancel on a €70-accepted / €100-ceiling trip recorded **€70** (was
+    €100), and a business cancel at 83% recorded **58,17 € off a €70 basis** (would have been €83). ⚠️ The bug the live
+    test caught: `settledFare` was optional-typed and the actions' narrow `FARE_COLS` select omitted `accepted_at`, so it
+    silently fell back to the live fare — the column is now selected and the parameter is **required**, so a missing
+    column is a compile error rather than a money bug.
+  - 💶 **Penalty RULES need a rethink — founder, 2026-07-28. Not urgent, but before real money moves.** With the fee now
+    correctly based on the accepted fare, **100% may be too weak a deterrent on cheap trips**: a €50 job costs €50 to
+    walk away from, so a Driver offered something better is tempted to cancel and pay. The founder's words: *"100% is not
+    enough … we need to fix rules later."* Sketch of the space (nothing decided): a **floor** under the penalty (max of
+    100% and a fixed €X), a **multiplier** that scales as pickup nears, or a non-monetary cost (reliability marks that a
+    Driver can actually see — itself an open founder conversation). Pairs with the reliability-marks discussion and with
+    the postpone-then-cancel laundering note below.
   - 🔒 **`p_fare_snapshot` is client-supplied / forgeable** → recompute the fare inside the RPC from the mission's pdp
     columns (or clamp) when the pricing engine lands. Beta-mitigated (MANUAL money, no payments).
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver

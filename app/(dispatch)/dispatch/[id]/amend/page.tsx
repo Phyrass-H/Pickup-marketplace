@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { parseWaypoints } from "@/lib/waypoints";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import {
   addressLine,
@@ -68,7 +68,7 @@ export default async function AmendMissionPage({
   const t = missionTone(mission);
   const amendable = AMENDABLE.includes(mission.status);
   const waypoints = parseWaypoints(mission.waypoints);
-  const fare = currentFare(mission);
+  const fare = settledFare(mission);
 
   const pickupDefault: Place | null =
     mission.pickup_lat != null && mission.pickup_lng != null

@@ -39,6 +39,26 @@ pre-existing: supabase-js on the edge runtime, webpack cache).
 IS the Driver's price — see [[d59]]); "No trips this week" becomes "that week" once you step away from now; and the trip
 route wraps to two lines rather than truncating to "Cannes → 16…".
 
+**Then the founder closed the fee-basis question the same session** — *"If a driver accepted a trip why would the fare
+keep climbing? The final fare … is the price that the Driver accepted."* So `settledFare` went into the fee snapshots
+too: `p_fare_snapshot` on `driver_cancel_mission` / `mark_no_show` / `business_cancel_mission` /
+`business_declare_no_show`, `p_from_fare`, and the amendment's `buildFromSnapshot`. BACKLOG § H2's fee-basis flag is now
+**RESOLVED**; a new § H2 entry records the founder's next question (100% is a weak deterrent on a €50 trip).
+
+**⚑ The bug of the session, caught by probing not reading.** After the change the cancel modal quoted €70 and
+`mission_cancellation.fee_amount` still recorded **€100**. Cause: `settledFare` typed `accepted_at` as *optional*, and
+both actions files select a narrow `FARE_COLS` list that didn't include it — so it fell back to `currentFare(now)`.
+The diff looked completely correct. Fixed by adding `accepted_at` to both `FARE_COLS` **and making the parameter
+required**, so a narrow select is now a compile error rather than a wrong penalty. (Same shape as the S42 airport-regex
+bug: correct-looking code, wrong at runtime, only live probing found it — more evidence for the § H2 automated-tests
+argument.)
+
+**Verified live, both directions, on throwaway missions** (ZZTEST, ceiling €100, accepted at €70, deleted after):
+driver cancel → quoted €70, recorded `fee_amount 70 / fare_snapshot 70`; business cancel at T−1.7h → quoted 58,15 €,
+recorded `fee_pct 83.09 / fee_amount 58,17 / fare_snapshot 70` (the few cents are the % clock ticking between render and
+RPC, not a basis error). DB restored to its 34-mission baseline, `reliability_marks` back to 0, no ZZTEST rows left.
+Dispatch's scan label now reads **"Agreed fare"** once `accepted_at` is set, "Fare now" only while pooled.
+
 ---
 
 ## 2026-07-28 — Session 48 — the Driver ACCOUNT rebuilt: hub + sub-pages, documents with a lifecycle ([[d58]])

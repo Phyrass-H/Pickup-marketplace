@@ -3,7 +3,7 @@ import { Pencil, GitPullRequestArrow, Lock, Phone, Car, Clock, Star } from "luci
 import type { MissionRow, AmendmentStatus, ReleaseStatus } from "@/lib/database.types";
 import { closeAmendment } from "@/app/(dispatch)/dispatch/[id]/amend/actions";
 import { closeRelease } from "@/app/(dispatch)/dispatch/actions";
-import { currentFare, settledFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
@@ -350,7 +350,7 @@ export function TripRow({
           <WaitingPanel
             missionId={mission.id}
             driverName={driver?.name ?? ""}
-            fare={currentFare(mission)}
+            fare={settledFare(mission)}
             waitingFromIso={waitingAt(mission).from.toISOString()}
             waitingUntilIso={waitingAt(mission).until.toISOString()}
             courtesyMinutes={noShowWaitMinutes(isAirportPickup(mission))}
@@ -366,7 +366,7 @@ export function TripRow({
               {cancellable && (
                 <BusinessCancel
                   missionId={mission.id}
-                  fare={currentFare(mission)}
+                  fare={settledFare(mission)}
                   pickupAtIso={mission.pickup_at}
                   hasDriver={!!mission.driver_id}
                 />
@@ -551,7 +551,11 @@ export function TripRow({
             </div>
           )}
           <div className="dx-scan__c dx-scan__c--fare">
-            <div className="dx-scan__cap">Fare now</div>
+            {/* "now" is only true while the fare is still climbing in the Pool. Once
+                a Driver holds it, the price is settled and the label has to say so. */}
+            <div className="dx-scan__cap">
+              {mission.accepted_at ? "Agreed fare" : "Fare now"}
+            </div>
             <div className="dx-scan__v dx-scan__v--big">{formatMoney(settledFare(mission))}</div>
             <div className="dx-scan__s">ceiling {formatMoney(mission.ceiling)}</div>
           </div>

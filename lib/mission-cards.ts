@@ -2,7 +2,7 @@
 // mission — the amendment (D39 Phase 2) accept/decline, and the agreed-release (O7, D45)
 // accept/decline. Extracted from the old rides list so the dedicated mission page
 // (/missions/[id], the "opened" run view) can render them too.
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { formatDateTime, shortPlaceLabel } from "@/lib/format";
@@ -64,7 +64,7 @@ export function buildAmendmentData(
     removedStops: diff.removedStops,
     wasLabel,
     note: a.note,
-    fareOld: from.fare ?? currentFare(m),
+    fareOld: from.fare ?? settledFare(m),
     fareNew: Number(a.new_fare),
     distOld: from.distance_km,
     durOld: from.duration_min,

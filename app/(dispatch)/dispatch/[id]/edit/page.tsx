@@ -14,7 +14,7 @@ import { parseLanguages, parseDriverFlags } from "@/lib/driver-service";
 import { parseWaypoints } from "@/lib/waypoints";
 import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { addressLine, formatDateTime, formatMoney, serviceClassLabel } from "@/lib/format";
 import { EditMissionForm } from "./edit-form";
 
@@ -132,7 +132,7 @@ export default async function EditMissionPage({
         <div className="ex-meta">
           <span>{formatDateTime(mission.pickup_at)}</span>
           <span>
-            Fare <b>{formatMoney(currentFare(mission))}</b> · ceiling {formatMoney(mission.ceiling)}
+            Fare <b>{formatMoney(settledFare(mission))}</b> · ceiling {formatMoney(mission.ceiling)}
           </span>
           <span>
             {serviceClassLabel(mission.category, mission.required_body_type)}

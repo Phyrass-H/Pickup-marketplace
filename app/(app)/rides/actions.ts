@@ -6,12 +6,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { nextStep } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import type { StatusEventStatus } from "@/lib/database.types";
 
 // The PDP columns needed to compute the fare snapshot recorded on a cancel / no-show.
 const FARE_COLS =
-  "id, driver_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at";
+  "id, driver_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at, accepted_at";
 
 export type StatusResult = { ok: true } | { ok: false; message: string };
 
@@ -175,7 +175,7 @@ export async function driverCancelMission(
   const { error } = await supabase.rpc("driver_cancel_mission", {
     p_mission_id: missionId,
     p_reason: reason?.trim() || null,
-    p_fare_snapshot: currentFare(mission),
+    p_fare_snapshot: settledFare(mission),
   });
   if (error) {
     const msg = error.message?.trim();
@@ -243,7 +243,7 @@ export async function markNoShow(missionId: string): Promise<StatusResult> {
 
   const { error } = await supabase.rpc("mark_no_show", {
     p_mission_id: missionId,
-    p_fare_snapshot: currentFare(mission),
+    p_fare_snapshot: settledFare(mission),
   });
   if (error) {
     const msg = error.message?.trim();

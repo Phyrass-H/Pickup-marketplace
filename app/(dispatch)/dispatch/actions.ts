@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
 const FARE_COLS =
-  "id, business_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at";
+  "id, business_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at, accepted_at";
 
 function revalidateDispatch() {
   revalidatePath("/dispatch", "layout");
@@ -40,7 +40,7 @@ export async function businessDeclareNoShow(missionId: string): Promise<ActionRe
 
   const { error } = await supabase.rpc("business_declare_no_show", {
     p_mission_id: missionId,
-    p_fare_snapshot: currentFare(mission),
+    p_fare_snapshot: settledFare(mission),
   });
   if (error) {
     const msg = error.message?.trim();
@@ -74,7 +74,7 @@ export async function businessCancelMission(
   const { error } = await supabase.rpc("business_cancel_mission", {
     p_mission_id: missionId,
     p_reason: reason?.trim() || null,
-    p_fare_snapshot: currentFare(mission),
+    p_fare_snapshot: settledFare(mission),
   });
   if (error) {
     const msg = error.message?.trim();
@@ -113,7 +113,7 @@ export async function proposeRelease(
   const { error } = await supabase.rpc("propose_release", {
     p_mission_id: missionId,
     p_note: note?.trim() || null,
-    p_from_fare: currentFare(mission),
+    p_from_fare: settledFare(mission),
     p_proposed_by: ctx.dispatcher?.id ?? null,
   });
   if (error) {

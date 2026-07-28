@@ -12,7 +12,7 @@ import {
   UserX,
   type LucideIcon,
 } from "lucide-react";
-import { currentFare, settledFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { formatMoney, formatPoolWhen, missionStatusLabel } from "@/lib/format";
 import type { MissionRow, MissionStatus, PreferredGps } from "@/lib/database.types";
 import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
@@ -366,7 +366,7 @@ export function MissionRunView({
         {m.status === "arrived" && arrivedAtIso && (
           <NoShowControl
             missionId={m.id}
-            fare={currentFare(m)}
+            fare={settledFare(m)}
             guestDueIso={guestDueAt(m).toISOString()}
             availableAtIso={noShowAvailableAt(m, arrivedAtIso).toISOString()}
             waitMinutes={noShowWaitMinutes(isAirportPickup(m))}
@@ -385,7 +385,7 @@ export function MissionRunView({
           m.status === "arrived") && (
           <DriverCancel
             missionId={m.id}
-            fare={currentFare(m)}
+            fare={settledFare(m)}
             businessPhone={dispatcherPhone}
             businessName={businessName}
           />

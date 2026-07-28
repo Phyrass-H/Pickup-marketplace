@@ -7,7 +7,7 @@ import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { routeMetrics } from "@/lib/directions";
 import { parseWaypointsField } from "@/lib/waypoints";
-import { currentFare } from "@/lib/pdp";
+import { settledFare } from "@/lib/pdp";
 import { buildFromSnapshot } from "@/lib/amendments";
 import type { MissionStatus } from "@/lib/database.types";
 
@@ -93,7 +93,7 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
 
   // The trip as agreed at this moment — including the CURRENT fare the Driver
   // agreed to (computed, never stored) — for the "was …" display + audit trail.
-  const fromSnapshot = buildFromSnapshot(mission, currentFare(mission));
+  const fromSnapshot = buildFromSnapshot(mission, settledFare(mission));
 
   // Only one proposal can be live at a time: retire any still-pending one for this
   // mission (the Business is replacing it). RLS scopes the update to this Business.

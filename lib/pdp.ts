@@ -52,8 +52,20 @@ export function currentFare(m: PdpInputs, now: Date = new Date()): number {
 }
 
 /**
- * The fare a Driver actually earned on a trip they took: the PDP climb FROZEN at
- * the moment of accept.
+ * THE fare of a mission once someone has taken it: the PDP climb FROZEN at the
+ * moment of accept.
+ *
+ * Founder rule (2026-07-28): *the final fare, on the Business side and the Driver
+ * side, is the price the Driver accepted.* The climb exists to fill a mission; it
+ * has no business running afterwards. So everything downstream of accept reads this
+ * — what a Driver earned, what a Business owes, AND the euro basis of a
+ * cancellation fee, a no-show and an amendment. `currentFare` is only correct while
+ * a mission is still in the Pool (the Pool card, and the pre-accept detail).
+ *
+ * `accepted_at` is REQUIRED, not optional, on purpose: the first version made it
+ * optional and a server action selected a narrow column list without it, so the
+ * function silently fell back to the live fare and recorded a EUR 100 penalty on a
+ * EUR 70 trip. A missing column is now a compile error, not a money bug.
  *
  * `currentFare(m)` climbs to `now`, which is right while a mission sits in the Pool
  * and wrong the instant someone takes it — a trip accepted at €70 reads €100 (the
@@ -61,7 +73,7 @@ export function currentFare(m: PdpInputs, now: Date = new Date()): number {
  * read must use this instead. Falls back to the live fare when there's no
  * `accepted_at` (a mission still pooled, or a legacy row).
  */
-export function settledFare(m: PdpInputs & { accepted_at?: string | null }): number {
+export function settledFare(m: PdpInputs & { accepted_at: string | null }): number {
   return currentFare(m, m.accepted_at ? new Date(m.accepted_at) : new Date());
 }
 
