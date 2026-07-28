@@ -108,6 +108,20 @@
   Pairs with the 👤 verify + video-interview items in section A. Needs an admin **write** path
   (service role) — browser RLS is read-only for admins today. The upload side already exists
   (Session 7: documents land in the `documents` bucket as `pending`); this is the review/confirm side.
+  - **Founder confirmed 2026-07-28: this back-office is wanted, and its scope is papers + disputes +
+    "other things"** — i.e. the two 🔨 items above are one product, not two. Call it the **back-office**
+    (`/admin`); "support console" works too. Not scheduled yet.
+  - **S48 made the Driver side concrete — the reviewer's contract is now fixed** ([[d58]]): per document
+    the back-office writes `status` (pending → verified/rejected), **`review_note`** (the Driver reads it
+    verbatim: *"the bottom edge is cut off"*), and may correct **`expires_at`** (the Driver types it off
+    the paper, so it's the field most likely to be wrong). Two-sided papers are **one row per `side`**
+    (front/back) — approve them independently. The Driver-facing states already render all of this, so the
+    back-office is genuinely just the write path. **Doc list to review** (9): licence · VTC card · REVTC ·
+    medical certificate · Kbis · **URSSAF attestation de vigilance** (re-collect every 6 months — the one
+    with a legal deadline on Kavenue) · RC Pro · carte grise · insurance.
+  - **The expiry-reminder job belongs here too**, not in the Driver app: the account copy already promises
+    "a month before, and again the week it lapses", which needs a scheduled query over `document.expires_at`
+    + the notifications phase. Until it exists, a Driver only learns on opening the app.
 - 📊 Doubles as **investor metrics** (fill rate, time-to-accept, GMV, commission) — see the
   ⚙️ "Kavenue internal / investor metrics" line in F.
 - ⚠️ **GDPR dependency**: analytics + session replay capture PII → require PII masking,
