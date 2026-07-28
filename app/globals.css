@@ -2612,3 +2612,231 @@ textarea::placeholder {
   color: var(--tone-warn-fg);
 }
 .ridecard__flag svg { width: 14px; height: 14px; flex: none; }
+
+/* ============================================================================
+   Driver ACCOUNT (S48) — the hub + its sub-pages. The last un-redesigned Driver
+   screen: one 1400px scroll of generic `.card` blocks with a single Save that
+   silently wrote the vehicle too. Now a hub of rows, each pile on its own page,
+   each with its own Save. Reuses the shipped `.dcard` / `.dpill` / `.dchip`
+   vocabulary — nothing new invented that already existed.
+   ========================================================================== */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---- Page furniture ---- */
+.dset__h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.dset__sub { font-size: 12.5px; color: var(--text-muted); margin: 5px 0 16px; line-height: 1.45; }
+.dset__body { font-size: 13.5px; color: var(--text-muted); line-height: 1.55; margin: 0 0 14px; }
+.dset__body--warn { color: var(--tone-warn-fg); }
+.dset__ver { font-size: 11px; color: var(--text-faint); text-align: center; margin: 18px 0 0; }
+
+/* Back to the hub. A real link, not history — a deep link lands somewhere sane. */
+.dback {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+.dback:active { color: var(--text); }
+
+/* A div.field (the address block) never got the label spacing — only label.field did. */
+div.field { margin-bottom: 14px; }
+.dlabel { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+
+/* Helper text under an input. Beats `label.field > span` (0,2,1) on specificity. */
+.dhint,
+label.field > span.dhint {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+.dhint svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 5px; }
+.dhint--block { margin-top: 12px; }
+.derr { font-size: 12.5px; color: var(--danger); margin: 10px 0 0; }
+
+/* ---- Identity card: who the Business is about to meet ---- */
+.dident { display: flex; align-items: center; gap: 15px; }
+.dident__av { width: 62px; height: 62px; flex: none; font-size: 21px; }
+.dident__t { min-width: 0; }
+.dident__nm { font-size: 16.5px; font-weight: 500; letter-spacing: -0.01em; }
+.dident__sub { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; }
+
+/* ---- Readiness: names what's missing, never a completion percentage ---- */
+.dready {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 15px 16px;
+  margin-bottom: 12px;
+}
+.dready--block { border-color: #f3d9b6; }
+.dready__h { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.dready__bar { display: flex; gap: 3px; margin: 11px 0 12px; }
+.dready__seg { height: 4px; flex: 1; border-radius: var(--radius-pill); background: #e6e9ef; }
+.dready__seg.is-on { background: var(--success); }
+.dready__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dready__list a {
+  font-size: 12.5px;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.dready__more { font-size: 11.5px; color: var(--text-faint); margin: 9px 0 0; }
+
+/* ---- Hub rows ---- */
+.drow {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 0;
+  border-top: 1px solid #f4f5f8;
+  text-decoration: none;
+  color: var(--text);
+}
+.drow:first-of-type { border-top: 0; }
+.drow:active { opacity: 0.72; }
+.drow--flat { color: var(--text); }
+/* A row that IS its own card (a pointer from one page to another). */
+.drow--solo { border-top: 0; padding: 16px; display: flex; }
+.drow__ic { flex: none; width: 20px; color: var(--text-muted); display: flex; }
+.drow__t { flex: 1; min-width: 0; }
+.drow__t b { display: block; font-size: 14px; font-weight: 500; }
+.drow__t span { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.drow__ch { color: #c3cad6; flex: none; }
+
+/* ---- Document rows: status carries the meaning, so it's coloured, not the name ---- */
+.dcard__label--split { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dcard__label--split em { font-style: normal; color: var(--text-faint); font-size: 11px; }
+
+.ddoc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: 1px solid #f4f5f8;
+  text-decoration: none;
+  color: var(--text);
+}
+.ddoc:first-of-type { border-top: 0; }
+.ddoc:active { opacity: 0.72; }
+.ddoc__ic {
+  width: 37px; height: 37px; border-radius: 10px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  background: #f4f6f9; color: var(--text-muted);
+}
+.ddoc__ic--success { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+.ddoc__ic--warn { background: var(--tone-warn-bg); color: var(--tone-warn-fg); }
+.ddoc__ic--error { background: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+.ddoc__t { flex: 1; min-width: 0; }
+.ddoc__t b { display: block; font-size: 13.5px; font-weight: 500; }
+.ddoc__st { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+.ddoc__st--warn { color: var(--tone-warn-fg); }
+.ddoc__st--error { color: var(--tone-danger-fg); }
+/* Outlined, not filled: a Driver starting out sees nine of these at once, and nine
+   navy blocks is a wall. The affordance has to be unmistakable without shouting. */
+.ddoc__cta {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 7px 13px;
+}
+
+/* ---- Capture: what you're about to send ---- */
+.dstage {
+  background: #f6f7f9;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 148px;
+}
+.dstage img { display: block; max-width: 100%; max-height: 260px; }
+.dstage__pdf {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 12.5px; color: var(--text-muted); padding: 20px 16px; text-align: center;
+}
+.btn.dfile { margin-top: 9px; }
+.btn.dquiet { margin-top: 4px; }
+
+/* Documents are wider than they are tall — give the framer more room than a face. */
+.crop-area--doc { height: 240px; }
+.btn.dframe__turn { margin-top: -4px; width: auto; padding: 8px 14px; font-size: 12.5px; }
+
+/* ---- Language chips: pickable, so they need a pressed state the read-only ones lack ---- */
+.dchips--pick { margin-top: 0; }
+.dchip--btn {
+  border: 1px solid transparent;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dchip--btn.is-on { background: var(--accent); color: var(--text-on-accent); }
+.dchip--add {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dchip--input {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  width: 116px;
+  font-family: inherit;
+  font-size: 11.5px;
+  height: 28px;
+}
+
+/* Form labels inside the Driver app: 14px/600 reads heavy on a phone next to the
+   S43+ card vocabulary (11.5px/500 section labels). Scoped to `.dapp-main` so the
+   Dispatch desktop forms keep their own weight. */
+.dapp-main label.field > span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.dapp-main .dlabel { font-size: 13px; font-weight: 500; }
+
+/* Navigate: the account's chosen map app, opened on the address that matters now.
+   A quiet outlined action — the filled button on a live trip is the status advance. */
+.dnav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  background: var(--surface);
+}
+.dnav:active { background: var(--surface-2); }

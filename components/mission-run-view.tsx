@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { currentFare } from "@/lib/pdp";
 import { formatMoney, formatPoolWhen, missionStatusLabel } from "@/lib/format";
-import type { MissionRow, MissionStatus } from "@/lib/database.types";
+import type { MissionRow, MissionStatus, PreferredGps } from "@/lib/database.types";
 import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
@@ -26,6 +26,7 @@ import {
   noShowWaitMinutes,
   waitingAt,
 } from "@/lib/cancellation";
+import { navigateUrl, nextDestination } from "@/lib/nav-links";
 import type { GuestPhone } from "@/lib/passengers";
 import type { AmendmentCardData, ReleaseCardData } from "@/lib/mission-cards";
 import { BoardFileLink } from "@/components/board-file-link";
@@ -94,6 +95,7 @@ export function MissionRunView({
   arrivedAtIso,
   amendment,
   release,
+  preferredGps = null,
   archived = false,
 }: {
   mission: MissionRow;
@@ -104,6 +106,8 @@ export function MissionRunView({
   arrivedAtIso: string | null;
   amendment: AmendmentCardData | null;
   release: ReleaseCardData | null;
+  /** Which map app the Driver picked in their account (S48). */
+  preferredGps?: PreferredGps | null;
   /** The trip is closed (Past tab): Guest data is gone, the card is a record. */
   archived?: boolean;
 }) {
@@ -125,6 +129,7 @@ export function MissionRunView({
   const caption = progressCaption(m.status, stops.length, stopsReached);
   const phones = guestPhones;
   const comp = cancelCompensation(m);
+  const destination = nextDestination(m, stops);
 
   return (
     <>
@@ -217,6 +222,20 @@ export function MissionRunView({
               <span className="proute__addr proute__addr--to">{m.dropoff_address ?? "—"}</span>
             </div>
           </div>
+
+          {/* Navigate, in the app the Driver chose in their account. Only while the
+              trip is live — a closed trip has nowhere to go. */}
+          {!archived && isExecutable(m.status) && destination && (
+            <a
+              className="dnav"
+              href={navigateUrl(preferredGps, destination)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Navigation size={16} strokeWidth={1.9} aria-hidden="true" />
+              Navigate to the {destination.label}
+            </a>
+          )}
 
           {/* Unlocked contacts, as tap targets. Only SHARED Guest numbers reach
               here (filtered server-side); a contact without a number is a fact row. */}

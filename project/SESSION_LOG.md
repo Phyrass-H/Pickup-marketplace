@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-07-28 — Session 48 — the Driver ACCOUNT rebuilt: hub + sub-pages, documents with a lifecycle ([[d58]])
+
+**Scope (founder-set).** "Make a real and complete settings page like a real app" — research driver apps, do documents
+properly, photos you can frame. D25 loop: two interactive mockups (hub + documents + capture, then vehicles + grouped
+documents + the accept-time car picker) → founder Q&A → sign-off → build.
+
+**Research fed the design.** French VTC roadside requirements (carte VTC, carte grise, assurance, RC Pro, REVTC, visite
+médicale) and how Uber structures a driver account (documents with expiry dates + colour-coded warnings; vehicles;
+payment; app settings). The URSSAF *attestation de vigilance* was the find that changed scope — it's an obligation on
+**Kavenue** as donneur d'ordre (≥ €5 000 HT, re-collected every 6 months, joint liability if missing).
+
+**Migration** `docs/migrations/2026-07-28_driver_account_and_documents.sql` (founder ran it, confirmed): 3 new
+`document_type` values (`kbis`, `urssaf_vigilance`, `medical_certificate`); `document.side` (+ CHECK) / `review_note` /
+`vehicle_id` (+ index); `vehicle.is_active`; `driver.company_name` / `siret` / `vat_number`. Additive only — an earlier
+draft that also added `mission.vehicle_id` and rewrote `accept_mission` for a car picker was **cut** with multi-vehicle.
+
+**Routes (net-new).** `/settings` is now a hub; `/settings/{profile,area,vehicle,company,documents,navigation,payouts,help}`
++ `/settings/documents/[type]` (unknown type → 404). `updateDriverSettings` split into `updateProfile` / `updateServiceArea`
+/ `updateVehicle` / `updateCompany` / `updateNavigation`, each redirecting to its own page; every save
+`revalidatePath("/settings","layout")` because the hub's readiness strip is computed from all of them.
+
+**Files.** New: `lib/driver-readiness.ts`, `lib/nav-links.ts`, `components/image-framer.tsx`, `document-capture.tsx`,
+`document-icon.tsx`, `language-picker.tsx`, `seg-field.tsx`, `settings-header.tsx`. Rewritten: `lib/account.ts` (doc
+groups + `DocMeta` + `docState`/`docStateLabel`/`blocksWork`), `lib/documents.ts` (per-side rows, expiry, review note),
+`components/avatar-editor.tsx` (now composes `ImageFramer`). Touched: `lib/document-actions.ts` (side + expiry validation
++ `vehicle_id`), `driver-tabbar.tsx` (Settings → **Account**), `help-legal-card.tsx` (`variant="driver"`),
+`mission-run-view.tsx` + `missions/[id]/page.tsx` (Navigate button), `lib/database.types.ts`, `app/globals.css`
+(`.dset*`/`.dback`/`.dident`/`.dready*`/`.drow*`/`.ddoc*`/`.dstage`/`.dnav`/`.dchip--btn`, and Driver-scoped 13px/500
+form labels).
+
+**Verified live against the real Supabase DB** (dev-login Driver, 375×812): all 10 routes 200 (unknown doc type 404);
+**a real document filed end-to-end** — inject photo → framer → crop/rotate → upload → storage object + `document` row
+with `side='front'` and `expires_at` → state computed **"Expires in 21 days"** (expiring/warn) → front View link, back
+Missing; **rejected state** (`review_note` set via service role) → red pill + the note + the side picker moving to the
+rejected side (fixed with a remount `key` — a client `useState` kept the stale side); SIRET validation rejects 9 digits
+and saves 14 space-stripped, VAT upper-cased; Navigate on a live `on_board` trip resolved to the **drop-off** in **Waze**
+(the Driver's own preference). No console errors. `tsc` clean. Test document + storage object deleted afterwards.
+
+**Two design corrections made during verification.** Nine filled navy "Add" buttons on a fresh account was a wall →
+outlined CTAs. And `Add your ${label.toLowerCase()}` produced "Add your vtc card" → labels stay verbatim, blockers sort
+above warnings.
+
+**Deliberately not built:** multi-vehicle (see [[d58]]); document *verification* (the admin workspace is a deferred
+integration — states are honest, nothing reviews them); notification reminders for expiring papers (the copy promises
+them; they need the notifications phase); and enforcement — readiness is shown, never gated.
+
+---
+
 ## 2026-07-26 — Session 47 — My Rides tabs + day separators + the Past archive (Guest data leaves a closed trip) ([[d56]])
 
 **Scope (founder-set, ask-first honoured).** The Earnings screen was deferred again; the founder asked for My Rides

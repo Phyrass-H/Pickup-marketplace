@@ -10,12 +10,23 @@ import {
   DOCS_BUCKET,
   MAX_UPLOAD_BYTES,
 } from "@/lib/supabase/storage";
-import { DRIVER_DOC_TYPES, BUSINESS_DOC_TYPES } from "@/lib/account";
-import type { DocumentType } from "@/lib/database.types";
+import { DRIVER_DOC_TYPES, BUSINESS_DOC_TYPES, documentMeta } from "@/lib/account";
+import type { DocumentType, DocumentSide } from "@/lib/database.types";
 
 export type UploadResult = { ok: true } | { ok: false; message: string };
 
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
+
+// An expiry date the Driver types is only useful if it's real and still ahead —
+// filing an already-lapsed paper just fails review later, so say so now.
+function parseExpiry(raw: string): { ok: true; value: string } | { ok: false; message: string } {
+  const d = new Date(`${raw}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return { ok: false, message: "That date doesn’t look right." };
+  if (d.getTime() < Date.now()) {
+    return { ok: false, message: "That date has already passed — check the document." };
+  }
+  return { ok: true, value: d.toISOString() };
+}
 
 // Upload a proof to the private documents bucket and record a `document` row.
 // One action serves both sides: it resolves the caller's role → owner_type +
@@ -52,6 +63,7 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
   let ownerId: string;
   let allowed: readonly DocumentType[];
   let revalidate: string;
+  let driverId: string | null = null;
 
   if (profile?.role === "driver") {
     const { data: driver } = await supabase
@@ -62,6 +74,7 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
     if (!driver) return { ok: false, message: "Driver profile not found." };
     ownerType = "driver";
     ownerId = driver.id;
+    driverId = driver.id;
     allowed = DRIVER_DOC_TYPES;
     revalidate = "/settings";
   } else if (profile?.role === "dispatcher") {
@@ -83,10 +96,45 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
     return { ok: false, message: "Unknown document type." };
   }
   const docType = typeRaw as DocumentType;
+  const meta = documentMeta(docType);
+
+  // Front/back: only two-sided papers carry a side, and it has to be one of the two.
+  const sideRaw = String(formData.get("side") ?? "");
+  const side: DocumentSide | null = meta.twoSided
+    ? sideRaw === "back"
+      ? "back"
+      : "front"
+    : null;
+
+  // Expiry. Asked for on the paper that has one; the back of a two-sided document
+  // reuses the front's date rather than asking twice.
+  let expiresAt: string | null = null;
+  if (meta.expiry === "required" && side !== "back") {
+    const raw = String(formData.get("expires_at") ?? "").trim();
+    if (!raw) return { ok: false, message: "Add the expiry date shown on the document." };
+    const parsed = parseExpiry(raw);
+    if (!parsed.ok) return parsed;
+    expiresAt = parsed.value;
+  }
+
+  // A carte grise / insurance belongs to a car, not to the Driver. One car today,
+  // so we resolve it rather than asking — the column is what makes a second car easy.
+  let vehicleId: string | null = null;
+  if (meta.group === "vehicle" && driverId) {
+    const { data: v } = await supabase
+      .from("vehicle")
+      .select("id")
+      .eq("driver_id", driverId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    vehicleId = v?.id ?? null;
+  }
 
   try {
     await ensureBucket(DOCS_BUCKET, false);
-    const path = `${ownerType}/${ownerId}/${docType}-${Date.now()}.${fileExt(file)}`;
+    const suffix = side ? `-${side}` : "";
+    const path = `${ownerType}/${ownerId}/${docType}${suffix}-${Date.now()}.${fileExt(file)}`;
     await uploadFile(DOCS_BUCKET, path, file);
 
     const admin = createAdminClient();
@@ -95,6 +143,9 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
       owner_id: ownerId,
       type: docType,
       file_url: path,
+      side,
+      expires_at: expiresAt,
+      vehicle_id: vehicleId,
     });
     if (error) return { ok: false, message: "Couldn’t save the document record." };
   } catch (e) {
@@ -104,6 +155,8 @@ export async function uploadDocument(formData: FormData): Promise<UploadResult> 
     };
   }
 
-  revalidatePath(revalidate);
+  // "layout" so the hub, the documents list and the per-document page all refresh
+  // (the readiness strip on the hub is computed from exactly this data).
+  revalidatePath(revalidate, "layout");
   return { ok: true };
 }

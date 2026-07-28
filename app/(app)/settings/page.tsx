@@ -1,163 +1,214 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import {
+  Bell,
+  BadgeCheck,
+  Building2,
+  Car,
+  ChevronRight,
+  Clock,
+  FileText,
+  HelpCircle,
+  MapPin,
+  Navigation,
+  User,
+  Wallet,
+} from "lucide-react";
 import { getAppContext } from "@/lib/app-context";
 import { getLatestDocuments } from "@/lib/documents";
-import { DRIVER_DOC_TYPES } from "@/lib/account";
-import { DocumentSection } from "@/components/document-section";
-import { AvatarEditor } from "@/components/avatar-editor";
-import { AddressAutocomplete } from "@/components/address-autocomplete";
-import { DriverVehicleFields } from "@/components/driver-vehicle-fields";
-import { HelpLegalCard } from "@/components/help-legal-card";
+import { DRIVER_DOC_TYPES, docState } from "@/lib/account";
+import { driverReadiness } from "@/lib/driver-readiness";
+import { serviceClassLabel } from "@/lib/format";
 import { DriverSignOut } from "@/components/driver-signout";
-import { updateDriverSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-const RADII = [25, 50, 75, 100, 150, 200, 300];
-
-const NOTICE: Record<string, string> = {
-  missing: "Please fill in your first and last name.",
-  nobase: "Please pick your base address from the suggestions so the Pool can match by distance.",
-  db: "Something went wrong saving your changes. Please try again.",
+const GPS_LABEL: Record<string, string> = {
+  waze: "Waze",
+  google: "Google Maps",
+  apple: "Apple Maps",
 };
 
-export default async function DriverSettingsPage({
-  searchParams,
+function Row({
+  href,
+  icon,
+  title,
+  value,
+  badge,
 }: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
+  href?: string;
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  badge?: number;
 }) {
+  const inner = (
+    <>
+      <span className="drow__ic" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="drow__t">
+        <b>{title}</b>
+        <span>{value}</span>
+      </span>
+      {badge ? <span className="dpill dpill--warn dpill--sm">{badge}</span> : null}
+      {href && <ChevronRight size={16} strokeWidth={2} className="drow__ch" aria-hidden="true" />}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="drow">
+      {inner}
+    </Link>
+  ) : (
+    <div className="drow drow--flat">{inner}</div>
+  );
+}
+
+export default async function DriverAccountPage() {
   const ctx = await getAppContext();
   if (!ctx.driver) redirect("/onboarding");
-  const driver = ctx.driver;
-  const vehicle = ctx.vehicle;
+  const { driver, vehicle } = ctx;
 
-  const { ok, error } = await searchParams;
   const docs = await getLatestDocuments("driver", driver.id, DRIVER_DOC_TYPES);
+  const ready = driverReadiness(driver, vehicle, docs);
+  const docsToDo = docs.filter((d) => {
+    const s = docState(d);
+    return s !== "valid" && s !== "pending";
+  }).length;
+  const docsValid = docs.filter((d) => docState(d) === "valid").length;
 
-  const base =
-    driver.base_lat != null && driver.base_lng != null
-      ? { label: driver.base_label ?? "", lat: driver.base_lat, lng: driver.base_lng }
-      : null;
-
-  // Keep a previously-saved radius selectable even if it isn't a preset.
-  const storedRadius = driver.service_radius_km ?? 50;
-  const radii = RADII.includes(storedRadius)
-    ? RADII
-    : [...RADII, storedRadius].sort((a, b) => a - b);
+  const carLine = vehicle?.make
+    ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") +
+      (vehicle.plate ? ` · ${vehicle.plate}` : "")
+    : "No car on file yet";
 
   return (
     <>
-      <h1>Settings</h1>
+      <h1 className="dset__h1">Account</h1>
+      <p className="dset__sub">Your profile, your car, your papers.</p>
 
-      {ok && <div className="notice success">Your changes were saved.</div>}
-      {error && NOTICE[error] && <div className="notice error">{NOTICE[error]}</div>}
-
-      <div className="card">
-        <h2>Profile</h2>
-        <AvatarEditor kind="driver" currentUrl={driver.profile_photo_url} fallback={driver.first_name} />
-      </div>
-
-      <form action={updateDriverSettings} className="card">
-        <label className="field">
-          <span>First name</span>
-          <input type="text" name="first_name" defaultValue={driver.first_name} required />
-        </label>
-        <label className="field">
-          <span>Last name</span>
-          <input type="text" name="last_name" defaultValue={driver.last_name} required />
-        </label>
-        <label className="field">
-          <span>Phone (revealed to the Business when you accept)</span>
-          <input type="tel" name="phone" defaultValue={driver.phone ?? ""} placeholder="+33 6 12 34 56 78" />
-        </label>
-        <label className="field">
-          <span>Languages (comma-separated)</span>
-          <input type="text" name="languages" defaultValue={driver.languages.join(", ")} placeholder="Français, English, Italiano" />
-        </label>
-        <label className="field">
-          <span>Preferred GPS</span>
-          <select name="preferred_gps" defaultValue={driver.preferred_gps ?? "google"}>
-            <option value="waze">Waze</option>
-            <option value="google">Google Maps</option>
-            <option value="apple">Apple Maps</option>
-          </select>
-        </label>
-
-        <h2 style={{ marginTop: 20 }}>Where you work</h2>
-        <div className="field">
-          <span style={{ fontWeight: 600, fontSize: 14, display: "block", marginBottom: 6 }}>
-            Your base
-          </span>
-          <AddressAutocomplete
-            labelName="base_label"
-            latName="base_lat"
-            lngName="base_lng"
-            defaultValue={base}
-            placeholder="Start typing a town or address…"
-          />
+      <div className="dcard dident">
+        {driver.profile_photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="avatar dident__av" src={driver.profile_photo_url} alt="" />
+        ) : (
+          <span className="avatar avatar-empty dident__av">{driver.first_name?.[0] ?? "?"}</span>
+        )}
+        <div className="dident__t">
+          <div className="dident__nm">
+            {driver.first_name} {driver.last_name}
+          </div>
+          <div className="dident__sub">{carLine}</div>
+          <div style={{ marginTop: 9 }}>
+            {driver.verified ? (
+              <span className="dpill dpill--go">
+                <BadgeCheck size={13} strokeWidth={2} aria-hidden="true" />
+                Verified Driver
+              </span>
+            ) : (
+              <span className="dpill dpill--warn">
+                <Clock size={13} strokeWidth={2} aria-hidden="true" />
+                Verification in progress
+              </span>
+            )}
+          </div>
         </div>
-        <label className="field">
-          <span>Service radius — how far from your base you’ll drive</span>
-          <select name="service_radius_km" defaultValue={String(storedRadius)}>
-            {radii.map((r) => (
-              <option key={r} value={r}>
-                Up to {r} km
-              </option>
+      </div>
+
+      {ready.gaps.length > 0 && (
+        <div className={`dready${ready.blockers > 0 ? " dready--block" : ""}`}>
+          <div className="dready__h">{ready.headline}</div>
+          <div className="dready__bar" aria-hidden="true">
+            {Array.from({ length: ready.total }, (_, i) => (
+              <span key={i} className={`dready__seg${i < ready.done ? " is-on" : ""}`} />
             ))}
-          </select>
-        </label>
-        <p className="muted small" style={{ marginTop: -6 }}>
-          A mission appears in your Pool when its pickup <strong>or</strong> drop-off is within this
-          distance of your base — so a long transfer that ends near you still shows up.
-        </p>
+          </div>
+          <ul className="dready__list">
+            {ready.gaps.slice(0, 3).map((g) => (
+              <li key={g.label}>
+                <Link href={g.href}>{g.label}</Link>
+              </li>
+            ))}
+          </ul>
+          {ready.gaps.length > 3 && (
+            <p className="dready__more">and {ready.gaps.length - 3} more below</p>
+          )}
+        </div>
+      )}
 
-        <h2 style={{ marginTop: 20 }}>Vehicle</h2>
-        <DriverVehicleFields
-          defaults={{
-            body_type: vehicle?.body_type,
-            make: vehicle?.make,
-            model: vehicle?.model,
-            colour: vehicle?.colour,
-            plate: vehicle?.plate,
-            seats: vehicle?.seats,
-            accepts_luggage_runs: driver.accepts_luggage_runs,
-          }}
+      <div className="dcard">
+        <p className="dcard__label">You</p>
+        <Row
+          href="/settings/profile"
+          icon={<User size={19} strokeWidth={1.7} />}
+          title="Profile"
+          value="Name, phone, languages"
         />
-
-        <button className="btn" type="submit">
-          Save changes
-        </button>
-      </form>
-
-      <DocumentSection docs={docs} />
-
-      <div className="card">
-        <h2>Payouts</h2>
-        <p className="muted small" style={{ marginTop: -2 }}>
-          {driver.stripe_account_id
-            ? "Connected — payouts are set up."
-            : "Not connected yet. Your weekly earnings are paid out via Stripe."}
-        </p>
-        <button className="btn secondary" type="button" disabled>
-          Set up payouts with Stripe — coming soon
-        </button>
-        <p className="muted small" style={{ marginTop: 10 }}>
-          Bank details are collected securely by Stripe when payouts go live. Kavenue
-          never stores your card or IBAN.
-        </p>
+        <Row
+          href="/settings/area"
+          icon={<MapPin size={19} strokeWidth={1.7} />}
+          title="Where you work"
+          value={
+            driver.base_label
+              ? `${driver.base_label.split(",")[0]} · up to ${driver.service_radius_km} km`
+              : "Not set yet"
+          }
+        />
+        <Row
+          href="/settings/vehicle"
+          icon={<Car size={19} strokeWidth={1.7} />}
+          title="Your vehicle"
+          value={
+            vehicle
+              ? `${serviceClassLabel(vehicle.category, vehicle.body_type)} · ${vehicle.seats ?? "?"} seats`
+              : "Add your car"
+          }
+        />
+        <Row
+          href="/settings/company"
+          icon={<Building2 size={19} strokeWidth={1.7} />}
+          title="Your company"
+          value={driver.company_name ?? driver.siret ?? "SIRET, VAT — so we can pay you"}
+        />
+        <Row
+          href="/settings/documents"
+          icon={<FileText size={19} strokeWidth={1.7} />}
+          title="Documents"
+          value={`${docsValid} of ${docs.length} valid`}
+          badge={docsToDo || undefined}
+        />
       </div>
 
-      <HelpLegalCard />
-
-      <p className="small" style={{ marginTop: 8 }}>
-        <Link href="/rides/history" className="muted" style={{ textDecoration: "underline" }}>
-          View your ride history →
-        </Link>
-      </p>
-
-      <div style={{ marginTop: 20 }}>
-        <DriverSignOut />
+      <div className="dcard">
+        <p className="dcard__label">App</p>
+        <Row
+          href="/settings/navigation"
+          icon={<Navigation size={19} strokeWidth={1.7} />}
+          title="Navigation"
+          value={GPS_LABEL[driver.preferred_gps ?? "google"]}
+        />
+        <Row
+          icon={<Bell size={19} strokeWidth={1.7} />}
+          title="Notifications"
+          value="Coming soon"
+        />
+        <Row
+          href="/settings/payouts"
+          icon={<Wallet size={19} strokeWidth={1.7} />}
+          title="Payouts"
+          value={driver.stripe_account_id ? "Connected" : "Not set up yet"}
+        />
+        <Row
+          href="/settings/help"
+          icon={<HelpCircle size={19} strokeWidth={1.7} />}
+          title="Help and legal"
+          value="Terms, privacy, support"
+        />
       </div>
+
+      <DriverSignOut />
+
+      <p className="dset__ver">Kavenue · beta</p>
     </>
   );
 }

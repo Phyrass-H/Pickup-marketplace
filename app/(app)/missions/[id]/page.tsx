@@ -186,6 +186,7 @@ export default async function MissionDetailPage({
           arrivedAtIso={arrivedAtIso}
           amendment={amendment}
           release={release}
+          preferredGps={driver.preferred_gps}
           archived={!isActive}
         />
       </>

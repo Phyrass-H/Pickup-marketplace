@@ -11,7 +11,9 @@ const TABS = [
   { href: "/pool", label: "Pool", Icon: Layers, match: (p: string) => p.startsWith("/pool") || p.startsWith("/missions") },
   { href: "/rides", label: "My Rides", Icon: Car, match: (p: string) => p.startsWith("/rides") },
   { href: "/earnings", label: "Earnings", Icon: Wallet, match: (p: string) => p.startsWith("/earnings") },
-  { href: "/settings", label: "Settings", Icon: Settings, match: (p: string) => p.startsWith("/settings") },
+  // "Account", not "Settings": the tab holds who you are, your car and your papers —
+  // preferences are the smallest thing on it (S48).
+  { href: "/settings", label: "Account", Icon: Settings, match: (p: string) => p.startsWith("/settings") },
 ];
 
 export function DriverTabbar() {

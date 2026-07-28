@@ -4,7 +4,10 @@ const APP_VERSION = "beta";
 
 // Shared "Help & legal" block for both the Driver and Dispatch settings pages.
 // Email targets are placeholders until a real support mailbox is set up.
-export function HelpLegalCard() {
+// `variant` only picks the surrounding card vocabulary: Dispatch still uses the
+// generic `.card` + <h2>, the Driver app uses the S43+ `.dcard` language.
+export function HelpLegalCard({ variant = "dispatch" }: { variant?: "dispatch" | "driver" }) {
+  const isDriver = variant === "driver";
   const link = {
     display: "block",
     padding: "11px 2px",
@@ -12,9 +15,13 @@ export function HelpLegalCard() {
   } as const;
 
   return (
-    <div className="card">
-      <h2>Help &amp; legal</h2>
-      <div style={{ marginTop: 4 }}>
+    <div className={isDriver ? "dcard" : "card"}>
+      {isDriver ? (
+        <p className="dcard__label">Help and legal</p>
+      ) : (
+        <h2>Help &amp; legal</h2>
+      )}
+      <div style={{ marginTop: isDriver ? -6 : 4 }}>
         <Link href="/legal/terms" style={link}>
           Terms of use
         </Link>

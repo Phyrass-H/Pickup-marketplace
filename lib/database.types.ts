@@ -47,8 +47,14 @@ export type DocumentType =
   | "insurance"
   | "rc_pro"
   | "vehicle_registration"
-  | "company_registration";
+  | "company_registration"
+  // Added 2026-07-28 (S48): a Driver is a company, and Kavenue is the donneur d'ordre.
+  | "kbis"
+  | "urssaf_vigilance"
+  | "medical_certificate";
 export type DocumentStatus = "pending" | "verified" | "rejected";
+// Two-sided papers (licence, VTC card) file one row per side; everything else is null.
+export type DocumentSide = "front" | "back";
 export type PaymentStatus = "requires_capture" | "captured" | "refunded" | "failed";
 
 // mission_amendment.status is a text CHECK (Phase-2 edit / consent flow, D39):
@@ -173,6 +179,10 @@ export interface Database {
           stripe_account_id: string | null;
           verified: boolean;
           reliability_marks: number; // O7 (D45): running count of cancel / no-confirm marks
+          // S48 — the Driver's company identity (they invoice as one). Payouts stay Stripe's job.
+          company_name: string | null;
+          siret: string | null;
+          vat_number: string | null;
           created_at: string;
         };
         Insert: {
@@ -194,6 +204,9 @@ export interface Database {
           stripe_account_id?: string | null;
           verified?: boolean;
           reliability_marks?: number;
+          company_name?: string | null;
+          siret?: string | null;
+          vat_number?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["driver"]["Insert"]>;
@@ -210,6 +223,7 @@ export interface Database {
           colour: string | null;
           plate: string | null;
           seats: number | null;
+          is_active: boolean; // S48 — a paused car stops pulling trips (one car today)
           created_at: string;
         };
         Insert: {
@@ -222,6 +236,7 @@ export interface Database {
           colour?: string | null;
           plate?: string | null;
           seats?: number | null;
+          is_active?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicle"]["Insert"]>;
@@ -236,6 +251,9 @@ export interface Database {
           file_url: string;
           status: DocumentStatus;
           expires_at: string | null;
+          side: DocumentSide | null; // S48 — front/back for two-sided papers
+          review_note: string | null; // S48 — why a document was rejected
+          vehicle_id: string | null; // S48 — carte grise / insurance belong to a car
           uploaded_at: string;
         };
         Insert: {
@@ -246,6 +264,9 @@ export interface Database {
           file_url: string;
           status?: DocumentStatus;
           expires_at?: string | null;
+          side?: DocumentSide | null;
+          review_note?: string | null;
+          vehicle_id?: string | null;
           uploaded_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["document"]["Insert"]>;

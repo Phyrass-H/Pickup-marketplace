@@ -366,37 +366,38 @@ CURRENT STATE block above). What each proposed item became:
   Business cancel · Driver cancel · agreed release · T-60 take-back (dead, see below) · **copilote hand-over (NOT
   BUILT — needs the community layer, shows "Soon")**.
 
-**★ SESSION-48 — DRIVER SETTINGS. Set by the founder at the end of S47 (they chose Settings over Earnings).**
-Confirm the scope in 1–2 lines before starting (rule #4), then **D25 preview → sign-off → build**.
+**★ SESSION-48 — ✅ SHIPPED (2026-07-28, [[d58]]; migration `2026-07-28_driver_account_and_documents` applied).**
+The Driver **Account** replaced the old Settings scroll: a hub (identity · a readiness strip that *names* what's
+missing · rows) with a sub-page each for Profile / Where you work / Your vehicle / Your company / Documents /
+Navigation / Payouts / Help, each saving only what it shows. **Documents got a real lifecycle** — expiry dates (the
+`expires_at` column had existed since day one and was never written), missing/pending/rejected/expiring/expired states,
+a rejection reason, front+back sides — plus **camera-first capture with framing** (shared `<ImageFramer>`: round for a
+face, rectangular + turn/straighten for a document; PDFs skip it). **Company papers added** (Kbis · RC Pro · the URSSAF
+*attestation de vigilance*, which is Kavenue's own legal obligation as donneur d'ordre, renewed every 6 months) plus
+`siret`/`vat_number`/`company_name`. Bank details deliberately NOT collected — Stripe's job. **`preferred_gps` was fake
+(saved, never read); it's now real** — a **Navigate** button on a live trip targeting pickup → next stop → drop-off via
+https universal links. Tab renamed **Settings → Account**. Languages are chips.
+- **Founder call: ONE car per Driver for now.** The real multi-car case in VTC is a *fleet* (one company, several
+  Drivers, several cars), which the data spine doesn't model — so multi-vehicle would serve nobody in beta while
+  dragging `mission.vehicle_id` + a car picker into the money-critical `accept_mission` RPC. Groundwork shipped anyway
+  (`document.vehicle_id`, `vehicle.is_active`): car #2 is now a small, contained job. See [[d58]] for what it costs.
+- **⚑ Open, deliberately:** readiness is **shown, never enforced** (`blocksWork()` exists and is unused — wiring it into
+  the Pool query is the switch to flip when real Drivers onboard, NOT before: no beta Driver has filed a document);
+  **nothing reviews a document** (the admin verification workspace is a deferred integration, so every state is honest
+  but a paper stays "with us for review" forever); and the expiry copy **promises reminders** ("a month before, and
+  again the week it lapses") that need the notifications phase to become true.
 
-**1. Redesign the Driver Settings screen** — the LAST un-redesigned Driver screen (Pool S43 · both mission cards S45 ·
-My Rides S46–S47 are all done; only Settings + the Earnings placeholder remain). It still uses the old generic
-`.card` / `<h1>Settings` styling, not the shipped `.pcard`/`.dcard` language.
-- **Files:** `app/(app)/settings/page.tsx` (163 lines — the whole screen) + `app/(app)/settings/actions.ts`
-  (`updateDriverSettings`), and the components it composes: `components/avatar-editor.tsx`,
-  `components/driver-vehicle-fields.tsx`, `components/address-autocomplete.tsx`,
-  `components/document-section.tsx`, `components/help-legal-card.tsx`, `components/driver-signout.tsx`.
-- **What's on it today** (one long scroll of `.card` blocks): **Profile** (photo · first/last name · phone, revealed to
-  the Business on accept · languages as a comma-separated string · preferred GPS: Waze/Google/Apple) · **Where you
-  work** (base address via Mapbox autocomplete + a service radius 25–300 km, with the "pickup OR drop-off within this
-  distance" explainer) · **Vehicle** (make · model · service tier, set automatically from the car · body sedan/van ·
-  colour · plate · seats · the `accepts_luggage_runs` opt-in from [[d38]]) · one **Save changes** · **Documents**
-  (licence · VTC card · VTC registration…, PDF/image ≤10 MB, "we review each document") · Help/legal · Sign out.
-- **Worth deciding with the founder:** whether it becomes **grouped sections or a left-nav/sub-page account area**
-  (Dispatch went sub-pages in S28 — but this is a phone, so sections + anchors probably beat routes); whether
-  **Documents** gets a real verification state (today it's a stub — the admin verification workspace is a DEFERRED
-  integration, so show honest states, don't build review); the **languages** free-text field is the weakest input on
-  the screen (a chip picker would match the `.dchip` vocabulary); and whether **phone** deserves the same "who sees
-  this, and when" line the Guest-privacy work established ([[d56]]).
-- Probably **no migration** — every field already exists. Confirm before assuming.
-
-**2. Parked, in priority order, for after Settings:**
+**★ SESSION-49 — pick with the founder. Parked, in priority order:**
+- **The Earnings screen** — the 4th tab is still a "coming soon" placeholder and is now the last unbuilt Driver screen.
+  Real data exists with no payments wired (completed missions + fares + waiting fees + no-shows). **D25 preview first.**
 - **⚑ The T-60 replacement + the "check in" rename** — see the dedicated block below; the founder **deferred it in S47**
   as not worth building before notifications exist.
 - **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently
   (`driver.reliability_marks`). The founder wants to discuss whether a Driver sees their own before any UI ships.
   S47 deliberately shipped the cancel cards WITHOUT them.
-- **The Earnings screen** — still wanted, just not next.
+- **Document verification** — the honest states shipped in S48 have nothing behind them. Whether that's a founder-run
+  Supabase view or the real admin workspace (BACKLOG F2) is a scope call, not a design one.
+- **A second vehicle** — scoped in [[d58]] and ready to build when a Driver actually has two cars.
 
 **★ T-60 / silent-Driver remedy — DESIGNED IN S47, DELIBERATELY NOT BUILT.** Keep this whole block; it's the decision
 trail so the next attempt doesn't restart from zero.

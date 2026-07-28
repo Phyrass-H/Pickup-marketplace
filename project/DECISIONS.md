@@ -870,6 +870,48 @@ nothing errors. **Open consequence:** a Business no longer has a free remedy for
 Deferred with notifications. Founder also rejected **"Lock-in" / "T-180"** as jargon — the agreed plain-words
 replacement, when that step returns, is **"check in"** ("check in 3 hours before pickup" / "not checked in yet").
 
+### D58 — The Driver account: a hub of sub-pages, documents with a lifecycle, one car (2026-07-28)
+**Shape.** The last un-redesigned Driver screen was one ~1400px scroll of generic `.card` blocks with a **single Save
+that silently wrote the vehicle too** — editing a phone number re-derived the service tier. It becomes an **account hub**
+(identity · readiness · rows) with a sub-page per pile, each saving only what it shows. Uber/Bolt/FREE NOW all use a hub;
+on a phone it beats anchors, and Dispatch already went sub-pages in S28. The tab is renamed **Account** — preferences are
+the smallest thing on it.
+
+**Readiness names what's missing, and never gates.** Not a completion percentage: it lists *"URSSAF attestation — not
+added"*, blockers sorted first, each a link. **Deliberately display-only** — no beta Driver has filed a document, so
+enforcing would empty every Pool overnight. `blocksWork()` exists and is unused; wiring it into the Pool query is the
+switch to flip when real Drivers onboard.
+
+**A Driver is a company, and Kavenue is the donneur d'ordre.** New document types: **Kbis / SIRENE notice**, **URSSAF
+attestation de vigilance** and the **medical certificate**. The URSSAF one is a legal obligation on *us*: for contracts
+≥ €5 000 HT the ordering party must hold a current attestation, **re-collected every 6 months**, or it is jointly liable
+for the sub-contractor's unpaid contributions. Company identity (`company_name`/`siret`/`vat_number`) is captured;
+**bank details deliberately are not** — Stripe collects those, Kavenue stores no IBAN.
+
+**`document.expires_at` existed since day one and had never been written.** Documents now have real states — missing ·
+pending · rejected · **expiring (≤30 days)** · expired — with expiry outranking review status, because a verified-but-
+lapsed paper is exactly as useless as a missing one. Plus `review_note` (a rejection with no reason is a dead end),
+`side` front/back (a licence and a VTC card are two-sided; the newest-row-per-type read buried the front), and
+`vehicle_id`.
+
+**One car, on purpose.** The founder asked for multi-vehicle; the recommendation against it was accepted. The real
+multi-car case in VTC is a **fleet** — one company, several Drivers, several cars — which the data spine doesn't model,
+so "one Driver, many cars" would serve almost nobody in beta while dragging `mission.vehicle_id` and a car-picker into
+the **money-critical `accept_mission` RPC**. `document.vehicle_id` + `vehicle.is_active` shipped anyway: they cost
+nothing and make car #2 a small job instead of a re-attribution of history.
+
+**Framing is shared, and the camera is first.** The avatar cropper became `<ImageFramer>` — round for a face, rectangular
+for a document, with quarter-turns and tilt kept as **separate** controls (one slider doing both fights itself). With no
+aspect given, react-easy-crop falls back to 4:3 and slices the ends off an ID card, so the frame **starts at the photo's
+own shape**: the first thing a Driver sees is their whole document. A **PDF skips framing entirely** — you can't crop one
+in the browser and pretending otherwise loses the file.
+
+**The navigation setting was fake, so it was made real.** `preferred_gps` was saved in two places and read nowhere.
+A **Navigate** button now sits on the live trip and targets the pickup, then the next unreached stop, then the drop-off.
+Deep links are **https universal links**, not `waze://` schemes: a missing app makes a scheme fail silently, whereas
+these open the app when present and the website when not. A web app **cannot** detect installed apps — that check is a
+native-build feature (founder: fine, do it at the native migration).
+
 ## Open decisions inherited from the spec (not ours to close — track only)
 From Doc 05 / Data Spine — values, not structure; don't let them block the build:
 - Commission split exact numbers (~12.5% Business / ~10% Driver, teaser).

@@ -5,6 +5,35 @@
 
 ---
 
+## 28 July 2026 (later) — the Driver's account, rebuilt
+- **A Driver's settings is now a proper account area.** It used to be one very long scroll with a single Save button
+  that quietly saved your car as well as your phone number. Now there's an **Account** screen — your photo, your name,
+  your car, and a line telling you exactly what's still missing — with a separate page for each thing: Profile, Where
+  you work, Your vehicle, Your company, Documents, Navigation, Payouts, Help.
+- **"2 things left before you can drive."** Instead of a meaningless progress percentage, the account page names what's
+  actually missing — *"URSSAF attestation — not added"*, *"VTC card — expires in 21 days"* — and each one is a link
+  straight to it. Anything that would stop you working is listed first. **It only tells you; it never blocks you** —
+  during the beta nobody is locked out for a missing paper.
+- **Documents are a real feature now, not a list of upload boxes.** Each paper has a state you can see at a glance —
+  valid, with us for review, needs a new photo, **expires in 21 days**, expired — and we ask for the expiry date when
+  you file it, so nothing lapses quietly. If we reject one, you're told **why**. Two-sided papers (licence, VTC card)
+  take a front *and* a back instead of one replacing the other.
+- **Take a photo, and frame it before it's sent.** A camera button opens the phone camera directly; you then crop the
+  document, turn it if it came out sideways, and straighten it if it's crooked — the same framing tool the profile
+  photo uses, and it starts by showing your whole document rather than cropping the ends off. A PDF still works and
+  skips the framing step.
+- **We now collect what we need to actually pay you.** A Driver drives as a company, so the account asks for the
+  company name, SIRET and VAT number, and the documents list has a "so we can pay you" section: **Kbis, RC Pro, and
+  the URSSAF attestation de vigilance** — that last one is something *Kavenue* is legally required to hold and renew
+  every 6 months. **We never ask for your bank details** — Stripe collects those when payouts go live.
+- **Languages are chips now**, not a comma-separated text box where "Francais" and "FR" both meant French.
+- **Navigate.** The "preferred GPS" setting had never actually done anything. Now a live trip has a **Navigate** button
+  that opens Waze, Google Maps or Apple Maps — whichever you chose — pointed at the pickup, then the next stop, then
+  the drop-off. If the app isn't on the phone it opens the route in the browser instead.
+- **Decided: one car per Driver for now.** Adding a second car sounds small but changes what the hotel is told about
+  which car is coming, and touches the code that hands out trips. The real "several cars" case is a fleet with several
+  drivers, which is a bigger piece of work — so the groundwork is in place and the feature waits.
+
 ## 28 July 2026
 - **A Driver's history now shows every trip that ended — including the ones they walked away from.** Until now, if a
   Driver cancelled a trip or you both agreed to release it, the trip went back into the Pool and **disappeared from
