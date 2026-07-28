@@ -937,6 +937,13 @@ driver cancel on a €70-accepted / €100-ceiling trip → €70 recorded; busi
 costs €50 to abandon. Founder: *"100% is not enough … we need to fix rules later."* Logged in BACKLOG § H2 with a sketch
 of the options (a floor, a multiplier near pickup, or visible reliability marks); nothing decided.
 
+**Asked and closed the same session: the [[d45]] business-cancel RAMP is unchanged.** Seeing a business cancel recorded
+at 58,17 € on a €70 trip read as the ceiling creeping back in; it was the *percentage* (83% at T−1.7h), not the basis.
+The founder was offered the choice — keep the sliding scale, or make a Business that cancels on an accepted trip owe the
+full agreed fare — and **kept the scale as it is**. So: free above 5h · 50% at −5h · +10%/h · 100% at pickup, now always
+applied to the accepted fare. Worth remembering that the number looked wrong until the two rules were separated: when a
+fee combines a basis and a rate, show the arithmetic, not the result.
+
 **Commission: the fare shown in the Pool is the Driver's fare.** The preview carried a line saying the total was what
 the Business pays with commission not yet deducted; the founder cut it — "it has to be like the other apps, the price
 shown in the Pool and paid to the Driver should be commission-taken". So Earnings is a straight sum of accepted fares,

@@ -32,7 +32,8 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-07-07_mission_amendment`, `2026-07-10_mission_info_change`, `2026-07-13_o7_cancellation`,
   `2026-07-19_agreed_release`, `2026-07-19_repool_speedwin_window`, `2026-07-19_no_show_clock_origin`,
   `2026-07-19_no_show_airport_label`, `2026-07-19_guest_ready_at_guard`, `2026-07-22_waiting_fee`,
-  `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`, `2026-07-25_accept_always_confirms`) —
+  `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`, `2026-07-25_accept_always_confirms`,
+  `2026-07-28_driver_account_and_documents`) —
   **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
@@ -407,19 +408,44 @@ turns itself on. Non-trip money is included (waiting · no-show · cancelled-on-
   other apps, the price shown in the Pool and paid to the Driver should be commission-taken". So no gross/net language
   anywhere in the app. Provisional until the pricing work lands.
 
-**★ SESSION-49 — pick with the founder. Parked, in priority order:**
-- **The back-office** (`/admin`) — founder-confirmed 2026-07-28 as one product: **document review + disputes + support**.
-  Half-built already: the `admin` role exists and RLS grants admins read on every table; what's missing is a **write**
-  path (service role). S48 fixed the write contract (`status` · `review_note` · `expires_at`, one row per `side`), and
-  the **expiry-reminder job belongs here too**. See BACKLOG § F2.
-- **⚑ The T-60 replacement + the "check in" rename** — see the dedicated block below; the founder **deferred it in S47**
-  as not worth building before notifications exist.
-- **Reliability marks — a founder conversation.** A driver cancel and a T-60 reclaim each add one silently
-  (`driver.reliability_marks`). The founder wants to discuss whether a Driver sees their own before any UI ships.
-  S47 deliberately shipped the cancel cards WITHOUT them.
-- **Document verification** — the honest states shipped in S48 have nothing behind them. Whether that's a founder-run
-  Supabase view or the real admin workspace (BACKLOG F2) is a scope call, not a design one.
-- **A second vehicle** — scoped in [[d58]] and ready to build when a Driver actually has two cars.
+**★ SESSION-49 — NOT CHOSEN YET.** The founder ended S48 undecided ("I'm not sure what to do on the next session").
+Open with the menu below in 2–3 lines and let them pick — do NOT start any of it unprompted (rule #4).
+
+**The Driver app is now COMPLETE**: Pool (S43) · both mission cards (S45) · My Rides + Past (S46–S47) · Account +
+documents (S48) · Earnings (S48b). There is no un-redesigned Driver screen left. That's why the next step is a genuine
+choice rather than the next item on a list.
+
+**A — The back-office (`/admin`).** *The one thing that unblocks real users.* Founder-confirmed 2026-07-28 as ONE
+product: **document review + disputes + support**. Nobody can approve a paper today, so every Driver sits at "with us
+for review" forever, and `driver.verified` can only be flipped by hand in Supabase. Half-built: the `admin` role exists
+and RLS already grants admins read on every table; what's missing is a **write** path (service role). S48 fixed the
+write contract (`status` · `review_note` · `expires_at`, one row per `side`). The **expiry-reminder job** belongs here
+too. See BACKLOG § F2. **Biggest single build of the options; also the one with no design unknowns.**
+
+**B — Notifications (Resend + web push).** *The #1 functional gap in the whole product* (a Driver only sees a Pool
+mission if they're looking at the screen; a Business learns of an acceptance on refresh). It is an INTEGRATION, which
+the founder has been deferring on purpose until the in-app experience is right — and the in-app experience is now
+right. Several shipped features are **written as promises that only notifications can keep**: document expiry reminders
+("a month before, and again the week it lapses"), the amendment/release cards, and the T-60 remedy below. Needs a
+service worker + Web Push (neither exists) and the founder's explicit green light for the integration phase.
+
+**C — Pricing.** *Founder-owned, and now the oldest blocker.* The suggested Ceiling/base-fare range on the mission form
+and the amendment auto price-delta both wait on it, and two live questions surfaced in S48b: **100% is a weak penalty on
+a cheap trip** (§ H2), and **commission** — the working assumption is now "the Pool price IS the Driver's price"
+([[d59]]), which the real model has to either confirm or overturn. Nothing to build until the founder brings the rule.
+
+**D — Smaller, self-contained, any time:**
+- **Reliability marks — a conversation first.** A driver cancel adds one silently (`driver.reliability_marks`); the
+  founder wants to decide whether a Driver sees their own before any UI ships. S47 shipped the cancel cards WITHOUT them.
+- **The T-60 replacement + the "check in" rename** — designed in S47, deliberately not built; see the block below. It
+  really wants notifications (option B) first.
+- **A second vehicle** — fully scoped in [[d58]], ~half a session, worth doing the moment a real Driver has two cars.
+- **Guidance Tier-2 tooltips** (`project/GUIDANCE_AUDIT.md`) and the **saved-addresses book** (BACKLOG § L) — both
+  Business-side, both small, neither urgent.
+
+**If the founder has no preference: A.** It's the only option that removes a human bottleneck rather than adding a
+feature, it has no design unknowns, and every honest "we're reviewing it" state shipped in S48 is currently a promise
+with nothing behind it.
 
 **★ T-60 / silent-Driver remedy — DESIGNED IN S47, DELIBERATELY NOT BUILT.** Keep this whole block; it's the decision
 trail so the next attempt doesn't restart from zero.
@@ -438,15 +464,13 @@ trail so the next attempt doesn't restart from zero.
 - **Optional 10-minute stopgap the founder did NOT decide on:** a line in the Business cancel modal for the
   under-an-hour case — *"Driver unreachable? Call us before cancelling."*
 - **Terminology (founder, S47): "Lock-in" and "T-180" are jargon — do not ship them.** When the confirmation step
-  returns, call it **"check in"** ("check in 3 hours before pickup" / "not checked in yet"). Turn the 4th Driver tab from a "coming soon"
-   placeholder into a real screen. **D25 preview first.** It can show real data with NO payments wired: completed trips
-   + their fares + waiting fees are all already in the DB (query `mission` where `status='completed'` / `no_show=true`).
-   Decide the shape *with the founder* — running total vs per-trip list, this-week vs all-time, how to surface waiting-fee
-   and no-show earnings. Files: `app/(app)/earnings/`. Remember: euro **settlement** is MANUAL in beta (rules only).
-2. Then the non-Driver items: **guidance Tier-2 tooltips** (`project/GUIDANCE_AUDIT.md` — a "?" glossary tooltip for
-   Ceiling/Pool/SPEED WIN/Lock-in/status pills, a Dispatch status legend, Lock-in in plain words) and the
-   **saved-addresses book** (BACKLOG § L — the Business's own address + pre-fill/swap plumbing already exists; next is a
-   small additive table for *multiple* saved places + a one-tap picker on both ends of the new-mission Route card).
+  returns, call it **"check in"** ("check in 3 hours before pickup" / "not checked in yet").
+
+**Non-Driver items still parked** (both small, neither urgent — listed as **D** in the Session-49 menu above):
+**guidance Tier-2 tooltips** (`project/GUIDANCE_AUDIT.md` — a "?" glossary tooltip for Ceiling / Pool / SPEED WIN /
+check-in / the status pills, plus a Dispatch status legend) and the **saved-addresses book** (BACKLOG § L — the
+Business's own address + the pre-fill/swap plumbing already exist; next is a small additive table for *multiple* saved
+places + a one-tap picker on both ends of the new-mission Route card).
 
 RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — ★1 and ★2 are now both SHIPPED):
 
@@ -488,7 +512,8 @@ these carry the same design language forward (`.pcard`/`.proute`/`.pbadge`, refi
 
 </details>
 
-Smaller open: the **Earnings screen** design; **guidance Tier-2** tooltips; the **saved-addresses book**. (✅ done since:
+Smaller open: **guidance Tier-2** tooltips; the **saved-addresses book**. (✅ done since: the **Earnings screen**
+[[d59]]; the Driver **Account + documents** [[d58]];
 **Pool empty/loading** [[d54]]; the **discreet-vehicle** note — KEPT (founder); Driver **"Complete ride" → green** [[d52]];
 the pre-accept **zone** removed [[d55]].) **Parked, founder-gated:** the €1/min **waiting-rate** research + cap review (pricing);
 **§ H2** the `pickup_at` column-grant audit (still Business-writable) + **automated tests** (S42 made the case — 3 of its bugs
@@ -534,9 +559,9 @@ small founder-run additive migration:
 2. **Saved-addresses address book** (BACKLOG § L) — the Business's own address is its **first saved place** (S29), and
    the pre-fill + **swap** plumbing already exists. Next: a small additive table for **multiple** saved addresses + a
    one-tap insert/picker on both ends of the new-mission Route card.
-3. **Driver app redesign** — it inherits the navy palette but its *layout* isn't redesigned (Dispatch is done). Use the
-   D25 preview loop (or a Claude Design phone mockup), then build. Small navy polish bundled here: Driver **"Complete
-   ride"** → green; re-export the **logo** to harmonise its sky-blue with navy.
+3. ✅ **Driver app redesign — COMPLETE (S43 → S48b).** Pool [[d49]] · both mission cards [[d52]] · My Rides + Past
+   [[d53]][[d56]][[d57]] · Account + documents [[d58]] · Earnings [[d59]]. No un-redesigned Driver screen remains.
+   "Complete ride" is green; the only leftover from this item is the cosmetic **logo re-export** (sky-blue → navy).
 4. **Luggage-vehicle Phase 2 (V2)** — real cargo/truck classes by **volume/m³ bands** (the "20 m³" idea, likely a
    partly separate fleet) + the grouped **car + luggage van** booking (the CUT grouped-mission feature; the cargo leg
    can "stop before the end" of the passenger trip). Bundle with the **Exception tier** (Rolls/Bentley above First) /
@@ -549,14 +574,16 @@ input-driven nudges + guidance audit; luggage-vehicle Phase 1. ❌ the founder *
 
 DEFERRED until the founder okays the integration phase: **Notifications (Resend)** — the #1 functional gap
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);
-**real email auth** (retire dev-login); **Admin verification workspace** (BACKLOG F2 — onboards real
-drivers/hotels); **Payments/Stripe**; flight tracking; analytics/monitoring.
+**real email auth** (retire dev-login); **the back-office / admin
+verification workspace** (BACKLOG F2 — onboards real drivers/hotels; founder-confirmed 2026-07-28 as ONE product
+covering documents + disputes + support, and it is **option A for Session 49**); **Payments/Stripe**; flight tracking;
+analytics/monitoring.
 
 OTHER OPEN ITEMS (pick what the founder asks):
-- **Driver app redesign:** inherits the navy palette but its **layout** isn't redesigned (Dispatch is done).
-  Use the D25 preview loop (or a Claude Design phone mockup), then build.
-- **Navy polish (small):** Driver **"Complete ride"** uses a `success-btn` class that falls through to navy
-  `.btn` — make it intentionally **green**; re-export the **logo** to harmonise its sky-blue with navy.
+- ✅ **Driver app redesign — COMPLETE (S43 → S48b).** See the Session-49 menu at the top: the next step is a real
+  choice now, not the next screen in a queue.
+- **Navy polish (all that's left):** re-export the **logo** to harmonise its sky-blue with navy. (Driver "Complete
+  ride" → green shipped in [[d52]].)
 - **Pricing engine** (IDEAS, ❓) — **founder is working on this now.** No objective base price by tier×body×distance×season;
   the Business sets the ceiling, Kavenue recommends. Principle: **NO empty-return charge** ([[d37]]) — a smart trajectory
   Pool handles the deadhead. Seeding approach in IDEAS (taxi tariff floor + base+€/km+€/min grid). Don't build until the
