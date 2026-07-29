@@ -5,6 +5,27 @@
 
 ---
 
+## 29 July 2026 — Kavenue moves to its own address, and gets real email
+- **The app now lives at `kavenue.fr`.** You bought the domain, and everything moved onto it the same day: the front
+  page at `kavenue.fr`, the Driver app at `driver.kavenue.fr`, the Business side at `dispatch.kavenue.fr`. The old
+  `pickupbedriven.com` is switched off. Since March the product has been *called* Kavenue while still living at the old
+  address — that's now closed.
+- **Typing `www.kavenue.fr` takes you to `kavenue.fr`,** not to a second copy of the site. The bare name is the real
+  one, so that's what goes on a business card.
+- **You have real email.** `phyrass@kavenue.fr` is your mailbox. `support@`, `feedback@` and `contact@` all land in
+  that same inbox and cost nothing extra — one paid mailbox instead of four. `support@` and `feedback@` were already
+  printed inside the app, so those two had to be real.
+- **Your mail is set up so it won't land in spam.** Three checks (SPF, DKIM, DMARC) tell a hotel's mail server that a
+  message really is from you and hasn't been tampered with. All three were tested on a real message and pass. This is
+  the unglamorous part that decides whether outreach gets read or silently binned.
+- **Nothing about how the app works changed** — no new screens, no changes to trips, money or accounts. Same product,
+  new address.
+- **Two things left on purpose.** The old domain is switched off but still registered in your name (worth keeping so
+  nobody else takes it). And the reminder emails the app promises — document expiry, trip alerts — still need the
+  notifications work; having mailboxes doesn't make those send yet.
+
+---
+
 ## 28 July 2026 (evening) — Earnings
 - **The Earnings tab is real.** Big total for the period, what it's made of, and every trip listed underneath grouped
   by day. No charts — you didn't want them, and the day and week rows say the same thing in numbers you can read.

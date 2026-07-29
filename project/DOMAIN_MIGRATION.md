@@ -27,7 +27,16 @@ the same time. Mapping lives in [`lib/hosts.ts`](../lib/hosts.ts).
 
 ---
 
-# PART 1 — The domain (do this first, verify, then email)
+# PART 1 — The domain — ✅ DONE 2026-07-29
+
+Deployed `0306bb7`. Verified: apex serves the landing splash; `driver.` / `dispatch.`
+route to their own `/login`; both dev-logins work and hold **separate sessions
+simultaneously**, so the host-only cookie split survived the move. The legacy domain
+still resolves and routes (cutover closes at Step 12). The only `pickupbedriven` string
+left in the compiled output is the deliberate `PROD_DOMAINS` constant.
+
+`www.kavenue.fr` → **308 → `kavenue.fr`**, path-preserving (`/pool` → `kavenue.fr/pool`).
+Certificate: Let's Encrypt, valid to 2026-10-27.
 
 ### Step 1 [YOU] — Add the four domains in Vercel
 
@@ -128,7 +137,11 @@ Supabase → project `luitjivedqiumefhfzkw` → **Authentication → URL Configu
   http://localhost:3000/auth/callback
   ```
 
-Leave the old `pickupbedriven.com` entries in place until Part 3.
+**Note from the actual run:** there were **no** old-domain entries to preserve — the
+redirect list was empty and `http://localhost:3000` was sitting in the *Site URL* field.
+That means magic-link sign-in was never allowlisted for production at all, which is
+consistent with real auth being a deferred integration. Nothing was lost; localhost was
+re-added to the redirect list so local dev still works the day auth is switched on.
 
 **Gate:** the five URLs are listed and saved.
 
@@ -195,7 +208,12 @@ The key-gated URLs move. Replace your bookmarks:
 
 ---
 
-# PART 2 — Email
+# PART 2 — Email — ✅ DONE 2026-07-29
+
+Verified on a real received message:
+`dkim=pass header.i=@kavenue.fr header.s=google` · `spf=pass` · `dmarc=pass (p=NONE)`.
+One paid mailbox `phyrass@kavenue.fr`, three free aliases, 2FA on the super-admin.
+
 
 ### Which addresses, and how to not pay for them
 
@@ -303,12 +321,13 @@ confirm it lands. Reply from the alias to confirm the send-as path works.
 
 ---
 
-# PART 3 — Close the cutover
+# PART 3 — Close the cutover — ✅ DONE 2026-07-29
 
-### Step 12 [CLAUDE] — Drop the old domain from the code
-Remove `pickupbedriven.com` from `isProdDomain()`; `kavenue.fr` only. Deploy.
+### Step 12 [CLAUDE] — Drop the old domain from the code — ✅ `bce11e6`
+`isProdDomain()` back to a single `PROD_BASE` check. Verified after deploy: `kavenue.fr` unchanged
+(200 / 307 / 307 / 308), `pickupbedriven.com` → **404**.
 
-### Step 13 [YOU] — Clean up
+### Step 13 [YOU] — Clean up — ✅ done
 - Vercel → Settings → Domains → **remove** the four `pickupbedriven.com` entries.
 - Supabase → remove the old `pickupbedriven.com` redirect URLs.
 - Mapbox → remove the old domain from the token restrictions.
@@ -319,7 +338,7 @@ Remove `pickupbedriven.com` from `isProdDomain()`; `kavenue.fr` only. Deploy.
 > party register a domain that used to be yours is a small, permanent nuisance. Your
 > call — it's the only line item here with an ongoing cost.
 
-### Step 14 [CLAUDE] — Update the docs
+### Step 14 [CLAUDE] — Update the docs — ✅ done
 `project/NEXT_SESSION.md` (CURRENT STATE + the founder-action list), `.env.example`,
 `README.md`, `project/CHANGELOG.md`, `project/SESSION_LOG.md`, `project/DECISIONS.md`.
 

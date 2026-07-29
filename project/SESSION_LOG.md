@@ -5,6 +5,81 @@
 
 ---
 
+## 2026-07-29 — Session 49 — THE DOMAIN MOVES TO kavenue.fr, and Kavenue gets email ([[d60]])
+
+**Scope set by the founder, not the menu.** S49 opened with the A/B/C/D choice from `NEXT_SESSION.md`; the founder
+picked none of them — *"before we are going further we have to update the domain name, I have bought kavenue.fr"* —
+plus real mailboxes. This closes the gap the S44 rename left open: the product was called Kavenue but lived at
+`pickupbedriven.com`.
+
+**Answers that set the shape** (asked up front, three questions): registrar **OVHcloud** · email **Google Workspace** ·
+old domain **full cutover**.
+
+### Code (5 files, no schema, no behaviour change) — `0306bb7`, then `bce11e6`
+- **`lib/hosts.ts`** — `PROD_BASE` → `kavenue.fr`. During the migration `isProdDomain()` checked a `PROD_DOMAINS` list
+  accepting **both** domains while `originForRole`/`devLoginHref` still generated `PROD_BASE` URLs, so the old domain
+  *funnelled onto* the new one and there was no switchover instant. Reverted to the single-domain check in `bce11e6`
+  once every hostname was verified.
+- **`support@` / `feedback@` mailto** → `kavenue.fr` (`components/help-legal-card.tsx`,
+  `app/(dispatch)/dispatch/settings/page.tsx`). The stale comment claiming the addresses were placeholders is gone.
+- Comment headers in `app/page.tsx` + `components/landing-splash.tsx` (the latter already imported `PROD_BASE`, so it
+  followed automatically).
+- **Sequencing that mattered:** DNS first, deploy second. Deploying while `kavenue.fr` was unresolved would have pointed
+  live role-redirects at a dead host. Written into the runbook as a gate, not left as tribal knowledge.
+
+### Infrastructure (founder-executed, Claude-verified at every gate)
+Vercel: 4 domains, apex primary (**declined** Vercel's "redirect apex to www" default), `www` → 308 → apex, old
+domains removed, project renamed `pickup-marketplace` → **`kavenue`**. OVH: parking A/AAAA/MX/SPF/ftp deleted, then
+A + 3 CNAME + MX + SPF + DKIM + DMARC. Supabase: Site URL + 5 redirect URLs. Google Workspace: one user
+`phyrass@kavenue.fr` + 3 free aliases, 2FA on.
+
+### Verification — every gate probed, and two probes changed the plan
+- **Vercel's DNS values were read off the panel, not assumed.** They were **not** the widely-documented
+  `76.76.21.21` / `cname.vercel-dns.com` but a per-project `216.198.79.1` /
+  `b995c589bd56b1fa.vercel-dns-017.com`. Guessing would have cost an hour.
+- **An IPv6 false alarm, correctly dismissed.** `dig` returned an AAAA (`64:ff9b::d8c6:4f01`) for the apex — that is
+  a NAT64/DNS64 *synthesis* of the A record by the local resolver (`d8c6:4f01` = `216.198.79.1`), not a zone record.
+  Querying `dns106.ovh.net` directly returned nothing, which is the correct state.
+- **The Mapbox step turned out to be a no-op.** Probing the geocoding API with referers `kavenue.fr`, the old domain,
+  and *none* all returned 200 — a restricted token rejects the no-referer case, so the token was never restricted at
+  all and nothing was gating the new domain. Step skipped, and the real finding logged instead (below).
+- **DKIM proved twice.** Base64-decoded the published key and parsed it with `openssl` → valid **2048-bit RSA**, so the
+  paste wasn't truncated (the usual DKIM failure). That still can't prove it's the *right* key — the real proof was
+  `dkim=pass header.i=@kavenue.fr header.s=google` on a received message, with `spf=pass` and `dmarc=pass` beside it.
+- Build output grepped: the only `pickupbedriven` string that shipped during the window was the deliberate
+  `PROD_DOMAINS` constant; every `mailto:` resolved to `kavenue.fr`. After `bce11e6`, zero.
+- Old domain → **404**. Cert: Let's Encrypt, valid to 2026-10-27. Both dev-logins hold **separate simultaneous
+  sessions** on `driver.` and `dispatch.` — the host-only cookie split survived the move, which was the whole point of
+  the subdomain design.
+
+### ⚑ The OVH trap (worth remembering for `kavenue.com`)
+A fresh OVH zone ships with its own **MX**, an **SPF** (`include:mx.ovh.com -all` — a *hard fail* that would have
+blocked Google from sending as you), a parking **A**, an **AAAA**, and an `ftp` CNAME. Two subtleties: OVH files SPF
+under its own record **type**, so it survives a "delete the TXT records" pass; and the **AAAA** is the dangerous one —
+Vercel issues only an IPv4 A record, so a leftover AAAA sends IPv6 visitors to a parking page while the site looks
+perfect to you over IPv4. Also: the **NS** records must be kept (deleting them takes the domain offline), and OVH's
+"Overview of the recording" preview line is the reliable way to confirm `@` resolved to the bare domain and not
+`@.kavenue.fr`.
+
+### ⚑ Open / follow-ups
+- **The Mapbox public token has no URL restrictions.** It ships in the JS bundle by design, so anyone can lift it and
+  spend the quota. Mapbox's auto-created *Default public token* can't be meaningfully restricted — the fix is a **new**
+  public token with restrictions, swapped into `.env.local` **and** Vercel, then a redeploy. ~30 min, not blocking.
+  Logged in `DOMAIN_MIGRATION.md` step 5.
+- **DMARC is at `p=none`** (monitor only) on purpose. Tighten to `quarantine` then `reject` once the `rua` reports show
+  only your own senders — jumping straight to `reject` on a fresh domain bins your own mail.
+- **`pickupbedriven.com` is removed from Vercel but still registered.** Worth ~€10/yr to keep parked; founder's call.
+- **Transactional email (Resend, deferred phase) should send from a subdomain** — `send.kavenue.fr` with its own
+  SPF/DKIM — so mission-alert volume never touches the reputation of the human mailbox. Noted in the runbook.
+
+**Runbook:** `project/DOMAIN_MIGRATION.md` — 14 steps, each marked **[YOU]** or **[CLAUDE]** with a "done looks like"
+gate. Written so `kavenue.com` later is the same file with one word changed.
+
+**Session 50 is still the S49 menu** (back-office / notifications / pricing / the small ones) — untouched, nothing
+consumed from it.
+
+---
+
 ## 2026-07-28 — Session 48b — EARNINGS, and the fare freeze it exposed ([[d59]])
 
 **Scope (founder-set).** "Simple but efficient", one-car independent Driver, **no charts**, filters by period, and a

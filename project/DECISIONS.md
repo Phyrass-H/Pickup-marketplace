@@ -978,3 +978,42 @@ From Doc 05 / Data Spine — values, not structure; don't let them block the bui
 - Hard-floor field (floor-vs-benchmark).
 - Fare extras (waiting, tolls, airport fee, hourly overtime).
 - Final name for "SPEED WIN" (candidates: Rush, Fast Track).
+
+### D60 — kavenue.fr is the production domain, and Kavenue has real email (2026-07-29)
+**The domain.** The founder bought **`kavenue.fr`** (the `.com` is deferred until affordable), closing the last gap
+left by the S44 rename: the product was called Kavenue but still *lived* at `pickupbedriven.com`. Registrar **OVHcloud**,
+DNS stays at OVH so the app records and the mail records live in one zone. Four hosts, same role-split as before:
+`kavenue.fr` (landing splash) · `www` (308 → apex) · `driver.` · `dispatch.`
+
+**Apex, not www.** Vercel's "Redirect apex domains to www" default was declined: `kavenue.fr` is what goes on a business
+card, and it reads consistently beside `driver.` / `dispatch.` The old domain had it the other way round.
+
+**A cutover with no cutover moment.** `isProdDomain()` was widened to a `PROD_DOMAINS` list accepting *both* domains
+while only ever *generating* `PROD_BASE` URLs, so the old domain funnelled onto the new one and nothing had to switch at
+an instant. Closed the same day (`bce11e6`) once every hostname was verified. Sequencing that mattered: **DNS first,
+deploy second** — deploying while `kavenue.fr` was unresolved would have pointed live role-redirects at a dead host.
+
+**Email: one paid mailbox, three free aliases.** Google Workspace Business Starter, a single user
+`phyrass@kavenue.fr`, with `support@` / `feedback@` / `contact@` as aliases into the same inbox. Three separate users
+would have been ~€21/month for one person's mail. `support@` and `feedback@` were already hardcoded in the shipped app
+(Driver help card + Dispatch settings), so those two had to exist. **Bank/billing addresses deliberately not created** —
+that waits for the payments phase.
+
+**⚑ The OVH trap, avoided.** OVH pre-fills a new zone with its *own* MX, an SPF record (`include:mx.ovh.com -all` — a
+hard fail that would have blocked Google from sending), a parking A record, and an AAAA. The AAAA is the nasty one:
+Vercel issues only an IPv4 A record, so a leftover OVH AAAA sends IPv6 visitors to a parking page while the site looks
+perfect to you over IPv4. All deleted before the new records went in. OVH also files SPF under its own record *type*
+rather than TXT, which is why it survives a "delete the TXT records" pass.
+
+**Verification was empirical throughout, and twice it changed the plan.** Vercel's DNS values were read off the panel
+rather than assumed — they were **not** the long-documented `76.76.21.21` / `cname.vercel-dns.com` but a per-project
+`216.198.79.1` / `b995c589bd56b1fa.vercel-dns-017.com`. And the planned Mapbox token restriction turned out to be a
+**no-op**: probing the geocoding API with no referer returned 200, proving the token was never restricted at all
+(logged as a follow-up — an unrestricted public token ships in the JS bundle and anyone can spend the quota).
+DKIM was checked by base64-decoding the published key and parsing it with `openssl` (valid 2048-bit RSA → the paste
+wasn't mangled), then proven correct end to end by `dkim=pass header.s=google` on a real received message, alongside
+`spf=pass` and `dmarc=pass`. DMARC starts at **`p=none`** deliberately; tightening to quarantine/reject on a fresh
+domain is how people bin their own mail.
+
+**Runbook kept:** `project/DOMAIN_MIGRATION.md` — 14 steps marked [YOU]/[CLAUDE] with a gate each, so adding
+`kavenue.com` later is the same file with one word changed.

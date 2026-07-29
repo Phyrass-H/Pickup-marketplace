@@ -64,9 +64,15 @@ editor** (Claude's app keys go through PostgREST = rows only, NOT DDL). Then bui
 also keeps the running app's data, so the dev server reads the **real** Supabase DB.
 
 CURRENT STATE (live, deployed from `main`):
-- **Custom domain + role subdomains:** `driver.pickupbedriven.com` = Driver app · `dispatch.pickupbedriven.com`
-  = Business/Dispatch. Each subdomain has its own host-only session cookie. Mapping in `lib/hosts.ts` (no-op on
-  localhost + `*.vercel.app`).
+- **Custom domain + role subdomains — `kavenue.fr` since 2026-07-29 ([[d60]]):** `kavenue.fr` = landing splash ·
+  `www.kavenue.fr` → 308 → apex · `driver.kavenue.fr` = Driver app · `dispatch.kavenue.fr` = Business/Dispatch.
+  Each subdomain has its own host-only session cookie. Mapping in `lib/hosts.ts` (no-op on localhost +
+  `*.vercel.app`). Registrar **OVHcloud**, DNS zone at OVH (app records + mail records in one zone), Vercel project
+  renamed **`kavenue`**. `pickupbedriven.com` is removed from Vercel (404) but still registered.
+- **Email — Google Workspace on `kavenue.fr`:** one paid mailbox `phyrass@kavenue.fr`; **`support@` · `feedback@` ·
+  `contact@` are free aliases into it** (`support@`/`feedback@` are hardcoded in the app — Driver help card +
+  Dispatch settings). SPF + DKIM + DMARC all verified `pass` on a real message. **DMARC is at `p=none`** (monitor
+  only) — tighten to quarantine → reject once the reports show only your own senders.
 - **Core loop** works end-to-end both sides vs the real Supabase DB (Pool→Accept→run trip; post mission→
   Schedule/Calendar→live status; accounts/records; Mapbox autocomplete + traffic-aware ETA; base+radius Pool).
 - **Dispatch redesign** shipped: navy palette app-wide (S14/D24), Geist + Lucide, collapsible sidebar shell,
@@ -104,8 +110,8 @@ CURRENT STATE (live, deployed from `main`):
 - **Drafts:** a **discard confirmation** (inline "Discard this draft? This can't be undone.") + a **count badge**
   on the sidebar Drafts item, kept fresh after save/post/discard via `revalidatePath("/dispatch","layout")`.
 - **Auth (testing):** key-gated dev-login on the live subdomains:
-  - Business → `https://dispatch.pickupbedriven.com/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
-  - Driver  → `https://driver.pickupbedriven.com/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
+  - Business → `https://dispatch.kavenue.fr/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
+  - Driver  → `https://driver.kavenue.fr/dev-login?key=v1a-DbkJHN9Dw3aqWKDGSfZ9`
   Local (`npm run dev`): dev-login is open, no key. `GET /api/seed` (dev-only) creates a Business +
   Dispatcher + missions. Real magic-link wired but OFF (turning it on is a deferred integration).
 - **Env:** `.env.local` (git-ignored) needs the 3 Supabase keys + `NEXT_PUBLIC_MAPBOX_TOKEN`; same in Vercel.
@@ -295,7 +301,8 @@ CURRENT STATE (live, deployed from `main`):
     console errors · French legal copy checked for élision (Kavenue is consonant-initial, so "de Kavenue" is correct).
   - **⚑ Founder actions still open (Claude deliberately did NOT do these):** rename the repo **directory**
     `PickUp_project_dev` (it's this session's cwd + the Claude project config path); rename the **GitHub repo**
-    `Phyrass-H/Pickup-marketplace` (outward-facing, your account); the **domain migration** (below). Also flagged, not
+    `Phyrass-H/Pickup-marketplace` (outward-facing, your account). **✅ The domain migration is DONE — S49, [[d60]].**
+    Also flagged, not
     touched: `.claude/settings.local.json` line 42 mentions the old brand inside a permission rule and line 32 has a stale
     `pickup_schema.sql` path (a dead entry — that path was already wrong pre-rename) — it's your permissions config, so
     edit it yourself if you want it tidy.
@@ -408,8 +415,15 @@ turns itself on. Non-trip money is included (waiting · no-show · cancelled-on-
   other apps, the price shown in the Pool and paid to the Driver should be commission-taken". So no gross/net language
   anywhere in the app. Provisional until the pricing work lands.
 
-**★ SESSION-49 — NOT CHOSEN YET.** The founder ended S48 undecided ("I'm not sure what to do on the next session").
-Open with the menu below in 2–3 lines and let them pick — do NOT start any of it unprompted (rule #4).
+**★ SESSION-49 — ✅ SHIPPED (2026-07-29, [[d60]]): the DOMAIN MOVE + EMAIL.** The founder took none of the menu below —
+they'd bought **`kavenue.fr`** and wanted the product to finally live at its own name, plus real mailboxes. Done and
+verified the same day: four hosts on `kavenue.fr` (apex primary, `www` → 308 → apex, `driver.`, `dispatch.`), the old
+domain removed from Vercel, the Vercel project renamed **`kavenue`**, and Google Workspace email with `support@` /
+`feedback@` / `contact@` as free aliases — SPF + DKIM + DMARC all verified `pass` on a real message. Runbook, gates and
+the OVH traps: `project/DOMAIN_MIGRATION.md`. **No app behaviour changed; nothing was consumed from the menu below.**
+
+**★ SESSION-50 — STILL NOT CHOSEN.** The menu below is intact and still current.
+Open with it in 2–3 lines and let the founder pick — do NOT start any of it unprompted (rule #4).
 
 **The Driver app is now COMPLETE**: Pool (S43) · both mission cards (S45) · My Rides + Past (S46–S47) · Account +
 documents (S48) · Earnings (S48b). There is no un-redesigned Driver screen left. That's why the next step is a genuine
@@ -478,8 +492,9 @@ RECOMMENDED NEXT STEP (set by the founder at the end of Session 43 — ★1 and 
 PWA manifest, README and the Dispatch topbar wordmark; the two brand-named doc files were git-renamed to
 `docs/Kavenue_Phase0_Data_Spine.md` + `docs/kavenue_schema.sql` and every reference updated. Verified by 4 adversarial
 lenses (a mechanical reversibility check on all 209 changed lines found 0 collateral edits) + 18 routes in-browser.
-**Deliberately NOT renamed** (each would break something real): every `pickupbedriven.com` hostname (DNS move hasn't
-happened), the `Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev` directory, `PickUp Go`, La Poste's
+**Deliberately NOT renamed at the time** (each would have broken something real): every `pickupbedriven.com` hostname
+(**superseded — the DNS move shipped in S49, [[d60]]; the code is on `kavenue.fr` now**), the
+`Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev` directory, `PickUp Go`, La Poste's
 "Pickup" trademark, the `pickup_*` transport term/DB columns, the `pickup-dx-collapsed` localStorage key, and the
 `*@pickup.local` dev-login/seed identities (they map to REAL Supabase auth rows — renaming the string alone breaks
 dev-login). See the founder-action list at the end of this file.
@@ -539,12 +554,14 @@ looked correct in code and only fell to live probing); the **"Both"** mission ty
    topbar wordmark, spec docs, `project/`, package name, PWA manifest and README all say **Kavenue**; `tsc` + `next build`
    green, 18 routes verified with zero "PickUp" leakage. **Kavenue ≠ PickUp Go** (separate product, hard rule) and the
    glossary (Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN) was deliberately untouched.
+   **✅ The domain migration SHIPPED in Session 49 ([[d60]])** — `kavenue.fr` is live (the `.com` waits until it's
+   affordable), old domain removed, Google Workspace email running. Runbook: `project/DOMAIN_MIGRATION.md`.
    **Still outstanding, founder-owned:** (1) the **repo directory** is still `PickUp_project_dev` and the **GitHub repo** is
    still `Phyrass-H/Pickup-marketplace` — both are the founder's to rename (they'd break this session's cwd / the remote);
-   (2) **domain migration** `pickupbedriven.com` → a Kavenue domain (DNS + Vercel + Supabase redirect allowlist +
-   `lib/hosts.ts`) — every hostname in code is deliberately still `pickupbedriven.com` and MUST stay until the DNS move;
-   (3) **Google Places** swap for address search — restrict the key ONCE, after the DNS move. For now: **stay on Mapbox**.
-   See [[d43]] [[d50]] [[d51]] + IDEAS.md.
+   (2) **Google Places** swap for address search — this was gated on the DNS move so the key could be restricted once,
+   and **that gate is now lifted**. Related: the Mapbox public token turned out to have **no URL restrictions at all**
+   (probed in S49), so if we stay on Mapbox it wants a new restricted token anyway. See [[d43]] [[d50]] [[d51]] [[d60]]
+   + IDEAS.md.
 
 **PRICING is IN PROGRESS — the founder is working on the model themselves** (how a Ceiling / base-fare is estimated;
 one-way vs round-trip). Respect **[[d37]] — NO empty-return charge** (a smart trajectory Pool solves the deadhead). Don't
@@ -576,8 +593,10 @@ DEFERRED until the founder okays the integration phase: **Notifications (Resend)
 (today a Driver only sees a Pool mission if watching the screen; a Business sees an acceptance on refresh);
 **real email auth** (retire dev-login); **the back-office / admin
 verification workspace** (BACKLOG F2 — onboards real drivers/hotels; founder-confirmed 2026-07-28 as ONE product
-covering documents + disputes + support, and it is **option A for Session 49**); **Payments/Stripe**; flight tracking;
-analytics/monitoring.
+covering documents + disputes + support, and it is **option A in the menu above**); **Payments/Stripe**; flight tracking;
+analytics/monitoring. **Mailboxes now exist ([[d60]]) but that does NOT make notifications work** — Resend, a service
+worker and Web Push are all still unbuilt, and when they land they should send from a **subdomain** (`send.kavenue.fr`,
+its own SPF/DKIM) so mission-alert volume never touches the human mailbox's reputation.
 
 OTHER OPEN ITEMS (pick what the founder asks):
 - ✅ **Driver app redesign — COMPLETE (S43 → S48b).** See the Session-49 menu at the top: the next step is a real
