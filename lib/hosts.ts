@@ -16,28 +16,16 @@ import type { UserRole } from "@/lib/database.types";
 
 export const PROD_BASE = "kavenue.fr";
 
-/**
- * Hosts treated as the role-separated production domain.
- *
- * `PROD_BASE` is the canonical one — every URL we *generate* points there. The
- * legacy domain is only *accepted*, for the length of the cutover, so links
- * already in the wild keep routing instead of dead-ending; because we generate
- * `PROD_BASE` URLs, a visit to the old domain funnels onto the new one.
- * MIGRATION: drop the legacy entry (and this note) once DNS has fully moved —
- * see `project/DOMAIN_MIGRATION.md` step 12.
- */
-const PROD_DOMAINS = [PROD_BASE, "pickupbedriven.com"] as const;
-
 export type RoleSub = "driver" | "dispatch";
 
 function hostname(host?: string | null): string {
   return (host ?? "").split(":")[0].toLowerCase();
 }
 
-/** True only on a role-separated production domain (see `PROD_DOMAINS`). */
+/** True only on the role-separated production domain (*.kavenue.fr). */
 export function isProdDomain(host?: string | null): boolean {
   const h = hostname(host);
-  return PROD_DOMAINS.some((base) => h === base || h.endsWith("." + base));
+  return h === PROD_BASE || h.endsWith("." + PROD_BASE);
 }
 
 /** Which role-subdomain we're currently on, if any. */
