@@ -372,8 +372,8 @@ export default async function BusinessSettingsPage({
             <SectionHead title="Your account" />
             <p className="muted small" style={{ marginTop: -4 }}>
               To export your data or close the business account, email{" "}
-              <a href="mailto:support@pickupbedriven.com" className="dx-tel">
-                support@pickupbedriven.com
+              <a href="mailto:support@kavenue.fr" className="dx-tel">
+                support@kavenue.fr
               </a>
               .
             </p>

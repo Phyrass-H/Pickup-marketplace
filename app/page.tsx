@@ -4,7 +4,7 @@ import { getAppContext, routeFor } from "@/lib/app-context";
 import { urlForRole, isProdDomain, roleSubOf } from "@/lib/hosts";
 import { LandingSplash } from "@/components/landing-splash";
 
-// Entry point. On the bare production domain (pickupbedriven.com / www — no role
+// Entry point. On the bare production domain (kavenue.fr / www — no role
 // subdomain) show the public splash. Everywhere else, route the visitor to the
 // right place for their role + state (crossing to their subdomain on prod).
 export default async function Home() {

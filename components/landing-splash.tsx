@@ -1,4 +1,4 @@
-// Public landing for the bare production domain (pickupbedriven.com / www).
+// Public landing for the bare production domain (kavenue.fr / www).
 // Kavenue is an intermediary connecting professional VTC Drivers with Businesses
 // — neither side is the "default", so the root just lets a visitor pick which
 // app they want and sends them to its subdomain. Design is intentionally light
