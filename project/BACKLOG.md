@@ -483,18 +483,25 @@ A blocking screen where the Pool would be:
   is itself a safety risk.
 - Visual: the calm `.pempty` block idiom ([[d54]]), **not** an alarming red screen. This is a person's income.
 
-### O.4 ⚠️ UNRESOLVED — what happens to their live and upcoming trips? ❓
-**Decide this before building; it will derail the implementation otherwise.**
-- **A trip in progress:** you cannot remove a Guest from a moving car. *Recommendation:* the trip completes, the block
-  applies after. Honest, and the alternative is worse.
-- **Upcoming accepted trips:** must be released and re-pooled — you do not want a Driver under investigation collecting
-  a Guest tomorrow. Reuses the whole O7 re-pool path incl. the **24h SPEED WIN window** ([[d46]]) and the existing
-  supersede-a-pending-amendment/release logic.
-- **Open, founder's call:**
-  - Is that release **free** for the Driver? *Recommend yes* — no fee, no reliability mark. They did not cancel.
-  - Does the Business learn **why**? *Recommend no* — "the Driver is no longer available", never the reason. An
-    allegation is not established fact, and the reporter may be that same Business.
-  - If the re-pool clears **higher**, who covers the difference?
+### O.4 ✅ DECIDED (founder, 2026-07-30) — we block ACCOUNTS, not trips
+*"I don't want to block a trip in progress but just a driver or a business account — we do not take care of trips apart
+from having a sight on it."*
+
+**The block is an account-level switch: no new work.** `driver_is_blocked()` gates the Pool query and
+`accept_mission`. That is the whole mechanism. Kavenue does **not** reach into work two professionals already agreed —
+consistent with hard rule #2.
+
+- **A trip in progress:** untouched, it completes.
+- **Upcoming accepted trips:** untouched **by Kavenue**. Instead, **tell the Business the assigned Driver's account is
+  on hold** — the *fact*, never the reason — so they can use the tools they already have (**agreed release** [[d46]], or
+  their own cancel). We surface the situation; the Business decides. That is giving them the tool rather than making the
+  decision, which is the same line as *"we don't chase a Driver for them"*.
+- **⚑ Accepted residual risk, recorded on purpose:** a Driver on hold can still perform tomorrow's trip if the Business
+  does nothing. Known, accepted, defensible — not an oversight. Revisit only if it actually bites.
+- **⚠️ The two stages differ here.** A **precautionary hold** leaves trips alone. A **permanent block** ends the
+  relationship, so there is no Driver left to perform an accepted trip — those **must** be released and re-pooled (the
+  O7 path, 24h SPEED-WIN window, supersede any pending amendment/release). Still open for that case only: is the release
+  **free** for the Driver (*recommend yes* — they did not cancel), and who covers a higher re-pool price?
 
 ### O.5 Due process (this protects Kavenue as much as the Driver) 🔨
 - Before a **permanent** block: the Driver is told there is an issue and given a chance to respond. A **precautionary
