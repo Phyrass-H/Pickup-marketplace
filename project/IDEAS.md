@@ -6,6 +6,43 @@
 
 ---
 
+## The GUEST has no touchpoint — tracking link + post-trip feedback to the hotel (founder, 2026-07-30) ❓
+
+**Founder asked to park this while reviewing the surface map.** Today the Guest — the person actually in the car, and
+the only person the hotel is judged on — has **zero** contact with Kavenue at any point. Two connected pieces:
+
+**1. A Guest tracking link.** Driver assigned, en route, ETA, driver first name + vehicle, per-stop progress. **No new
+data needed** — `status_event`, `stops_reached`, the driver/vehicle rows and the traffic-aware ETA all exist. What it
+needs is a **public, tokenised, expiring route** (no auth — the Guest never signs up), reachable by a link the Business
+can hand over or that goes out with a confirmation. Design constraint: an unguessable token per mission, dead after the
+trip closes, and it must expose only the Guest-safe subset — never the fare, never the Business's private message to the
+Driver, never the reference tag.
+
+**2. A post-trip feedback email — to the HOTEL, not to Kavenue.** The founder's framing, and it matters: the Guest tells
+*the hotel* how the ride was. That makes it a **B2B value proposition** (a hotel finally learns what its guest
+experienced in the car) rather than a rating system Kavenue owns. Keeps Kavenue in its **agent/intermediary** position —
+we carry the message, we are not the operator being reviewed.
+
+**What it would actually cost:**
+- **A Guest email column.** `mission_guest_contact` stores name + phone only today, so this is a small additive
+  migration — and it inherits that table's **deny-by-default RLS** (Drivers can't read it), which is the right default.
+- **Notifications first.** The feedback email needs the deferred Resend phase. The tracking link does **not** — it is
+  buildable today and is the cheaper half.
+- **A lawful basis to email the Guest.** They are a third party who never signed up; the relationship is the hotel's,
+  not ours. Practical consequence: it is probably the **Business** who chooses to send it, per booking, mirroring the
+  existing **per-phone Share gate** (S20) rather than a blanket Kavenue mailing. Founder owns legal — flag, don't gate
+  ([[legal-not-mvp-blocker]]).
+- **Respect the S47 privacy rule** ([[d57]]): a Guest's data *leaves the Driver's app* once the trip closes. A feedback
+  loop must not quietly reopen that door.
+- **Don't let it become a Driver rating by the back door.** S40 already logged that a review system must be gated to a
+  completed trip and double-blind ([[d46]]). Guest→hotel feedback about the *ride* is a different object from a
+  Driver score; if it starts driving Driver reputation, it inherits every one of those constraints.
+
+**Why it's worth doing eventually:** for a hotel choosing between Kavenue and the local VTC firm they already phone,
+*"your guest gets a tracking link"* is concrete and demonstrable in a sales meeting. Consumer ride-hailing has trained
+everyone to expect it, so its absence reads as a downgrade. **Split it:** the tracking link is a self-contained,
+no-integration build; the feedback email waits for notifications.
+
 ## Build-time reminders
 - Enforce the glossary in code: name variables/components Business/Dispatcher/Driver/
   Guest/Pool/Ceiling — never `client`/`principal`. Consider a lint note in review.
