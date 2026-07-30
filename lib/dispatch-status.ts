@@ -20,6 +20,12 @@ export interface MissionTone {
 
 /** Check-in opens 3h before pickup, and the row escalates to red at 1h. */
 export const CHECK_IN_OPENS_MS = 3 * 3_600_000;
+/**
+ * How long after the pickup time check-in still applies. A Driver five minutes
+ * late genuinely hasn't checked in; a trip left `confirmed` for three weeks is
+ * stale data, not a check-in problem, and shouldn't sit red on the schedule.
+ */
+export const CHECK_IN_GRACE_MS = 1 * 3_600_000;
 const HOURS_3 = CHECK_IN_OPENS_MS;
 const HOURS_1 = 1 * 3_600_000;
 
@@ -35,7 +41,11 @@ export function checkInOpen(
   now: Date = new Date(),
 ): boolean {
   if (m.status !== "confirmed" || m.checked_in_at) return false;
-  return new Date(m.pickup_at).getTime() <= now.getTime() + CHECK_IN_OPENS_MS;
+  const pickup = new Date(m.pickup_at).getTime();
+  return (
+    pickup <= now.getTime() + CHECK_IN_OPENS_MS &&
+    pickup >= now.getTime() - CHECK_IN_GRACE_MS
+  );
 }
 
 export function missionTone(
@@ -48,8 +58,15 @@ export function missionTone(
   const pickup = new Date(m.pickup_at).getTime();
   // In the history archive every pickup is in the past, so the "pickup is soon —
   // call them" urgency is never meaningful: show the calm variants instead.
+  // D61 — the check-in states are a WINDOW, not "any time before pickup": a
+  // pickup in the past also satisfies `<= now + 1h`, which turned every stale
+  // still-confirmed trip on the schedule red. One hour of grace past the pickup
+  // keeps a genuinely late trip flagged (a Driver 5 minutes late still hasn't
+  // checked in) and then lets it fall back to the calm "Confirmed".
+  const notLongPast = pickup >= now.getTime() - HOURS_1;
   const within3h = !opts.archived && pickup <= now.getTime() + HOURS_3;
   const within1h = !opts.archived && pickup <= now.getTime() + HOURS_1;
+  const checkInWindow = within3h && notLongPast;
 
   switch (m.status) {
     case "en_route":
@@ -72,7 +89,7 @@ export function missionTone(
     // Driver who hasn't checked in for tomorrow's trip is not news.
     case "confirmed":
       if (m.checked_in_at) return { tone: "info", label: "Checked in", needsAttention: false };
-      if (within1h)
+      if (within1h && notLongPast)
         return {
           tone: "danger",
           label: "Not checked in",
@@ -80,7 +97,7 @@ export function missionTone(
           needsAttention: true,
           wash: true,
         };
-      if (within3h)
+      if (checkInWindow)
         return {
           tone: "warn",
           label: "Not checked in",
