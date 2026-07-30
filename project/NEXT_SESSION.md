@@ -422,7 +422,36 @@ domain removed from Vercel, the Vercel project renamed **`kavenue`**, and Google
 `feedback@` / `contact@` as free aliases — SPF + DKIM + DMARC all verified `pass` on a real message. Runbook, gates and
 the OVH traps: `project/DOMAIN_MIGRATION.md`. **No app behaviour changed; nothing was consumed from the menu below.**
 
-**★ SESSION-50 — STILL NOT CHOSEN.** The menu below is intact and still current.
+**★ SESSION-50 — CHECK-IN shipped (2026-07-30, [[d61]]; migration `2026-07-30_mission_check_in.sql` applied; deployed
+`c6f13a0` + `aa18778`).** The founder ruled out A–C for now — *"I need to have a complete functional system between the
+Dispatch and the Driver and all UI done"* — so the work is the Driver↔Dispatch loop. Shipped: a Driver **checks in** 3h
+before pickup; the Business's row reads `Confirmed` → **`Not checked in`** (amber, whole row) → red inside 1h →
+**`Checked in`**; a count badge on the My Rides tab; `en_route` checks in implicitly. This revived the S39 pill + red row
+wash that [[d55]] had made unreachable.
+- **⚑ The T-60 take-back is STILL parked, and now for a documented reason.** Its S47 trigger ("the Driver hasn't
+  started") fires on a Driver who simply plans to leave at 17:40 for an 18:00 pickup — turning a **90%** business-cancel
+  fee into **0%**, an hour before every trip. It needs a response test, which needs push. See [[d61]].
+- **⚑ Test-harness trap:** `?as=driver` → `demo.driver@pickup.local` → the **Marc Dubois** driver row, NOT the row whose
+  `email` column says `s46.driver@pickup.local`. Match on `driver.auth_user_id`, never on `driver.email`.
+
+**REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, worst first):
+1. **A Business's default vehicle class is saved and never read.** `default_vehicle_category` saves in Settings →
+   Booking defaults; `/dispatch/new` ignores it. The UI makes a promise it doesn't keep. ~1h.
+2. **The date picker is in French inside an English form** — 7 strings in `components/date-time-picker.tsx`
+   ("Choisir une date", "Mois précédent", "Heure exacte"…), on the most-worked screen. ~30 min.
+3. **Only the latest edit shows.** `mission_info_change` records every edit to a posted trip; the schedule renders one
+   ("…and 2 earlier edits"). ~half a session.
+4. **A second vehicle** — scoped in [[d58]], groundwork shipped. ~half a session.
+5. **Saved-addresses book** (§ L) — needs a small additive table. ~1 session.
+6. **Reliability marks** — a conversation before any code: does a Driver see their own?
+7. **Guidance Tier-2 tooltips** — the biggest UI-completeness item (Ceiling / Pool / SPEED WIN / the status pills are
+   "taught in fragments and defined nowhere"), plus folding `.set-note`/`.rf-hint`/`.ds-note` into one component.
+   ⚠️ `GUIDANCE_AUDIT.md` predates S31/S37, which closed some of its 15 gaps — re-check before using it as a worklist.
+8. **The logo re-export** (sky-blue → navy) — founder's own, ~15 min.
+- **Blocked, not forgotten:** the suggested Ceiling/base-fare range is the audit's highest-leverage item but needs the
+  pricing rule (option C).
+
+**★ The A–D menu below is UNTOUCHED and still current** when the founder wants to leave the Driver↔Dispatch loop.
 Open with it in 2–3 lines and let the founder pick — do NOT start any of it unprompted (rule #4).
 
 **The Driver app is now COMPLETE**: Pool (S43) · both mission cards (S45) · My Rides + Past (S46–S47) · Account +

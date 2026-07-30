@@ -5,6 +5,53 @@
 
 ---
 
+## 2026-07-30 — Session 50 — CHECK-IN restored, and the fee hole that kept the take-back parked ([[d61]])
+
+**Scope.** The founder ruled out the back-office and notifications for now — *"I need to have a complete functional
+system between the Dispatch and the Driver and all UI done"* — so I audited what is actually open on that loop and read
+the code rather than the notes. Top of the list: the Business's T-60 take-back is **dead code**. `trip-row.tsx` gates it
+on `status === "accepted"`, which [[d55]] made unreachable. The founder's reply reframed it: *"At T-180 the system sends
+a notification reminder to the driver, he has to confirm it, if not, at T-60 the dispatch has access to a button."* Same
+feature — they were describing the design, I was describing the state.
+
+**The archaeology.** That design shipped two-thirds built in S39 and then lost its other third. See [[d61]]; the short
+version is that the pill, the hint and the red row wash all exist and have rendered for nobody since S46.
+
+**⚑ I listed the take-back as buildable and had to withdraw it.** The S47 trigger — *"the Driver hasn't started"* — fires
+on a Driver who simply intends to leave at 17:40 for an 18:00 pickup, turning a **90%** business-cancel fee into **0%**
+one hour before every trip. The distinguishing signal is a response test, which needs push. Raised before any code;
+the founder took the safe half.
+
+**Built (9 files + 1 migration `2026-07-30_mission_check_in.sql`):** `mission.checked_in_at`; `checkInOpen()` +
+`CHECK_IN_OPENS_MS` / `CHECK_IN_GRACE_MS` and a rewritten `confirmed` branch in `lib/dispatch-status.ts`; an explicit
+`wash` flag on `MissionTone` driving a new `.dx-trip--warn` beside the existing `.dx-trip--alert`; `checkIn()` in
+`rides/actions.ts` (+ implicit check-in on `en_route`); `components/check-in-card.tsx`; a flag on the My Rides list; a
+count badge on the tab bar, counted in `app/(app)/layout.tsx`.
+
+**Two decisions worth keeping.** No countdown copy on the check-in card — a live "pickup in 2h 47m" needs the client
+clock and is how S33 shipped a hydration mismatch; the pickup time is already at the top of the card. And the badge is
+computed in the **layout**, not the page, so it follows the Driver around the app: with no push, the badge *is* the
+notification.
+
+**⚑ Caught by probing, not by reading.** `within1h` (`pickup <= now + 1h`) is also true for a pickup in the **past**, so
+six stale still-`confirmed` demo trips went red on the schedule alongside the three deliberate test rows. Bounded with a
+1h grace in all three places (`missionTone`, `checkInOpen`, the badge query). Deployed as its own commit `aa18778`.
+
+**⚑ Test-harness trap, recorded so the next session doesn't repeat it.** `?as=driver` signs in as
+`demo.driver@pickup.local`, which maps to the **Marc Dubois** driver row — *not* the row whose `email` column reads
+`s46.driver@pickup.local` ("Demo Driver"). I reassigned the test trips to the wrong driver on that assumption and got
+three empty pages. The `driver.email` column is not the dev-login identity; `driver.auth_user_id` is.
+
+**Verified live** on 3 tagged trips (T-2h / T-30m / T-8h) through real authenticated sessions on both subdomains: both
+row washes, all four pill states, the badge counting 2 → 1, the button absent beyond 3h, `en_route` clearing the
+warning, and 5 guards including a Driver being **denied** a direct PATCH of `checked_in_at`. DB restored to its
+34-mission baseline, 0 leftover rows. Deployed `c6f13a0` + `aa18778` → Vercel `success`.
+
+**Also this session:** the domain + email migration to `kavenue.fr` ([[d60]]) — logged separately under Session 49 —
+and two scoping conversations that produced **BACKLOG § O** (trust & safety) and the parked **Guest touchpoint** idea.
+
+---
+
 ## 2026-07-29 — Session 49 — THE DOMAIN MOVES TO kavenue.fr, and Kavenue gets email ([[d60]])
 
 **Scope set by the founder, not the menu.** S49 opened with the A/B/C/D choice from `NEXT_SESSION.md`; the founder

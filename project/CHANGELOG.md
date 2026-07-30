@@ -5,6 +5,23 @@
 
 ---
 
+## 30 July 2026 — Drivers can now confirm they'll be there
+- **Three hours before a pickup, a Driver gets a "Check in" button.** One tap tells the hotel they're on it. The count
+  on the My Rides tab tells them how many are waiting, wherever they are in the app.
+- **The hotel finally has a signal.** Until now a Dispatcher had no way of knowing whether their Driver was engaged —
+  they just waited. Now the trip's row says **"Not checked in"** and the whole row turns amber once check-in opens, then
+  red inside the last hour. Once the Driver checks in it goes quiet again and reads **"Checked in"**.
+- **A Driver who just drives off is counted as checked in.** Starting the trip says more than the button does, so
+  nobody who's already on their way shows the hotel a warning.
+- **What this does NOT do yet: remind anyone.** There's no notification — a Driver only sees the prompt when they open
+  the app. That needs the notifications work, and it's why nothing bad happens if they don't check in: the hotel is told
+  so they can call, and that's all.
+- **The take-back button is still not back**, deliberately. Taking a trip off a Driver at the last hour has to be based
+  on them ignoring a reminder we actually sent — and we can't send one yet. Building it on "hasn't started driving"
+  would have let a cancellation that costs 90% be made free instead, an hour before every single trip.
+
+---
+
 ## 29 July 2026 — Kavenue moves to its own address, and gets real email
 - **The app now lives at `kavenue.fr`.** You bought the domain, and everything moved onto it the same day: the front
   page at `kavenue.fr`, the Driver app at `driver.kavenue.fr`, the Business side at `dispatch.kavenue.fr`. The old

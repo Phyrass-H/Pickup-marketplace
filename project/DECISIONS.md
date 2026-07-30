@@ -1017,3 +1017,50 @@ domain is how people bin their own mail.
 
 **Runbook kept:** `project/DOMAIN_MIGRATION.md` — 14 steps marked [YOU]/[CLAUDE] with a gate each, so adding
 `kavenue.com` later is the same file with one word changed.
+
+### D61 — Check-in: the Driver confirms they'll be there, and the Business can see it (2026-07-30)
+**What was already there, and dead.** The O7 design ([[d45]]) had a Driver confirm at T-180. Two thirds of it shipped in
+S39: `accept_mission` parked a far-out trip in `accepted`, and the Business side got a red **"Not confirmed"** pill
+(`lib/dispatch-status.ts`) plus a whole-row red wash (`.dx-trip--alert`, whose CSS comment still read *"the T-180
+alert"*). The missing third was the part that **asks the Driver** — no reminder, no button, nothing. So a trip accepted
+4h out sat in `accepted` limbo with no Driver controls, and [[d55]] fixed that by confirming on accept and backfilling
+every row. Correct fix — but it made `accepted` unreachable, so the pill and the wash had rendered for nobody since.
+This gives that machinery a condition it can actually reach. **The founder remembered the feature working; it did.**
+
+**Scope, split on what push can and can't do.** Built: the check-in state, the Driver's button, and the Business's
+visibility. **Deliberately not built:** the T-180 reminder and the T-60 take-back. Both need Web Push, which does not
+exist (no service worker, no subscriptions).
+
+**⚑ The reason that split is not arbitrary — a 90%→0% fee hole.** S47 had designed the take-back to trigger on *"the
+Driver hasn't started the trip"*, a proxy for silence chosen precisely because there was no way to ask. But a Driver
+with an 18:00 pickup who intends to leave at 17:40 is `confirmed` and not `en_route` at 17:15 — doing their job. Under
+that trigger a Business could take the trip back, or free-cancel it, at 17:00. A business cancel at 1h costs **90%** of
+the fare; this would have made it **0%** — an on-demand fee dodge available one hour before every trip, structurally
+identical to the postpone-then-cancel trick closed by freezing `pickup_at` and to cancel-being-cheaper-than-waiting
+caught by the S42 pre-build review. **Nothing punishing may hang off a missed check-in until the Driver has actually
+been asked.** Raised before writing code; the founder chose to ship the safe half.
+
+**Design.** The pill sequence is the founder's: `Confirmed` beyond 3h → **`Not checked in`** inside 3h (amber) → red
+inside 1h → **`Checked in`** → then the Driver's own progress. Each state *replaces* the last — after [[d55]] every
+accepted trip is confirmed, so that word carries no information; what a Dispatcher scans for is the exception. The
+founder asked for the **whole row** to wash, not just the pill: that comes from a new explicit `wash` flag on
+`MissionTone` rather than being derived from `tone`, because "No-show" and "Unfilled" are also warn/danger and must keep
+their current unwashed behaviour. On the Driver's My Rides **list** it is a flag, not a button — that list is a pure
+tap-through ([[d53]]) and the card is one big `<Link>`, so a nested button was never an option; the real button is on
+the trip's own page. A **count** on the tab badge, not a dot (founder): two trips waiting is a different morning from
+one. Computed in the Driver layout so it follows them around the app — **without push, the badge is the notification.**
+
+**Going `en_route` checks in implicitly.** Starting the trip is a stronger signal than the button, and a Driver already
+on their way must never show the hotel a "not checked in" row.
+
+**⚑ Found by probing the live site, not by reading the diff.** `within1h` is `pickup <= now + 1h` — which a pickup in
+the **past** also satisfies. Six stale still-`confirmed` demo trips lit up red alongside the three deliberate test rows.
+Fixed with `CHECK_IN_GRACE_MS` (1h past pickup) in `missionTone`, `checkInOpen` **and** the badge query: a Driver five
+minutes late genuinely hasn't checked in, but a trip left confirmed for three weeks is stale data, not a check-in
+problem. Same lesson as the S42 airport regex and the [[d59]] `accepted_at` omission — **the diff looked right.**
+
+**Verified live** (3 tagged trips at T-2h / T-30m / T-8h, DB restored to its 34-mission baseline): both washes and all
+four pill states render; the tab badge counts 2 → 1 as trips are checked in; the button is absent beyond 3h; and five
+guards hold — RLS read of an own trip, a beyond-window trip refused, first-write-wins, a double tap moving nothing
+(`0 rows`), and a Driver PATCHing `checked_in_at` directly still **denied** (there is no driver UPDATE policy on
+`mission`; the action writes through the service role after an RLS ownership check, mirroring `advanceStatus`).
