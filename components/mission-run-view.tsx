@@ -33,6 +33,8 @@ import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard } from "@/components/amendment-card";
 import { ReleaseCard } from "@/components/release-card";
 import { StatusControl } from "@/app/(app)/rides/status-control";
+import { CheckInCard } from "@/components/check-in-card";
+import { checkInOpen } from "@/lib/dispatch-status";
 import { DriverCancel, NoShowControl } from "@/app/(app)/rides/cancel-noshow";
 
 // The card leads with STATE, not price. Tone follows the trip's phase: blue while
@@ -149,6 +151,14 @@ export function MissionRunView({
         </div>
 
         <div className="pcard__body">
+          {/* D61 — check-in leads: it's the only thing to DO on a trip that hasn't
+              started, and it disappears the moment it's done or the trip moves. */}
+          <CheckInCard
+            missionId={m.id}
+            open={checkInOpen(m)}
+            checkedInAt={m.status === "confirmed" ? m.checked_in_at : null}
+          />
+
           {/* Trip progress: one bar + plain words (the bar alone is colour-only). */}
           {showProgress && (
             <div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Car, ChevronRight, Layers, Route, Handshake } from "lucide-react";
+import { Building2, Car, ChevronRight, CircleCheck, Layers, Route, Handshake } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
@@ -11,7 +11,7 @@ import {
   missionStatusLabel,
   addressLine,
 } from "@/lib/format";
-import { parisDayKey } from "@/lib/dispatch-status";
+import { checkInOpen, parisDayKey } from "@/lib/dispatch-status";
 import type { MissionRow, MissionStatus } from "@/lib/database.types";
 import { parseWaypoints } from "@/lib/waypoints";
 import { progressDone, progressSegments } from "@/lib/mission-flow";
@@ -172,6 +172,16 @@ export default async function RidesPage() {
                       />
                     ))}
                   </div>
+
+                  {/* D61 — the list stays a pure tap-through ([[d53]]), so this is
+                      a flag and not a button: the card is one big <Link> and the
+                      real Check in sits on the trip's own page. */}
+                  {checkInOpen(m) && (
+                    <div className="ridecard__flag">
+                      <CircleCheck aria-hidden="true" />
+                      Check in to confirm you’ll be there
+                    </div>
+                  )}
 
                   {flag && (
                     <div className="ridecard__flag">

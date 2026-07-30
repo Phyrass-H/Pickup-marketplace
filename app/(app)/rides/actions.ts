@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { nextStep } from "@/lib/mission-flow";
+import { checkInOpen } from "@/lib/dispatch-status";
 import { parseWaypoints } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
 import type { StatusEventStatus } from "@/lib/database.types";
@@ -94,14 +95,63 @@ export async function advanceStatus(
     .insert({ mission_id: missionId, status: requested });
   if (eventErr) return { ok: false, message: "Couldn’t record the update." };
 
+  // D61 — starting the trip IS a check-in, and a stronger one than the button.
+  // Backfill it here so a Driver who drives off without tapping check-in never
+  // shows the Business a "not checked in" row while they're on their way.
   const { error: updateErr } = await admin
     .from("mission")
-    .update({ status: requested })
+    .update(
+      requested === "en_route"
+        ? { status: requested, checked_in_at: new Date().toISOString() }
+        : { status: requested },
+    )
     .eq("id", missionId)
     .eq("driver_id", driver.id);
   if (updateErr) return { ok: false, message: "Couldn’t update the mission." };
 
   revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
+// D61 — the Driver confirms, from 3h before pickup, that they'll be there.
+//
+// Deliberately does NOT write a status_event: check-in is not a step in the
+// trip, it's an answer to a question, and the Business reads it from the pill.
+// Same trust model as advanceStatus — verify ownership under RLS, then write
+// through the service role (there is no driver UPDATE policy on mission).
+//
+// The eligibility check is re-run here rather than trusted from the client: the
+// button is the UI's business, the rule is the server's.
+export async function checkIn(missionId: string): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { data: mission } = await supabase
+    .from("mission")
+    .select("id, status, driver_id, pickup_at, checked_in_at")
+    .eq("id", missionId)
+    .maybeSingle();
+
+  if (!mission || mission.driver_id !== driver.id) {
+    return { ok: false, message: "This isn’t one of your missions." };
+  }
+  if (mission.checked_in_at) return { ok: true }; // already done — idempotent, not an error
+  if (!checkInOpen(mission)) {
+    return { ok: false, message: "Check-in opens 3 hours before pickup." };
+  }
+
+  const { error } = await createAdminClient()
+    .from("mission")
+    .update({ checked_in_at: new Date().toISOString() })
+    .eq("id", missionId)
+    .eq("driver_id", driver.id)
+    .is("checked_in_at", null); // first write wins; a double-tap can't move the time
+  if (error) return { ok: false, message: "Couldn’t check you in — please try again." };
+
+  revalidatePath("/rides");
+  revalidatePath("/missions", "layout");
   revalidatePath("/dispatch");
   return { ok: true };
 }

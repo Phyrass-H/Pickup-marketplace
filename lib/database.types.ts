@@ -326,6 +326,7 @@ export interface Database {
           created_at: string;
           accepted_at: string | null;
           confirmed_at: string | null;
+          checked_in_at: string | null; // D61: Driver confirmed they'll be there (opens T-180). 2026-07-30 migration
           info_edited_at: string | null; // set by updateMissionInfo on an info-only edit (2026-07-05 migration)
           cancellation_fee: number | null; // O7 (D45): euro basis at cancel — MANUAL settle
           cancellation_reason: string | null; // O7
@@ -394,6 +395,7 @@ export interface Database {
           created_at?: string;
           accepted_at?: string | null;
           confirmed_at?: string | null;
+          checked_in_at?: string | null;
           info_edited_at?: string | null;
           cancellation_fee?: number | null;
           cancellation_reason?: string | null;

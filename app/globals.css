@@ -985,8 +985,15 @@ textarea::placeholder {
 .dx-trip--alert { border-bottom-color: #f4cdc8; }
 .dx-trip--alert > summary,
 .dx-trip--alert[open] > summary { background: var(--tone-danger-bg); }
+/* D61 — the softer step: check-in is open (T-180) and the Driver hasn't. Same
+   whole-row wash so it can't be scrolled past, amber because 3h out is a
+   prompt to call, not an emergency. Escalates to --alert inside the hour. */
+.dx-trip--warn { border-bottom-color: #fadfc4; }
+.dx-trip--warn > summary,
+.dx-trip--warn[open] > summary { background: var(--tone-warn-bg); }
 .dx-trip > summary:hover { background: #f0f3f8; }
 .dx-trip--alert > summary:hover { background: #fbe0db; }
+.dx-trip--warn > summary:hover { background: #ffedd9; }
 .dx-trip > summary {
   list-style: none; cursor: pointer; padding: 12px 16px;
 }
@@ -2612,6 +2619,67 @@ textarea::placeholder {
   color: var(--tone-warn-fg);
 }
 .ridecard__flag svg { width: 14px; height: 14px; flex: none; }
+
+/* ---- D61 CHECK-IN (Driver, on the trip's own page) ------------------------
+   Amber, not red: three hours out this is a prompt, not an emergency, and a red
+   block here would train Drivers to dismiss the one thing we want them to read.
+   The DONE state is a single quiet line so the screen goes back to having
+   exactly one filled button ([[d52]]). */
+.dcheck {
+  margin-bottom: 16px;
+  padding: 13px 14px;
+  background: var(--tone-warn-bg);
+  border: 1px solid #fadfc4;
+  border-radius: 10px;
+}
+.dcheck__t {
+  margin: 0 0 11px;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--tone-warn-fg);
+}
+.dcheck__btn {
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.dcheck__btn:hover:not(:disabled) { background: var(--accent-hover); }
+.dcheck__btn:disabled { opacity: 0.6; cursor: default; }
+.dcheck__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 16px;
+  font-size: var(--text-xs);
+  color: var(--tone-success-fg);
+}
+.dcheck__done svg { flex: none; }
+
+/* The tab-bar count: same warn pill as the Account documents badge, sized to
+   sit on the icon rather than beside the label. */
+.dtab__badge {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  margin-left: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--tone-warn-fg);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+.dtab__ic { position: relative; display: inline-flex; }
 
 /* ============================================================================
    Driver ACCOUNT (S48) — the hub + its sub-pages. The last un-redesigned Driver

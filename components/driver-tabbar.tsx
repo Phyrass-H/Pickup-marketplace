@@ -16,7 +16,7 @@ const TABS = [
   { href: "/settings", label: "Account", Icon: Settings, match: (p: string) => p.startsWith("/settings") },
 ];
 
-export function DriverTabbar() {
+export function DriverTabbar({ checkInCount = 0 }: { checkInCount?: number }) {
   const pathname = usePathname();
 
   return (
@@ -24,6 +24,9 @@ export function DriverTabbar() {
       <div className="dtabbar__inner">
         {TABS.map(({ href, label, Icon, match }) => {
           const active = match(pathname);
+          // D61 — a count, not a dot (founder): two trips waiting on a check-in
+          // is a different morning from one. Only My Rides carries it.
+          const badge = href === "/rides" ? checkInCount : 0;
           return (
             <Link
               key={href}
@@ -31,8 +34,19 @@ export function DriverTabbar() {
               className={active ? "dtab dtab--active" : "dtab"}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
-              <span>{label}</span>
+              <span className="dtab__ic">
+                <Icon size={22} strokeWidth={1.75} aria-hidden="true" />
+                {badge > 0 && <span className="dtab__badge">{badge}</span>}
+              </span>
+              <span>
+                {label}
+                {badge > 0 && (
+                  <span className="sr-only">
+                    {" "}
+                    — {badge} trip{badge === 1 ? "" : "s"} to check in
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}

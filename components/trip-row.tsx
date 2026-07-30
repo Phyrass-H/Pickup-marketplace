@@ -77,9 +77,10 @@ export interface InfoChangeBrief {
 }
 
 // One dense schedule line. Click to expand full detail. The coloured left edge +
-// status pill are the at-a-glance signal a hotel scans (red = needs a call). When
-// a Driver hasn't confirmed near pickup (danger tone) the whole row gets a gentle
-// red wash — the T-180 alert.
+// status pill are the at-a-glance signal a hotel scans (red = needs a call).
+// A tone carrying `wash` tints the WHOLE row so it can't be scrolled past: amber
+// once check-in opens at T-180 and the Driver hasn't, red inside the last hour
+// (D61), plus the pre-existing red on a cancelled/expired trip.
 export function TripRow({
   mission,
   driver,
@@ -165,7 +166,7 @@ export function TripRow({
     mission.status === "on_board" && waypoints.length > 0
       ? `${stopsReached}/${waypoints.length}`
       : "";
-  const alert = t.tone === "danger";
+  const wash = t.wash ? (t.tone === "warn" ? " dx-trip--warn" : " dx-trip--alert") : "";
   const flightEta = mission.flight_eta ? formatTime(mission.flight_eta) : null;
   const distanceKm = tripDistanceKm(
     mission.pickup_lat,
@@ -213,7 +214,7 @@ export function TripRow({
     <details
       // Anchor for the calendar's "Open in Schedule" deep link (?open=<missionId>).
       id={`trip-${mission.id}`}
-      className={`dx-trip${alert ? " dx-trip--alert" : ""}`}
+      className={`dx-trip${wash}`}
       style={{ "--edge": TONE_COLOR[t.tone] } as React.CSSProperties}
     >
       <summary>
