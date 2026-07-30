@@ -424,3 +424,101 @@ RPC, like `respond_to_amendment`). See [[d45]] + IDEAS.md.
 
 **⏸️ Disputes / mediation (deferred, documented):** the "Business disputes a hand-back / no-show / cancellation" path — no
   state today; V1 stays email + Kavenue mediates on the timestamped trail. Revisit deeper later.
+
+---
+
+## O. Trust & safety — incidents, investigation, and blocking a Driver (founder, 2026-07-30) 🔨❓
+
+**Why this exists.** The founder's scenario: *a Business reports a Driver's behaviour towards a woman.* Today there is
+**no** answer — the only lever is setting `driver.verified = false` by hand in the Supabase dashboard: no reason, no
+timestamp, no notice to the Driver, no distinction between "papers lapsed" and "removed after a safety report". And
+`blocksWork()` isn't wired into the Pool, so it isn't even certain that flag stops them being offered work.
+
+**The boundary (positioning — hard rule #2).** Kavenue **investigates to make a platform decision, not to reach a legal
+verdict.** Deciding who keeps access to the marketplace is entirely ours — we admitted them, we hold their papers, we are
+the donneur d'ordre. Determining criminal guilt is not. If a report describes a crime, the two run in parallel: ours ends
+at *"does this Driver stay"*, the police's at *"what happened in law"*. We preserve evidence and cooperate; we do not
+take statements for a prosecution.
+
+**Roles.** **Support receives** — takes the details, escalates immediately, promises nothing, adjudicates nothing, and
+**never names the reporter**. **The team investigates** — Guest, Business and Driver, to understand what happened.
+**Admin decides and clicks.** In beta all three are the founder.
+
+### O.1 A two-stage model 🔨
+1. **Precautionary hold** — immediate, needs no investigation, fully reversible. Stops the Driver being offered or
+   accepting work now.
+2. **Decision** — after the investigation: reinstate · warning · permanent block.
+
+**Why suspend first:** the two errors are not symmetrical. A wrongly-held Driver loses income you can pay back. The other
+error has no ceiling. Decide this *before* it happens — in the moment there will be an angry hotel on the phone.
+
+### O.2 Schema — append-only, mirroring the O7 idiom 🔨
+Three tables, all **deny-by-default RLS**, all writes through SECURITY DEFINER RPCs (the `mission_cancellation` /
+`mission_release` pattern — tamper-proof, and they are the evidence if this ever goes further):
+
+- **`driver_suspension`** (append-only) — `driver_id` · `kind` (`precautionary` | `permanent`) · `reason_internal` ·
+  `notice_to_driver` · `opened_by` · `opened_at` · `lifted_at` · `lifted_by` · `lift_reason` · `incident_id`.
+  A lift is a new column on the row, never a delete — re-suspension writes a new row, so the history reads in order.
+- **`incident`** — `mission_id` (**nullable** — a report may not be tied to one trip) · `category`
+  (`conduct` | `safety` | `vehicle` | `other`) · `severity` · `reported_by_type` / `reported_by_id` ·
+  `subject_driver_id` · `subject_business_id` · `summary` · `status` (`open` | `investigating` | `decided` | `closed`) ·
+  `decision` · `decided_by` · `decided_at`.
+- **`incident_note`** (append-only) — `incident_id` · `party_spoken_to` (`guest` | `business` | `driver` | `other`) ·
+  `body` · `author` · `created_at`. **This is the investigation trail** the founder described.
+
+**⚠️ One shared SQL helper `driver_is_blocked(driver_id)`**, called by **both** the Pool query **and**
+`accept_mission`. Do **not** denormalise a boolean onto `driver` — two sources of truth drift, and this one decides
+whether a suspended Driver can take a Guest. Same reasoning as the shared `mission_waiting()` / `pdp.ts`.
+
+**RLS is the sensitive part.** `incident` and `incident_note` hold **third-party allegations about a named person**.
+No Driver read, no Business read, ever — not even "their own". The Driver sees exactly one field,
+`driver_suspension.notice_to_driver`, served through a narrow read.
+
+### O.3 What the Driver sees 🔨
+A blocking screen where the Pool would be:
+- **"Your account is on hold"** + the `notice_to_driver` text (written by admin, plain words, no jargon).
+- What happens next, and **a way to respond** — otherwise it is a black box, which is both unfair and guarantees an
+  angry email to `support@` anyway.
+- **It must never reveal who reported, or any detail that identifies them.** Non-negotiable — in a conduct case that
+  is itself a safety risk.
+- Visual: the calm `.pempty` block idiom ([[d54]]), **not** an alarming red screen. This is a person's income.
+
+### O.4 ⚠️ UNRESOLVED — what happens to their live and upcoming trips? ❓
+**Decide this before building; it will derail the implementation otherwise.**
+- **A trip in progress:** you cannot remove a Guest from a moving car. *Recommendation:* the trip completes, the block
+  applies after. Honest, and the alternative is worse.
+- **Upcoming accepted trips:** must be released and re-pooled — you do not want a Driver under investigation collecting
+  a Guest tomorrow. Reuses the whole O7 re-pool path incl. the **24h SPEED WIN window** ([[d46]]) and the existing
+  supersede-a-pending-amendment/release logic.
+- **Open, founder's call:**
+  - Is that release **free** for the Driver? *Recommend yes* — no fee, no reliability mark. They did not cancel.
+  - Does the Business learn **why**? *Recommend no* — "the Driver is no longer available", never the reason. An
+    allegation is not established fact, and the reporter may be that same Business.
+  - If the re-pool clears **higher**, who covers the difference?
+
+### O.5 Due process (this protects Kavenue as much as the Driver) 🔨
+- Before a **permanent** block: the Driver is told there is an issue and given a chance to respond. A **precautionary
+  hold does not wait** — that is the point of having two stages.
+- Every decision records **who** and **when**. Append-only, nothing editable.
+- A reinstatement path with its own reason, so a lift six months later can be explained.
+- **⚠️ Real constraint:** the Guest is the person it happened to, and **Kavenue has no relationship with the Guest at
+  all** — the report arrives third-hand via the Business, with no way to ask her anything. Another argument for the
+  Guest touchpoint parked in IDEAS.md.
+
+### O.6 Wire `blocksWork()` at the same time 🔨
+`blocksWork()` already exists in `lib/account.ts` and **nothing calls it**. Suspension and document-readiness are the
+same question — *may this Driver work right now?* Build **one** gate with two inputs (blocked, or a
+missing/expired/rejected required document) rather than two mechanisms that disagree. Note the deliberate S48 decision:
+readiness is shown, never enforced, until real Drivers onboard — flipping it is a founder call.
+
+### O.7 ❓ For the lawyer — flag, don't gate ([[legal-not-mvp-blocker]])
+Worth knowing the answer *before* it happens, not as a build gate: what Kavenue is **obliged** to do on receiving a
+report of this kind, what it is obliged to **retain**, and whether a blocked Driver has a right of appeal or to know the
+substance of an allegation. The model above is deliberately conservative — record everything, tell the Driver something,
+always allow a lift.
+
+### O.8 Also missing, same area 🔨
+- **Businesses have no `verified` flag at all** (`driver.verified` exists; the business side has `siret` / `vat_number` /
+  `legal_name` and can file a Kbis, but nowhere to record approval). A Business that behaves badly has even less of a
+  lever than a Driver.
+- **Nothing records a warning** short of a block — the middle outcome of an investigation currently has no home.

@@ -429,7 +429,13 @@ Open with it in 2–3 lines and let the founder pick — do NOT start any of it 
 documents (S48) · Earnings (S48b). There is no un-redesigned Driver screen left. That's why the next step is a genuine
 choice rather than the next item on a list.
 
-**A — The back-office (`/admin`).** *The one thing that unblocks real users.* Founder-confirmed 2026-07-28 as ONE
+**A — The back-office (`/admin`).** *The one thing that unblocks real users.* **Scope grew on 2026-07-30:** the founder
+walked through the surfaces and two additions came out of it — **BACKLOG § O (trust & safety: incidents, an investigation
+trail, and blocking a Driver with a notice)**, which today has NO answer at all (the only lever is editing
+`driver.verified` by hand), and the **admin subdomain** `admin.kavenue.fr` (separate host-only cookie so a staff session
+survives testing as a Driver; plus origin-level gating on the most sensitive surface in the product). § O has **one
+blocking question** — what happens to a suspended Driver's live and upcoming trips (§ O.4).
+ Founder-confirmed 2026-07-28 as ONE
 product: **document review + disputes + support**. Nobody can approve a paper today, so every Driver sits at "with us
 for review" forever, and `driver.verified` can only be flipped by hand in Supabase. Half-built: the `admin` role exists
 and RLS already grants admins read on every table; what's missing is a **write** path (service role). S48 fixed the
