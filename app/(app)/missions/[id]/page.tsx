@@ -32,6 +32,7 @@ import {
   type GuestPhone,
 } from "@/lib/passengers";
 import { buildAmendmentData, buildReleaseData } from "@/lib/mission-cards";
+import { isExpired } from "@/lib/dispatch-status";
 import type { MissionStatus } from "@/lib/database.types";
 import { MissionRunView } from "@/components/mission-run-view";
 import { AcceptButton } from "./accept-button";
@@ -194,7 +195,14 @@ export default async function MissionDetailPage({
   }
 
   // ---- Pooled (or no longer available): the pre-accept view ---------------
-  const isPooled = mission.status === "pooled";
+  // § P — a past-due trip is dead even if the sweep hasn't reached it yet (a deep
+  // link can land here without either sweeping page being opened). Requiring a
+  // future pickup here means the Accept button is never offered for something
+  // `accept_mission` would refuse.
+  // Already swept, or on its way there — either way the Driver deserves the real
+  // reason rather than the generic "someone else took it".
+  const expired = isExpired(mission);
+  const isPooled = mission.status === "pooled" && !expired;
   const isHourly = mission.mission_type === "hourly";
   const fare = currentFare(mission);
   const when = formatPoolWhen(mission.pickup_at);
@@ -360,6 +368,10 @@ export default async function MissionDetailPage({
 
       {isPooled ? (
         <AcceptButton missionId={mission.id} />
+      ) : expired ? (
+        <div className="notice warn">
+          This mission expired — it wasn’t filled before its pickup time.
+        </div>
       ) : (
         <div className="notice warn">
           This mission is no longer available in the Pool.

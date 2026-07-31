@@ -48,6 +48,39 @@ export function checkInOpen(
   );
 }
 
+/**
+ * § P — is this trip dead? Either already swept to `expired`, or still `pooled`
+ * with its pickup time behind us, which is the same thing a moment earlier.
+ *
+ * The sweep (`expire_stale_missions`) runs on the Pool and Dispatch schedule
+ * reads, so those two pages see the real status — but the calendar, the history
+ * and any deep link don't sweep, and none of them should treat a dead trip as
+ * live. One predicate so that judgement can't drift between screens.
+ */
+export function isExpired(
+  m: Pick<MissionRow, "status" | "pickup_at">,
+  now: Date = new Date(),
+): boolean {
+  return (
+    m.status === "expired" ||
+    (m.status === "pooled" && new Date(m.pickup_at).getTime() <= now.getTime())
+  );
+}
+
+/**
+ * § P — a trip nobody accepted before its pickup time. Shared by the `expired`
+ * status and by a still-`pooled` row the sweep hasn't reached yet, so the two
+ * can never drift apart on screen. Deliberately identical in the history archive:
+ * "we never filled this" is worth noticing whenever a Business looks at it.
+ */
+const expiredTone: MissionTone = {
+  tone: "danger",
+  label: "Expired",
+  hint: "Was not filled in time.",
+  needsAttention: true,
+  wash: true,
+};
+
 export function missionTone(
   m: Pick<MissionRow, "status" | "pickup_at" | "checked_in_at"> & {
     no_show?: boolean | null;
@@ -112,6 +145,13 @@ export function missionTone(
     case "accepted":
       return { tone: "info", label: "Accepted", needsAttention: false };
     case "pooled":
+      // § P — past its pickup and still nobody took it: that trip is dead, and
+      // it reads exactly like an already-swept one. The sweep (expire_stale_missions)
+      // writes the real status on the next Pool/Schedule read, but the label must
+      // not wait for it — showing "In the Pool" on a trip from last month is the
+      // bug the founder reported. Doing it here covers the schedule, the calendar,
+      // the history and the expanded row in one place.
+      if (pickup <= now.getTime()) return expiredTone;
       if (within3h)
         return {
           tone: "warn",
@@ -123,13 +163,7 @@ export function missionTone(
     case "cancelled":
       return { tone: "danger", label: "Cancelled", needsAttention: false, wash: true };
     case "expired":
-      return {
-        tone: "danger",
-        label: "Expired",
-        hint: "Was not filled in time.",
-        needsAttention: true,
-        wash: true,
-      };
+      return expiredTone;
     default:
       return { tone: "neutral", label: m.status, needsAttention: false };
   }

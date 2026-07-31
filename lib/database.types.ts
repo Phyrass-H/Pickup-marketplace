@@ -746,6 +746,10 @@ export interface Database {
         Args: { p_release_id: string };
         Returns: Database["public"]["Tables"]["mission_release"]["Row"];
       };
+      // § P — the expiry sweep: pooled + past due -> expired, idempotent, and
+      // returns how many it closed. SECURITY DEFINER, so an ordinary session can
+      // call it; we do, on the Pool + Dispatch schedule reads, instead of a cron.
+      expire_stale_missions: { Args: Record<PropertyKey, never>; Returns: number };
       app_role: { Args: Record<PropertyKey, never>; Returns: UserRole };
       current_driver_id: { Args: Record<PropertyKey, never>; Returns: string };
       current_business_id: { Args: Record<PropertyKey, never>; Returns: string };

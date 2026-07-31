@@ -5,10 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AcceptResult = { ok: true } | { ok: false; message: string };
 
-// Accept a mission. ALL the hard logic — atomic first-wins, slot-conflict, and
-// the Lock-in (auto-confirm <3h) rule — lives in the DB function accept_mission
-// (Doc spine). We just call it AS THE DRIVER (user-session client, so auth.uid()
-// resolves) and translate any error into something human-readable.
+// Accept a mission. ALL the hard logic — atomic first-wins, slot-conflict, the
+// immediate confirm (D55), and the § P expiry check — lives in the DB function
+// accept_mission (Doc spine). We just call it AS THE DRIVER (user-session client,
+// so auth.uid() resolves) and translate any error into something human-readable.
 export async function acceptMission(missionId: string): Promise<AcceptResult> {
   const supabase = await createClient();
 
@@ -28,6 +28,10 @@ export async function acceptMission(missionId: string): Promise<AcceptResult> {
 
 function friendlyAcceptError(raw: string): string {
   const m = raw.toLowerCase();
+  // § P — checked before "no longer available" so the Driver gets the real
+  // reason: this one isn't a race they lost, it's a trip that died unfilled.
+  if (m.includes("expired"))
+    return "This mission expired — its pickup time has passed.";
   if (m.includes("no longer available"))
     return "Sorry — this mission was just taken by another Driver.";
   if (m.includes("slot conflict"))

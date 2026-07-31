@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { formatDate } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
+import { sweepExpiredMissions } from "@/lib/expiry";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
 import {
@@ -120,6 +121,13 @@ export default async function DispatchSchedule({
   const { open, day } = await searchParams;
 
   const supabase = await createClient();
+
+  // § P — a trip nobody accepted is dead at its pickup time. Sweeping here (as
+  // well as on the Driver's Pool) means the Business sees "Expired · Was not
+  // filled in time" on their own schedule without waiting for a Driver to happen
+  // to open the app. Idempotent; never throws.
+  await sweepExpiredMissions(supabase);
+
   const { data: missions, error } = await supabase
     .from("mission")
     .select("*")

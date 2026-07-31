@@ -14,7 +14,7 @@ import {
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
-import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
+import { isExpired, missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { isExecutable } from "@/lib/mission-flow";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
@@ -114,15 +114,19 @@ export function TripRow({
     }))
     .filter((g) => g.name || g.phone);
   // Sharing is read-only once a trip is finished (and on archived/history rows).
+  const expired = isExpired(mission);
   const shareLocked =
     archived ||
     mission.status === "completed" ||
     mission.status === "cancelled" ||
-    mission.status === "expired";
+    expired;
   // Info edits allowed only while the trip is pre-departure (matches the edit
-  // page + action guard). Hidden on history rows.
+  // page + action guard). Hidden on history rows — and on a dead one (§ P): the
+  // status guard on the edit action still says `pooled`, so without this a
+  // past-due trip would keep offering "Edit details" for a trip nobody can run.
   const editable =
     !archived &&
+    !expired &&
     (mission.status === "pooled" ||
       mission.status === "accepted" ||
       mission.status === "confirmed");

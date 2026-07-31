@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MapPin, Radar, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getDriverContext } from "@/lib/driver";
+import { sweepExpiredMissions } from "@/lib/expiry";
 import { MissionCard } from "@/components/mission-card";
 import { serviceClassLabel } from "@/lib/format";
 import { withinRadius } from "@/lib/geo";
@@ -74,12 +75,27 @@ export default async function PoolPage({
 
   const supabase = await createClient();
 
+  // § P — close out anything that went past due since the last read, then never
+  // list a past-due trip. Both matter: the sweep writes the honest `expired`
+  // status the Business sees, the floor below is what actually protects a Driver
+  // if the sweep is behind or fails.
+  await sweepExpiredMissions(supabase);
+
   // Pool = pooled missions matching the Driver's category. RLS lets a Driver
   // read any pooled mission; we then keep those whose pickup OR dropoff falls
   // within the Driver's service radius of their base — the single place this
   // filter lives (IDEAS.md). (Beta scale: filter in app; add a bounding-box /
   // PostGIS prefilter later if the Pool grows large.)
-  let query = supabase.from("mission").select("*").eq("status", "pooled");
+  //
+  // The pickup_at floor applies even under `?all=1`: the see-all bypass drops the
+  // MATCHING filters (tier / zone / body / luggage) so one demo Driver can view
+  // the whole Pool, but a dead trip isn't a filtered-out trip — `accept_mission`
+  // would refuse it, so listing it would be a lie.
+  let query = supabase
+    .from("mission")
+    .select("*")
+    .eq("status", "pooled")
+    .gt("pickup_at", new Date().toISOString());
   if (!seeAll) query = query.eq("category", vehicle.category);
   const { data: all, error } = await query.order("pickup_at", { ascending: true });
 
