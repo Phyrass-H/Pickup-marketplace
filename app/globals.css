@@ -978,8 +978,114 @@ textarea::placeholder {
    growing a second set — same control, same behaviour, both sides. */
 .dxh-head { margin: 0 0 16px; }
 .dxh-sum { margin: 0; font-size: 13px; color: var(--text-muted); }
+.dxh-sum b { color: var(--text); font-weight: 600; }
 .dxh-sum__bad { color: var(--tone-danger-fg); }
 .rchip__n { color: var(--text-faint); }
+
+/* ---- History toolbar (S52): search · date range · Driver · class · sort · export.
+   Every control writes to the URL and nothing else, so a filtered archive is a
+   link — and the CSV is the same query re-run on the server. */
+.dxh-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0 0; }
+.dxh-tools.is-busy { opacity: 0.6; }
+.dxh-search { position: relative; max-width: 380px; flex: 1 1 260px; }
+.dxh-spacer { flex: 1 1 auto; }
+
+/* What the one box covers. Held out of the placeholder, where the list was
+   being truncated mid-word; it appears under the field on focus instead. */
+.dxh-scope {
+  position: absolute; top: calc(100% + 5px); left: 2px; margin: 0;
+  font-size: 11.5px; color: var(--text-faint); white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+}
+.dxh-scope.is-on { opacity: 1; }
+
+.dxh-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+}
+.dxh-btn:hover { background: var(--surface-2); }
+.dxh-btn:focus-visible { outline: none; box-shadow: var(--ring); }
+.dxh-btn svg { width: 15px; height: 15px; color: var(--text-muted); flex: none; }
+.dxh-btn--on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.dxh-btn--on svg { color: var(--accent); }
+.dxh-btn--ghost { border-color: transparent; color: var(--text-muted); }
+.dxh-btn--ghost:hover { color: var(--text); background: var(--surface-2); }
+.dxh-btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+
+/* Anchor for the shared calendar. .ecal spans its parent by default (right for
+   the Driver's full-width block); here it's a toolbar button, so it gets a real
+   width and is pinned left — and flipped right when it would run off the edge. */
+.dxh-pop { position: relative; }
+.dxh-pop .ecal { right: auto; width: 292px; }
+.dxh-sel { display: inline-flex; }
+.dxh-sel select {
+  height: 36px; padding: 0 28px 0 12px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background-color: var(--surface); color: var(--text); cursor: pointer; max-width: 190px;
+}
+.dxh-sel select.is-on { border-color: var(--accent); color: var(--accent); background-color: var(--accent-soft); }
+
+.dxh-bar {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-top: 12px;
+}
+
+/* ---- The 8-column archive grid: Date and Fare on top of the schedule's 7.
+   Money is the column the old history was missing entirely, and Date replaces a
+   bare time that couldn't distinguish two rows inside the same month band. */
+.dx-colhead--arch, .dx-trip--arch > summary {
+  grid-template-columns:
+    minmax(92px,  0.95fr)  /* date   */
+    minmax(86px,  3.6fr)   /* route  */
+    minmax(56px,  0.85fr)  /* flight */
+    minmax(56px,  1.05fr)  /* guest  */
+    minmax(50px,  0.75fr)  /* ref    */
+    minmax(56px,  1.15fr)  /* driver */
+    minmax(64px,  0.7fr)   /* fare   */
+    minmax(112px, 1fr);    /* outcome */
+}
+.dxh-sort { color: inherit; text-decoration: none; display: inline-flex; align-items: baseline; gap: 3px; }
+.dxh-sort:hover { color: var(--text); }
+.dxh-sort.is-on { color: var(--accent); }
+.dxh-sort--num { justify-content: flex-end; }
+.dx-colhead--arch > *:nth-child(7) { text-align: right; }
+.dxh-sort__dir { font-size: 10px; }
+
+.dxh-when { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.dxh-when b { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.dxh-when > span { font-size: 12px; color: var(--text-muted); }
+
+.dxh-fare { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; min-width: 0; }
+.dxh-fare b { font-weight: 600; }
+/* What the amount IS, when it isn't a fare: a cancellation fee owes its cause,
+   and waiting is the one charge a Business never booked (D48). */
+.dxh-fare em {
+  font-style: normal; display: block; font-size: 11px; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dxh-fare--none { color: var(--text-faint); }
+/* A past trip the Driver never closed (§ Q): the fare is agreed but nothing has
+   settled, so it shows on its row and is excluded from every total. Muted so it
+   can't be read as money owed. */
+.dxh-fare--pending b { font-weight: 400; color: var(--text-muted); }
+
+/* Search hit. Amber wash rather than the accent — navy on navy would fight the
+   status rail, and this is a "look here", not a state. */
+.dx-trip mark { background: #fdf0c8; color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* Why a row matched, when the hit was in something with no column (car, class). */
+.dxh-why {
+  grid-column: 2 / -1; margin-top: 5px; display: flex; gap: 14px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--text-muted);
+}
+
+@media (max-width: 880px) {
+  .dx-colhead--arch, .dx-trip--arch > summary { min-width: 700px; }
+  .dxh-search { max-width: none; }
+  .dxh-scope { display: none; }
+}
 .rchip--on .rchip__n { color: var(--accent); opacity: 0.65; }
 .dx-fold {
   background: none; border: none; color: var(--text-muted); font-size: 13px;

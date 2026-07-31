@@ -11,10 +11,12 @@ import {
   formatDateTime,
   formatMoney,
   formatTime,
+  formatArchiveDay,
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
 import { isExpired, missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
+import { highlightSegments, type MatchField } from "@/lib/history-filter";
 import { isExecutable } from "@/lib/mission-flow";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
 import { StatusSteps } from "@/components/status-steps";
@@ -76,6 +78,24 @@ export interface InfoChangeBrief {
   items: string[]; // human phrases: "Flight BA342 → BA118", "Added guest X"
 }
 
+/**
+ * Paints the search hit inside a cell. A server component — the archive renders
+ * on the server, so the highlight costs no client JS at all.
+ */
+function Hl({ text, q }: { text: string; q: string }) {
+  if (!q) return <>{text}</>;
+  const parts = highlightSegments(text, q);
+  if (parts.length === 1 && !parts[0].hit) return <>{text}</>;
+  return (
+    <>
+      {parts.map((p, i) => (p.hit ? <mark key={i}>{p.text}</mark> : <span key={i}>{p.text}</span>))}
+    </>
+  );
+}
+
+/** How a hit reads when it landed somewhere the table has no column for. */
+const MATCH_NOTE: Partial<Record<MatchField, string>> = { car: "Car", class: "Class" };
+
 // One dense schedule line. Click to expand full detail. The coloured left edge +
 // status pill are the at-a-glance signal a hotel scans (red = needs a call).
 // A tone carrying `wash` tints the WHOLE row so it can't be scrolled past: amber
@@ -89,6 +109,10 @@ export function TripRow({
   release,
   infoChange,
   archived = false,
+  fare = null,
+  farePending = false,
+  query = "",
+  matchedOn = null,
 }: {
   mission: MissionRow;
   driver?: DriverContact | null;
@@ -97,6 +121,14 @@ export function TripRow({
   release?: ReleaseBrief | null;
   infoChange?: InfoChangeBrief | null;
   archived?: boolean;
+  /** History only: what this trip cost, already settled (see historyFare). */
+  fare?: number | null;
+  /** History only: the fare is agreed but nothing settled (a § Q unclosed trip). */
+  farePending?: boolean;
+  /** History only: the live search text, for the highlight. */
+  query?: string;
+  /** History only: which fields the search hit, for the "matched on" line. */
+  matchedOn?: MatchField[] | null;
 }) {
   const t = missionTone(mission, undefined, { archived });
   const reference = mission.reference?.trim() || null;
@@ -214,15 +246,63 @@ export function TripRow({
     !!amendment && amendment.fareOld != null && amendment.fareOld !== amendment.fareNew;
   const acceptedRouteChanged = !!amendment && !!amendment.summary && amendment.summary !== "Fare change";
 
+  // ---- archive-only derivations -------------------------------------------
+  // What the money line says under the amount. A bare "110 €" on a cancelled
+  // trip reads as the fare; it's a fee, and who caused it decides who owes it
+  // ([[d45]]). Waiting is called out because it's the one charge a Business
+  // didn't book — D48 pays the Driver by the minute and it belongs on the face
+  // of the row, not buried in the detail.
+  const waitingFee = Number(mission.waiting_fee ?? 0);
+  const archiveNote = !archived
+    ? null
+    : farePending
+      ? "Not settled"
+      : mission.status === "cancelled"
+        ? mission.cancelled_by === "driver"
+          ? "Driver cancelled"
+          : mission.cancelled_by === "business"
+            ? "Your cancellation fee"
+            : "Cancellation fee"
+        : mission.no_show
+          ? "Charged in full"
+          : waitingFee > 0
+            ? `incl. ${formatMoney(waitingFee)} waiting`
+            : null;
+
+  // Hits that no column shows. Address/guest/driver/reference/flight all paint
+  // themselves in place, so naming them again would just be noise.
+  const archiveWhy =
+    archived && query && matchedOn
+      ? matchedOn
+          .filter((f): f is "car" | "class" => f === "car" || f === "class")
+          .map((key) => ({
+            key,
+            text:
+              key === "car"
+                ? [driver?.vehicle?.make, driver?.vehicle?.model, driver?.vehicle?.plate]
+                    .filter(Boolean)
+                    .join(" · ")
+                : serviceClassLabel(mission.category, mission.required_body_type),
+          }))
+          .filter((w) => w.text)
+      : [];
+
   return (
     <details
       // Anchor for the calendar's "Open in Schedule" deep link (?open=<missionId>).
       id={`trip-${mission.id}`}
-      className={`dx-trip${wash}`}
+      className={`dx-trip${archived ? " dx-trip--arch" : ""}${wash}`}
       style={{ "--edge": TONE_COLOR[t.tone] } as React.CSSProperties}
     >
       <summary>
-        <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
+        {archived ? (
+          <span className="dxh-when">
+            <b>{formatArchiveDay(mission.pickup_at)}</b>
+            <span className="mono">{formatTime(mission.pickup_at)}</span>
+          </span>
+        ) : (
+          <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
+        )}
 
         {/* Stacked route rail: pickup → stop(s) → drop-off, one address per line so
             long addresses fit without truncation. Each line is the full address
@@ -232,7 +312,7 @@ export function TripRow({
           <span className="dx-route__node">
             <span className="dx-route__dot dx-route__dot--pk" aria-hidden />
             <span className="dx-route__addr dx-route__addr--pk" title={mission.pickup_address}>
-              {addressLine(mission.pickup_address)}
+              <Hl text={addressLine(mission.pickup_address)} q={query} />
             </span>
           </span>
           {waypoints.map((w, i) => {
@@ -245,7 +325,7 @@ export function TripRow({
               >
                 <span className="dx-route__dot dx-route__dot--via" aria-hidden />
                 <span className="dx-route__addr dx-route__addr--via" title={w.address}>
-                  {addressLine(w.address)}
+                  <Hl text={addressLine(w.address)} q={query} />
                 </span>
               </span>
             );
@@ -256,7 +336,11 @@ export function TripRow({
               className="dx-route__addr dx-route__addr--dp"
               title={mission.dropoff_address ?? undefined}
             >
-              {mission.dropoff_address ? addressLine(mission.dropoff_address) : "—"}
+              {mission.dropoff_address ? (
+                <Hl text={addressLine(mission.dropoff_address)} q={query} />
+              ) : (
+                "—"
+              )}
             </span>
           </span>
         </span>
@@ -264,7 +348,7 @@ export function TripRow({
         <span className="dx-trip__flight">
           {mission.flight_number ? (
             <span className="dx-flight">
-              {mission.flight_number}
+              <Hl text={mission.flight_number} q={query} />
               {flightEta ? ` · ${flightEta}` : ""}
             </span>
           ) : (
@@ -275,22 +359,41 @@ export function TripRow({
         <span className="dx-trip__guest">
           {mission.luggage_only ? (
             <span className="muted">Luggage</span>
+          ) : mission.passenger_name ? (
+            <Hl text={mission.passenger_name} q={query} />
           ) : (
-            mission.passenger_name ?? "—"
+            "—"
           )}
         </span>
 
         <span className="dx-trip__ref">
           {reference ? (
-            <span className="ref">{reference}</span>
+            <span className="ref">
+              <Hl text={reference} q={query} />
+            </span>
           ) : (
             <span className="dx-flight-empty">—</span>
           )}
         </span>
 
         <span className="dx-trip__driver">
-          {driver ? driver.name : <span className="muted">—</span>}
+          {driver ? <Hl text={driver.name} q={query} /> : <span className="muted">—</span>}
         </span>
+
+        {/* Money, history only. An archive with no fare column can't answer the
+            one question an accountant opens it with. `fare` is settled upstream
+            (historyFare): the frozen accept-time fare for a real trip, the fee
+            for a cancellation, nothing at all for a trip nobody took. */}
+        {archived && (
+          <span
+            className={`dxh-fare${fare == null ? " dxh-fare--none" : ""}${
+              farePending ? " dxh-fare--pending" : ""
+            }`}
+          >
+            {fare == null ? "—" : <b>{formatMoney(fare)}</b>}
+            {archiveNote && <em>{archiveNote}</em>}
+          </span>
+        )}
 
         <span
           className="status-pill"
@@ -301,6 +404,19 @@ export function TripRow({
           {t.label}
           {stopProgress && <span className="status-pill__sub">{stopProgress}</span>}
         </span>
+
+        {/* Why this row is here when the hit landed somewhere with no column of
+            its own — searching a plate or a make otherwise returns rows with no
+            visible reason, which reads as a broken search. */}
+        {archiveWhy.length > 0 && (
+          <span className="dxh-why">
+            {archiveWhy.map((w) => (
+              <span key={w.key}>
+                {MATCH_NOTE[w.key]} · <Hl text={w.text} q={query} />
+              </span>
+            ))}
+          </span>
+        )}
       </summary>
 
       <div className="dx-trip__detail">

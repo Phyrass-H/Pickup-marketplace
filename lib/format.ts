@@ -237,6 +237,33 @@ export function formatDayGroup(iso: string | null | undefined): {
   return { label: (sameYear ? groupWeekday : groupWeekdayYear).format(d), today: false };
 }
 
+// Archive row date: "Sat 18 Jul" (+ the year when it isn't the current one).
+//
+// The history rows are grouped by MONTH but used to print only a time, so a
+// July archive read "21:27 / 22:23 / 13:45" with no way to tell the 3rd from the
+// 19th without opening the row. English like the month headings above them.
+const archiveDay = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Paris",
+});
+const archiveDayYear = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Europe/Paris",
+});
+
+export function formatArchiveDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const sameYear =
+    parisCalDate.format(d).slice(0, 4) === parisCalDate.format(new Date()).slice(0, 4);
+  return (sameYear ? archiveDay : archiveDayYear).format(d);
+}
+
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {
   eco: "Eco",
   business: "Business",

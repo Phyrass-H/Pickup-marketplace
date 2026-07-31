@@ -2,10 +2,23 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
-import { formatMonth } from "@/lib/format";
+import { categoryLabel, formatMoney, formatMonth } from "@/lib/format";
 import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { TripRow, type DriverContact } from "@/components/trip-row";
-import type { MissionRow } from "@/lib/database.types";
+import { HistoryFilters, type DriverOption } from "@/components/history-filters";
+import { ScrollToTrip } from "@/components/scroll-to-trip";
+import {
+  applyHistoryQuery,
+  historyFare,
+  historyHref,
+  isFiltered,
+  OUTCOMES,
+  parseHistoryQuery,
+  type HistoryRow,
+  type Outcome,
+  type Sort,
+} from "@/lib/history-filter";
+import type { MissionRow, VehicleCategory } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -21,34 +34,49 @@ export const dynamic = "force-dynamic";
  * ⚑ These buckets deliberately do NOT cover everything. A past trip still sitting
  * `confirmed`/`on_board` — a Driver took it and never closed it — has no ending in
  * the model yet, so it appears under All and nowhere else. That is why the chip
- * counts don't sum to All, and it stays visible on purpose until the founder
- * rules on what an abandoned trip costs.
+ * counts don't sum to All, and it stays visible on purpose until the founder's
+ * § Q design ships (designed S52, parked on push — see BACKLOG § Q / [[d67]]).
  */
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "completed", label: "Completed" },
-  { key: "unfilled", label: "Unfilled" },
-  { key: "cancelled", label: "Cancelled" },
-] as const;
-type Filter = (typeof FILTERS)[number]["key"];
+const OUTCOME_LABEL: Record<Outcome, string> = {
+  all: "All",
+  completed: "Completed",
+  unfilled: "Unfilled",
+  cancelled: "Cancelled",
+};
 
-function bucketOf(m: MissionRow): Filter | null {
-  if (isExpired(m)) return "unfilled";
-  if (m.status === "completed") return "completed";
-  if (m.status === "cancelled") return "cancelled";
-  return null;
-}
-
-function ColumnHead() {
+/**
+ * The 8-column header. Date and Fare are links that flip their own direction —
+ * the same sort the toolbar's dropdown sets, reachable where the eye already is.
+ */
+function ColumnHead({ sort, hrefs }: { sort: Sort; hrefs: { date: string; fare: string } }) {
+  const mark = (active: boolean, ascending: boolean) =>
+    active ? <span className="dxh-sort__dir" aria-hidden="true">{ascending ? "↑" : "↓"}</span> : null;
+  const onDate = sort === "recent" || sort === "oldest";
+  const onFare = sort === "high" || sort === "low";
   return (
-    <div className="dx-colhead">
-      <span>Time</span>
+    <div className="dx-colhead dx-colhead--arch">
+      <Link
+        href={hrefs.date}
+        className={`dxh-sort${onDate ? " is-on" : ""}`}
+        scroll={false}
+        aria-label={sort === "oldest" ? "Sort by date, newest first" : "Sort by date, oldest first"}
+      >
+        Date {mark(onDate, sort === "oldest")}
+      </Link>
       <span>Route</span>
       <span>Flight</span>
       <span>Guest</span>
       <span>Ref</span>
       <span>Driver</span>
-      <span>Status</span>
+      <Link
+        href={hrefs.fare}
+        className={`dxh-sort dxh-sort--num${onFare ? " is-on" : ""}`}
+        scroll={false}
+        aria-label={sort === "high" ? "Sort by fare, lowest first" : "Sort by fare, highest first"}
+      >
+        Fare {mark(onFare, sort === "low")}
+      </Link>
+      <span>Outcome</span>
     </div>
   );
 }
@@ -56,14 +84,14 @@ function ColumnHead() {
 export default async function DispatchHistory({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const ctx = await getAppContext();
   if (!ctx.business) return null;
 
-  const { filter } = await searchParams;
-  const active: Filter =
-    FILTERS.find((f) => f.key === filter)?.key ?? "all";
+  const sp = await searchParams;
+  const query = parseHistoryQuery(sp);
+  const openId = typeof sp.open === "string" ? sp.open : undefined;
 
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
@@ -75,20 +103,16 @@ export default async function DispatchHistory({
     .lt("pickup_at", nowIso)
     .order("pickup_at", { ascending: false });
 
-  // Count every bucket from the full set, then narrow — so each chip shows its
-  // real total whichever one is selected (a count that changed with the filter
-  // would be useless: you'd have to click a bucket to find out if it's empty).
-  const counts: Record<Filter, number> = { all: 0, completed: 0, unfilled: 0, cancelled: 0 };
-  for (const m of all ?? []) {
-    counts.all += 1;
-    const b = bucketOf(m);
-    if (b) counts[b] += 1;
-  }
-  const missions = active === "all" ? all : (all ?? []).filter((m) => bucketOf(m) === active);
+  const missions: MissionRow[] = all ?? [];
 
-  // Reveal assigned Driver contacts + car (service role, gated to this business).
+  // Driver + car for EVERY past trip, not just the ones on screen: the search
+  // matches on a Driver's name and on a plate, and the Driver dropdown has to
+  // list everyone who ever drove for this Business — both are impossible if the
+  // lookup only covers rows that already survived the filter.
   const contacts = new Map<string, DriverContact>();
-  const assigned = (missions ?? []).filter((m) => m.driver_id);
+  const driverIdOf = new Map<string, string>();
+  const driverOptions = new Map<string, DriverOption>();
+  const assigned = missions.filter((m) => m.driver_id);
   if (assigned.length > 0) {
     const admin = createAdminClient();
     const driverIds = [...new Set(assigned.map((m) => m.driver_id!))];
@@ -100,91 +124,179 @@ export default async function DispatchHistory({
     const vehByDriver = new Map((vehicles ?? []).map((v) => [v.driver_id, v]));
     for (const m of assigned) {
       const d = byId.get(m.driver_id!);
-      if (d)
-        contacts.set(m.id, {
-          name: `${d.first_name} ${d.last_name}`,
-          phone: d.phone,
-          vehicle: vehByDriver.get(d.id) ?? null,
-        });
+      if (!d) continue;
+      const name = `${d.first_name} ${d.last_name}`;
+      contacts.set(m.id, { name, phone: d.phone, vehicle: vehByDriver.get(d.id) ?? null });
+      driverIdOf.set(m.id, d.id);
+      driverOptions.set(d.id, { id: d.id, name });
     }
   }
 
-  // Group by Paris month, newest first.
-  const groups = new Map<string, MissionRow[]>();
-  for (const m of missions ?? []) {
-    const key = parisDayKey(m.pickup_at).slice(0, 7);
-    (groups.get(key) ?? groups.set(key, []).get(key)!).push(m);
+  const rows: HistoryRow[] = missions.map((m) => {
+    const c = contacts.get(m.id) ?? null;
+    return {
+      mission: m,
+      driverId: driverIdOf.get(m.id) ?? null,
+      driverName: c?.name ?? null,
+      car: c?.vehicle ?? null,
+      ...historyFare(m),
+    };
+  });
+
+  const { rows: shown, matches, counts, spend } = applyHistoryQuery(rows, query);
+
+  // Classes that actually occur in this archive — a dropdown offering "First"
+  // to a hotel that has never booked one is a filter that can only disappoint.
+  const categories = [...new Set(missions.map((m) => m.category))]
+    .map((key) => ({ key: key as VehicleCategory, label: categoryLabel(key) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const drivers = [...driverOptions.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const oldest = missions.length > 0 ? missions[missions.length - 1] : null;
+  const firstDay = oldest ? parisDayKey(oldest.pickup_at) : null;
+  const today = parisDayKey(new Date());
+
+  // Group by Paris month, preserving whatever order the sort produced. A fare
+  // sort ignores months entirely, so it renders as one ungrouped list instead of
+  // fake month bands that would no longer be chronological.
+  const grouped = query.sort === "recent" || query.sort === "oldest";
+  const groups = new Map<string, HistoryRow[]>();
+  for (const r of shown) {
+    const key = grouped ? parisDayKey(r.mission.pickup_at).slice(0, 7) : "";
+    (groups.get(key) ?? groups.set(key, []).get(key)!).push(r);
   }
 
-  const isEmpty = !error && (!missions || missions.length === 0);
-  const nothingEverHappened = !error && counts.all === 0;
+  const nothingEverHappened = !error && missions.length === 0;
+  const isEmpty = !error && shown.length === 0;
+  const narrowed = isFiltered(query);
+  const sortHref = {
+    date: historyHref(query, { sort: query.sort === "recent" ? "oldest" : "recent" }),
+    fare: historyHref(query, { sort: query.sort === "high" ? "low" : "high" }),
+  };
 
   return (
     <>
       {!nothingEverHappened && !error && (
         <div className="dxh-head">
-          <p className="dxh-sum">
-            {counts.all} past trip{counts.all === 1 ? "" : "s"}
-            {counts.unfilled > 0 && (
-              <>
-                {" · "}
-                <span className="dxh-sum__bad">{counts.unfilled} unfilled</span>
-              </>
-            )}
-          </p>
-          <div className="rfilter" role="group" aria-label="Filter past trips by outcome">
-            {FILTERS.map((f) => (
-              <Link
-                key={f.key}
-                href={f.key === "all" ? "/dispatch/history" : `/dispatch/history?filter=${f.key}`}
-                className={f.key === active ? "rchip rchip--on" : "rchip"}
-                aria-current={f.key === active ? "true" : undefined}
-              >
-                {f.label} <span className="rchip__n">{counts[f.key]}</span>
-              </Link>
-            ))}
+          <HistoryFilters
+            query={query}
+            drivers={drivers}
+            categories={categories}
+            today={today}
+            firstDay={firstDay}
+            resultCount={shown.length}
+          />
+
+          <div className="dxh-bar">
+            <div className="rfilter" role="group" aria-label="Filter past trips by outcome">
+              {OUTCOMES.map((o) => (
+                <Link
+                  key={o}
+                  href={`/dispatch/history${historyHref(query, { outcome: o })}`}
+                  className={o === query.outcome ? "rchip rchip--on" : "rchip"}
+                  aria-current={o === query.outcome ? "true" : undefined}
+                  scroll={false}
+                >
+                  {OUTCOME_LABEL[o]} <span className="rchip__n">{counts[o]}</span>
+                </Link>
+              ))}
+            </div>
+
+            {/* One line that always answers "what am I looking at, and what did
+                it cost". Under a search it says "of N" so a narrow result can
+                never be mistaken for the whole archive. */}
+            <p className="dxh-sum">
+              <b>
+                {shown.length} trip{shown.length === 1 ? "" : "s"}
+              </b>
+              {narrowed && counts.all !== missions.length ? ` of ${missions.length}` : ""}
+              {" · "}
+              {formatMoney(spend)}
+              {query.outcome === "all" && counts.unfilled > 0 && (
+                <>
+                  {" · "}
+                  <span className="dxh-sum__bad">{counts.unfilled} unfilled</span>
+                </>
+              )}
+            </p>
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="notice error">Couldn’t load your history: {error.message}</div>
-      )}
+      {error && <div className="notice error">Couldn’t load your history: {error.message}</div>}
 
-      {/* Two different emptinesses: a brand-new Business, or a filter that found
-          nothing. The second must never read as "you have no history". */}
+      {/* Three different emptinesses, and they must not read alike: a brand-new
+          Business, a search that found nothing, and an outcome bucket that is
+          empty. Only the first one means "you have no history". */}
       {nothingEverHappened && <div className="empty">No past missions yet.</div>}
       {isEmpty && !nothingEverHappened && (
         <div className="empty">
-          No {FILTERS.find((f) => f.key === active)!.label.toLowerCase()} trips in your history.
+          {query.q ? (
+            <>
+              {/* "with these filters" only when something OTHER than the search
+                  is narrowing — otherwise it sends you hunting for filters that
+                  aren't set. */}
+              Nothing matches “{query.q}”
+              {isFiltered({ ...query, q: "" }) && " with these filters"}.{" "}
+              <Link href="/dispatch/history">Clear filters</Link>
+            </>
+          ) : narrowed ? (
+            <>
+              No {query.outcome === "all" ? "" : `${OUTCOME_LABEL[query.outcome].toLowerCase()} `}
+              trips in this selection. <Link href="/dispatch/history">Clear filters</Link>
+            </>
+          ) : (
+            <>No {OUTCOME_LABEL[query.outcome].toLowerCase()} trips in your history.</>
+          )}
         </div>
       )}
 
       {[...groups.entries()].map(([monthKey, list]) => {
-        const unfilled = list.filter((m) => isExpired(m)).length;
+        const unfilled = list.filter((r) => isExpired(r.mission)).length;
+        let monthSpend = 0;
+        for (const r of list) if (r.counted) monthSpend += r.fare ?? 0;
         return (
-          <section key={monthKey} className="dx-sched">
-            <div className="dx-day">
-              <h2>{formatMonth(monthKey)}</h2>
-              <span className="dx-count">
-                {list.length} trip{list.length === 1 ? "" : "s"}
-                {/* Only when it's non-zero — a good month stays quiet. Redundant
-                    while the Unfilled filter is active, so it's hidden there. */}
-                {active === "all" && unfilled > 0 && (
-                  <>
-                    {" · "}
-                    <span className="dx-count__bad">{unfilled} unfilled</span>
-                  </>
-                )}
-              </span>
-            </div>
-            <ColumnHead />
-            {list.map((m) => (
-              <TripRow key={m.id} mission={m} driver={contacts.get(m.id) ?? null} archived />
+          <section key={monthKey || "flat"} className="dx-sched">
+            {monthKey && (
+              <div className="dx-day" id={`day-${monthKey}`}>
+                <h2>{formatMonth(monthKey)}</h2>
+                <span className="dx-count">
+                  {list.length} trip{list.length === 1 ? "" : "s"} · {formatMoney(monthSpend)}
+                  {/* Only when it's non-zero — a good month stays quiet. Redundant
+                      while the Unfilled filter is active, so it's hidden there. */}
+                  {query.outcome === "all" && unfilled > 0 && (
+                    <>
+                      {" · "}
+                      <span className="dx-count__bad">{unfilled} unfilled</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            )}
+            <ColumnHead
+              sort={query.sort}
+              hrefs={{
+                date: `/dispatch/history${sortHref.date}`,
+                fare: `/dispatch/history${sortHref.fare}`,
+              }}
+            />
+            {list.map((r) => (
+              <TripRow
+                key={r.mission.id}
+                mission={r.mission}
+                driver={contacts.get(r.mission.id) ?? null}
+                archived
+                fare={r.fare}
+                farePending={!r.counted}
+                query={query.q}
+                matchedOn={matches.get(r.mission.id) ?? null}
+              />
             ))}
           </section>
         );
       })}
+
+      {openId && <ScrollToTrip missionId={openId} />}
     </>
   );
 }
