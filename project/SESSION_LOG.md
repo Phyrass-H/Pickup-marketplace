@@ -1208,3 +1208,92 @@ the row expanded; **reference + message persisted, and Fare 67,50 € · ceiling
 Sessions 1–33 (2026-06-16 → 2026-07-05) live in **`project/SESSION_LOG_ARCHIVE.md`** to keep this file — and
 session startup — light. Read the archive only if you need that deep history; `project/CHANGELOG.md` has the
 plain-language big picture.
+
+---
+
+## Session 52 — 2026-07-31 · § Q ruled on and parked · Dispatch History taken the rest of the way ([[d67]], [[d68]])
+
+### Part A — abandoned trips (§ Q): a founder conversation, no code
+
+The founder opened by challenging the premise: *"I am the only one here testing… in a real situation there will be
+people taking care of it — a business who creates a mission will follow up on it… and if a driver has it we did offer
+solution on both parties, copilote, agreed release, T-60."*
+
+Mostly right, and the useful part was naming **which** case the valves cover. Every escape valve built to date
+(copilote · agreed release · T-60 · Business cancel) answers **"this trip isn't going to happen"** — someone is
+unhappy, so someone acts. That case is genuinely closed. The open hole is the opposite: **the trip DID happen and
+nobody tapped the last button.** Driver drops the Guest, hotel is delighted, Driver moves on and never reopens the app.
+Nobody is unhappy, so nobody chases it — the service was fine, only the *record* is wrong, and the record is what pays
+the Driver and bills the Business. **That is the case that survives real users, because it has no complainer.**
+
+So the answer isn't a rule (time can never separate "drove and forgot" from "never turned up") but a **question**:
+a pinned card — **not a modal**, the founder agreed a popup trains people to tap ✕ without reading — on My Rides ~3h
+after the trip should have ended. The founder's own best question closed the design: *"what if the driver comes back a
+month later?"* A month later he doesn't remember either, so the question has a **48h shelf life** and then **flips to
+the Business**, who knew that same day whether their Guest reached the airport.
+
+The founder also proposed **geolocation auto-close**. Right instinct, blocked: Kavenue is a PWA and a browser only gets
+location while the app is on screen — no background arrival detection without a native app. And even then, **location
+may suggest, never decide**; location closing a trip is location *paying* someone (failure case: the Driver returns to
+Nice airport at 11am for his next job and the app closes and pays out yesterday's trip).
+
+**Founder's call: leave it.** All 8 rows are test artifacts, and the card only fires if a Driver opens the app, so the
+design needs push. Written up in full in BACKLOG § Q + [[d67]] so it is never re-derived. Q4 (reliability mark) stays
+open; Q5 dissolves; ⚑ the "No, the Guest never showed" branch will need its own route — the [[d47]]/[[d48]] no-show
+rules assume a courtesy-wait clock running on the spot and will not pass their guards three days later.
+
+### Part B — Dispatch History, § R phase 2 ([[d68]], deployed `0acdb68` → Vercel `success`)
+
+Founder: *"it is a professional tool, and they need accurate infos and easy to find a specific trip or mission by
+drivers name, or passenger or internal reference, or car… it need to be perfect and complete."*
+
+**D25 loop:** researched back-office/reservation-log patterns, then built a **live** preview at real width (a static
+harness on :4613 `<link>`-ing the real `app/globals.css`, with the founder's own addresses/refs/guests) — the search
+actually filtered, so the founder could type in it. Signed off with one change: **the search placeholder was being
+truncated**, so it became `Search trips…` with the covered fields shown under the box on focus.
+
+**New files**
+- `lib/history-filter.ts` — the ONE place a past trip is filtered, searched, sorted and priced. The page and the CSV
+  route both call `applyHistoryQuery`, which is what makes "Export CSV = exactly what's on screen" survive future
+  filters. Holds `fold()` (accent-blind compare), `foldWithMap()`/`highlightSegments()` (paint the ORIGINAL string from
+  offsets found in the FOLDED one — folding the whole string loses the mapping the moment a character isn't 1:1),
+  `matchRow()` (AND across terms, OR across fields, returns WHICH fields hit), `historyFare()` and `historyHref()`.
+- `components/history-filters.tsx` — the toolbar. Search debounced 300 ms into the URL via `router.replace`; native
+  `<select>` for Driver/class/sort (keyboard + SR correct for free, platform picker on a phone); Export is a plain `<a>`.
+- `components/date-cal.tsx` — the Earnings calendar, **extracted** and adopted unchanged. Gained one optional
+  `anchorDay` prop so it can open on a month while banding nothing.
+- `app/(dispatch)/dispatch/history/export/route.ts` — CSV.
+
+**Changed:** `history/page.tsx` (rewrite), `components/trip-row.tsx` (archive gains a date cell, a fare cell, the
+highlight and the match-reason line), `components/earnings-period.tsx` (imports the shared calendar), `lib/format.ts`
+(`formatArchiveDay`), `app/globals.css` (the 8-column archive grid + toolbar).
+
+**Two gaps the work exposed:** rows showed only a **time** while grouped by **month** (3 vs 19 July indistinguishable),
+and there was **no fare column at all**.
+
+**⚑ The accuracy call.** First cut counted every non-expired trip's `settledFare` into the spend total — which silently
+included the 8 § Q trips nobody ever closed, inflating the archive's spend by trips that may never have happened.
+`historyFare()` now returns `{fare, counted}`: an unclosed trip shows its agreed fare **greyed, "Not settled", excluded
+from row totals, month bands and the summary**, with its own CSV column.
+
+**⚑ Bug caught in review, not by the compiler.** The search box tracked "has the user typed" with a boolean ref that
+never reset — so after typing, **"Clear filters" could not clear the box**: the effect ignored the incoming empty
+`query.q` and re-pushed the stale text. Replaced with a `sent` ref holding the last value the box itself pushed;
+anything else arriving in `query.q` (Clear, Back, a pasted link) wins. Verified live.
+
+**CSV specifics:** `;` delimiter and French decimals (58,17) because the reader is Excel FR, where a comma is the
+decimal separator and a comma-delimited file lands entirely in column A; UTF-8 BOM (without it "Aéroport" arrives as
+"AÃ©roport"); a leading `=`/`+`/`-`/`@` is quote-prefixed so a stray reference can't execute as a formula.
+
+**Verified live** vs the real Supabase DB on `Le Grand Hôtel (demo)`, 28 past trips: accent search (`medecin` → matches
+and highlights "Médecin"), car search (`mercedes` → 10 rows, each with the `Car ·` reason line), the settled/unsettled
+money split (10 trips, only the 3 completed summing to 265,00 €), a two-tap range (1–6 Jul, band joins, calendar stays
+open with Done, results narrow to 1), search→Clear round trip, CSV output (delimiter, decimals, accents, sort, columns),
+narrow-viewport wrap + side-scroll, and **the Driver's Earnings picker re-checked at 430 px after the extraction** (no
+regression). `tsc --noEmit` clean · `next build` green (25 routes) · no console errors.
+
+**Left open, deliberately** (both recorded in § R): the **volume ceiling** — the page loads the whole archive in one
+query and filters in memory, which is exactly what lets the chip counts, the Driver dropdown and the class list be
+honest about the *whole* archive; correct at 28 trips, first thing to break at 5 000, at which point the filters move
+into SQL and the counts need their own aggregate query. And the **density toggle** — the row is already dense and
+nobody asked for it.
