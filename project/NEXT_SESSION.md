@@ -478,9 +478,18 @@ hotel back-office is a different user doing analysis, not a Driver checking a ph
 D25 preview loop applies. `settledFare()` already solves the maths, and it should adopt the **fixed** period control
 from B rather than the broken one.
 
-**★ Also queued by the founder 2026-07-31: Dispatch History, the rest of the way — BACKLOG § R.** Phase 1 (filters +
-counts) shipped in [[d63]]; § R lists search, a shared date range, sort, CSV export, per-Driver view, deep links, and
-the pagination note. **Build the date-range control ONCE** — B, § R and § S all want the same one.
+**★ NEXT SESSION STARTS HERE — § R, the founder's pick (deferred from S51 on context, 2026-07-31).**
+**Dispatch History, the rest of the way — BACKLOG § R.** Phase 1 (filters + counts) shipped in [[d63]]; § R lists
+search, a shared date range, sort, CSV export, per-Driver view, deep links, and the pagination note. **It is more than
+one session — open by asking the founder which rows matter most.** ⚑ **Build the date-range control ONCE**: the
+calendar in `components/earnings-period.tsx` + `lib/use-dismiss.ts` already do it ([[d64]]–[[d66]]); § R and § S adopt
+that, they do not grow their own.
+
+**Also open: § T — the Earnings lag, already measured, don't re-measure.** Production is **1.97 s cold / 0.34 s warm**;
+the 7 queries run in parallel and cost about one query's latency, so **the cause is a serverless cold start, not the
+query count** (Hobby plan — not fixable in code). The worthwhile fix is perceptual: the money total currently looks
+final while it's stale. See § T for the two cheap query trims and the caveat that gating the year-ago query means
+sequencing a round trip.
 
 **★ NEW — ABANDONED TRIPS have no ending at all (found 2026-07-31 while closing § P; [[d63]]). Full spec: BACKLOG § Q.**
 § P closed the *unfilled* hole. This is the other one: **8 past trips sit `confirmed`/`on_board`** — a Driver accepted
