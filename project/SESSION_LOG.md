@@ -1297,3 +1297,64 @@ query and filters in memory, which is exactly what lets the chip counts, the Dri
 honest about the *whole* archive; correct at 28 trips, first thing to break at 5 000, at which point the filters move
 into SQL and the counts need their own aggregate query. And the **density toggle** — the row is already dense and
 nobody asked for it.
+
+
+### Part C — the founder tested it, and three reports became ten fixes ([[d69]], deployed `8e1ca74` + `8b06038`)
+
+**Founder's three reports.** (1) *"Please remove 'any drivers' — can you imagine there is 300, how it would look
+like?"* (2) *"When writing it starts searching from the first letters which blocks me to keep typing, it removes what
+I wrote then the writing comes back… and a cross appears on top of the other cross already in the field."* (3) *"The
+calendar I can't select a specific week or month, can you use the same as the driver app you did?"* Then, after that
+shipped: *"the day picker behaviour is confusing in both dispatch and driver — when I pick the from date the layout
+changes, Done disappears, letters of the days week also; when I pick the to date the calendar displays today's date
+for a moment before going back to from–to."*
+
+**Every one of them was the same root shape: a control reading its own state back from something that lags.**
+
+- **The revert bug (mine, from Part B).** The search input mirrored `query.q` into local state so "Clear filters"
+  could empty it. `router.replace` runs in a transition, so between *pushed q=x* and *committed* there is a render
+  where the prop still holds the OLD q — the sync read that as external, wrote the stale value in (text vanishes),
+  then the new one (text returns). Once per keystroke. Local state is the sole owner now. Proved by typing
+  `croisette` one character at a time and recording every value the field held: strictly monotonic.
+- **The double cross.** `type="search"` draws the browser's own ✕ over `.dx-search__clear`. Now plain text (matching
+  the calendar's search box, which always was) plus a CSS guard so it can't recur.
+- **The layout jump.** The "Now pick the end date" prompt rendered at the TOP and Done was hidden mid-selection, so a
+  first tap pushed the grid **down 27px** and shrank the popover **18px** — the date numbers slid up into where the
+  weekday letters had been, which is precisely what the founder described. One fixed-height footer slot now holds
+  either the prompt or Done. Measured: height 440 / gridTop 340 / dowTop 321, identical across all three states, on
+  both screens.
+- **The "today" flash.** The two-tap state lived in each CALLER, cleared the instant the second tap landed, while the
+  new range only arrives on commit — one frame of OLD props. Moved into `DateCal` with an `optimistic` pair that is
+  drawn immediately and dropped when the props catch up. Frame-by-frame capture across the second tap: before, the
+  previous range reappeared at t=40ms; after, the correct band is there from the first frame. Deleted the duplicated
+  logic from both callers as a side effect.
+
+**Then a 4-lens / 29-agent adversarial review of the fixes (`Workflow`, ~1.96M subagent tokens): 8 confirmed, 8
+refuted.** Nearly all of the confirmed ones were the SAME lag-shape as the bug being reviewed:
+- **Tapping a month from "Any date" did nothing at all** — `period` is null until a filter exists; DateCal fell back
+  to `"month"` for rendering but `pickDay` pushed the raw null, so `historyHref` wrote no params. **Reproduced live
+  before fixing** (URL and label both unchanged after the tap). One `calPeriod` now feeds both sides.
+- **Three fast ‹ clicks stepped one month.** Steps now compute from the live anchor via `periodRange`: July → April.
+- **A debounced search reverted a sort changed within its 350 ms.** `push` merges patches onto a `live` ref of the
+  last intent, guarded by an `inflight` href so a slower earlier response can't overwrite a newer one. Verified:
+  `?q=croisette&p=month&d=2026-04-01&sort=high` — all three survive together.
+- **No unmount cleanup on the debounce** — leaving History mid-word fired `router.replace` back to it, with Back
+  already spent by the replace. Timer moved to a ref with an unmount cleanup.
+- **The empty state's "Clear filters" was a soft `<Link>`** — it emptied the URL and left the typed text in the box
+  next to every trip. Hard `<a>` now: the box owns its text, so only a remount can legitimately reset it.
+- `?p=day&d=2026-02-31` rolled over to **3 March** — shape-only regex replaced with earnings' own `parseDayParam`.
+- A query of just `^` or `¨` folds to nothing and **matched every row** with no highlight; it matches nothing now.
+- Switching Month → Day anchored on the period's first day rather than the day you were on.
+
+**Refuted and deliberately left alone (8)**, including: the export link lagging the visible rows (the rows are
+server-filtered from the same URL, so it can't); a stuck `driver=` param with no UI to clear it (nothing writes it,
+and Clear filters reaches it anyway); and two findings about files outside this change.
+
+**Verified:** `tsc` clean · `next build` green · both apps driven live against the real Supabase DB (Dispatch at
+1560px and 820px, Driver at 430px) · no console errors · popover never overflows the viewport. Deployed `8b06038`,
+Vercel `success`.
+
+**⚑ The pattern worth carrying forward.** In an App Router client component, `searchParams`-derived props are ALWAYS
+one navigation behind the user's last action. Anything that (a) mirrors them into local state, (b) merges a patch
+onto them, or (c) computes a "next" value from them will misbehave under fast input. Own the intent locally; let the
+URL catch up. This session produced five separate bugs of that one shape.
