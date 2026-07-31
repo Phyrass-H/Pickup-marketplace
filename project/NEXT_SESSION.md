@@ -453,6 +453,7 @@ the calendar and history can't lag behind the sweep. Verified live incl. a genui
   summary, a per-month failure count, and two distinct empty states. **Wording changed:** "Expired" → **"Unfilled"**
   (the ending) and the Schedule's live warning "Unfilled" → **"No Driver yet"** (still fixable) — they had read almost
   identically since S39 and nobody noticed, because the outcome had never rendered.
+  **→ Superseded/extended by [[d68]] (S52): History is now searchable, range-filterable, sortable and exportable.**
 
 **B. ✅ Driver EARNINGS picker — SHIPPED (S51, 2026-07-31, [[d64]]; NO migration; deployed `684ae82` → Vercel
 `success`).** One root cause behind both symptoms: the label drove a **hidden** `<input type="date">`
@@ -478,12 +479,38 @@ hotel back-office is a different user doing analysis, not a Driver checking a ph
 D25 preview loop applies. `settledFare()` already solves the maths, and it should adopt the **fixed** period control
 from B rather than the broken one.
 
-**★ NEXT SESSION STARTS HERE — § R, the founder's pick (deferred from S51 on context, 2026-07-31).**
-**Dispatch History, the rest of the way — BACKLOG § R.** Phase 1 (filters + counts) shipped in [[d63]]; § R lists
-search, a shared date range, sort, CSV export, per-Driver view, deep links, and the pagination note. **It is more than
-one session — open by asking the founder which rows matter most.** ⚑ **Build the date-range control ONCE**: the
-calendar in `components/earnings-period.tsx` + `lib/use-dismiss.ts` already do it ([[d64]]–[[d66]]); § R and § S adopt
-that, they do not grow their own.
+**§ R — ✅ SHIPPED (S52, 2026-07-31, [[d68]]; NO migration; deployed `0acdb68` → Vercel `success`).**
+**Dispatch History is a tool you search, not a list you scroll.** Founder: *"it is a professional tool… easy to find a
+specific trip by drivers name, or passenger or internal reference, or car… perfect and complete."*
+- **One search box** over Guest · Driver · reference · address · flight · car. Every term must hit somewhere;
+  **accent-folded** ("aeroport" finds "Aéroport" — the highlight maps folded offsets back to the original per
+  character, which is why it paints correctly); and when the hit lands somewhere with **no column** the row prints
+  `Car · Mercedes · Classe E · AB-123-CD`, so searching a plate never returns rows with no visible reason.
+- **Date range · Driver · class · sort · Export CSV.** The export re-runs the **same** `applyHistoryQuery` on the
+  server, so "exactly what's on screen" survives the next filter anyone adds. `;` + French decimals + BOM for Excel FR;
+  formula-injection escaped. Every filter is in the URL → a filtered archive is a shareable link, and `?open=<id>`
+  matches the Schedule.
+- **Two gaps closed:** rows showed only a **time** inside month bands (3 vs 19 July were indistinguishable), and there
+  was **no fare column at all**.
+- **⚑ The accuracy call:** a past trip a Driver never closed (§ Q) shows its agreed fare **greyed as "Not settled" and
+  excluded from every total** (row, month band, summary; its own CSV column). Counting it inflated a hotel's spend with
+  trips that may never have happened.
+- **⚑ The date-range control is now genuinely shared** — extracted from `earnings-period.tsx` to
+  **`components/date-cal.tsx`**; the Driver's Earnings was re-verified after the extraction. **§ S adopts THAT file.
+  Do not build a third.**
+- **⚑ Left open on purpose (in § R):** the **volume ceiling** — the page loads the whole archive in one query and
+  filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
+  Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
+
+**★ NEXT SESSION STARTS HERE — the founder picks. Nothing is pre-selected; open with these in 2–3 lines (rule #4).**
+The obvious candidates, in the order they'd help most:
+1. **§ S — Dispatch-side Earnings / spend** ("a real one, complete and pro"): the founder already asked for it, it
+   **wants charts and desktop-class controls** (unlike the Driver's, [[d59]]), `settledFare()` already solves the maths,
+   and it should adopt `components/date-cal.tsx` + the § R filter vocabulary rather than inventing a second one.
+   Research best-in-class first; D25 preview loop applies. **This is the natural follow-on from § R.**
+2. **§ T — the Earnings lag** (below): one file, real restructure, well understood.
+3. **The two quick ones** (§ 1 and § 2 in the worst-first list below): the Business default vehicle class that's saved
+   and never read (~1h), and the 7 French strings in the English app (~30 min).
 
 **Also open: § T — the Earnings lag, already measured, don't re-measure and don't trim the queries.** Production is
 **1.97 s cold / 0.34 s warm**; the 7 queries run in parallel and cost about one query's latency (146 ms for one alone),
