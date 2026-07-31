@@ -37,6 +37,13 @@ const MONTH_FMT = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
   timeZone: "UTC",
 });
+/**
+ * "Jul" — the cells of the Month grid. Sliced to 3, because en-GB's short month
+ * gives "Sept" while every other month is three letters, and one wider label in a
+ * 3-across grid reads as a mistake.
+ */
+const MON_FMT = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
+const monthCell = (y: number, i: number) => MON_FMT.format(Date.UTC(y, i, 1)).slice(0, 3);
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
@@ -228,28 +235,66 @@ function Cal({
   onPickDay: (iso: string) => void;
   onPickPreset: (from: string, to: string) => void;
 }) {
+  // The grid matches what the period is actually asking for. Picking a DAY to mean
+  // "July" (Month) or to mean "2026" (Year) made the calendar collect information
+  // it then threw away, and left the arrows stepping a month when reaching 2024
+  // needed thirty taps. Day / Week / Range keep the day grid — there a day really
+  // is the unit, or sits inside the month on screen.
+  const grid: "day" | "month" | "year" =
+    period === "month" ? "month" : period === "year" ? "year" : "day";
+
+  const curY = Number(today.slice(0, 4));
+  const selY = Number(fromDay.slice(0, 4));
+
   const [view, setView] = useState({
-    y: Number(fromDay.slice(0, 4)),
+    y: selY,
     m: Number(fromDay.slice(5, 7)),
+    // Blocks of 12 years anchored to END at the current year, not to a calendar
+    // decade: a Driver's history runs backwards from today, so the default block
+    // is the one with the data in it and no cell is wasted on the future.
+    block: Math.floor((selY - (curY - 11)) / 12),
   });
 
-  const cells = useMemo(() => {
+  const blockStart = curY - 11 + view.block * 12;
+
+  function shift(delta: number) {
+    if (grid === "day") {
+      const d = new Date(Date.UTC(view.y, view.m - 1 + delta, 1));
+      setView((v) => ({ ...v, y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 }));
+    } else if (grid === "month") {
+      setView((v) => ({ ...v, y: v.y + delta }));
+    } else {
+      setView((v) => ({ ...v, block: v.block + delta }));
+    }
+  }
+
+  const dayCells = useMemo(() => {
+    if (grid !== "day") return [];
     const lead = firstDowMon(view.y, view.m);
     const total = daysInMonth(view.y, view.m);
     const out: (string | null)[] = [];
     for (let i = 0; i < lead; i++) out.push(null);
     for (let d = 1; d <= total; d++) out.push(`${view.y}-${pad(view.m)}-${pad(d)}`);
     return out;
-  }, [view]);
+  }, [grid, view.y, view.m]);
 
-  function shift(delta: number) {
-    const d = new Date(Date.UTC(view.y, view.m - 1 + delta, 1));
-    setView({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 });
-  }
+  const title =
+    grid === "day"
+      ? MONTH_FMT.format(Date.UTC(view.y, view.m - 1, 1))
+      : grid === "month"
+        ? String(view.y)
+        : `${blockStart} – ${blockStart + 11}`;
 
-  const viewIso = `${view.y}-${pad(view.m)}`;
-  // Nothing to earn in the future, so those days aren't offered.
-  const atCurrentMonth = viewIso >= today.slice(0, 7);
+  // Nothing to earn in the future, so it is never offered — and once the view
+  // reaches the present there is nothing further to step to.
+  const atPresent =
+    grid === "day"
+      ? `${view.y}-${pad(view.m)}` >= today.slice(0, 7)
+      : grid === "month"
+        ? view.y >= curY
+        : blockStart + 11 >= curY;
+
+  const navNoun = grid === "day" ? "month" : grid === "month" ? "year" : "years";
 
   return (
     <div className="ecal" role="dialog" aria-label="Choose a date">
@@ -273,29 +318,76 @@ function Cal({
       )}
 
       <div className="ecal__head">
-        <button type="button" className="ecal__nav" onClick={() => shift(-1)} aria-label="Previous month">
+        <button
+          type="button"
+          className="ecal__nav"
+          onClick={() => shift(-1)}
+          aria-label={`Previous ${navNoun}`}
+        >
           <ChevronLeft size={17} aria-hidden="true" />
         </button>
-        <span className="ecal__title">{MONTH_FMT.format(Date.UTC(view.y, view.m - 1, 1))}</span>
+        <span className="ecal__title">{title}</span>
         <button
           type="button"
           className="ecal__nav"
           onClick={() => shift(1)}
-          aria-label="Next month"
-          disabled={atCurrentMonth}
+          aria-label={`Next ${navNoun}`}
+          disabled={atPresent}
         >
           <ChevronRight size={17} aria-hidden="true" />
         </button>
       </div>
 
-      <div className="ecal__dow" aria-hidden="true">
-        {DOW.map((d, i) => (
-          <span key={i}>{d}</span>
-        ))}
-      </div>
+      {grid === "month" && (
+        <div className="ecal__blocks">
+          {Array.from({ length: 12 }, (_, i) => {
+            const key = `${view.y}-${pad(i + 1)}`;
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`ecal__block${key === fromDay.slice(0, 7) ? " is-sel" : ""}`}
+                disabled={key > today.slice(0, 7)}
+                // The 1st is only a carrier: periodRange widens it to the month.
+                onClick={() => onPickDay(`${key}-01`)}
+              >
+                {monthCell(view.y, i)}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
+      {grid === "year" && (
+        <div className="ecal__blocks">
+          {Array.from({ length: 12 }, (_, i) => {
+            const y = blockStart + i;
+            return (
+              <button
+                key={y}
+                type="button"
+                className={`ecal__block${y === selY ? " is-sel" : ""}`}
+                disabled={y > curY}
+                onClick={() => onPickDay(`${y}-01-01`)}
+              >
+                {y}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {grid === "day" && (
+        <div className="ecal__dow" aria-hidden="true">
+          {DOW.map((d, i) => (
+            <span key={i}>{d}</span>
+          ))}
+        </div>
+      )}
+
+      {grid === "day" && (
       <div className="ecal__grid">
-        {cells.map((iso, i) =>
+        {dayCells.map((iso, i) =>
           iso === null ? (
             <span key={`e${i}`} />
           ) : (
@@ -323,14 +415,13 @@ function Cal({
           ),
         )}
       </div>
+      )}
 
-      {/* Only where the granularity actually widens the tap. In Day mode "pick any
-          day — you'll get its day" is a tautology, and in Range the header hint
-          ("Now pick the end date") is doing the work. */}
-      {period !== "range" && period !== "day" && (
-        <p className="ecal__hint ecal__hint--foot">
-          Pick any day — you’ll get its {period}.
-        </p>
+      {/* Week is now the only mode where a tap widens into something else — Month
+          and Year pick their own unit directly, and in Day the sentence was a
+          tautology. Range is covered by the "now pick the end date" hint above. */}
+      {period === "week" && (
+        <p className="ecal__hint ecal__hint--foot">Pick any day — you’ll get its week.</p>
       )}
     </div>
   );
