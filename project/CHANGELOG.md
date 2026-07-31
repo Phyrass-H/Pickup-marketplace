@@ -25,6 +25,10 @@
   and hoping. On the **Year** tab it shows twelve years and the arrows step **twelve years**, so getting back to 2024
   is one tap instead of about thirty. Day, Week and Range still show days, because there a day is genuinely what you're
   choosing.
+- **A finished range now stays on screen.** Picking the second date used to close the calendar instantly, so you never
+  saw the range you'd just built. It stays open now — the days join up, the label rewrites to "6 July – 22 July · 17
+  days", and the totals load behind while you look. **Done** closes it, and because the results were already loading,
+  that tap costs no waiting. The four shortcuts still close on the spot — one tap, nothing to check.
 - **The comparison still works for your own range.** Pick 46 days and it compares against the previous 46 days — not
   against a calendar month, which would have been a meaningless comparison dressed up as a real one.
 

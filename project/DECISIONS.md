@@ -1227,3 +1227,25 @@ en-GB renders September as "Sept" and one wider label in a 3-across grid reads a
 **⚑ The lesson to carry:** the founder proposed a control tweak; the real problem was that the control was asking the
 wrong question. Before implementing a requested adjustment, check whether the thing being adjusted should exist in
 that form at all — and look for the same shape elsewhere in the app.
+
+### D66 — A completed date range stays on screen (2026-07-31, founder)
+Founder, testing [[d64]]/[[d65]]: *"when I pick the date 'from' and then the date 'to' the calendar disappears… I would
+like to first have a visual, but I understand why it disappears."* They diagnosed it correctly and asked whether it was
+worth changing. It was: **the one moment a range picker most needs to confirm itself is the moment it was destroying
+its own evidence.**
+
+**What changed.** The second tap still commits the range — the URL and the totals update immediately — but the calendar
+no longer closes. The band joins up, the label rewrites, and a **Done** button closes it. Because navigation already
+happened on the tap, that confirming tap costs **no waiting**; by the time it's pressed the numbers are there. It also
+gives a mis-tap on a 34px day cell somewhere to be caught before leaving the screen.
+
+**Why not the alternatives.** A timed auto-close (~½ s) needs no extra tap but commits a mis-tap regardless and is
+either too slow or too fast depending on the person. Staying open with no button is the cleanest to look at but says
+nothing about the selection being finished — which is the whole complaint.
+
+**Presets deliberately keep closing instantly** (founder's call): one tap, unambiguous intent, nothing to confirm.
+Making a shortcut cost a second tap defeats the shortcut. A knowing inconsistency, not an oversight.
+
+**Two details that make it correct rather than merely open:** Done is **hidden mid-selection**, so it can't be pressed
+over a half-built range; and clearing `pendingFrom` on completion is what makes the next tap **start a fresh range**
+instead of extending the finished one.
