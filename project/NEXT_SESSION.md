@@ -454,10 +454,18 @@ the calendar and history can't lag behind the sweep. Verified live incl. a genui
   (the ending) and the Schedule's live warning "Unfilled" → **"No Driver yet"** (still fixable) — they had read almost
   identically since S39 and nobody noticed, because the outcome had never rendered.
 
-**B. Driver EARNINGS — no date range, and the picker is broken.** Founder: no way to ask "what did I earn between these
-two dates" (only Day/Week/Month/Year with an anchor), **the calendar won't close on desktop**, and **it doesn't respond
-at all on phone**. `components/earnings-period.tsx` uses `showPicker()` with a focus fallback — start there. The bug is
-the urgent half; the range is a feature.
+**B. ✅ Driver EARNINGS picker — SHIPPED (S51, 2026-07-31, [[d64]]; NO migration; deployed `684ae82` → Vercel
+`success`).** One root cause behind both symptoms: the label drove a **hidden** `<input type="date">`
+(`pointer-events: none`) via `showPicker()` — dead on phone, undismissable on desktop, and unable to express a range
+at all. Replaced with the app's own calendar (opens on tap, closes on outside-tap/Escape, same on both), plus a 5th
+period **Range** (two taps, `?p=range&from=&to=`, arrows removed) and presets last 7 / last 30 / this month / all
+time. The selection band now makes the "granularity decides what a tapped day means" rule visible for the first time.
+- **⚑ REUSE THIS for § R and § S.** `lib/use-dismiss.ts` (pointerdown, not mousedown) + the calendar in
+  `components/earnings-period.tsx` are the controls Dispatch History and Dispatch Earnings should adopt — the founder
+  asked for a date range in all three. **Do not build a second one.**
+- **⚑ Follow-up worth doing:** `components/date-time-picker.tsx` (the mission form) still has its own inline
+  `mousedown`-only dismiss hook — the same class of mobile bug, unfixed. Swapping it to `useDismiss` is small, but it
+  touches the money-critical mission form, so it wants its own pass rather than riding along in a bug fix.
 
 **C. Dispatch-side EARNINGS / spend — "a real one, complete and pro" (founder, 2026-07-31).** Full spec now in
 **BACKLOG § S**. ⚑ It deliberately **diverges** from the Driver's Earnings: the founder wants **charts, comparison

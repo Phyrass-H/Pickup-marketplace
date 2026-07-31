@@ -1145,3 +1145,50 @@ and the whole O7 fee machinery attached. Nothing decided; it is the next thing t
 built to match. **⚑ And a lesson about explaining:** the founder asked twice for the four changes in plainer words, and
 the second ask was fair — the first attempt led with mechanism ("server-side links", "per-month outcome count") instead
 of with what they'd see. **Describe the screen, not the implementation.**
+
+### D64 — The Earnings period picker: stop hiding a native control, and pick your own dates (2026-07-31)
+Item **B** of the founder's 2026-07-31 list: *"no way to ask what did I earn between these two dates, the calendar
+won't close on desktop, and it doesn't respond at all on phone."*
+
+**⚑ One root cause behind both symptoms, and it was a design decision.** `earnings-period.tsx` rendered a real
+`<input type="date">`, hid it (`opacity: 0`, a 1px box, **`pointer-events: none`**) and drove it with `showPicker()`.
+On a phone `showPicker()` on a non-interactive input does nothing — the tap was dead. On a desktop the native calendar
+anchors to an invisible 1px box the user cannot click away — "won't close". Probed live: it also throws
+`NotAllowedError` without a user gesture, so an uncaught throw in the handler was a second silent failure mode. **The
+CSS comment even admitted the hack** (*"Real and focusable (showPicker() refuses a display:none input), just
+invisible"*) — the workaround was documented, which made it look considered rather than fragile.
+
+**Why the fix is a replacement, not a patch.** `<input type="date">` **cannot express a range**, which is the feature
+actually being asked for. Patching the picker would have delivered half the ask and then needed replacing anyway. So
+the native control is gone and the app uses its own calendar.
+
+**Not shared with the mission form's picker — yet, deliberately.** `components/date-time-picker.tsx` has the same
+month-grid shape, but it is future-only and single-date; this is past-only and picks a span. Unifying them is a fair
+follow-up; doing it *inside a bug fix* would have meant editing the money-critical mission form. What WAS extracted is
+`lib/use-dismiss.ts` — and it listens on **`pointerdown`**, where the mission form's inline hook listens on
+`mousedown` only. That difference is the real mobile fix, and the mission form should adopt it.
+
+**Range design.** Two taps in either order; `?p=range&from=&to=`; the **‹ › arrows are removed, not disabled** —
+stepping an arbitrary span is meaningless, and a disabled control invites a click that will never work. Presets: last
+7 / last 30 / this month / **all time**, the last hidden for a Driver with no history (an "all time" over nothing is a
+lie). Switching to Range **seeds from the period already on screen**, so the numbers don't reset to nothing.
+
+**⚑ A side effect worth more than the feature:** the band makes the pre-existing rule *"the granularity decides what a
+tapped day means"* **visible** for the first time — pick Month, the whole month lights up. That rule shipped in
+[[d59]] and lived only in a code comment.
+
+**⚑ Comparisons needed a new shape.** A custom span has no anchor, so `Range` gained `prevCustom`/`lastYearCustom`,
+and "the period before" is the **same-length** span ending the day before it starts. Comparing 46 days against a
+calendar month would be a lie wearing a real comparison's clothes. Copy borrows a neutral `"period"` noun, because
+"the range before" and "same range last year" are nonsense.
+
+**⚑ `parseDayParam` rejects 31 February.** `Date` rolls it over to early March **silently** — a hand-edited URL would
+have shifted a Driver's chosen span by days with no error anywhere. Reversed `from`/`to` is normalised rather than
+rendered as zero earnings; an incomplete range URL falls back to the week.
+
+**⚑ Reusable, and § R + § S are waiting for it.** The founder queued a date range for Dispatch History and Dispatch
+Earnings the same day. This is the control those should adopt — build once.
+
+**⚑ Measurement trap, logged so the next session doesn't repeat it:** reading the DOM synchronously right after
+`.click()` shows the state *before* React re-renders. That made the popover look broken twice; a check deferred by
+120 ms showed it working. **Assert on React UI only after a tick.**

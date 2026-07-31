@@ -5,6 +5,26 @@
 
 ---
 
+## 31 July 2026 (later) — The Earnings date picker works, and you can pick your own dates
+- **The broken calendar is fixed, and the reason it broke is worth knowing.** The date button wasn't opening a
+  calendar of ours — it was secretly holding your phone's *own* date control, made invisible, and trying to poke it
+  open from the outside. On a phone that does nothing at all, which is why tapping did nothing. On a computer it
+  opened a calendar attached to an invisible one-pixel spot, which is why it wouldn't close. That whole trick is gone.
+- **You now get Kavenue's own calendar** — the same one the mission form uses. It opens on tap, closes when you tap
+  away or press Escape, and behaves the same on a phone as on a computer.
+- **New: "Range".** A fifth button next to Day / Week / Month / Year. Tap the start date, tap the end date, done —
+  "what did I earn between these two dates", which wasn't possible before. The ‹ › arrows disappear in this mode,
+  because stepping forward from a made-up span doesn't mean anything.
+- **Four shortcuts** inside it: last 7 days, last 30 days, this month, and **all time** — every trip you've ever done,
+  in one tap.
+- **You can finally SEE what Day/Week/Month/Year do.** Pick Month and the whole month lights up on the calendar. That
+  rule always existed, it was just invisible.
+- **Future dates are greyed out.** There's nothing to have earned tomorrow.
+- **The comparison still works for your own range.** Pick 46 days and it compares against the previous 46 days — not
+  against a calendar month, which would have been a meaningless comparison dressed up as a real one.
+
+---
+
 ## 31 July 2026 — Trips that nobody took now die properly
 - **You found this one by using the app**: the Pool was full of trips from weeks ago. Every single pooled trip — all 23
   — had a pickup time in the past, the oldest by 44 days. Nothing in the product had ever closed one.

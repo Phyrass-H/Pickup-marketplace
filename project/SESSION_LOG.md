@@ -53,6 +53,43 @@ feature has been found two-thirds built and unreachable — `reclaim_mission` af
 **Noticed, not touched:** the Dispatch day headers render French (*"Samedi 11 Juillet"*) inside the English app — same
 family as the French date picker already queued as item 2.
 
+### Part C — the Earnings period picker + a custom range (item B of the founder's list; [[d64]]; deployed `684ae82`)
+
+**Root cause, and it was a design decision not a slip.** `earnings-period.tsx` rendered a real `<input type="date">`,
+hid it (`opacity: 0`, 1px, **`pointer-events: none`**) and drove it with `showPicker()`. Both reported symptoms fall
+straight out of that: on a phone `showPicker()` on a non-interactive input does nothing, so the label was dead; on a
+desktop the native calendar anchors to an invisible 1px box the user can't click away — "won't close". Probed live:
+`showPicker()` also throws `NotAllowedError` without a gesture, so an uncaught throw in the handler was a second way
+to fail silently. **And it was a dead end anyway** — `<input type="date">` cannot express a range, which was the other
+half of the ask. So the native control is gone entirely rather than patched.
+
+**Built.** The app's own calendar, deliberately the same shape as `components/date-time-picker.tsx` but NOT shared
+code: that one is future-only + single-date, this one past-only + span. Merging them is a fair follow-up; doing it
+inside a bug fix would have meant editing the money-critical mission form. New `lib/use-dismiss.ts` listens on
+**`pointerdown`** (the old inline hook in the mission picker used `mousedown` only) — that is the actual mobile fix,
+and the mission form should adopt it too. A 5th period `range`: two taps in either order, `?p=range&from=&to=`, with
+the **‹ › arrows removed** rather than disabled. Presets: last 7 / last 30 / this month / **all time** (hidden when
+the Driver has no history — `loadFirstDay()`). The band finally makes the pre-existing "granularity decides what a
+tapped day means" rule *visible*: Month lights the whole month.
+
+**⚑ Comparisons needed a new shape.** A custom span can't be expressed as an anchor, so `Range` gained
+`prevCustom`/`lastYearCustom`. "The period before" is the **same-length** span ending the day before it starts —
+comparing 46 days against a calendar month would be a lie wearing a real comparison's clothes. Copy borrows a neutral
+`"period"` noun for range, since "the range before" and "same range last year" are nonsense.
+
+**⚑ `parseDayParam` rejects 31 February.** `new Date(Date.UTC(y, 1, 31))` rolls over to 2/3 March silently, which
+would have shifted a Driver's chosen span by days with no error anywhere. Reversed `from`/`to` is normalised rather
+than rendered as zero earnings; an incomplete range URL falls back to the week.
+
+**Verified live** on both viewports: tap opens · outside-tap and Escape close · two-tap range → "5 July – 20 July ·
+16 days" · All time → "17 June – 31 July · 45 days", 265,00 €, 3 trips, and the comparison chip reads correctly with
+the neutral noun · reversed URL normalised · `from=2026-02-31` falls back to Week with the arrows back. `tsc` +
+`next build` green.
+
+**⚑ Measurement trap worth remembering:** reading the DOM synchronously right after `.click()` shows the *old* state —
+React hasn't re-rendered yet. I twice concluded the popover "wasn't opening" when it was; the third check, deferred by
+120ms, showed it open. **Assert on React UI only after a tick.**
+
 ### Part B — Dispatch History, done properly (same day, [[d62]] cont.; deployed `73d7102`)
 
 **Why it followed.** The founder's next question was whether the Business keeps a trace of an unfilled trip. It does —
