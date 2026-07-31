@@ -47,6 +47,21 @@ row washes, all four pill states, the badge counting 2 → 1, the button absent 
 warning, and 5 guards including a Driver being **denied** a direct PATCH of `checked_in_at`. DB restored to its
 34-mission baseline, 0 leftover rows. Deployed `c6f13a0` + `aa18778` → Vercel `success`.
 
+**⚑ Founder testing, 2026-07-31 — three findings, all recorded, none built:**
+1. **The Pool is entirely stale.** 23 of 23 pooled missions have a pickup in the past (oldest 44 days); nothing has ever
+   been marked `expired`. The status exists and `missionTone` renders it, but no code writes it and the Pool query has
+   no time floor. **`accept_mission` has no time check either**, so a Driver can accept a dead trip and create a live
+   priced obligation. Spec + the 5 open decisions → **BACKLOG § P**. The guard needs no scheduler; the sweep shares
+   D61's.
+2. **Driver Earnings:** no date-range filter, the calendar won't close on desktop, and it doesn't respond on mobile
+   (`components/earnings-period.tsx`, `showPicker()` + focus fallback).
+3. **Dispatch-side earnings/spend** wanted — mirror [[d59]] (BACKLOG § F).
+
+**⚑ And a confirmation that matters:** the founder tested the "default vehicle class is ignored" item and reported
+Business *was* selected. It is a **coincidence** — `service-class-fields.tsx:41` falls back to a hardcoded `"business"`
+with no draft, and to `""` for the body (hence Sedan unselected). The setting is genuinely never read. Worth knowing
+before someone "verifies" this is already working.
+
 **Also this session:** the domain + email migration to `kavenue.fr` ([[d60]]) — logged separately under Session 49 —
 and two scoping conversations that produced **BACKLOG § O** (trust & safety) and the parked **Guest touchpoint** idea.
 

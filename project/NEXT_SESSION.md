@@ -434,9 +434,32 @@ wash that [[d55]] had made unreachable.
 - **⚑ Test-harness trap:** `?as=driver` → `demo.driver@pickup.local` → the **Marc Dubois** driver row, NOT the row whose
   `email` column says `s46.driver@pickup.local`. Match on `driver.auth_user_id`, never on `driver.email`.
 
-**REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, worst first):
+**REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, + the founder's own testing 2026-07-31).
+**★ START HERE — the two the founder found by using the app, both worse than clutter:**
+
+**A. ⚠️ EXPIRED TRIPS — no protocol exists at all.** Measured 2026-07-31: **23 of 23 pooled missions have a pickup in
+the past**, the oldest **44 days** ago; **zero** missions have ever been marked `expired`. The status exists and
+`missionTone` already renders it, but nothing writes it, and the Pool query has no time floor. **The sharp edge:**
+`accept_mission` does not check the time either, so a Driver can accept a six-week-dead trip and create a live priced
+obligation. **The guard (a `pickup_at` floor in the Pool query + a time check in the RPC) needs no scheduler and should
+ship first.** The sweep that flips `pooled → expired` needs a timer — same scheduler as D61's T-180 reminder, so build
+it once. Full spec + the 5 founder decisions: **BACKLOG § P**.
+
+**B. Driver EARNINGS — no date range, and the picker is broken.** Founder: no way to ask "what did I earn between these
+two dates" (only Day/Week/Month/Year with an anchor), **the calendar won't close on desktop**, and **it doesn't respond
+at all on phone**. `components/earnings-period.tsx` uses `showPicker()` with a focus fallback — start there. The bug is
+the urgent half; the range is a feature.
+
+**C. Dispatch-side EARNINGS / spend** — the founder wants the money view for the Business too. Mirror the Driver's
+Earnings ([[d59]]); `settledFare()` already solves the maths. Logged in BACKLOG § F.
+
+Then, worst first:
 1. **A Business's default vehicle class is saved and never read.** `default_vehicle_category` saves in Settings →
-   Booking defaults; `/dispatch/new` ignores it. The UI makes a promise it doesn't keep. ~1h.
+   Booking defaults; `/dispatch/new` ignores it. **⚑ Confirmed by the founder 2026-07-31 and it is a trap:** the form
+   *looks* right because `service-class-fields.tsx:41` falls back to a hardcoded `"business"` — that is a coincidence,
+   not the setting being read. The body type falls back to `""`, which is why Sedan is unselected. **Also decide:** the
+   setting is ONE `default_vehicle_category` while the form has TWO controls (tier + body), so wiring it needs to say
+   which it fills. ~1h.
 2. **The date picker is in French inside an English form** — 7 strings in `components/date-time-picker.tsx`
    ("Choisir une date", "Mois précédent", "Heure exacte"…), on the most-worked screen. ~30 min.
 3. **Only the latest edit shows.** `mission_info_change` records every edit to a posted trip; the schedule renders one

@@ -80,6 +80,13 @@
 - 🔨/⚙️ **Admin role + dashboard** (`admin` role exists in schema): verify drivers,
   oversee missions, run payouts.
 
+**Dispatch-side EARNINGS / spend (founder, 2026-07-31) 🔨** — the founder wants the money view on the Business side too:
+what a hotel has spent over a period, per trip, and presumably by month for their own accounting. The Driver's Earnings
+screen ([[d59]]) is the model to follow — same period filter (Day/Week/Month/Year), no charts, comparison against the
+previous period — and `settledFare()` already gives the correct frozen fare, so the maths is solved. **Open:** does it
+include cancellation fees and waiting charges (it should — a hotel's real cost), and does it need an export for their
+accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue is not the seller of the transport.
+
 ## F2. Internal tooling & observability stack  ⚙️/🔨 (Kavenue back-office — future pillar)
 > Founder request (2026-06-17): the Kavenue-internal layer for **dev / marketing /
 > dispute-support** — so when a user calls about a bug we can see what happened, and
@@ -529,3 +536,45 @@ always allow a lift.
   `legal_name` and can file a Kbis, but nowhere to record approval). A Business that behaves badly has even less of a
   lever than a Driver.
 - **Nothing records a warning** short of a block — the middle outcome of an investigation currently has no home.
+
+---
+
+## P. Expired / unfilled trips — the missing protocol (founder, 2026-07-31) 🔨❓
+
+**Found by the founder in the live Pool:** *"trips on the pool exist even though the trips are outdated by weeks!"*
+
+**Measured 2026-07-31:** **23 of 23 pooled missions have a pickup time in the past.** Oldest is **44 days** ago. The
+Pool is, right now, entirely stale. **Zero** missions have ever been marked `expired`.
+
+**Why.** The `expired` status exists in the enum, and `missionTone` already renders it ("Expired · Was not filled in
+time"). **Nothing ever writes it** — there is no job, no trigger, no server-side sweep. The Pool query is simply
+`status = 'pooled'` with no lower bound on `pickup_at` ([`app/(app)/pool/page.tsx:82`]). So an unfilled trip stays in
+the Pool for ever.
+
+**⚑ The sharp edge:** `accept_mission` checks `status = 'pooled'` and **does not check the time**. A Driver can accept
+a trip whose pickup was six weeks ago — creating a live, confirmed, priced obligation out of a dead booking. That is a
+money-and-trust bug, not just clutter.
+
+### ❓ Founder decisions needed before building
+1. **When does a trip expire?** At `pickup_at`? A grace period after (15 min? an hour)? The PDP climb ends at the
+   ceiling long before pickup, so a trip sitting unfilled at T-0 is already a failure.
+2. **Where does it go?** Out of the Pool, clearly — but does it land in the **Dispatch History** as a closed record,
+   stay on the schedule, or get its own "didn't happen" list?
+3. **How is it labelled to the Business?** `missionTone` already has the copy ("Expired · Was not filled in time"), so
+   this may be free.
+4. **Is the Business told, and can they re-post it?** A one-tap "post it again" is cheap and probably what a hotel
+   wants when the trip is tomorrow rather than yesterday.
+5. **Does it count anywhere?** An unfilled trip is the single most important marketplace-health number (fill rate) —
+   see the metrics note in the § F2 back-office.
+
+### How it would be built (no third-party anything)
+- **The guard is the urgent half and needs no scheduler:** add a `pickup_at` floor to the Pool query *and* a time check
+  inside `accept_mission`. That alone stops a Driver accepting a dead trip, today.
+- **The sweep** (actually flipping `pooled → expired`) wants something that runs on a timer. Options: Vercel Cron
+  (⚠️ **Hobby plan caps cron at once per day** — confirm the plan), or a lazy sweep on read, or a Postgres trigger.
+  Deciding this overlaps with the T-180 reminder job (D61), which needs the same scheduler — **build the scheduler once.**
+- ⚠️ Whatever writes `expired` must respect the **`pickup_at` freeze trigger** (D48) and must not disturb the O7
+  cancellation/release paths.
+
+**Note for the founder:** the 23 stale rows are demo data, so this reads worse in the beta DB than it would in
+production — but the missing guard is real either way.
