@@ -266,7 +266,9 @@ const MISSION_STATUS_LABELS: Record<MissionStatus, string> = {
   on_board: "On board",
   completed: "Completed",
   cancelled: "Cancelled",
-  expired: "Expired",
+  // "Unfilled" is the ending; the Schedule's live warning is "No Driver yet".
+  // A Driver never owns an expired trip, so this is belt-and-braces.
+  expired: "Unfilled",
 };
 
 export function missionStatusLabel(s: MissionStatus): string {

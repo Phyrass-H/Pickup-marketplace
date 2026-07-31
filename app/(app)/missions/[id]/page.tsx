@@ -370,7 +370,7 @@ export default async function MissionDetailPage({
         <AcceptButton missionId={mission.id} />
       ) : expired ? (
         <div className="notice warn">
-          This mission expired — it wasn’t filled before its pickup time.
+          Too late — this mission’s pickup time has passed and no Driver took it.
         </div>
       ) : (
         <div className="notice warn">

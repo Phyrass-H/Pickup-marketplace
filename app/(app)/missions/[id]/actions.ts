@@ -31,7 +31,7 @@ function friendlyAcceptError(raw: string): string {
   // § P — checked before "no longer available" so the Driver gets the real
   // reason: this one isn't a race they lost, it's a trip that died unfilled.
   if (m.includes("expired"))
-    return "This mission expired — its pickup time has passed.";
+    return "Too late — this mission’s pickup time has passed.";
   if (m.includes("no longer available"))
     return "Sorry — this mission was just taken by another Driver.";
   if (m.includes("slot conflict"))

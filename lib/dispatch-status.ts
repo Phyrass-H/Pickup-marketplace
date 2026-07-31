@@ -75,8 +75,8 @@ export function isExpired(
  */
 const expiredTone: MissionTone = {
   tone: "danger",
-  label: "Expired",
-  hint: "Was not filled in time.",
+  label: "Unfilled",
+  hint: "No Driver accepted it before the pickup time.",
   needsAttention: true,
   wash: true,
 };
@@ -152,10 +152,13 @@ export function missionTone(
       // bug the founder reported. Doing it here covers the schedule, the calendar,
       // the history and the expanded row in one place.
       if (pickup <= now.getTime()) return expiredTone;
+      // "No Driver yet" (still fixable) vs "Unfilled" (over) — founder's wording.
+      // These used to BOTH read "Unfilled", one as a warning and one as an
+      // outcome, which is the one pair of labels a Dispatcher must never confuse.
       if (within3h)
         return {
           tone: "warn",
-          label: "Unfilled",
+          label: "No Driver yet",
           hint: "Pickup is soon and no Driver has accepted yet.",
           needsAttention: true,
         };

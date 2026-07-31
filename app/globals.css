@@ -969,6 +969,18 @@ textarea::placeholder {
 }
 .dx-day h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--accent); text-transform: capitalize; }
 .dx-count { font-size: 12px; color: var(--text-muted); }
+/* The month's failure count, shown only when it's above zero (§ P): a good
+   month reads exactly as it always did. Not bold — the colour is the signal. */
+.dx-count__bad { color: var(--tone-danger-fg); }
+
+/* Dispatch History header: the one-line summary + the outcome filter chips.
+   The chips themselves reuse the Driver Past .rfilter/.rchip pair rather than
+   growing a second set — same control, same behaviour, both sides. */
+.dxh-head { margin: 0 0 16px; }
+.dxh-sum { margin: 0; font-size: 13px; color: var(--text-muted); }
+.dxh-sum__bad { color: var(--tone-danger-fg); }
+.rchip__n { color: var(--text-faint); }
+.rchip--on .rchip__n { color: var(--accent); opacity: 0.65; }
 .dx-fold {
   background: none; border: none; color: var(--text-muted); font-size: 13px;
   cursor: pointer; font-family: inherit; margin: 14px 0 6px; padding: 0;
