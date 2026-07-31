@@ -485,11 +485,12 @@ one session — open by asking the founder which rows matter most.** ⚑ **Build
 calendar in `components/earnings-period.tsx` + `lib/use-dismiss.ts` already do it ([[d64]]–[[d66]]); § R and § S adopt
 that, they do not grow their own.
 
-**Also open: § T — the Earnings lag, already measured, don't re-measure.** Production is **1.97 s cold / 0.34 s warm**;
-the 7 queries run in parallel and cost about one query's latency, so **the cause is a serverless cold start, not the
-query count** (Hobby plan — not fixable in code). The worthwhile fix is perceptual: the money total currently looks
-final while it's stale. See § T for the two cheap query trims and the caveat that gating the year-ago query means
-sequencing a round trip.
+**Also open: § T — the Earnings lag, already measured, don't re-measure and don't trim the queries.** Production is
+**1.97 s cold / 0.34 s warm**; the 7 queries run in parallel and cost about one query's latency (146 ms for one alone),
+so **the cause is a serverless cold start, not the query count** — Hobby plan, not fixable in code. Query trimming is
+**explicitly rejected in § T** with the numbers. The one fix worth making is perceptual: wrap the loads in a
+`<Suspense key={period…}>` with a skeleton, so the total shows as loading instead of sitting there looking final while
+it's stale. One file, but a real restructure — give it a proper slot, not the tail of a session.
 
 **★ NEW — ABANDONED TRIPS have no ending at all (found 2026-07-31 while closing § P; [[d63]]). Full spec: BACKLOG § Q.**
 § P closed the *unfilled* hole. This is the other one: **8 past trips sit `confirmed`/`on_board`** — a Driver accepted

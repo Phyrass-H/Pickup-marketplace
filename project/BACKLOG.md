@@ -703,14 +703,22 @@ first**; the fixed control is what this screen should adopt.
 cost roughly one query's latency. The first tap after an idle period pays ~2 s; every tap after is ~350 ms. Cold start
 is inherent to the Vercel Hobby plan — not fixable in code.
 
-### Worth doing (cheap, real, but modest)
-- **The year-ago query always returns nothing and always runs.** The oldest mission is 2026-06-16, so every `lastYear`
-  span is empty by definition, and the line renders only when non-zero ([[d59]]). Skip it when `firstDay` postdates the
-  span. ⚠️ It's inside the same `Promise.all` as `loadFirstDay`, so gating it means sequencing — trade one round trip
-  for two queries; measure before assuming that's a win.
-- **`loadFirstDay` repeats on every tap** for a value that changes about once a month.
-- `export const dynamic = "force-dynamic"` means nothing is cached at all. Correct for the Pool; arguably too strict for
-  an archive of completed trips.
+### ❌ DON'T trim the queries — the measurement above already rules it out
+An earlier draft of this section proposed skipping the always-empty year-ago query and caching `loadFirstDay`. **Both
+are near-worthless and the table above says why:** seven queries in parallel cost 213–490 ms while ONE `loadPeriod`
+costs 146 ms. They are concurrent, not queued, so removing two of seven saves roughly nothing — and gating the year-ago
+query on `firstDay` would mean *sequencing* a round trip, plausibly making it slower. Recorded as a rejected option so
+nobody re-derives it. (`force-dynamic` is likewise correct here; caching an archive is a different, later question.)
+
+### ✅ The fix worth making — the wait should be honest, not shorter
+`startTransition` already keeps the old UI up and `.eper.is-busy` dims the period row, but **the money total sits there
+looking final while it is stale.** 350 ms of a visibly-loading number reads as deliberate; 350 ms of a confidently wrong
+number reads as lag — which is exactly what the founder reported.
+
+Shape: move the four loads out of `EarningsPage` into an async child, and render it inside
+`<Suspense key={period+anchor+from+to} fallback={<skeleton/>}>` so the boundary re-suspends on every period change. The
+skeleton wants to mirror `.etotal`/`.etotal__sub`/`.ecmp`, and `pool/loading.tsx` ([[d54]]) is the house precedent for
+what a Kavenue skeleton looks like. Contained to one file, but a real restructure — **not an end-of-session job.**
 
 ### The bigger perceived win — make the wait honest, not shorter
 `startTransition` already keeps the old UI up, and `.eper.is-busy` dims the period row — but **the money total sits
