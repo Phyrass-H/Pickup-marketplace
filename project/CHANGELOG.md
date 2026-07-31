@@ -20,6 +20,11 @@
 - **You can finally SEE what Day/Week/Month/Year do.** Pick Month and the whole month lights up on the calendar. That
   rule always existed, it was just invisible.
 - **Future dates are greyed out.** There's nothing to have earned tomorrow.
+- **The calendar now shows what you're actually picking.** Your idea, taken one step further. On the **Month** tab it
+  shows the twelve months of a year and the arrows step a **year** — you tap "Jun" instead of tapping some day in June
+  and hoping. On the **Year** tab it shows twelve years and the arrows step **twelve years**, so getting back to 2024
+  is one tap instead of about thirty. Day, Week and Range still show days, because there a day is genuinely what you're
+  choosing.
 - **The comparison still works for your own range.** Pick 46 days and it compares against the previous 46 days — not
   against a calendar month, which would have been a meaningless comparison dressed up as a real one.
 

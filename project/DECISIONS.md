@@ -1201,3 +1201,29 @@ Earnings the same day. This is the control those should adopt — build once.
 **⚑ Measurement trap, logged so the next session doesn't repeat it:** reading the DOM synchronously right after
 `.click()` shows the state *before* React re-renders. That made the popover look broken twice; a check deferred by
 120 ms showed it working. **Assert on React UI only after a tick.**
+
+### D65 — The Earnings calendar shows the unit it's picking (2026-07-31, founder)
+Founder, right after [[d64]] shipped: *"in calendar it would be great to move forward or backward based on the period,
+month by month on month tab and so on for the others, should we?"*
+
+**⚑ The arrows were the symptom, not the defect.** The calendar always rendered a DAY grid whatever the period, so in
+Month mode you tapped the 14th to mean "July" and in Year mode you tapped any day at all to mean "2026" — the control
+was **collecting precision the model immediately discarded**, and month-stepping meant reaching 2024 took about thirty
+taps on ‹. Match the grid to the unit and the founder's request falls out for free.
+
+- **Month** → a 12-month grid; arrows step a **year**.
+- **Year** → a 12-year grid; arrows step **twelve years**.
+- **Day / Week / Range** → unchanged. There a day genuinely *is* the unit, or sits inside the month already on screen.
+
+**Year blocks end at the current year (2015–2026), not on a calendar decade.** A Driver's history runs backwards from
+today, so the default block is the one holding the data and not a single cell is spent on unpickable future years.
+This is a deliberate deviation from the approved mockup, which showed 2020–2031 with four dead cells.
+
+**Copy followed the structure.** The nav labels now say previous/next month · year · years, and the "pick any day —
+you'll get its X" footnote shows for **Week only**: it was a tautology in Day mode ("you'll get its day") and is now
+simply false in Month and Year, where you pick the unit itself. Month cells are sliced to three characters because
+en-GB renders September as "Sept" and one wider label in a 3-across grid reads as a bug.
+
+**⚑ The lesson to carry:** the founder proposed a control tweak; the real problem was that the control was asking the
+wrong question. Before implementing a requested adjustment, check whether the thing being adjusted should exist in
+that form at all — and look for the same shape elsewhere in the app.

@@ -90,6 +90,21 @@ the neutral noun · reversed URL normalised · `from=2026-02-31` falls back to W
 React hasn't re-rendered yet. I twice concluded the popover "wasn't opening" when it was; the third check, deferred by
 120ms, showed it open. **Assert on React UI only after a tick.**
 
+**Part C2 — the grid matches the period (founder's follow-up, deployed `df54770`).** The founder asked for the arrows
+to step by period instead of always by month. **The arrows were the symptom:** the calendar always rendered DAYS, so
+Month mode had you tap the 14th to mean "July" and Year mode had you tap any day at all to mean "2026" — it collected
+information it discarded, and reaching 2024 took ~30 taps on ‹. Fixing the grid fixed the arrows for free. Month → a
+12-month grid stepping a year; Year → a 12-year grid stepping 12 years; Day/Week/Range keep days and month steps,
+because there the day is the unit or genuinely sits in the month on screen. **Year blocks END at the current year**
+(2015–2026) rather than aligning to a calendar decade — a Driver's history runs backwards from today, so the default
+block holds the data and no cell is spent on the future. The "pick any day — you'll get its X" footnote now shows for
+**Week only**: it was a tautology in Day and is false in Month/Year. Month cells sliced to 3 chars (en-GB renders
+"Sept" while every other month is 3 letters). Verified live across all five modes.
+
+**⚑ The generalisable bit:** the founder asked for a control tweak; the actual defect was that the control was asking
+the wrong question. Worth checking for the same shape elsewhere — a widget collecting precision the model then throws
+away.
+
 ### Part B — Dispatch History, done properly (same day, [[d62]] cont.; deployed `73d7102`)
 
 **Why it followed.** The founder's next question was whether the Business keeps a trace of an unfilled trip. It does —
