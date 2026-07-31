@@ -594,3 +594,92 @@ money-and-trust bug, not just clutter.
 production — but the missing guard is real either way.
 
 </details>
+
+---
+
+## Q. Abandoned trips — a Driver took it and never closed it ❓🔨 (found 2026-07-31 closing § P, [[d63]])
+
+**⚠️ NEEDS A FOUNDER RULING BEFORE ANY CODE. It is a money question, not a cleanup question.**
+
+**Measured 2026-07-31:** **8 missions have a pickup in the past and no ending** — 7 `confirmed`, 1 `on_board` (that one
+for **36 days**). A Driver accepted each of them and never advanced it to `completed`. Nothing expires them, nothing
+settles them, and they fall into no History bucket — which is exactly why the § P filter chips deliberately don't sum
+to All (3 + 18 + 0 ≠ 28).
+
+**Why this is worse than the unfilled case § P just closed.** An unfilled trip owes nobody anything — no Driver ever
+held it. Each of these has **a fare, an assigned Driver, and the whole O7 fee machinery** ([[d45]], [[d48]]) still
+treating it as live. As far as the system is concerned that `on_board` trip is *still driving*.
+
+### ❓ The questions
+1. **The same status means two opposite things.** A past `confirmed` trip might be one the Driver **drove and forgot to
+   tap Complete on** (a data-entry failure — they should be paid) or one they **never turned up for** (a Driver no-show
+   — the Business should not be charged, and it is a reliability event). The status cannot tell them apart, so **the
+   rule probably can't be time alone.**
+2. **Does anything auto-close?** And at what distance — 24h past pickup? A week? Or does it wait for a human (the § F2
+   back-office) precisely because money hangs on it?
+3. **Who pays?** Driver paid / Business charged / neither / held pending review.
+4. **Does it mark the Driver?** `driver.reliability_marks` exists and is written silently on a driver cancel; the
+   founder has already parked whether a Driver sees their own.
+5. **`on_board` specifically** — the trip demonstrably started. Does that alone justify paying it out?
+
+### Signals we already have (and their limits)
+- **Check-in ([[d61]])** is the only "will you be there" signal, and it is **shown, never enforced**.
+- **`status_event`** timestamps every advance, so "how far did this trip actually get" is answerable per trip.
+- ⚠️ There is **no push**, so "the Driver didn't respond" cannot yet be distinguished from "the Driver wasn't asked" —
+  the same blocker that keeps the T-60 take-back parked ([[d61]]).
+
+### If/when it is built
+Mirrors § P's shape: a sweep with a guard. But **§ P's sweep could be lazy and unattended precisely because expiring an
+unfilled trip moves no money.** This one does, so it likely wants the real scheduler *and* a human review step — i.e.
+it lands with the back-office (§ F2) or the notifications phase, not before.
+
+---
+
+## R. Dispatch History — the full feature set 🔨 (founder, 2026-07-31)
+
+Phase 1 shipped 2026-07-31 ([[d63]]): outcome filter chips (All / Completed / Unfilled / Cancelled) with counts, a
+one-line summary, per-month failure counts, two empty states. The founder wants it taken the rest of the way.
+
+**Candidates (needs a founder pass to prioritise — this list is deliberately longer than one session):**
+- **Search** — by Guest name, reference, address, Driver. The Calendar already has a search that matches the assigned
+  Driver's name (S18); reuse that vocabulary rather than inventing a second one.
+- **A date range** — "everything between these two dates", the same ask as the Driver's Earnings (§ B of the current
+  worklist). **Build the range control once and share it** across History and both Earnings screens.
+- **Sort** — newest/oldest, and by fare.
+- **Export** (CSV) — a hotel's accountant is the real user here; pairs with the § S spend view. ⚠️ Agent framing in any
+  document the Business hands on: Kavenue is not the seller of the transport.
+- **Per-Driver view** — "show me every trip Marc did for us".
+- **Columns/density** — the dense grid is fixed today; consider a compact/comfortable toggle.
+- **Deep links** — `/dispatch/history?open=<id>` to match the Schedule's existing `?open=`/`?day=` (S33).
+- **Pagination / virtualisation** — not needed at 34 missions; the whole archive is loaded in one query today, and
+  that is the first thing to break at real volume. Note it before a hotel has 5 000 trips.
+
+---
+
+## S. Dispatch EARNINGS / spend — "a real one, complete and pro" 🔨 (founder, 2026-07-31)
+
+The Business-side money view. Supersedes the short note in § F.
+
+**⚑ The one place it deliberately DIVERGES from the Driver's Earnings ([[d59]]): the founder wants CHARTS here.** The
+Driver's screen has none — an explicit founder call ("no charts"), because a Driver wants to know what they made, on a
+phone. A hotel's back-office is a different user on a bigger screen doing analysis, so "pro graphic", comparison tools
+and desktop-class controls are the ask. **Do not treat the two screens as needing to match.**
+
+**Already solved, reuse it:** `settledFare()` freezes the fare at `accepted_at` ([[d59]]), so the maths is correct and
+already proven on both sides. The period-filter concept (Day/Week/Month/Year + step + jump) exists in
+`components/earnings-period.tsx` — but see § B of the current worklist, **its picker is broken and is being fixed
+first**; the fixed control is what this screen should adopt.
+
+**Scope to design (D25 preview loop applies — this is a big UI job, mock it before building):**
+- **Total spend** for the period + what it's made of (trip fares · waiting charges · cancellation fees · no-shows).
+- **Comparison tools** — previous period, and same-period-last-year once there is a year of data (the Driver's screen
+  turns that line on by itself once it's non-zero; do the same, don't render a zero).
+- **Charts** — spend over time, and probably a breakdown by category. Research the best-in-class first (the founder's
+  ask): hotel/travel back-offices, Stripe, Qonto, Pennylane, Booking's partner dashboards.
+- **Breakdowns worth having:** by month, by vehicle class, by route/zone, by Driver, by Dispatcher (who booked it), and
+  **fill rate** — the § P number that currently has no home.
+- **Export** for the accountant (shares with § R).
+- ⚠️ **Agent/intermediary framing throughout** (Doc 01): Kavenue takes a service fee, it does not sell the transport.
+  Watch the copy on anything that looks like an invoice.
+- ⚠️ **Amounts settle MANUAL in beta.** Every figure is what the model says is owed, not what has been paid — the
+  screen must not imply a payment ran.

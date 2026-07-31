@@ -459,18 +459,26 @@ two dates" (only Day/Week/Month/Year with an anchor), **the calendar won't close
 at all on phone**. `components/earnings-period.tsx` uses `showPicker()` with a focus fallback — start there. The bug is
 the urgent half; the range is a feature.
 
-**C. Dispatch-side EARNINGS / spend** — the founder wants the money view for the Business too. Mirror the Driver's
-Earnings ([[d59]]); `settledFare()` already solves the maths. Logged in BACKLOG § F.
+**C. Dispatch-side EARNINGS / spend — "a real one, complete and pro" (founder, 2026-07-31).** Full spec now in
+**BACKLOG § S**. ⚑ It deliberately **diverges** from the Driver's Earnings: the founder wants **charts, comparison
+tools and desktop-class controls** here, where the Driver's screen has none by their own earlier call ([[d59]]) — a
+hotel back-office is a different user doing analysis, not a Driver checking a phone. Research best-in-class first;
+D25 preview loop applies. `settledFare()` already solves the maths, and it should adopt the **fixed** period control
+from B rather than the broken one.
 
-**★ NEW — ABANDONED TRIPS have no ending at all (found 2026-07-31 while closing § P; [[d63]]).** § P closed the
-*unfilled* hole. This is the other one: **8 past trips sit `confirmed`/`on_board`** — a Driver accepted them and never
-closed them, one `on_board` for **36 days**. Nothing expires them, nothing settles them, and they fall into no History
-bucket (which is why the filter chips deliberately don't sum to All). **Worse than the unfilled case:** an unfilled trip
-owes nobody anything, but each of these has a fare, a Driver and the whole O7 fee machinery attached. **It needs a
-founder ruling before any code** — does an abandoned trip pay the Driver, charge the Business, or neither, and at what
-point does "didn't tap Complete" become "didn't happen"? Note a `confirmed` trip that was genuinely driven is a *data
-entry* failure, while one never started is a *no-show by the Driver* — the same status covers both, so the rule probably
-can't be time alone. Related: [[d61]]'s check-in is the only signal we have, and it isn't enforced.
+**★ Also queued by the founder 2026-07-31: Dispatch History, the rest of the way — BACKLOG § R.** Phase 1 (filters +
+counts) shipped in [[d63]]; § R lists search, a shared date range, sort, CSV export, per-Driver view, deep links, and
+the pagination note. **Build the date-range control ONCE** — B, § R and § S all want the same one.
+
+**★ NEW — ABANDONED TRIPS have no ending at all (found 2026-07-31 while closing § P; [[d63]]). Full spec: BACKLOG § Q.**
+§ P closed the *unfilled* hole. This is the other one: **8 past trips sit `confirmed`/`on_board`** — a Driver accepted
+them and never closed them, one `on_board` for **36 days**. Nothing expires them, nothing settles them, and they fall
+into no History bucket (which is why the filter chips deliberately don't sum to All). **Worse than the unfilled case:**
+an unfilled trip owes nobody anything, but each of these has a fare, a Driver and the whole O7 fee machinery attached.
+**⚠️ NEEDS A FOUNDER RULING BEFORE ANY CODE** — the five questions are in § Q. The hard one: a past `confirmed` trip is
+either a Driver who **drove and forgot to tap Complete** (pay them) or one who **never turned up** (a Driver no-show).
+Same status, opposite meanings, so **the rule probably can't be time alone**. Related: [[d61]]'s check-in is the only
+signal we have and it isn't enforced, and without push we still can't tell "didn't respond" from "wasn't asked".
 
 Then, worst first:
 1. **A Business's default vehicle class is saved and never read.** `default_vehicle_category` saves in Settings →
