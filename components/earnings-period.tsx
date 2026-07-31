@@ -126,9 +126,17 @@ export function EarningsPeriod({
       return;
     }
     // Second tap completes it, in whichever order they were tapped.
+    //
+    // Deliberately does NOT close (founder): the calendar used to vanish on this
+    // tap, so you never saw the range you'd just built. It stays open with the
+    // band joined up and the label above rewritten, and the results load behind
+    // meanwhile — so the confirming tap on Done costs no waiting. It also gives a
+    // mis-tap on a small day cell somewhere to be noticed before you leave.
+    // Clearing pendingFrom is what makes the NEXT tap start a fresh range rather
+    // than extend this one.
     const [a, b] = pendingFrom <= iso ? [pendingFrom, iso] : [iso, pendingFrom];
     goRange(a, b);
-    close();
+    setPendingFrom(null);
   }
 
   const presets = useMemo(
@@ -205,10 +213,13 @@ export function EarningsPeriod({
             today={today}
             presets={isRange ? presets : null}
             onPickDay={pickDay}
+            // A shortcut is one tap with unambiguous intent — nothing to confirm,
+            // so it closes straight away. Only the hand-built two-tap range waits.
             onPickPreset={(f, t) => {
               goRange(f, t);
               close();
             }}
+            onDone={close}
           />
         )}
       </div>
@@ -225,6 +236,7 @@ function Cal({
   presets,
   onPickDay,
   onPickPreset,
+  onDone,
 }: {
   period: Period;
   fromDay: string;
@@ -234,6 +246,7 @@ function Cal({
   presets: readonly { key: string; label: string; from: string; to: string }[] | null;
   onPickDay: (iso: string) => void;
   onPickPreset: (from: string, to: string) => void;
+  onDone: () => void;
 }) {
   // The grid matches what the period is actually asking for. Picking a DAY to mean
   // "July" (Month) or to mean "2026" (Year) made the calendar collect information
@@ -422,6 +435,15 @@ function Cal({
           tautology. Range is covered by the "now pick the end date" hint above. */}
       {period === "week" && (
         <p className="ecal__hint ecal__hint--foot">Pick any day — you’ll get its week.</p>
+      )}
+
+      {/* Range only, and only once both ends are set: the explicit way out, now
+          that completing a range no longer closes the calendar by itself. Hidden
+          mid-selection so it can't be tapped over a half-built range. */}
+      {period === "range" && !pendingFrom && (
+        <button type="button" className="ecal__done" onClick={onDone}>
+          Done
+        </button>
       )}
     </div>
   );
