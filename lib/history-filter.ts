@@ -9,6 +9,7 @@ import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
 import { parsePassengers, passengerName } from "@/lib/passengers";
 import { serviceClassLabel } from "@/lib/format";
+import { isPeriod, parseAnchor, periodRange, todayAnchor, type Period } from "@/lib/earnings";
 
 export const OUTCOMES = ["all", "completed", "unfilled", "cancelled"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
@@ -50,12 +51,60 @@ export interface HistoryRow {
 export interface HistoryQuery {
   outcome: Outcome;
   q: string;
-  /** Inclusive Paris day keys (YYYY-MM-DD). Both null = no range applied. */
+  /**
+   * The date filter, expressed exactly like the Driver's Earnings ([[d64]]):
+   * a granularity plus an anchor day, or a hand-picked span. `null` = any date,
+   * which is History's default and has no equivalent on the Earnings screen
+   * (that one always shows *some* period).
+   */
+  period: Period | null;
+  /** Anchor day for day/week/month/year. Null when period is null or "range". */
+  anchor: string | null;
+  /**
+   * Inclusive Paris day keys — DERIVED from period+anchor (or typed directly for
+   * a range). This is what the filter actually compares against, so the page and
+   * the CSV can never disagree about what "July" means.
+   */
   from: string | null;
   to: string | null;
+  /**
+   * ⚑ No UI: the founder had the Driver dropdown removed in S52 ("can you imagine
+   * there is 300, how would it look"), and searching a Driver's name already does
+   * the job. Kept as a URL param so "every trip this Driver did" stays one link
+   * away when a row-level entry point for it is worth adding.
+   */
   driverId: string | null;
   category: VehicleCategory | null;
   sort: Sort;
+}
+
+/** The human label + step anchors for whatever date filter is applied. */
+export interface PeriodView {
+  label: string;
+  prev: string;
+  next: string;
+  isCurrent: boolean;
+  fromDay: string;
+  toDay: string;
+}
+
+/** Null when no date filter is applied — the caller shows "Any date". */
+export function periodView(q: HistoryQuery, now: Date = new Date()): PeriodView | null {
+  if (!q.period) return null;
+  const r = periodRange(
+    q.period,
+    parseAnchor(q.anchor ?? undefined),
+    now,
+    q.period === "range" && q.from ? { from: q.from, to: q.to ?? q.from } : null,
+  );
+  return {
+    label: r.label,
+    prev: r.prev,
+    next: r.next,
+    isCurrent: r.isCurrent,
+    fromDay: r.fromDay,
+    toDay: r.toDay,
+  };
 }
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,29 +119,60 @@ export function parseHistoryQuery(sp: Record<string, string | string[] | undefin
     return v && DAY_RE.test(v) ? v : null;
   };
 
-  let from = day("from");
-  let to = day("to");
-  // A backwards range would silently match nothing, which reads as "you have no
-  // history" rather than "these dates are the wrong way round". Swap instead.
-  if (from && to && from > to) [from, to] = [to, from];
+  const pRaw = one("p") ?? undefined;
+  const period: Period | null = isPeriod(pRaw) ? pRaw : null;
 
-  const outcome = OUTCOMES.find((o) => o === one("filter")) ?? "all";
-  const sort = SORTS.find((s) => s === one("sort")) ?? "recent";
+  let from: string | null = null;
+  let to: string | null = null;
+  let anchor: string | null = null;
 
+  if (period === "range") {
+    from = day("from");
+    to = day("to");
+    // A backwards range would silently match nothing, which reads as "you have no
+    // history" rather than "these dates are the wrong way round". Swap instead.
+    if (from && to && from > to) [from, to] = [to, from];
+    // "p=range" with no dates is not a filter; fall back to showing everything
+    // rather than an empty archive.
+    if (!from && !to) {
+      return base(one, { period: null, anchor: null, from: null, to: null });
+    }
+    if (!to) to = from;
+    if (!from) from = to;
+  } else if (period) {
+    const a = day("d");
+    anchor = a ?? isoOf(todayAnchor());
+    // The granularity decides the span: "d=2026-07-13" under Month means July,
+    // under Week means the 13th's week. Same rule the Earnings calendar makes
+    // visible ([[d65]]) — derived here so the page and the CSV can't disagree.
+    const r = periodRange(period, parseAnchor(anchor));
+    from = r.fromDay;
+    to = r.toDay;
+  }
+
+  return base(one, { period, anchor, from, to });
+}
+
+const isoOf = (a: { y: number; m: number; d: number }) =>
+  `${a.y}-${String(a.m).padStart(2, "0")}-${String(a.d).padStart(2, "0")}`;
+
+function base(
+  one: (k: string) => string | null,
+  dates: Pick<HistoryQuery, "period" | "anchor" | "from" | "to">,
+): HistoryQuery {
   return {
-    outcome,
+    outcome: OUTCOMES.find((o) => o === one("filter")) ?? "all",
     q: one("q") ?? "",
-    from,
-    to,
+    ...dates,
     driverId: one("driver"),
     category: (one("cat") as VehicleCategory | null) ?? null,
-    sort,
+    sort: SORTS.find((s) => s === one("sort")) ?? "recent",
   };
 }
 
 /** Whether anything narrows the archive right now (drives "Clear filters"). */
 export function isFiltered(q: HistoryQuery): boolean {
-  return Boolean(q.q || q.from || q.to || q.driverId || q.category || q.outcome !== "all");
+  return Boolean(q.q || q.period || q.driverId || q.category || q.outcome !== "all");
 }
 
 /** Rebuild a query string, dropping empties so a plain view has a clean URL. */
@@ -101,8 +181,17 @@ export function historyHref(q: HistoryQuery, patch: Partial<HistoryQuery> = {}):
   const p = new URLSearchParams();
   if (m.outcome !== "all") p.set("filter", m.outcome);
   if (m.q) p.set("q", m.q);
-  if (m.from) p.set("from", m.from);
-  if (m.to) p.set("to", m.to);
+  // Only the SOURCE of the date filter is written; from/to for the four
+  // granularities are derived on read, so a link can never carry a "July" that
+  // spans the wrong days.
+  if (m.period === "range") {
+    p.set("p", "range");
+    if (m.from) p.set("from", m.from);
+    if (m.to) p.set("to", m.to);
+  } else if (m.period) {
+    p.set("p", m.period);
+    if (m.anchor) p.set("d", m.anchor);
+  }
   if (m.driverId) p.set("driver", m.driverId);
   if (m.category) p.set("cat", m.category);
   if (m.sort !== "recent") p.set("sort", m.sort);

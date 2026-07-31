@@ -5,7 +5,7 @@ import { getAppContext } from "@/lib/app-context";
 import { categoryLabel, formatMoney, formatMonth } from "@/lib/format";
 import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { TripRow, type DriverContact } from "@/components/trip-row";
-import { HistoryFilters, type DriverOption } from "@/components/history-filters";
+import { HistoryFilters } from "@/components/history-filters";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
 import {
   applyHistoryQuery,
@@ -14,6 +14,7 @@ import {
   isFiltered,
   OUTCOMES,
   parseHistoryQuery,
+  periodView,
   type HistoryRow,
   type Outcome,
   type Sort,
@@ -106,12 +107,10 @@ export default async function DispatchHistory({
   const missions: MissionRow[] = all ?? [];
 
   // Driver + car for EVERY past trip, not just the ones on screen: the search
-  // matches on a Driver's name and on a plate, and the Driver dropdown has to
-  // list everyone who ever drove for this Business — both are impossible if the
-  // lookup only covers rows that already survived the filter.
+  // matches on a Driver's name and on a plate, which is impossible if the lookup
+  // only covers rows that already survived the filter.
   const contacts = new Map<string, DriverContact>();
   const driverIdOf = new Map<string, string>();
-  const driverOptions = new Map<string, DriverOption>();
   const assigned = missions.filter((m) => m.driver_id);
   if (assigned.length > 0) {
     const admin = createAdminClient();
@@ -128,7 +127,6 @@ export default async function DispatchHistory({
       const name = `${d.first_name} ${d.last_name}`;
       contacts.set(m.id, { name, phone: d.phone, vehicle: vehByDriver.get(d.id) ?? null });
       driverIdOf.set(m.id, d.id);
-      driverOptions.set(d.id, { id: d.id, name });
     }
   }
 
@@ -151,7 +149,6 @@ export default async function DispatchHistory({
     .map((key) => ({ key: key as VehicleCategory, label: categoryLabel(key) }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const drivers = [...driverOptions.values()].sort((a, b) => a.name.localeCompare(b.name));
   const oldest = missions.length > 0 ? missions[missions.length - 1] : null;
   const firstDay = oldest ? parisDayKey(oldest.pickup_at) : null;
   const today = parisDayKey(new Date());
@@ -180,7 +177,7 @@ export default async function DispatchHistory({
         <div className="dxh-head">
           <HistoryFilters
             query={query}
-            drivers={drivers}
+            view={periodView(query)}
             categories={categories}
             today={today}
             firstDay={firstDay}

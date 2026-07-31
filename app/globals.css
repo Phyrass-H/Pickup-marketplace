@@ -986,7 +986,6 @@ textarea::placeholder {
    Every control writes to the URL and nothing else, so a filtered archive is a
    link — and the CSV is the same query re-run on the server. */
 .dxh-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0 0; }
-.dxh-tools.is-busy { opacity: 0.6; }
 .dxh-search { position: relative; max-width: 380px; flex: 1 1 260px; }
 .dxh-spacer { flex: 1 1 auto; }
 
@@ -1013,12 +1012,59 @@ textarea::placeholder {
 .dxh-btn--ghost { border-color: transparent; color: var(--text-muted); }
 .dxh-btn--ghost:hover { color: var(--text); background: var(--surface-2); }
 .dxh-btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
+.dxh-btn.is-busy { opacity: 0.5; }
 
-/* Anchor for the shared calendar. .ecal spans its parent by default (right for
-   the Driver's full-width block); here it's a toolbar button, so it gets a real
-   width and is pinned left — and flipped right when it would run off the edge. */
+/* ---- The date filter: the Driver's Earnings control, in a toolbar.
+   ‹ label › in the bar; the Day/Week/Month/Year/Range segmented control lives
+   INSIDE the popover so the bar stays one button wide. */
 .dxh-pop { position: relative; }
-.dxh-pop .ecal { right: auto; width: 292px; }
+.dxh-date {
+  display: inline-flex; align-items: center; height: 36px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+  background: var(--surface); overflow: hidden;
+}
+.dxh-date.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.dxh-date__lab {
+  display: inline-flex; align-items: center; gap: 7px; height: 100%; padding: 0 12px;
+  border: none; background: none; color: var(--text); font-size: 13px;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+}
+.dxh-date__lab svg { color: var(--text-muted); flex: none; }
+.dxh-date.is-on .dxh-date__lab { color: var(--accent); }
+.dxh-date.is-on .dxh-date__lab svg { color: var(--accent); }
+.dxh-date__lab:hover { background: var(--surface-2); }
+.dxh-date.is-on .dxh-date__lab:hover { background: var(--blue-100); }
+.dxh-date__arw {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 100%; border: none; background: none;
+  color: var(--text-muted); cursor: pointer; flex: none;
+}
+.dxh-date__arw:hover { background: var(--surface-2); color: var(--text); }
+.dxh-date__arw:disabled { opacity: 0.3; cursor: default; background: none; }
+.dxh-date__lab:focus-visible, .dxh-date__arw:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* The popover body. .ecal spans its parent by default (right for the Driver's
+   full-width block); here it's a toolbar button, so the wrapper sets the width
+   and the calendar sits inside it in normal flow. */
+.dxh-cal {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; width: 300px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px; box-shadow: var(--shadow-pop, 0 8px 24px rgba(16,24,40,.12));
+}
+.dxh-cal .ecal {
+  position: static; width: auto; border: none; padding: 0;
+  box-shadow: none; border-radius: 0; background: none;
+}
+.dxh-cal .seg { margin-bottom: 9px; }
+/* History's default is "everything" — the Earnings screen has no equivalent, so
+   there has to be an explicit way back to it. */
+.dxh-anydate {
+  display: block; width: 100%; margin: 0 0 9px; padding: 7px 0;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-md);
+  background: none; color: var(--text-muted); font-size: 12.5px;
+  font-family: inherit; cursor: pointer;
+}
+.dxh-anydate:hover { color: var(--text); background: var(--surface-2); }
 .dxh-sel { display: inline-flex; }
 .dxh-sel select {
   height: 36px; padding: 0 28px 0 12px; font-size: 13px; font-family: inherit;
@@ -1085,6 +1131,7 @@ textarea::placeholder {
   .dx-colhead--arch, .dx-trip--arch > summary { min-width: 700px; }
   .dxh-search { max-width: none; }
   .dxh-scope { display: none; }
+  .dxh-cal { left: auto; right: 0; }
 }
 .rchip--on .rchip__n { color: var(--accent); opacity: 0.65; }
 .dx-fold {
@@ -1288,6 +1335,12 @@ textarea::placeholder {
 .dx-search { position: relative; display: flex; align-items: center; flex: 1; min-width: 200px; max-width: 320px; }
 .dx-search > svg { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--text-faint); pointer-events: none; }
 .dx-search input { width: 100%; padding: 9px 32px 9px 34px; font-size: 14px; }
+/* Belt-and-braces against TWO clear buttons. An <input type="search"> draws the
+   browser's own ✕ in the same corner as .dx-search__clear — the "cross on top of
+   the other cross" (founder, S52). The inputs are plain text now; this makes the
+   mistake unrepeatable if one ever goes back to type="search". */
+.dx-search input::-webkit-search-cancel-button,
+.dx-search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
 .dx-search__clear {
   position: absolute; right: 8px; width: 22px; height: 22px; display: inline-flex;
   align-items: center; justify-content: center; border: none; background: none;
