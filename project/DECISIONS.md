@@ -1249,3 +1249,41 @@ Making a shortcut cost a second tap defeats the shortcut. A knowing inconsistenc
 **Two details that make it correct rather than merely open:** Done is **hidden mid-selection**, so it can't be pressed
 over a half-built range; and clearing `pendingFrom` on completion is what makes the next tap **start a fresh range**
 instead of extending the finished one.
+
+---
+
+### D67 — Abandoned trips: don't guess who drove, ask — and not yet (2026-07-31, founder)
+
+**The hole.** § P closed the *unfilled* case. This is the other one: 8 past trips still sat `confirmed`/`on_board`, one
+for 36 days. A Driver accepted them and never tapped Complete, so nothing settles them and they fall into no History
+bucket.
+
+**The founder's reading, and why it's mostly right.** *"In a real situation there will be people taking care of it — a
+Business follows up, there are passengers behind it, and we did offer solutions to both parties."* True: copilote, the
+agreed release, T-60 and Business cancel all answer **"this trip isn't going to happen."** Someone is unhappy, so
+someone acts. **That case is genuinely covered.**
+
+**What they don't cover — the case with no complainer.** The opposite one: *the trip DID happen and nobody tapped the
+last button.* The Driver drops the Guest, the hotel is delighted, the Driver moves to the next job and never reopens the
+app. Nobody is unhappy, so nobody chases it — the service was fine, only the **record** is wrong, and the record is what
+pays the Driver and bills the Business. **That is the case that survives real users.**
+
+**So: a question, not a rule.** Time can never separate "drove and forgot" from "never turned up" — same status,
+opposite meanings. Only the Driver knows. A **pinned card, not a modal popup** (a popup trains people to tap ✕ without
+reading) on My Rides ~3h after the trip should have ended: *Yes, I drove it* / *No, the Guest never showed* / *Something
+else*. It adds **no abuse surface** — a Driver can already tap Complete without driving.
+
+**The shelf life — the founder's own best question: "what if the Driver comes back a month later?"** A month later *he
+doesn't remember either*. So the question expires in ~48h and **flips to the Business**, who knew that same day whether
+their Guest reached the airport. Neither answers → back-office. The Business meanwhile sees an honest "Waiting on the
+Driver to close this" and can **Nudge, never close** — a Business that can mark a trip complete is a Business declaring
+a Driver's work done, and that is money.
+
+**Geolocation (founder's idea) — right instinct, V2.** Kavenue is a PWA: a browser only gets location **while the app is
+open on screen**, so there's no background arrival detection without a native app. And even then, **location may
+suggest, never decide** — location closing a trip is location *paying* someone. Failure case: the Driver returns to Nice
+airport at 11am for his next job and the app closes and pays out yesterday's trip.
+
+**PARKED.** In beta the founder is the only one creating trips, so all 8 are test artifacts; and the card only fires
+when a Driver opens the app, so the design needs **push** to be worth building. Building now ships the weak version
+twice. Lands with notifications (menu B) or the back-office (§ F2). Full spec: BACKLOG § Q.

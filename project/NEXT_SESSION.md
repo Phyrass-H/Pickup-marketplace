@@ -492,15 +492,22 @@ so **the cause is a serverless cold start, not the query count** — Hobby plan,
 `<Suspense key={period…}>` with a skeleton, so the total shows as loading instead of sitting there looking final while
 it's stale. One file, but a real restructure — give it a proper slot, not the tail of a session.
 
-**★ NEW — ABANDONED TRIPS have no ending at all (found 2026-07-31 while closing § P; [[d63]]). Full spec: BACKLOG § Q.**
-§ P closed the *unfilled* hole. This is the other one: **8 past trips sit `confirmed`/`on_board`** — a Driver accepted
-them and never closed them, one `on_board` for **36 days**. Nothing expires them, nothing settles them, and they fall
-into no History bucket (which is why the filter chips deliberately don't sum to All). **Worse than the unfilled case:**
-an unfilled trip owes nobody anything, but each of these has a fare, a Driver and the whole O7 fee machinery attached.
-**⚠️ NEEDS A FOUNDER RULING BEFORE ANY CODE** — the five questions are in § Q. The hard one: a past `confirmed` trip is
-either a Driver who **drove and forgot to tap Complete** (pay them) or one who **never turned up** (a Driver no-show).
-Same status, opposite meanings, so **the rule probably can't be time alone**. Related: [[d61]]'s check-in is the only
-signal we have and it isn't enforced, and without push we still can't tell "didn't respond" from "wasn't asked".
+**★ ABANDONED TRIPS — ✅ RULED ON + DESIGNED, then PARKED by the founder (2026-07-31, S52). Do NOT reopen it as an open
+question, and do NOT re-derive the design — it's written out in full in BACKLOG § Q.**
+§ P closed the *unfilled* hole; this was the other one (**8 past trips sit `confirmed`/`on_board`**, one for 36 days).
+**Founder's call: leave it for now** — in beta they're the only one creating trips, so all 8 are test artifacts, and the
+good version needs push, so building now ships the weak version twice.
+- **What resolved it:** every escape valve already built (copilote · agreed release · T-60 · cancel) answers *"this trip
+  isn't going to happen"* — someone's unhappy, so someone acts. **Covered.** The open hole is the opposite case: *the
+  trip DID happen and nobody tapped the last button.* Nobody is unhappy, so nobody chases it — only the record is wrong,
+  and the record is what pays the Driver and bills the Business.
+- **The agreed shape:** not a rule that guesses (time can never separate "drove and forgot" from "never turned up") but a
+  **question** — a pinned card (**not a modal**) on the Driver's My Rides ~3h after the trip should have ended, three
+  answers; the Business meanwhile sees an honest "Waiting on the Driver to close this" + **Nudge, never close**; the
+  question **expires in ~48h and flips to the Business**, who knew that day; neither answers → back-office.
+- **Blocked on push** (the card only fires if the Driver opens the app) → lands with notifications (menu **B**) or the
+  back-office (**§ F2**). **Geolocation auto-close was considered and is V2** — a PWA only gets location while the app is
+  on screen; and location may **suggest, never decide** (location closing a trip = location *paying* someone).
 
 Then, worst first:
 1. **A Business's default vehicle class is saved and never read.** `default_vehicle_category` saves in Settings →

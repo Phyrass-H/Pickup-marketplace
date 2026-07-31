@@ -633,6 +633,56 @@ Mirrors § P's shape: a sweep with a guard. But **§ P's sweep could be lazy and
 unfilled trip moves no money.** This one does, so it likely wants the real scheduler *and* a human review step — i.e.
 it lands with the back-office (§ F2) or the notifications phase, not before.
 
+### ✅ DESIGNED + PARKED 2026-07-31 (founder conversation, S52). Do not re-derive.
+**Founder's ruling: leave it for now.** In beta the founder is the only one creating trips, so all 8 are test artifacts;
+and the good version needs push, so building now means shipping the weak version twice. **The design below is settled —
+pick it up in the notifications phase (menu option B) or with the back-office (§ F2).**
+
+**The insight that resolved Q1 — there are two different holes, and only one is open.**
+Every escape valve already built (copilote, agreed release, T-60, Business cancel) answers *"this trip is not going to
+happen."* Someone is unhappy, so someone acts. **That case is covered.** The open hole is the opposite: *the trip DID
+happen and nobody tapped the last button* — Driver drops the Guest, hotel is delighted, Driver drives off and never
+reopens the app. **Nobody is unhappy, so nobody chases it.** The service was fine; only the record is wrong, and the
+record is what pays the Driver and bills the Business. That is the case that survives real users, because it has no
+complainer.
+
+**So the answer is not a rule that guesses — it is a question.** Time alone cannot separate "drove and forgot" from
+"never turned up" (Q1), and no threshold ever will. Ask the only party who knows.
+
+1. **Trigger** — a trip still open a few hours after it should have ended (`pickup_at` + trip duration + buffer;
+   founder's instinct **~3h after the expected end**, so a delayed flight is not nagged). Nothing auto-changes; the trip
+   just becomes *askable*. **This answers Q2: nothing auto-closes.**
+2. **Driver side** — a **pinned card, NOT a modal popup** (founder agreed: a popup trains people to tap ✕ without
+   reading). Top of My Rides + a tab badge — the same pattern as the [[d61]] check-in badge. Stays until answered, never
+   blocks the Pool. Three answers: **Yes, I drove it** → closes the trip dated at its real time, lands in Earnings/Past ·
+   **No, the Guest never showed** → the existing no-show path · **Something else** → human review.
+   ⚑ **No new abuse surface**: a Driver can already tap "Complete ride" without driving. Same exposure as today.
+3. **Business side, meanwhile** — instead of a frozen "On board" from 36 days ago, an honest amber
+   *"Waiting on the Driver to close this"* + a **Nudge the Driver** button. ⚑ **Nudge, never close** — a Business that can
+   mark a trip complete is a Business declaring a Driver's work done, and that is money (**Q3**).
+4. **The shelf life (founder's own question: "what if the Driver comes back a month later?")** — a month later *he does
+   not remember either*, so the question expires. **~48h**, then it stops being his and **flips to the Business**, who
+   knew that same day whether their Guest reached the airport. Two independent parties, one tap each, and they will
+   almost always agree. Neither answers → back-office queue, unresolved, founder closes by hand (which is what happens
+   today, minus anything telling them it is there). **The deadline must be short — days, not weeks; the value of the
+   answer decays fast.**
+
+**Why this needs push (and therefore waits).** The card only fires when the Driver opens the app. A notification is what
+makes a 48h shelf life realistic instead of optimistic. Same blocker as the T-60 take-back.
+
+**Geolocation auto-close — founder's idea, correct instinct, blocked today.** Kavenue is a PWA: a browser only gets
+location **while the app is open on screen**, so there is no background "he arrived at the airport" detection without a
+native app. V2 at the earliest. And even then, one hard rule: **location may suggest, never decide** — location closing a
+trip is location *paying* someone. Failure case: the Driver returns to Nice airport at 11am for his *next* job and the
+app closes and pays out yesterday's trip. The right shape is *"Looks like you finished — tap to complete."*
+
+**Still open when it is built:**
+- **Q4 (reliability mark)** — untouched, still gated on the founder's parked "does a Driver see their own?" decision.
+- **Q5 (`on_board` specifically)** — moot under this design: `on_board` is asked the same question as `confirmed`.
+- ⚑ **The "No, the Guest never showed" branch needs its own route.** The [[d47]]/[[d48]] no-show rules assume the Driver
+  is standing at the pickup with a courtesy-wait clock running; reporting one three days later does not fit that shape
+  and will not pass those guards.
+
 ---
 
 ## R. Dispatch History — the full feature set 🔨 (founder, 2026-07-31)
