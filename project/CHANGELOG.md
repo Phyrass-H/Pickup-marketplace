@@ -8,9 +8,9 @@
 ## 31 July 2026 — Trips that nobody took now die properly
 - **You found this one by using the app**: the Pool was full of trips from weeks ago. Every single pooled trip — all 23
   — had a pickup time in the past, the oldest by 44 days. Nothing in the product had ever closed one.
-- **A trip now expires the moment its pickup time passes.** It leaves the Pool, and the Business's row turns red and
-  reads **"Expired · Was not filled in time"**. It stays on the schedule for the rest of that day so you can't miss it,
-  then folds away with the other past trips.
+- **A trip now dies the moment its pickup time passes.** It leaves the Pool, and the Business's row turns red and
+  reads **"Unfilled · No Driver accepted it before the pickup time"**. It stays on the schedule for the rest of that
+  day so you can't miss it, then folds away with the other past trips.
 - **The part that actually mattered: a Driver could still accept them.** Tapping Accept on a six-week-dead booking
   would have created a real, priced job — with a real cancellation fee attached — for a hotel that had long since made
   other arrangements. That's now blocked in three places, including inside the database itself, so it can't happen even
@@ -20,6 +20,17 @@
   moment to revisit it, not now.
 - **Your Pool is empty as a result** — correctly, since every trip in it was dead. New trips you post will behave
   normally.
+- **History now has filters.** Your past trips were one long mixed list. There are now four buttons at the top —
+  **All · Completed · Unfilled · Cancelled** — each showing how many, so you can see at a glance how many trips never
+  got driven and tap once to see only those. Each month line also says how many it lost (`8 trips · 7 unfilled`), and
+  the red number only shows up when there is one.
+- **One word changed, for a reason.** A trip nobody took used to say **"Expired"** — a computer word. It now says
+  **"Unfilled"**. And because the Schedule already used "Unfilled" as a *warning* for a trip that's coming up soon with
+  nobody on it, that one now says **"No Driver yet"**. So: *No Driver yet* = you can still fix it. *Unfilled* = too late.
+- **⚠️ One thing the numbers will show you.** The four buttons don't add up to the total, on purpose. **8 past trips
+  have a Driver on them and no ending** — they were accepted and never closed (one has been "on board" for 36 days).
+  Those aren't unfilled and they aren't completed, so they only appear under All. That gap is real and it's the next
+  thing to decide: what does an abandoned trip cost, and who pays?
 - **What this does NOT do yet: count anything.** "How many trips did we fail to fill" is the single most useful health
   number for the marketplace, and it needs the back-office to have somewhere to live.
 

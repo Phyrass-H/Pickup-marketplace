@@ -53,6 +53,38 @@ feature has been found two-thirds built and unreachable — `reclaim_mission` af
 **Noticed, not touched:** the Dispatch day headers render French (*"Samedi 11 Juillet"*) inside the English app — same
 family as the French date picker already queued as item 2.
 
+### Part B — Dispatch History, done properly (same day, [[d62]] cont.; deployed `73d7102`)
+
+**Why it followed.** The founder's next question was whether the Business keeps a trace of an unfilled trip. It does —
+18 rows already showed in History — but they said the screen "was never properly done", and they were right: 95 lines,
+no filters, no counts, no per-view empty state. The Driver's Past tab got that in S47 ([[d56]]); this side never did.
+So the expiry work had made a question answerable that the UI still couldn't ask.
+
+**D25 loop honoured.** Mockup from the real tokens + the real July rows → founder amended the wording → built to match.
+
+**Built.** `FILTERS` = All / Completed / **Unfilled** / Cancelled as server-side `?filter=` links, reusing the Driver's
+`.rfilter`/`.rchip` (not a second control). **Counts are computed from the full set before narrowing** — a count that
+moved with the active filter would force a click to discover an empty bucket. Plus a `.dxh-sum` one-liner and a
+`.dx-count__bad` per-month failure count, both rendered only when non-zero, and the month suffix suppressed while the
+Unfilled filter is active (redundant there). Two distinct empty states: never-any-history vs this-filter-is-empty.
+A **no-show buckets under Completed** (`mark_no_show` pays the Driver in full) — same call `rides/history` makes.
+
+**⚑ The wording fix, which is the part worth remembering.** "Expired" described the record, not the hotel's problem.
+The founder chose **"Unfilled"** — and spotted that renaming the Schedule's live warning to **"No Driver yet"** frees
+that word up. The two had both read "Unfilled": one a warning you can still act on, one a final outcome. That is the
+single pair of labels a Dispatcher must never confuse, and it had shipped that way since S39. "No Driver yet" also
+happens to match the Driver bar's pre-existing `No Driver yet · in the Pool`.
+
+**⚑ The chip counts deliberately do not sum to All (3 + 18 + 0 ≠ 28).** The 8 past trips still sitting
+`confirmed`/`on_board` have **no ending in the model** — accepted and never closed, one `on_board` for 36 days. The
+founder declined a 5th bucket, so they appear under All and nowhere else, visibly. Hiding them would have implied we
+handle them. **This is the next open question and it is a money question:** what does an abandoned trip cost, and who
+pays? § P closed the *unfilled* hole; the *abandoned* one is untouched.
+
+**Verified live:** Unfilled → 18 rows, month counts recomputed (7 + 11), suffix suppressed; Cancelled → 0 rows with its
+own empty state and the chips still reachable; a staged 2h-out trip renders amber **"No Driver yet"** while a 30h-out
+one stays **"In the Pool"**. DB restored to baseline. `tsc` + `next build` green.
+
 ---
 
 ## 2026-07-30 — Session 50 — CHECK-IN restored, and the fee hole that kept the take-back parked ([[d61]])

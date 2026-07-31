@@ -1113,3 +1113,35 @@ Expired rows render with the red wash on the Business schedule. `tsc` + `next bu
 
 **⚑ Left open, deliberately:** an expired trip **counts nowhere**. Fill rate is the single most important
 marketplace-health number and it has no home until the § F2 back-office exists. Logged there, not built here.
+
+### D63 — Dispatch History gets outcome filters, and "Unfilled" means the ending (2026-07-31)
+Follows [[d62]] the same day. The founder asked whether a Business keeps a trace of an unfilled trip; it did — 18 rows
+already rendered in History — but they said the screen *"was never properly done, with filter"*, and the code agreed:
+95 lines, no filters, no counts, no per-view empty state. The Driver's Past tab got that in [[d56]]; this side never did.
+**The expiry work had made a question answerable that the UI still couldn't ask.**
+
+**Filters: All / Completed / Unfilled / Cancelled**, server-side `?filter=` links reusing the Driver's `.rfilter`/`.rchip`
+rather than growing a second control. **Counts come from the full set before narrowing** — a count that moved with the
+active filter would make you click a bucket to find out it was empty. A **no-show buckets under Completed**, since
+`mark_no_show` charges the Business in full and pays the Driver like a completed trip; the same call `rides/history` makes.
+Two empty states, because "you have no history" and "this filter found nothing" must never read alike.
+
+**⚑ The wording, which is the durable part.** The app said **"Expired"** — a word about the record, not about the
+hotel's problem. Founder's choice: **"Unfilled"**. Their second observation is the good one: that word was *already*
+taken by the Schedule's live warning for a soon-but-unaccepted trip, so renaming that one to **"No Driver yet"** frees
+it. The two had both read "Unfilled" since S39 — one a warning you can still act on, one a final outcome. **That is the
+one pair of labels a Dispatcher must never confuse**, and nobody had noticed because the outcome had never rendered
+([[d62]]: nothing wrote `expired`). Reachability hid a copy bug. "No Driver yet" also matches the Driver bar's
+pre-existing `No Driver yet · in the Pool`, so the rename cost nothing in consistency.
+
+**⚑ The counts deliberately do not sum (3 + 18 + 0 ≠ 28), and that is the finding.** Eight past trips sit
+`confirmed`/`on_board` — a Driver accepted them and never closed them, one `on_board` for **36 days**. They have **no
+ending in the data model at all**. The founder declined a fifth bucket, so they show under All and nowhere else,
+visibly. Hiding them would have implied we handle them. **§ P closed the *unfilled* hole; the *abandoned* one is
+untouched, and it is a money question** — an unfilled trip owes nobody anything, but each of these has a fare, a Driver
+and the whole O7 fee machinery attached. Nothing decided; it is the next thing to rule on.
+
+**Process.** D25 loop honoured: mockup from the real tokens + the real July rows → founder amended the wording →
+built to match. **⚑ And a lesson about explaining:** the founder asked twice for the four changes in plainer words, and
+the second ask was fair — the first attempt led with mechanism ("server-side links", "per-month outcome count") instead
+of with what they'd see. **Describe the screen, not the implementation.**
