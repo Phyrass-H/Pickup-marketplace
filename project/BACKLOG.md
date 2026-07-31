@@ -683,3 +683,38 @@ first**; the fixed control is what this screen should adopt.
   Watch the copy on anything that looks like an invoice.
 - ⚠️ **Amounts settle MANUAL in beta.** Every figure is what the model says is owed, not what has been paid — the
   screen must not imply a payment ran.
+
+---
+
+## T. Earnings feels laggy — MEASURED 2026-07-31, it's cold starts 🔨
+
+**Founder, testing [[d66]]:** *"there is some lag but maybe because is the test version."* It was **not** a test build
+— `driver.kavenue.fr` serves production. So the lag is real. Measured rather than guessed:
+
+| What | Time |
+|---|---|
+| production `/earnings`, first request | **1.97 s** |
+| same page, warm | **0.34–0.38 s** |
+| all 7 Supabase queries, in parallel | 213–490 ms |
+| one `loadPeriod` (2 queries) | 146 ms |
+| `loadFirstDay` | 102 ms |
+
+**⚑ The cause is a serverless COLD START, not the query count.** The queries run in `Promise.all`, so seven of them
+cost roughly one query's latency. The first tap after an idle period pays ~2 s; every tap after is ~350 ms. Cold start
+is inherent to the Vercel Hobby plan — not fixable in code.
+
+### Worth doing (cheap, real, but modest)
+- **The year-ago query always returns nothing and always runs.** The oldest mission is 2026-06-16, so every `lastYear`
+  span is empty by definition, and the line renders only when non-zero ([[d59]]). Skip it when `firstDay` postdates the
+  span. ⚠️ It's inside the same `Promise.all` as `loadFirstDay`, so gating it means sequencing — trade one round trip
+  for two queries; measure before assuming that's a win.
+- **`loadFirstDay` repeats on every tap** for a value that changes about once a month.
+- `export const dynamic = "force-dynamic"` means nothing is cached at all. Correct for the Pool; arguably too strict for
+  an archive of completed trips.
+
+### The bigger perceived win — make the wait honest, not shorter
+`startTransition` already keeps the old UI up, and `.eper.is-busy` dims the period row — but **the money total sits
+there looking final while it is stale**. 350 ms of a visibly-loading number reads as deliberate; 350 ms of a confidently
+wrong number reads as lag. This is probably worth more than any query trimming.
+
+**Applies to § S too** — the Dispatch spend view will have the same shape and should be built with this known.
