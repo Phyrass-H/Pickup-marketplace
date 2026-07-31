@@ -519,3 +519,18 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   shows greyed as "Not settled" and is left out of every total — otherwise your spend would include trips that may
   never have happened.
 - **The date picker is the same one as the Driver's Earnings**, not a second one built to look alike.
+
+### Later the same day — the History filters, fixed after testing
+
+- **The Driver dropdown is gone.** A list of every Driver you've ever used doesn't work once there are hundreds of
+  them. Type a Driver's name in the search box instead — it finds their trips and highlights the name.
+- **The search box no longer fights you.** Typing used to wipe what you'd written and then put it back, once per
+  letter, and there were two ✕ buttons stacked in the field. Both fixed.
+- **The date picker is the Driver app's, whole** — Day, Week, Month, Year or a custom range, with arrows to step
+  back and forward a month at a time, and "Any date" to see everything again.
+- **The calendar no longer jumps.** Picking your first date used to shift the whole grid down and make the Done
+  button and the weekday letters appear to vanish; picking the second flashed today's date before settling. The
+  box now stays exactly the same size, and your chosen range appears immediately. This was one shared calendar, so
+  the Driver's Earnings screen got the same fix.
+- **Eight more problems found by review before you could hit them** — including tapping a month doing nothing at
+  all when no filter was set, and clicking the back arrow three times only moving one month.

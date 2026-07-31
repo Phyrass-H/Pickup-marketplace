@@ -1336,3 +1336,55 @@ free, and they render as the platform picker on a phone. Only the calendar neede
 
 **Not built, on purpose:** a density toggle (the row is already dense), and pagination — fine at 28 trips, the first
 thing to break at 5 000, and still noted in § R rather than pre-built.
+
+---
+
+### D69 — The shared calendar owns its own range, and the toolbar owns its own intent (2026-07-31, S52)
+
+Three founder reports on the [[d68]] History screen, then an adversarial review of the fixes. All of it is one
+theme: **a control must not read its own state back from something that lags behind it.**
+
+**"Can you imagine there is 300, how it would look like?"** The Driver `<select>` is gone. A native dropdown over
+every Driver a hotel ever used is unusable at real scale, and typing a name in the search box already finds them
+with the match highlighted. `driverId` survives as a URL param with no UI, so a row-level "every trip this Driver
+did" stays one link away.
+
+**"It removes what I wrote to search then the writing comes back."** The input mirrored `query.q` back into local
+state so "Clear filters" could empty it. But `router.replace` runs in a transition, so between *we pushed q=x* and
+*the navigation committed* there is a render where the prop still holds the OLD q — the sync read that as an
+external change, wrote the stale value in, then the new one when it landed. Once per keystroke. **Local state is
+now the sole owner of the box**; the things that clear it clear it explicitly, and the empty state's link is a hard
+navigation rather than a soft one that would leave the text sitting there. (Also: the field was `type="search"`,
+so the browser drew its own ✕ over the app's — "a cross on top of the other cross".)
+
+**"I can't select a specific week or month, can you use the same as the driver app."** The date filter is now the
+Earnings control whole — Day · Week · Month · Year · Range — with the segmented picker inside the popover so the
+toolbar stays one button wide, ‹ › steps around the label, and an "Any date" reset that the Driver's screen has no
+need for. The URL carries `?p=&d=` (or `p=range&from=&to=`) and from/to are **derived** via `periodRange`, so the
+page and the CSV can't disagree about what "July" means.
+
+**"The layout changes… Done disappears, letters of the days week also."** The prompt appeared at the TOP and Done
+vanished, so a first tap pushed the grid down 27px and shrank the popover 18px — the date numbers slid up into
+where the weekday letters had been, which is exactly what the founder saw. **One footer slot of a fixed height**
+now holds either the prompt or Done. Measured identical (440 / 340 / 321) across open, first tap and complete.
+
+**"It displays today's date for a moment before going back to from–to."** The two-tap state lived in each CALLER,
+which cleared it the instant the second tap landed — but the new range only arrives when the navigation commits, so
+for one frame the calendar drew the OLD props: the previous range, or nothing with only "today" lit. **The range
+now lives inside `DateCal`, which paints the completed pair optimistically** and drops it once the props catch up.
+Fixes Driver and Dispatch at once and deletes the duplicated logic from both callers.
+
+**⚑ The review's real lesson, and the pattern to remember.** A 4-lens / 29-agent adversarial pass over the first fix
+confirmed 8 more defects (and refuted 8). Almost every one was the SAME shape as the bug it was reviewing — code
+reading a value that hadn't caught up yet:
+- Tapping a month from "Any date" did **nothing**: `period` is null until a filter exists; the calendar fell back to
+  `"month"` for rendering but `pickDay` pushed the raw null, so no params were written. Reproduced live.
+- Clicking ‹ three times fast stepped **one** month — each step recomputed from a prop mid-flight.
+- A debounced search fired with the query as it was 350 ms earlier, **reverting** a sort changed in between.
+- No unmount cleanup on the debounce: leaving History mid-word navigated you back to it, with Back already spent.
+So `push` now merges patches onto **the last intent this component asked for**, guarded so a slower earlier
+response can't overwrite a newer one — and steps compute from that same ref, not from the prop.
+
+Also fixed: `?p=day&d=2026-02-31` rolled over to 3 March (shape-only regex → earnings' own `parseDayParam`); and a
+query of just `^` or `¨` folds away to nothing and used to match **every** row with no highlight — it matches
+nothing now, which is the honest answer.
