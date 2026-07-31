@@ -1166,7 +1166,16 @@ the native control is gone and the app uses its own calendar.
 month-grid shape, but it is future-only and single-date; this is past-only and picks a span. Unifying them is a fair
 follow-up; doing it *inside a bug fix* would have meant editing the money-critical mission form. What WAS extracted is
 `lib/use-dismiss.ts` — and it listens on **`pointerdown`**, where the mission form's inline hook listens on
-`mousedown` only. That difference is the real mobile fix, and the mission form should adopt it.
+`mousedown` only.
+
+**⚑ Correction, same day — that `pointerdown` change was hardening, NOT the fix, and the follow-up it implied does not
+exist.** Claude flagged the three other `mousedown`-only popovers (`date-time-picker.tsx` · `address-autocomplete.tsx`
+· `dispatch-shell.tsx`) as carrying "the same class of mobile bug", reasoning that iOS Safari withholds synthetic mouse
+events on non-interactive targets. **The founder tested all three on a real iPhone and every one dismisses correctly**
+— as does the new Earnings calendar. The hypothesis was wrong; iOS synthesises the event here. Recorded because a
+plausible-sounding phantom in the backlog costs a future session, and because the lesson generalises: **a mechanism
+confirmed in the code (`pointerdown` is ignored — verified) is not the same as a failure confirmed on a device.** The
+Earnings bug was only ever `showPicker()` on a hidden input. Unifying the three hooks is optional tidying now.
 
 **Range design.** Two taps in either order; `?p=range&from=&to=`; the **‹ › arrows are removed, not disabled** —
 stepping an arbitrary span is meaningless, and a disabled control invites a click that will never work. Presets: last

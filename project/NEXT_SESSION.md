@@ -463,9 +463,13 @@ time. The selection band now makes the "granularity decides what a tapped day me
 - **⚑ REUSE THIS for § R and § S.** `lib/use-dismiss.ts` (pointerdown, not mousedown) + the calendar in
   `components/earnings-period.tsx` are the controls Dispatch History and Dispatch Earnings should adopt — the founder
   asked for a date range in all three. **Do not build a second one.**
-- **⚑ Follow-up worth doing:** `components/date-time-picker.tsx` (the mission form) still has its own inline
-  `mousedown`-only dismiss hook — the same class of mobile bug, unfixed. Swapping it to `useDismiss` is small, but it
-  touches the money-critical mission form, so it wants its own pass rather than riding along in a bug fix.
+- **⚑ TESTED AND CLEAR — do NOT re-flag this.** Claude suspected the three other popovers that dismiss on `mousedown`
+  only (`date-time-picker.tsx:38` · `address-autocomplete.tsx:204` · `dispatch-shell.tsx:77`) had the same mobile
+  weakness, on the theory that iOS Safari skips synthetic mouse events when you tap a non-interactive area. **The
+  founder tested all three on a real iPhone 2026-07-31: every one closes correctly**, and so does the new Earnings
+  calendar. The theory was wrong — iOS synthesises the event fine here. They are NOT broken, and the Earnings bug was
+  never about `mousedown` (it was `showPicker()` on a hidden input). Consolidating the three inline hooks onto
+  `useDismiss` is optional tidying, worth doing only if one of those files is open for another reason.
 
 **C. Dispatch-side EARNINGS / spend — "a real one, complete and pro" (founder, 2026-07-31).** Full spec now in
 **BACKLOG § S**. ⚑ It deliberately **diverges** from the Driver's Earnings: the founder wants **charts, comparison
