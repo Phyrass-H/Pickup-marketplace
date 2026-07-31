@@ -9,11 +9,31 @@ import { settledFare } from "@/lib/pdp";
 import { cancelCompensation } from "@/lib/cancellation";
 import type { MissionRow } from "@/lib/database.types";
 
-export const PERIODS = ["day", "week", "month", "year"] as const;
+// The four calendar granularities step forwards and backwards from an anchor day.
+// `range` is different in kind — it's an arbitrary from→to the Driver picked, so it
+// has no natural neighbour to step to (that's why the ‹ › arrows hide in that mode).
+export const GRANULARITIES = ["day", "week", "month", "year"] as const;
+export const PERIODS = [...GRANULARITIES, "range"] as const;
+export type Granularity = (typeof GRANULARITIES)[number];
 export type Period = (typeof PERIODS)[number];
 
 export function isPeriod(v: string | undefined): v is Period {
   return !!v && (PERIODS as readonly string[]).includes(v);
+}
+export function isGranularity(v: Period): v is Granularity {
+  return v !== "range";
+}
+
+/** A 'YYYY-MM-DD' the calendar produced, or null. Rejects anything malformed. */
+export function parseDayParam(v: string | undefined): string | null {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const [y, m, d] = v.split("-").map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  // Reject 31 February and friends — Date rolls them over silently, which would
+  // quietly shift a Driver's chosen range by a day or two.
+  const probe = new Date(Date.UTC(y, m - 1, d));
+  if (probe.getUTCMonth() + 1 !== m || probe.getUTCDate() !== d) return null;
+  return v;
 }
 
 // ---------------------------------------------------------------- Paris calendar
@@ -101,12 +121,25 @@ export interface Range {
   lastYear: string;
   /** True when the period contains today — the › step is then a no-op. */
   isCurrent: boolean;
+  /**
+   * For a custom range only: the comparison spans, since an anchor can't express
+   * them. "The period before" is the span of the SAME LENGTH ending the day before
+   * this one starts — comparing 46 days against a calendar month would be a lie.
+   * Null for the four granularities, which step by anchor as they always have.
+   */
+  prevCustom: { from: string; to: string } | null;
+  lastYearCustom: { from: string; to: string } | null;
+  /** Inclusive 'YYYY-MM-DD' ends — what the calendar highlights. */
+  fromDay: string;
+  toDay: string;
 }
 
 export function periodRange(
   period: Period,
   anchor: { y: number; m: number; d: number },
   now: Date = new Date(),
+  /** Only read when period === 'range'; both ends inclusive, 'YYYY-MM-DD'. */
+  custom?: { from: string; to: string } | null,
 ): Range {
   const today = parisParts(now);
   const iso = (a: { y: number; m: number; d: number }) =>
@@ -118,7 +151,40 @@ export function periodRange(
   let prev: { y: number; m: number; d: number };
   let next: { y: number; m: number; d: number };
 
-  if (period === "day") {
+  if (period === "range") {
+    // A custom span. `to` is inclusive to the Driver ("16 June – 31 July" includes
+    // the 31st), so `end` is the day after — every other branch is already
+    // half-open and loadPeriod compares `< to`.
+    const parts = (s: string) => ({
+      y: Number(s.slice(0, 4)),
+      m: Number(s.slice(5, 7)),
+      d: Number(s.slice(8, 10)),
+    });
+    const a = parts(custom?.from ?? iso(anchor));
+    const b = parts(custom?.to ?? custom?.from ?? iso(anchor));
+    // Tolerate a reversed pair rather than returning an empty period: the URL is
+    // hand-editable, and "to before from" reads as zero earnings, not as an error.
+    const [lo, hi] =
+      parisMidnight(a.y, a.m, a.d) <= parisMidnight(b.y, b.m, b.d) ? [a, b] : [b, a];
+    start = lo;
+    end = shiftDays(hi, 1);
+    const days =
+      Math.round(
+        (parisMidnight(end.y, end.m, end.d).getTime() -
+          parisMidnight(start.y, start.m, start.d).getTime()) /
+          86_400_000,
+      ) || 1;
+    const one = DM_LABEL.format(Date.UTC(lo.y, lo.m - 1, lo.d));
+    label =
+      days === 1
+        ? DAY_LABEL.format(Date.UTC(lo.y, lo.m - 1, lo.d))
+        : `${one} – ${DM_LABEL.format(Date.UTC(hi.y, hi.m - 1, hi.d))} · ${days} days`;
+    // Stepping an arbitrary span is meaningless, so the UI hides the arrows; these
+    // stay self-referential rather than undefined so nothing downstream has to
+    // special-case them.
+    prev = start;
+    next = start;
+  } else if (period === "day") {
     start = anchor;
     end = shiftDays(anchor, 1);
     label = DAY_LABEL.format(Date.UTC(anchor.y, anchor.m - 1, anchor.d));
@@ -150,6 +216,21 @@ export function periodRange(
   const from = parisMidnight(start.y, start.m, start.d);
   const to = parisMidnight(end.y, end.m, end.d);
   const nowMs = now.getTime();
+  const lastDay = shiftDays(end, -1); // `end` is exclusive; this is the inclusive end
+
+  let prevCustom: { from: string; to: string } | null = null;
+  let lastYearCustom: { from: string; to: string } | null = null;
+  if (period === "range") {
+    const span = Math.round((to.getTime() - from.getTime()) / 86_400_000) || 1;
+    prevCustom = {
+      from: iso(shiftDays(start, -span)),
+      to: iso(shiftDays(start, -1)),
+    };
+    lastYearCustom = {
+      from: iso({ ...start, y: start.y - 1 }),
+      to: iso({ ...lastDay, y: lastDay.y - 1 }),
+    };
+  }
 
   return {
     from,
@@ -159,6 +240,10 @@ export function periodRange(
     next: iso(next),
     lastYear: iso({ ...start, y: start.y - 1 }),
     isCurrent: nowMs >= from.getTime() && nowMs < to.getTime(),
+    prevCustom,
+    lastYearCustom,
+    fromDay: iso(start),
+    toDay: iso(lastDay),
   };
 }
 

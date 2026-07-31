@@ -14,6 +14,7 @@ import { getDriverContext } from "@/lib/driver";
 import {
   isPeriod,
   parseAnchor,
+  parseDayParam,
   periodRange,
   totalsFor,
   missionAmount,
@@ -32,6 +33,23 @@ const MONEY_STATUSES = ["completed", "cancelled"] as const;
 
 // Every read here is scoped to the signed-in Driver by RLS; the explicit driver_id
 // filters say so at the call site too.
+/**
+ * The Driver's earliest money-bearing trip, which is where "All time" starts.
+ * One indexed row — cheap enough to fetch on every render, and it means the
+ * shortcut can't offer a span that predates their first day on the platform.
+ */
+async function loadFirstDay(driverId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("mission")
+    .select("pickup_at")
+    .eq("driver_id", driverId)
+    .in("status", MONEY_STATUSES)
+    .order("pickup_at", { ascending: true })
+    .limit(1);
+  return data?.[0] ? dayKey(data[0].pickup_at) : null;
+}
+
 async function loadPeriod(driverId: string, from: Date, to: Date) {
   const supabase = await createClient();
   const [{ data: missions }, { data: cancels }] = await Promise.all([
@@ -131,25 +149,40 @@ function Breakdown({ t }: { t: Totals }) {
 export default async function EarningsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ p?: string; d?: string }>;
+  searchParams: Promise<{ p?: string; d?: string; from?: string; to?: string }>;
 }) {
   const { driver } = await getDriverContext();
   if (!driver) return null;
 
-  const { p, d } = await searchParams;
-  const period: Period = isPeriod(p) ? p : "week";
-  const anchor = parseAnchor(d);
-  const range = periodRange(period, anchor);
+  const { p, d, from: fromParam, to: toParam } = await searchParams;
+  const requested: Period = isPeriod(p) ? p : "week";
+  // A range needs both ends. A hand-edited or truncated URL falls back to the week
+  // rather than rendering an empty screen with no explanation.
+  const custom =
+    requested === "range" && parseDayParam(fromParam) && parseDayParam(toParam)
+      ? { from: fromParam!, to: toParam! }
+      : null;
+  const period: Period = requested === "range" && !custom ? "week" : requested;
+  const anchor = parseAnchor(custom?.from ?? d);
+  const range = periodRange(period, anchor, undefined, custom);
 
   // This period, the one before it, and the same one a year ago — the year-ago read
   // costs one query and stays silent until there's actually a year of history.
-  const prevRange = periodRange(period, parseAnchor(range.prev));
-  const lastYearRange = periodRange(period, parseAnchor(range.lastYear));
+  // A custom range can't be expressed as an anchor, so it carries its own comparison
+  // spans (the SAME LENGTH immediately before, not the previous calendar month).
+  const prevRange = periodRange(period, parseAnchor(range.prev), undefined, range.prevCustom);
+  const lastYearRange = periodRange(
+    period,
+    parseAnchor(range.lastYear),
+    undefined,
+    range.lastYearCustom,
+  );
 
-  const [now, before, yearAgo] = await Promise.all([
+  const [now, before, yearAgo, firstEver] = await Promise.all([
     loadPeriod(driver.id, range.from, range.to),
     loadPeriod(driver.id, prevRange.from, prevRange.to),
     loadPeriod(driver.id, lastYearRange.from, lastYearRange.to),
+    loadFirstDay(driver.id),
   ]);
 
   const t = now.totals;
@@ -159,7 +192,10 @@ export default async function EarningsPage({
   const today = todayAnchor();
   const todayIso = `${today.y}-${pad(today.m)}-${pad(today.d)}`;
 
-  const periodNoun = period;
+  // A custom span has no calendar noun — "the range before" and "same range last
+  // year" would be nonsense, so it borrows the neutral "period" everywhere the
+  // copy needs a word, and loses the "use the arrows" hint (it has none).
+  const periodNoun = period === "range" ? "period" : period;
   // "this week" only while you're in it; stepping back reads "that week".
   const dem = range.isCurrent ? "this" : "that";
   const rideCount = t.tripCount + t.noShowCount;
@@ -186,6 +222,10 @@ export default async function EarningsPage({
         prev={range.prev}
         next={range.next}
         isCurrent={range.isCurrent}
+        fromDay={range.fromDay}
+        toDay={range.toDay}
+        firstDay={firstEver}
+        today={todayIso}
       />
 
       <div className="dcard">
@@ -231,8 +271,10 @@ export default async function EarningsPage({
               Nothing {dem} {periodNoun}
             </p>
             <p className="pempty__s">
-              Trips show up here the moment you complete them. Use the arrows to look at
-              another {periodNoun}.
+              Trips show up here the moment you complete them.{" "}
+              {period === "range"
+                ? "Tap the dates to choose a different span."
+                : `Use the arrows to look at another ${periodNoun}.`}
             </p>
           </div>
         </div>
@@ -279,9 +321,13 @@ export default async function EarningsPage({
         </span>
       </div>
 
-      {anchorIso !== todayIso && (
+      {/* A custom range is always "somewhere else", so the way back is to a real
+          calendar period — this week — not to `p=range` with no ends. */}
+      {(period === "range" || anchorIso !== todayIso) && (
         <p className="ejump">
-          <a href={`/earnings?p=${period}&d=${todayIso}`}>Back to now</a>
+          <a href={`/earnings?p=${period === "range" ? "week" : period}&d=${todayIso}`}>
+            Back to now
+          </a>
         </p>
       )}
     </>

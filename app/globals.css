@@ -2944,12 +2944,55 @@ label.field > span.dhint {
   cursor: pointer;
 }
 .eper__lab:active { background: var(--surface-2); }
+.eper__lab.is-open { background: var(--accent-soft); color: var(--accent); }
 .eper__lab svg { color: var(--text-muted); flex: none; }
-/* Real and focusable (showPicker() refuses a display:none input), just invisible. */
-.eper__date {
-  position: absolute; bottom: 0; left: 50%; width: 1px; height: 1px;
-  opacity: 0; pointer-events: none; border: 0; padding: 0;
+.eper__lab.is-open svg { color: var(--accent); }
+
+/* Five segments instead of four: trim the padding so Day…Range still fit a 360px
+   phone without the labels wrapping. */
+.seg--5 .seg-btn { padding-left: 2px; padding-right: 2px; font-size: 13px; }
+
+/* ---- The Earnings calendar (replaces the old hidden <input type="date">) ----
+   The native control was invisible + pointer-events:none and driven by
+   showPicker(), which did nothing on a phone and opened an undismissable popup on
+   a desktop — and could never express a range. This is the app's own, same shape
+   as the mission form's .dtp-cal. Anchored under the label; on a narrow screen it
+   simply spans the row, which is nearly the full width anyway. */
+.ecal {
+  position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px; box-shadow: var(--shadow-pop, 0 8px 24px rgba(16,24,40,.12));
 }
+.ecal__presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ecal__presets .rchip { cursor: pointer; font-family: inherit; }
+.ecal__hint { margin: 0 0 9px; font-size: 12px; color: var(--accent); }
+.ecal__hint--foot { margin: 10px 0 0; color: var(--text-muted); text-align: center; }
+.ecal__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ecal__title { font-size: 13.5px; font-weight: 500; }
+.ecal__nav {
+  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; border-radius: 8px; color: var(--text-muted); cursor: pointer;
+}
+.ecal__nav:hover { background: var(--surface-2); color: var(--text); }
+.ecal__nav:disabled { opacity: 0.3; cursor: default; background: transparent; }
+.ecal__dow, .ecal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.ecal__dow { font-size: 10.5px; color: var(--text-faint); text-align: center; margin-bottom: 3px; }
+.ecal__day {
+  /* 34px keeps every day a comfortable tap target on a phone — the old control
+     offered a 1px one. */
+  min-height: 34px; border: 0; background: transparent; border-radius: 0;
+  font-family: inherit; font-size: 13px; color: var(--text); cursor: pointer; padding: 0;
+}
+.ecal__day:disabled { color: var(--text-faint); opacity: 0.45; cursor: default; }
+.ecal__day.is-in { background: var(--accent-soft); }
+.ecal__day.is-start { border-radius: 8px 0 0 8px; }
+.ecal__day.is-end { border-radius: 0 8px 8px 0; }
+.ecal__day.is-start.is-end { border-radius: 8px; }
+.ecal__day.is-today { font-weight: 600; color: var(--accent); }
+.ecal__day.is-start:not(:disabled), .ecal__day.is-end:not(:disabled) {
+  background: var(--accent); color: var(--text-on-accent);
+}
+.ecal__day:focus-visible { outline: none; box-shadow: var(--ring); border-radius: 8px; }
 
 .etotal { font-size: 33px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
 .etotal__sub { font-size: 12.5px; color: var(--text-muted); margin-top: 5px; }
