@@ -9,7 +9,14 @@ import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
 import { parsePassengers, passengerName } from "@/lib/passengers";
 import { serviceClassLabel } from "@/lib/format";
-import { isPeriod, parseAnchor, periodRange, todayAnchor, type Period } from "@/lib/earnings";
+import {
+  isPeriod,
+  parseAnchor,
+  parseDayParam,
+  periodRange,
+  todayAnchor,
+  type Period,
+} from "@/lib/earnings";
 
 export const OUTCOMES = ["all", "completed", "unfilled", "cancelled"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
@@ -107,17 +114,15 @@ export function periodView(q: HistoryQuery, now: Date = new Date()): PeriodView 
   };
 }
 
-const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 export function parseHistoryQuery(sp: Record<string, string | string[] | undefined>): HistoryQuery {
   const one = (k: string) => {
     const v = sp[k];
     return (Array.isArray(v) ? v[0] : v)?.trim() || null;
   };
-  const day = (k: string) => {
-    const v = one(k);
-    return v && DAY_RE.test(v) ? v : null;
-  };
+  // parseDayParam, not a shape-only regex: it rejects month 13 and 31 February,
+  // which Date otherwise rolls over silently — "?p=day&d=2026-02-31" would have
+  // quietly filtered to 3 March.
+  const day = (k: string) => parseDayParam(one(k) ?? undefined);
 
   const pRaw = one("p") ?? undefined;
   const period: Period | null = isPeriod(pRaw) ? pRaw : null;
@@ -338,7 +343,11 @@ export function searchFields(row: HistoryRow): Field[] {
  */
 export function matchRow(row: HistoryRow, q: string): MatchField[] | null {
   const terms = fold(q).split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return [];
+  // A query that folds away to nothing — a lone "^" or "¨", which are diacritic
+  // marks fold() strips — matches NOTHING rather than everything. Returning an
+  // empty hit list here made every row pass with no highlight, so typing an
+  // accent key by itself silently looked like "no filter applied".
+  if (terms.length === 0) return null;
 
   const fields = searchFields(row).map((f) => ({ key: f.key, folded: fold(f.text) }));
   const hits = new Set<MatchField>();

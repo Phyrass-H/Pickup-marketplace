@@ -235,12 +235,17 @@ export default async function DispatchHistory({
                   aren't set. */}
               Nothing matches “{query.q}”
               {isFiltered({ ...query, q: "" }) && " with these filters"}.{" "}
-              <Link href="/dispatch/history">Clear filters</Link>
+              {/* A plain <a>, not <Link>: the search box owns its own text (that
+                  is what fixed the type-and-revert bug), so a SOFT navigation
+                  would empty the URL and leave "zzz" sitting in the field next to
+                  every trip. A hard navigation remounts the toolbar, and this
+                  path only exists when nothing matched anyway. */}
+              <a href="/dispatch/history">Clear filters</a>
             </>
           ) : narrowed ? (
             <>
               No {query.outcome === "all" ? "" : `${OUTCOME_LABEL[query.outcome].toLowerCase()} `}
-              trips in this selection. <Link href="/dispatch/history">Clear filters</Link>
+              trips in this selection. <a href="/dispatch/history">Clear filters</a>
             </>
           ) : (
             <>No {OUTCOME_LABEL[query.outcome].toLowerCase()} trips in your history.</>

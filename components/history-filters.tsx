@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, ChevronLeft, ChevronRight, Download, Search, X } from "lucide-react";
 import { DateCal, shiftIso, type CalPreset } from "@/components/date-cal";
 import { useDismiss } from "@/lib/use-dismiss";
-import { PERIODS, type Period } from "@/lib/earnings";
+import { parseAnchor, periodRange, PERIODS, type Period } from "@/lib/earnings";
 import {
   historyHref,
   isFiltered,
@@ -64,13 +64,36 @@ export function HistoryFilters({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // ⚑ The last query this component ASKED for, which is not the same thing as the
+  // last one the server sent back. `query` is a server prop and router.replace
+  // runs in a transition, so it lags every click by a round trip. Merging a new
+  // patch onto that lagging prop silently drops whatever was pushed in between:
+  // click ‹ twice quickly and the second computes from the first's stale anchor,
+  // so you step once; change the class while a search is still debouncing and the
+  // search fires with the old class and undoes it. Patches merge onto this ref
+  // instead, and a newly committed prop always overwrites it.
+  const live = useRef(query);
+  // The href of the navigation we are still waiting on, if any. Without it, a
+  // slower EARLIER response landing after a newer one would overwrite the newer
+  // intent — so the prop is adopted only once it IS what we last asked for.
+  const inflight = useRef<string | null>(null);
+  useEffect(() => {
+    const href = historyHref(query);
+    if (inflight.current === null || inflight.current === href) {
+      live.current = query;
+      inflight.current = null;
+    }
+  }, [query]);
+
   const push = useCallback(
     (patch: Partial<HistoryQuery>) => {
-      startTransition(() =>
-        router.replace(`/dispatch/history${historyHref(query, patch)}`, { scroll: false }),
-      );
+      const next = { ...live.current, ...patch };
+      live.current = next;
+      const href = historyHref(next);
+      inflight.current = href;
+      startTransition(() => router.replace(`/dispatch/history${href}`, { scroll: false }));
     },
-    [router, query],
+    [router],
   );
 
   // ---- search --------------------------------------------------------------
@@ -88,34 +111,54 @@ export function HistoryFilters({
   // moment the box's value legitimately comes from outside.
   const [text, setText] = useState(query.q);
   const [focused, setFocused] = useState(false);
-  const [debounce, setDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
+  // A ref, not state: a pending timer must be cancellable from anywhere without
+  // re-rendering, and must not outlive the component — leaving this screen inside
+  // the debounce window used to fire a navigation back to it.
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (debounce.current) clearTimeout(debounce.current);
+    },
+    [],
+  );
 
   const search = useCallback(
     (next: string) => {
       setText(next);
-      if (debounce) clearTimeout(debounce);
-      setDebounce(setTimeout(() => push({ q: next }), 350));
+      if (debounce.current) clearTimeout(debounce.current);
+      debounce.current = setTimeout(() => push({ q: next }), 350);
     },
-    [debounce, push],
+    [push],
   );
 
   const clearAll = () => {
-    if (debounce) clearTimeout(debounce);
+    if (debounce.current) clearTimeout(debounce.current);
     setText("");
-    startTransition(() => router.replace("/dispatch/history", { scroll: false }));
+    push({
+      outcome: "all",
+      q: "",
+      period: null,
+      anchor: null,
+      from: null,
+      to: null,
+      driverId: null,
+      category: null,
+      sort: "recent",
+    });
   };
 
   // ---- date ----------------------------------------------------------------
   const [open, setOpen] = useState(false);
-  const [pendingFrom, setPendingFrom] = useState<string | null>(null);
-  const close = useCallback(() => {
-    setOpen(false);
-    setPendingFrom(null);
-  }, []);
+  const close = useCallback(() => setOpen(false), []);
   const popRef = useDismiss<HTMLDivElement>(open, close);
 
   const period = query.period;
   const isRange = period === "range";
+  // ⚑ What the calendar is actually RENDERING when no filter is applied. `period`
+  // is null under "Any date", and DateCal was already falling back to "month" —
+  // but pickDay pushed the raw null, so historyHref wrote no `p` at all and
+  // tapping a month from "Any date" did nothing whatsoever. Both sides read this.
+  const calPeriod: Period = period ?? "month";
 
   const presets = useMemo<CalPreset[]>(
     () => [
@@ -132,33 +175,35 @@ export function HistoryFilters({
       // Seed the span from whatever is on screen, so switching to Range shows the
       // same rows instead of resetting to nothing.
       push({ period: "range", anchor: null, from: view?.fromDay ?? today, to: view?.toDay ?? today });
-      setPendingFrom(null);
     } else {
-      push({ period: p, anchor: view?.fromDay ?? today, from: null, to: null });
+      // Anchor on the day already chosen, not on the period's first day: going
+      // from "July 2026" to Day meant 1 July rather than the day you were on.
+      push({ period: p, anchor: query.anchor ?? query.from ?? today, from: null, to: null });
     }
   }
 
+  // The granularity decides what a tapped day MEANS — tapping the 13th under
+  // Month selects July. Derived server-side; the anchor is all that travels.
+  // The two-tap span is DateCal's own business now (it holds the half-built
+  // state and paints the completed one optimistically), so this only sees a
+  // finished pair.
   function pickDay(iso: string) {
-    if (!isRange) {
-      // The granularity decides what a tapped day MEANS — tapping the 13th under
-      // Month selects July. Derived server-side; the anchor is all that travels.
-      push({ period, anchor: iso, from: null, to: null });
-      close();
-      return;
-    }
-    if (!pendingFrom) {
-      setPendingFrom(iso);
-      return;
-    }
-    // Second tap completes it, in whichever order the two were tapped. It does
-    // NOT close — same rule as Earnings ([[d66]]): the moment a range most needs
-    // to confirm itself is the moment it used to destroy its own evidence.
-    const [a, b] = pendingFrom <= iso ? [pendingFrom, iso] : [iso, pendingFrom];
-    push({ period: "range", anchor: null, from: a, to: b });
-    setPendingFrom(null);
+    push({ period: calPeriod, anchor: iso, from: null, to: null });
+    close();
   }
 
-  const step = (anchor: string) => push({ period, anchor, from: null, to: null });
+  // Computed from the LIVE anchor, so holding ‹ steps once per click instead of
+  // recomputing from a prop that hasn't caught up yet. periodRange is pure and
+  // already the server's own source of truth for these anchors.
+  function step(dir: -1 | 1) {
+    const cur = live.current;
+    if (!cur.period || cur.period === "range") return;
+    const r = periodRange(cur.period, parseAnchor(cur.anchor ?? undefined));
+    // Nothing has happened in the future; the › stops at the present rather than
+    // walking into empty months.
+    if (dir > 0 && r.isCurrent) return;
+    push({ period: cur.period, anchor: dir < 0 ? r.prev : r.next, from: null, to: null });
+  }
 
   const filtered = isFiltered(query);
   const exportHref = `/dispatch/history/export${historyHref(query)}`;
@@ -210,7 +255,7 @@ export function HistoryFilters({
               type="button"
               className="dxh-date__arw"
               aria-label={`Earlier ${period}`}
-              onClick={() => step(view.prev)}
+              onClick={() => step(-1)}
             >
               <ChevronLeft size={15} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -230,7 +275,7 @@ export function HistoryFilters({
               type="button"
               className="dxh-date__arw"
               aria-label={`Later ${period}`}
-              onClick={() => step(view.next)}
+              onClick={() => step(1)}
               disabled={view.isCurrent}
             >
               <ChevronRight size={15} strokeWidth={2} aria-hidden="true" />
@@ -270,14 +315,14 @@ export function HistoryFilters({
             )}
 
             <DateCal
-              period={period ?? "month"}
-              fromDay={pendingFrom ?? view?.fromDay ?? ""}
-              toDay={pendingFrom ?? view?.toDay ?? ""}
+              period={calPeriod}
+              fromDay={view?.fromDay ?? ""}
+              toDay={view?.toDay ?? ""}
               anchorDay={view?.fromDay ?? today}
-              pendingFrom={pendingFrom}
               today={today}
               presets={isRange ? presets : null}
               onPickDay={pickDay}
+              onPickRange={(f, t) => push({ period: "range", anchor: null, from: f, to: t })}
               onPickPreset={(f, t) => {
                 push({ period: "range", anchor: null, from: f, to: t });
                 close();

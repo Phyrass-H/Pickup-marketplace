@@ -49,13 +49,7 @@ export function EarningsPeriod({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  // Half-picked range: the first tap lands here until a second tap completes it.
-  const [pendingFrom, setPendingFrom] = useState<string | null>(null);
-
-  const close = useCallback(() => {
-    setOpen(false);
-    setPendingFrom(null);
-  }, []);
+  const close = useCallback(() => setOpen(false), []);
   const popRef = useDismiss<HTMLDivElement>(open, close);
 
   const isRange = period === "range";
@@ -75,34 +69,16 @@ export function EarningsPeriod({
       // shows the same numbers rather than resetting to nothing.
       goRange(fromDay, toDay);
       setOpen(true);
-      setPendingFrom(null);
     } else {
       go(p, anchor);
     }
   }
 
+  // The half-built span and the optimistic paint of a finished one both live in
+  // DateCal now, so this only ever sees a single day or a completed pair.
   function pickDay(iso: string) {
-    if (!isRange) {
-      go(period, iso);
-      close();
-      return;
-    }
-    if (!pendingFrom) {
-      setPendingFrom(iso);
-      return;
-    }
-    // Second tap completes it, in whichever order they were tapped.
-    //
-    // Deliberately does NOT close (founder): the calendar used to vanish on this
-    // tap, so you never saw the range you'd just built. It stays open with the
-    // band joined up and the label above rewritten, and the results load behind
-    // meanwhile — so the confirming tap on Done costs no waiting. It also gives a
-    // mis-tap on a small day cell somewhere to be noticed before you leave.
-    // Clearing pendingFrom is what makes the NEXT tap start a fresh range rather
-    // than extend this one.
-    const [a, b] = pendingFrom <= iso ? [pendingFrom, iso] : [iso, pendingFrom];
-    goRange(a, b);
-    setPendingFrom(null);
+    go(period, iso);
+    close();
   }
 
   const presets = useMemo(
@@ -173,12 +149,16 @@ export function EarningsPeriod({
         {open && (
           <DateCal
             period={period}
-            fromDay={pendingFrom ?? fromDay}
-            toDay={pendingFrom ?? toDay}
-            pendingFrom={pendingFrom}
+            fromDay={fromDay}
+            toDay={toDay}
             today={today}
             presets={isRange ? presets : null}
             onPickDay={pickDay}
+            // Completing a span deliberately does NOT close ([[d66]]): the
+            // calendar used to vanish on this tap, so you never saw the range you
+            // had just built. The results load behind it meanwhile, so the
+            // confirming tap on Done costs no waiting.
+            onPickRange={goRange}
             // A shortcut is one tap with unambiguous intent — nothing to confirm,
             // so it closes straight away. Only the hand-built two-tap range waits.
             onPickPreset={(f, t) => {

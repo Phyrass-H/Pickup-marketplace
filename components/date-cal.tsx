@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Period } from "@/lib/earnings";
 
@@ -59,27 +59,82 @@ export function DateCal({
   fromDay,
   toDay,
   anchorDay,
-  pendingFrom,
   today,
   presets,
   onPickDay,
+  onPickRange,
   onPickPreset,
   onDone,
 }: {
   period: Period;
-  /** Inclusive ends of the band. Pass "" for both to open with nothing banded. */
+  /** Inclusive ends of the COMMITTED band (from the URL). "" for both = nothing banded. */
   fromDay: string;
   toDay: string;
   /** Which month/year to open on. Defaults to the band's start; required when
       the band is empty, since "" carries no month to show. */
   anchorDay?: string;
-  pendingFrom: string | null;
   today: string;
   presets: readonly CalPreset[] | null;
+  /** A single day, for day/week/month/year. */
   onPickDay: (iso: string) => void;
+  /** Both ends of a hand-built span, once the second tap lands. Range mode only. */
+  onPickRange?: (from: string, to: string) => void;
   onPickPreset: (from: string, to: string) => void;
   onDone: () => void;
 }) {
+  // ⚑ The two-tap range lives HERE, not in the callers.
+  //
+  // It used to live in each caller (Earnings and History), which had two costs:
+  // the same twenty lines twice, and a flash the founder reported — *"when I pick
+  // the second date the calendar displays today's date for a moment before going
+  // back to the from-to selected."* The caller cleared its half-built state the
+  // instant the second tap landed, but the new range only arrives after
+  // router.replace commits, so for one frame the calendar rendered the OLD props:
+  // the previous range, or nothing at all with only "today" still highlighted.
+  //
+  // `optimistic` closes that window. The completed pair is held locally and drawn
+  // immediately; it is dropped once the props catch up, so the URL stays the
+  // source of truth and nothing is stale for longer than the navigation takes.
+  const [pendingFrom, setPendingFrom] = useState<string | null>(null);
+  const [optimistic, setOptimistic] = useState<{ from: string; to: string } | null>(null);
+
+  useEffect(() => {
+    if (optimistic && optimistic.from === fromDay && optimistic.to === toDay) setOptimistic(null);
+  }, [optimistic, fromDay, toDay]);
+
+  // Switching granularity abandons a half-built span rather than carrying it into
+  // a mode where a "start" means nothing.
+  useEffect(() => {
+    setPendingFrom(null);
+    setOptimistic(null);
+  }, [period]);
+
+  const band = pendingFrom
+    ? { from: pendingFrom, to: pendingFrom }
+    : (optimistic ?? { from: fromDay, to: toDay });
+
+  function handleDay(iso: string) {
+    if (period !== "range" || !onPickRange) {
+      onPickDay(iso);
+      return;
+    }
+    if (!pendingFrom) {
+      setPendingFrom(iso);
+      return;
+    }
+    // Second tap completes it, in whichever order the two were tapped. It does
+    // NOT close ([[d66]]): the moment a range most needs to confirm itself is the
+    // moment it used to destroy its own evidence.
+    const [a, b] = pendingFrom <= iso ? [pendingFrom, iso] : [iso, pendingFrom];
+    setOptimistic({ from: a, to: b });
+    setPendingFrom(null);
+    onPickRange(a, b);
+  }
+
+  function handleDone() {
+    setPendingFrom(null);
+    onDone();
+  }
   // The grid matches what the period is actually asking for. Picking a DAY to mean
   // "July" (Month) or to mean "2026" (Year) made the calendar collect information
   // it then threw away, and left the arrows stepping a month when reaching 2024
@@ -89,6 +144,8 @@ export function DateCal({
     period === "month" ? "month" : period === "year" ? "year" : "day";
 
   const anchor = anchorDay || fromDay || today;
+  const bandFrom = band.from;
+  const bandTo = band.to;
   const curY = Number(today.slice(0, 4));
   const selY = Number(anchor.slice(0, 4));
 
@@ -159,8 +216,6 @@ export function DateCal({
         </div>
       )}
 
-      {pendingFrom && <p className="ecal__hint">Now pick the end date.</p>}
-
       <div className="ecal__head">
         <button
           type="button"
@@ -190,10 +245,10 @@ export function DateCal({
               <button
                 key={key}
                 type="button"
-                className={`ecal__block${key === fromDay.slice(0, 7) ? " is-sel" : ""}`}
+                className={`ecal__block${key === bandFrom.slice(0, 7) ? " is-sel" : ""}`}
                 disabled={key > today.slice(0, 7)}
                 // The 1st is only a carrier: periodRange widens it to the month.
-                onClick={() => onPickDay(`${key}-01`)}
+                onClick={() => handleDay(`${key}-01`)}
               >
                 {monthCell(view.y, i)}
               </button>
@@ -212,7 +267,7 @@ export function DateCal({
                 type="button"
                 className={`ecal__block${y === selY ? " is-sel" : ""}`}
                 disabled={y > curY}
-                onClick={() => onPickDay(`${y}-01-01`)}
+                onClick={() => handleDay(`${y}-01-01`)}
               >
                 {y}
               </button>
@@ -243,16 +298,16 @@ export function DateCal({
                 // in, which is what makes "the granularity decides" visible at last.
                 className={[
                   "ecal__day",
-                  iso >= fromDay && iso <= toDay ? "is-in" : "",
-                  iso === fromDay ? "is-start" : "",
-                  iso === toDay ? "is-end" : "",
+                  bandFrom && iso >= bandFrom && iso <= bandTo ? "is-in" : "",
+                  iso === bandFrom ? "is-start" : "",
+                  iso === bandTo ? "is-end" : "",
                   iso === today ? "is-today" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
                 disabled={iso > today}
                 aria-label={iso}
-                onClick={() => onPickDay(iso)}
+                onClick={() => handleDay(iso)}
               >
                 {Number(iso.slice(8, 10))}
               </button>
@@ -263,18 +318,27 @@ export function DateCal({
 
       {/* Week is the only mode where a tap widens into something else — Month and
           Year pick their own unit directly, and in Day the sentence was a
-          tautology. Range is covered by the "now pick the end date" hint above. */}
+          tautology. */}
       {period === "week" && (
         <p className="ecal__hint ecal__hint--foot">Pick any day — you’ll get its week.</p>
       )}
 
-      {/* Range only, and only once both ends are set: the explicit way out, now
-          that completing a range no longer closes the calendar by itself. Hidden
-          mid-selection so it can't be tapped over a half-built range. */}
-      {period === "range" && !pendingFrom && (
-        <button type="button" className="ecal__done" onClick={onDone}>
-          Done
-        </button>
+      {/* ⚑ ONE footer slot of a FIXED height, holding either the prompt or the way
+          out. The prompt used to appear at the TOP and Done used to vanish, so a
+          first tap pushed the whole grid down 27px and shrank the popover — the
+          founder read that as the weekday letters disappearing, because the date
+          numbers slid up into where the letters had been. Nothing above this line
+          moves now; only the contents of this row change. */}
+      {period === "range" && (
+        <div className="ecal__foot">
+          {pendingFrom ? (
+            <p className="ecal__prompt">Now pick the end date.</p>
+          ) : (
+            <button type="button" className="ecal__done" onClick={handleDone}>
+              Done
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
