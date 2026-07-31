@@ -5,6 +5,26 @@
 
 ---
 
+## 31 July 2026 — Trips that nobody took now die properly
+- **You found this one by using the app**: the Pool was full of trips from weeks ago. Every single pooled trip — all 23
+  — had a pickup time in the past, the oldest by 44 days. Nothing in the product had ever closed one.
+- **A trip now expires the moment its pickup time passes.** It leaves the Pool, and the Business's row turns red and
+  reads **"Expired · Was not filled in time"**. It stays on the schedule for the rest of that day so you can't miss it,
+  then folds away with the other past trips.
+- **The part that actually mattered: a Driver could still accept them.** Tapping Accept on a six-week-dead booking
+  would have created a real, priced job — with a real cancellation fee attached — for a hotel that had long since made
+  other arrangements. That's now blocked in three places, including inside the database itself, so it can't happen even
+  if someone hits the exact second the trip dies.
+- **No new moving parts.** Closing old trips happens quietly whenever a Pool or Schedule page is opened, so there's no
+  scheduled job to set up, pay for or watch. When we build notifications we'll want a proper timer anyway — that's the
+  moment to revisit it, not now.
+- **Your Pool is empty as a result** — correctly, since every trip in it was dead. New trips you post will behave
+  normally.
+- **What this does NOT do yet: count anything.** "How many trips did we fail to fill" is the single most useful health
+  number for the marketplace, and it needs the back-office to have somewhere to live.
+
+---
+
 ## 30 July 2026 — Drivers can now confirm they'll be there
 - **Three hours before a pickup, a Driver gets a "Check in" button.** One tap tells the hotel they're on it. The count
   on the My Rides tab tells them how many are waiting, wherever they are in the app.

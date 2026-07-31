@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-07-31 — Session 51 — EXPIRED TRIPS: the missing protocol (BACKLOG § P, [[d62]])
+
+**Scope.** The founder picked § P — item **A** of the three things they'd found by using the app. Five decisions were
+open in the backlog; three of them changed what gets built, so I asked those and inferred nothing: expiry moment
+(**exactly `pickup_at`**, no grace), where it lands (**stays on the schedule until the day ends**), re-post (**not now**).
+
+**State on arrival, measured not assumed.** 34 missions; **23 pooled, every one past due**, oldest 2026-06-17 (44 days);
+**zero** rows had ever been `expired`. `missionTone` had rendered the state since day one for nobody.
+
+**⚑ The sharp edge.** `accept_mission` checked `status = 'pooled'` and not the time. Accepting a dead booking would
+have produced a confirmed, priced trip that the whole O7 fee machinery ([[d45]]/[[d48]]) would then treat as real.
+
+**Built.** Migration `2026-07-31_expired_missions.sql`: widen `status_event_status_check` to allow `'expired'`; a
+`create or replace` of `accept_mission` adding one time check **inside the existing row lock** (everything else
+byte-identical to the D55 version); and `expire_stale_missions()`, a `SECURITY DEFINER` sweep flipping `pooled → expired`
+and inserting the `status_event` in **one statement** (a data-modifying CTE chain, so a row can't be expired without its
+timeline entry). App: new `lib/expiry.ts` `sweepExpiredMissions()` called on the Pool + Dispatch schedule reads; a
+`.gt("pickup_at", now)` floor on the Pool query (**including under `?all=1`**); `isExpired()` exported from
+`lib/dispatch-status.ts` and used by `missionTone`, the trip-row Share lock, the "Edit details" gate and
+`/missions/[id]`; an `expired` branch in `friendlyAcceptError`.
+
+**No cron, on purpose.** Vercel Hobby caps cron at once per **day** — useless for a T-0 rule — and [[d61]]'s T-180
+reminder needs a real scheduler regardless. Building half a scheduler here would have meant redoing it. The RPC is
+idempotent, its UPDATE normally matches zero rows, and it **never throws** — which is what let the app deploy ahead of
+the migration (confirmed in the browser: `Could not find the function…` logged, page rendered fine).
+
+**Why `missionTone` also derives it.** The sweep runs on two pages; the calendar, the history and deep links don't
+sweep. Without the display-level rule the founder's original complaint would have stayed true on the calendar.
+
+**Verification (live, real Supabase DB, 34-mission baseline restored after).** Sweep closed **23 with 23 timeline rows**,
+returns 0 on a second call. **A genuine UI race:** staged a trip 75s out → Accept rendered → clicked it **96s after** the
+pickup passed → RPC raised, UI showed *"This mission expired — its pickup time has passed."* The sweep then caught that
+newly-stale row on the next Pool read (timeline 23 → 24). Happy path: a +3d trip accepted → `confirmed` immediately
+([[d55]] intact). Business schedule: **18 Expired rows** with the red wash. `tsc` + `next build` green (24 routes).
+Deployed `d7e06d4` → Vercel `success`.
+
+**⚑ Process note — my own error cost two round-trips.** I handed the founder a `bash` block (`open …`, then `pbcopy …`)
+immediately above the words "paste this into the SQL editor"; they pasted the shell command into Postgres twice and got
+`42601`. They then asked what a shell command even is — a fair question I should never have made them ask. **Name the
+destination before the block, and give SQL as SQL.**
+
+**⚑ Left open, deliberately:** an expired trip counts nowhere (fill rate needs § F2). And the third time now that a
+feature has been found two-thirds built and unreachable — `reclaim_mission` after [[d55]], the check-in pill in
+[[d61]], `expired` here. Worth a sweep for others.
+
+**Noticed, not touched:** the Dispatch day headers render French (*"Samedi 11 Juillet"*) inside the English app — same
+family as the French date picker already queued as item 2.
+
+---
+
 ## 2026-07-30 — Session 50 — CHECK-IN restored, and the fee hole that kept the take-back parked ([[d61]])
 
 **Scope.** The founder ruled out the back-office and notifications for now — *"I need to have a complete functional

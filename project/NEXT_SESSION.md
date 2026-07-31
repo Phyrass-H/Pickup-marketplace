@@ -435,15 +435,19 @@ wash that [[d55]] had made unreachable.
   `email` column says `s46.driver@pickup.local`. Match on `driver.auth_user_id`, never on `driver.email`.
 
 **REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, + the founder's own testing 2026-07-31).
-**★ START HERE — the two the founder found by using the app, both worse than clutter:**
+**★ START HERE — B is now the top item; A shipped in S51.**
 
-**A. ⚠️ EXPIRED TRIPS — no protocol exists at all.** Measured 2026-07-31: **23 of 23 pooled missions have a pickup in
-the past**, the oldest **44 days** ago; **zero** missions have ever been marked `expired`. The status exists and
-`missionTone` already renders it, but nothing writes it, and the Pool query has no time floor. **The sharp edge:**
-`accept_mission` does not check the time either, so a Driver can accept a six-week-dead trip and create a live priced
-obligation. **The guard (a `pickup_at` floor in the Pool query + a time check in the RPC) needs no scheduler and should
-ship first.** The sweep that flips `pooled → expired` needs a timer — same scheduler as D61's T-180 reminder, so build
-it once. Full spec + the 5 founder decisions: **BACKLOG § P**.
+**A. ✅ EXPIRED TRIPS — SHIPPED (S51, 2026-07-31, [[d62]]; migration `2026-07-31_expired_missions` applied; deployed
+`d7e06d4` → Vercel `success`).** A trip now expires **exactly at `pickup_at`** (founder: no grace), leaves the Pool, and
+shows the Business a red **"Expired · Was not filled in time"** row that stays on the schedule until the day ends. The
+money bug is closed in three places — a time check **inside `accept_mission`** (under the existing row lock), a
+`pickup_at` floor on the Pool query (**including under `?all=1`**), and `/missions/[id]` no longer offering Accept.
+`expire_stale_missions()` sweeps `pooled → expired` + writes the `status_event` in one statement, called on the Pool and
+Dispatch schedule reads — **deliberately no cron** (Vercel Hobby caps it at once a DAY; the scheduler decision belongs
+with D61's T-180 reminder in the notifications phase). `missionTone` derives the same state for `pooled` + past-due so
+the calendar and history can't lag behind the sweep. Verified live incl. a genuine UI accept race; DB restored to its
+34-mission baseline. **Still open from § P: an expired trip counts nowhere** — fill rate needs the § F2 back-office.
+**⚑ Note the side effect: the Pool is now legitimately EMPTY** (all 23 were dead), so testing needs freshly posted trips.
 
 **B. Driver EARNINGS — no date range, and the picker is broken.** Founder: no way to ask "what did I earn between these
 two dates" (only Day/Week/Month/Year with an anchor), **the calendar won't close on desktop**, and **it doesn't respond
@@ -460,8 +464,10 @@ Then, worst first:
    not the setting being read. The body type falls back to `""`, which is why Sedan is unselected. **Also decide:** the
    setting is ONE `default_vehicle_category` while the form has TWO controls (tier + body), so wiring it needs to say
    which it fills. ~1h.
-2. **The date picker is in French inside an English form** — 7 strings in `components/date-time-picker.tsx`
-   ("Choisir une date", "Mois précédent", "Heure exacte"…), on the most-worked screen. ~30 min.
+2. **French strings inside the English app** — 7 in `components/date-time-picker.tsx` ("Choisir une date", "Mois
+   précédent", "Heure exacte"…) on the most-worked screen, **plus the Dispatch schedule's day headers** ("Samedi 11
+   Juillet" — spotted S51, `formatDate` in `lib/format.ts`; S47 fixed `formatMonth` to `en-GB` but not this one).
+   Do both together. ~30 min.
 3. **Only the latest edit shows.** `mission_info_change` records every edit to a posted trip; the schedule renders one
    ("…and 2 earlier edits"). ~half a session.
 4. **A second vehicle** — scoped in [[d58]], groundwork shipped. ~half a session.

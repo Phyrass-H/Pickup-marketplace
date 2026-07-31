@@ -539,7 +539,21 @@ always allow a lift.
 
 ---
 
-## P. Expired / unfilled trips — the missing protocol (founder, 2026-07-31) 🔨❓
+## P. Expired / unfilled trips — ✅ SHIPPED 2026-07-31 (S51, [[d62]]; migration `2026-07-31_expired_missions` applied; deployed `d7e06d4`)
+
+**Founder's answers to the five questions below:** (1) expires **exactly at `pickup_at`**, no grace · (2) **stays on the
+Dispatch schedule until the day ends**, then folds into "Earlier trips" (no query change needed) · (3) labelled with the
+existing "Expired · Was not filled in time" · (4) **no re-post for now** — and note it could never have been a re-time,
+since the [[d48]] trigger freezes `pickup_at`, so it would have to duplicate into a new mission · (5) **counts nowhere
+yet** — fill rate still needs the § F2 back-office, which is the one piece of § P left open.
+
+**Shipped:** a time check inside `accept_mission` (under the existing row lock), a `pickup_at` floor on the Pool query
+(applied even under the dev `?all=1` bypass), `expire_stale_missions()` sweeping `pooled → expired` + writing the
+`status_event` in one statement, called on the Pool/Schedule reads — **no cron** (Hobby caps at once per day; the
+scheduler decision belongs to the notifications phase with [[d61]]'s T-180 reminder). `missionTone` also derives the
+state for `pooled` + past-due so the calendar/history can't lag. Verified live 6/6 incl. a genuine UI accept race.
+
+<details><summary>Original § P brief (kept for the record)</summary>
 
 **Found by the founder in the live Pool:** *"trips on the pool exist even though the trips are outdated by weeks!"*
 
@@ -578,3 +592,5 @@ money-and-trust bug, not just clutter.
 
 **Note for the founder:** the 23 stale rows are demo data, so this reads worse in the beta DB than it would in
 production — but the missing guard is real either way.
+
+</details>

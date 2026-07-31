@@ -1064,3 +1064,52 @@ four pill states render; the tab badge counts 2 → 1 as trips are checked in; t
 guards hold — RLS read of an own trip, a beyond-window trip refused, first-write-wins, a double tap moving nothing
 (`0 rows`), and a Driver PATCHing `checked_in_at` directly still **denied** (there is no driver UPDATE policy on
 `mission`; the action writes through the service role after an RLS ownership check, mirroring `advanceStatus`).
+
+### D62 — Expired trips: a booking dies at its pickup time, and can no longer be accepted (2026-07-31)
+**Found by the founder using the app**, not by reading code: *"trips on the pool exist even though the trips are
+outdated by weeks!"* Measured the same day — **23 of 23 pooled missions had a pickup in the past, the oldest 44 days
+ago**, and **zero** missions had ever been marked `expired`.
+
+**The machinery existed and was never connected.** The `expired` status has been in the enum since day one and
+`missionTone` already rendered it ("Expired · Was not filled in time"). But nothing ever wrote it — no job, no trigger,
+no sweep — and the Pool query had no lower bound on `pickup_at`. Same shape as [[d61]]: a feature two thirds built,
+sitting unreachable. **The third time this pattern has cost a session** (see also `reclaim_mission` after [[d55]]).
+
+**⚑ Why this was a money bug, not clutter.** `accept_mission` checked `status = 'pooled'` and **not the time**. A Driver
+could accept a six-week-dead booking and create a live, confirmed, priced obligation on a Business that had long since
+made other arrangements — and every O7 fee path ([[d45]], [[d48]]) would then treat it as a real trip.
+
+**The founder's rules.** (1) A trip expires **exactly at `pickup_at`** — no grace. A trip still unfilled at T-0 is
+already a failure; the PDP climb hit the ceiling long before then. (2) It **stays on the Dispatch schedule until the day
+ends**, then falls into the "Earlier trips" fold — which needed no query change, because the schedule already pins
+today's group and folds past days by Paris day key. (3) **No re-post.** Worth recording *why* that could never have been
+a simple re-time: the [[d48]] trigger freezes `pickup_at` once a trip leaves `draft`, so "post it again" has to
+duplicate into a **new** mission. Deferred, not refused.
+
+**Three guards, deepest first — the shallow ones are convenience, the deep one is the truth.**
+`accept_mission` raises `Mission has expired` **under the same row lock as the status check**, so the sweep can't race
+it. The Pool query gets a `pickup_at` floor, applied **even under the dev `?all=1` bypass**: that bypass drops the
+*matching* filters so one demo Driver can see the whole Pool, but a dead trip isn't a filtered-out trip — listing one
+`accept_mission` would refuse is a lie. And `/missions/[id]` stops offering Accept, saying why instead of the generic
+"someone else took it".
+
+**No cron — deliberately, and this is the reusable part.** `expire_stale_missions()` is a `SECURITY DEFINER` RPC that
+flips `pooled → expired` and writes the `status_event` **in one statement**, called on the Pool and Dispatch schedule
+reads. Vercel's Hobby plan caps cron at **once per day**, useless for a T-0 rule, and [[d61]]'s T-180 reminder needs a
+real scheduler anyway — so the scheduler decision is **deferred to the notifications phase rather than half-made here**.
+The RPC never throws, which is what let the app deploy ahead of the migration. If `mission` ever grows, this is the
+first thing to move onto a timer.
+
+**`missionTone` treats `pooled` + past-due exactly like `expired`.** The sweep only runs on two pages; the calendar,
+the history and any deep link don't sweep. Without this the founder's original complaint would still be true on the
+calendar for as long as the DB lagged. One exported `isExpired()` predicate now backs the tone, the Share lock and the
+"Edit details" gate, so those three can't drift.
+
+**Verified live against the real Supabase DB** (34-mission baseline restored afterwards): the sweep closed 23 with 23
+timeline rows and returns 0 on a second call; a **genuine UI race** — Accept rendered while the trip was 75s out,
+clicked 96s after the pickup passed — hit the RPC guard and surfaced the honest copy; the sweep caught that
+newly-stale row on the next Pool read; a future trip still accepts and confirms immediately ([[d55]] intact); and 18
+Expired rows render with the red wash on the Business schedule. `tsc` + `next build` green.
+
+**⚑ Left open, deliberately:** an expired trip **counts nowhere**. Fill rate is the single most important
+marketplace-health number and it has no home until the § F2 back-office exists. Logged there, not built here.
