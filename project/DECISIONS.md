@@ -1287,3 +1287,52 @@ airport at 11am for his next job and the app closes and pays out yesterday's tri
 **PARKED.** In beta the founder is the only one creating trips, so all 8 are test artifacts; and the card only fires
 when a Driver opens the app, so the design needs **push** to be worth building. Building now ships the weak version
 twice. Lands with notifications (menu B) or the back-office (§ F2). Full spec: BACKLOG § Q.
+
+---
+
+### D68 — Dispatch History is a tool you search, not a list you scroll (2026-07-31, S52)
+
+**The ask.** Founder: *"it is a professional tool, and they need accurate infos and easy to find a specific trip or
+mission by drivers name, or passenger or internal reference, or car… it need to be perfect and complete."* § R phase 1
+([[d63]]) had given it outcome chips and counts; this is the rest.
+
+**One search box, not five fields.** A Dispatcher doesn't know which field they remember a trip by — they remember
+*something*. So one box covers Guest · Driver · reference · address · flight · car, every term must hit somewhere (AND
+across terms, OR across fields), so "marc negresco" narrows the way a person narrows out loud.
+
+**It is accent-blind, and that isn't cosmetic.** Half the beta's addresses are "Aéroport Nice Côte d'Azur" and "Hôtel
+Negresco"; typing "aeroport" in a hurry has to find them. The highlight paints the ORIGINAL text from offsets found in
+the folded one, which needs a per-character index map — folding the whole string loses the mapping the moment a
+character doesn't fold 1:1. (Related to the S42 airport-predicate bug: accents are never incidental in this product.)
+
+**The row says WHY it matched, when the hit has no column.** Searching a plate or a make otherwise returns rows with no
+visible reason, which reads as a broken search. So a car hit prints `Car · Mercedes · Classe E · AB-123-CD` under the
+route. That is what makes "find it by car" work without spending a column on it.
+
+**Two gaps the redesign exposed, both fixed.** (1) Rows showed only a **time** while being grouped by **month** — 3 July
+and 19 July were indistinguishable without opening the row. (2) There was **no fare column at all**; an archive with no
+money in it cannot be the thing an accountant opens.
+
+**⚑ The accuracy call that matters most: an unclosed trip is not spend.** A past trip still `confirmed`/`on_board`
+(§ Q / [[d67]]) has an agreed fare but nothing settled. It now shows that fare **greyed, labelled "Not settled", and
+excluded from every total** — the row, the month band and the summary. Counting it would inflate a hotel's spend with
+trips that may never have happened; hiding it would lose a real number. The CSV gives it its own column.
+
+**Export CSV re-runs the same query on the server.** The page and the export both call `applyHistoryQuery`, so "exactly
+what's on screen" survives the next filter someone adds. Delimiter is `;` and amounts are French-style (58,17) because
+the reader is Excel FR, where a comma is the decimal separator and a comma-delimited file lands entirely in column A;
+a BOM keeps "Aéroport" from arriving as "AÃ©roport". A leading `=`/`+`/`-`/`@` is escaped so a stray reference can't
+execute as a formula.
+
+**The date range is the Earnings calendar, not a second one.** Extracted to `components/date-cal.tsx` and adopted
+unchanged ([[d64]]–[[d66]]); the Driver's screen was verified after the extraction. Third surface asking for a range,
+still one control. § S adopts the same.
+
+**Everything lives in the URL** — filter, search, from/to, driver, class, sort — so a filtered archive is a link you can
+send, Back works, and the CSV is that link with a different extension.
+
+**Native `<select>` for Driver / class / sort** rather than three more popovers: keyboard- and screen-reader-correct for
+free, and they render as the platform picker on a phone. Only the calendar needed to be custom.
+
+**Not built, on purpose:** a density toggle (the row is already dense), and pagination — fine at 28 trips, the first
+thing to break at 5 000, and still noted in § R rather than pre-built.

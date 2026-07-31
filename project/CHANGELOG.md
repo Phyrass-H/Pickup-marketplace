@@ -495,3 +495,27 @@
 
 ## Earlier entries (16 June → 27 June 2026) — archived
 Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep this file — and session startup — light.
+
+## 2026-07-31 — Session 52
+
+- **Abandoned trips: decided, then deliberately parked.** Talked through the 8 past trips a Driver took and never
+  closed. The escape valves already built (copilote, agreed release, T-60, cancel) all answer *"this trip isn't going
+  to happen"* — someone is unhappy, so someone acts. The hole is the opposite case: *the trip happened and nobody
+  tapped the last button*, which has no complainer, so nobody chases it. The fix is a question, not a rule: a card on
+  the Driver's My Rides a few hours later, expiring in 48h and flipping to the Business, who knew that day. It needs
+  push to be worth building, so it waits. Nothing shipped; the design is written down so it isn't re-derived.
+- **Dispatch History is now a real back-office tool.** It could only be filtered by outcome; it now answers *"find me
+  that trip."* One search box covers the Guest, the Driver, your internal reference, the address, the flight number and
+  the car — type any of them. It ignores accents, so "aeroport" finds "Aéroport", and it highlights what matched. When
+  the match is something the table has no column for, like a number plate, the row tells you: *Car · Mercedes ·
+  Classe E · AB-123-CD*.
+- **Plus a date range, a Driver filter, a class filter, sorting, and Export CSV** — the export gives you exactly the
+  rows you're looking at, formatted for French Excel (accents intact, amounts as 58,17). Every filter is in the address
+  bar, so a filtered archive is a link you can send to your accountant.
+- **Two things the archive was missing.** Rows showed only a time even though they're grouped by month, so 3 July and
+  19 July looked identical — they show the date now. And there was no fare column at all, which made it useless for
+  money; there is one now, with the cancellation fee or the waiting charge named underneath.
+- **The spend figure is honest.** A trip a Driver took and never closed has an agreed price but nothing settled. It
+  shows greyed as "Not settled" and is left out of every total — otherwise your spend would include trips that may
+  never have happened.
+- **The date picker is the same one as the Driver's Earnings**, not a second one built to look alike.

@@ -685,10 +685,36 @@ app closes and pays out yesterday's trip. The right shape is *"Looks like you fi
 
 ---
 
-## R. Dispatch History — the full feature set 🔨 (founder, 2026-07-31)
+## R. Dispatch History — ✅ SHIPPED 2026-07-31 (S52, [[d68]]; NO migration; deployed `0acdb68`)
 
 Phase 1 shipped 2026-07-31 ([[d63]]): outcome filter chips (All / Completed / Unfilled / Cancelled) with counts, a
-one-line summary, per-month failure counts, two empty states. The founder wants it taken the rest of the way.
+one-line summary, per-month failure counts, two empty states.
+
+**Phase 2 — the rest of the way — is DONE.** Founder: *"it is a professional tool, and they need accurate infos and easy
+to find a specific trip or mission by drivers name, or passenger or internal reference, or car… it need to be perfect
+and complete."* Everything in the candidate list below shipped except the two items explicitly deferred at the end.
+Full reasoning: [[d68]]. Files: `lib/history-filter.ts` (new — the one place a past trip is filtered/searched/sorted),
+`components/history-filters.tsx` (new toolbar), `components/date-cal.tsx` (the Earnings calendar, extracted),
+`app/(dispatch)/dispatch/history/{page.tsx,export/route.ts}`, `components/trip-row.tsx`, `lib/format.ts`, `globals.css`.
+
+- ✅ **Search** — ONE box over Guest · Driver · reference · address · flight · car; every term must hit somewhere;
+  **accent-folded** ("aeroport" finds "Aéroport"); the hit is painted in the row; and when it lands somewhere with no
+  column (a plate, a make) the row prints `Car · Mercedes · Classe E · AB-123-CD` so the result never looks arbitrary.
+- ✅ **Date range** — the Earnings calendar, extracted to `components/date-cal.tsx` and adopted unchanged. Presets:
+  last 7 / last 30 / this month / all time.
+- ✅ **Sort** — newest / oldest / highest fare / lowest fare, from the toolbar or by clicking the Date / Fare headers.
+- ✅ **Export CSV** — the page and the export run the SAME `applyHistoryQuery`, so it is exactly what's on screen.
+  `;` delimiter + French decimals + BOM (Excel FR), formula-injection escaped.
+- ✅ **Per-Driver view** — a Driver dropdown listing everyone who has driven for this Business.
+- ✅ **Deep links** — `?open=<id>` matches the Schedule; every filter is in the URL, so a filtered archive is a link.
+- ✅ **Two gaps found and closed:** rows showed only a **time** inside month bands (3 July vs 19 July were
+  indistinguishable), and there was **no fare column at all**.
+- ✅ **Accuracy:** a past trip a Driver never closed (§ Q) shows its agreed fare greyed as **"Not settled"** and is
+  **excluded from every total** — row, month band and summary. It has its own CSV column.
+- ⏳ **Deferred, deliberately:** the compact/comfortable **density toggle** (the row is already dense — nobody asked)
+  and **pagination/virtualisation** (fine at 28 trips, the first thing to break at 5 000 — see the note below).
+
+<details><summary>The original candidate list (kept for reference)</summary>
 
 **Candidates (needs a founder pass to prioritise — this list is deliberately longer than one session):**
 - **Search** — by Guest name, reference, address, Driver. The Calendar already has a search that matches the assigned
@@ -703,6 +729,14 @@ one-line summary, per-month failure counts, two empty states. The founder wants 
 - **Deep links** — `/dispatch/history?open=<id>` to match the Schedule's existing `?open=`/`?day=` (S33).
 - **Pagination / virtualisation** — not needed at 34 missions; the whole archive is loaded in one query today, and
   that is the first thing to break at real volume. Note it before a hotel has 5 000 trips.
+
+</details>
+
+**⚑ STILL OPEN — the volume ceiling.** The page loads the Business's whole archive in one query and filters in memory.
+That is correct at 28 trips and deliberate (it is what lets the chip counts, the Driver dropdown and the class list all
+be honest about the *whole* archive). It is also the first thing that breaks at real volume. When a hotel has thousands
+of trips, the filters move into the SQL (`ilike`/`websearch_to_tsquery` on a generated search column) and the page
+paginates — and at that point the chip counts need their own aggregate query. Not before.
 
 ---
 
