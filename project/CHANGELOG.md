@@ -534,3 +534,15 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   the Driver's Earnings screen got the same fix.
 - **Eight more problems found by review before you could hit them** — including tapping a month doing nothing at
   all when no filter was set, and clicking the back arrow three times only moving one month.
+
+## 2026-08-05 — the marketing site moved out
+
+- **`kavenue.fr` is now a separate project.** The public site lives in its own repo and its own Vercel project,
+  so marketing copy can change without touching the product — and a broken landing page can't stop a product
+  fix from shipping. The two app subdomains (`driver.` and `dispatch.`) stayed exactly where they were and were
+  never interrupted.
+- **What's there today is a holding page, not the landing page** — presentable, true, and it links to both
+  sign-ins. It exists so the domain could move on its own schedule instead of waiting for the design.
+- **The design and copy are deliberately not started.** A finished page was built and rejected; the next attempt
+  starts from a preview and your direction, in its own session.
+- The old splash inside the app has been deleted, since nothing can reach it any more.

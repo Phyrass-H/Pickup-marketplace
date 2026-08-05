@@ -64,11 +64,22 @@ editor** (Claude's app keys go through PostgREST = rows only, NOT DDL). Then bui
 also keeps the running app's data, so the dev server reads the **real** Supabase DB.
 
 CURRENT STATE (live, deployed from `main`):
-- **Custom domain + role subdomains — `kavenue.fr` since 2026-07-29 ([[d60]]):** `kavenue.fr` = landing splash ·
-  `www.kavenue.fr` → 308 → apex · `driver.kavenue.fr` = Driver app · `dispatch.kavenue.fr` = Business/Dispatch.
+- **⚑ THE APEX IS NO LONGER THIS APP (2026-08-05).** `kavenue.fr` + `www.kavenue.fr` were moved to a **separate
+  Vercel project + separate repo** for the marketing site (`Phyrass-H/kavenue-landing`, local folder
+  `../kavenue-landing`). Founder's call after weighing a route group inside this repo: they wanted a hard wall.
+  **This app now only ever receives `driver.kavenue.fr` and `dispatch.kavenue.fr` in production**, so the old
+  `LandingSplash` branch in `app/page.tsx` was unreachable and both it and `components/landing-splash.tsx` are
+  deleted. `lib/hosts.ts` is untouched — `isProdDomain`/`roleSubOf` still enforce role-per-subdomain in the two
+  route-group layouts. Runbook + brand rules for the marketing site: **`project/LANDING_HANDOFF.md`**.
+  ⚑ **Brand-token drift is the standing cost of the split:** the tokens are copied verbatim into the landing
+  repo's `app/globals.css`. Change a colour here, change it there.
+- **Custom domain + role subdomains — `kavenue.fr` since 2026-07-29 ([[d60]]):**
+  `www.kavenue.fr` → 308 → apex (both now on the LANDING project) · `driver.kavenue.fr` = Driver app ·
+  `dispatch.kavenue.fr` = Business/Dispatch (both still on this project).
   Each subdomain has its own host-only session cookie. Mapping in `lib/hosts.ts` (no-op on localhost +
   `*.vercel.app`). Registrar **OVHcloud**, DNS zone at OVH (app records + mail records in one zone), Vercel project
   renamed **`kavenue`**. `pickupbedriven.com` is removed from Vercel (404) but still registered.
+  ⚑ **DNS at OVH was NOT touched** by the split — only the project↔hostname binding inside Vercel changed.
 - **Email — Google Workspace on `kavenue.fr`:** one paid mailbox `phyrass@kavenue.fr`; **`support@` · `feedback@` ·
   `contact@` are free aliases into it** (`support@`/`feedback@` are hardcoded in the app — Driver help card +
   Dispatch settings). SPF + DKIM + DMARC all verified `pass` on a real message. **DMARC is at `p=none`** (monitor
