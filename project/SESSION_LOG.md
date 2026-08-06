@@ -1471,3 +1471,19 @@ it describes what was true when written, and rewriting history to match the pres
 
 **Still founder-owned and still open:** the GitHub repo is `Phyrass-H/Pickup-marketplace`. Renaming it breaks the
 git remote, so it is not something to do casually mid-session.
+
+### Session 53 close, 2026-08-06 — the landing brief pack
+
+Wrote **`brief/` in the landing repo** — 8 files, ~740 lines, deliberately **self-contained** so a session over
+there never needs to reach into this repo: what Kavenue is (including the trip flow end to end, which nothing
+had written down in one place), the legal position as concrete copy rules, a claims ledger (true today / check
+first / never), the three audiences, design tokens + the founder's taste, the technical constraints that settle
+the sign-in question, and an honest account of the rejected first attempt. The landing `CLAUDE.md` now points
+there instead of here.
+
+⚑ **Landing-side decisions now live in `../kavenue-landing/CLAUDE.md` §0, not in this repo's DECISIONS.md.** The
+founder's landing session has already recorded **D-L1** (English only for now; French is a later pass, don't
+build i18n routing yet), **D-L2** (*no geography at all* — no "French Riviera", no city names; the page talks to
+everyone) and **D-L3** (no Driver count, in any wording). Those supersede what the brief originally said about
+the beta being Riviera-specific — the facts are still true internally, they just don't go on the page. **If a
+future product session needs to know what the public site claims, read that file, not this one.**
