@@ -234,7 +234,7 @@ These are confusion points specific to this form where **no guidance exists toda
 15. **Luggage has no cap or guidance** (#41): a plain number input with `min=0` and no hint on how it interacts with Body type (a Van vs Sedan boot). Passenger count nudges toward a Van (#34–37); luggage never does, so a 6-bag Sedan booking passes silently.
 
 Relevant files audited (all absolute):
-`/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/app/(dispatch)/dispatch/new/mission-form.tsx`, `.../new/page.tsx`, `.../new/actions.ts`, `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/components/route-stops.tsx`, `service-class-fields.tsx`, `passenger-list.tsx`, `driver-service-fields.tsx`, `reference-field.tsx`, `date-time-picker.tsx`, `board-file-link.tsx`, `address-autocomplete.tsx`, `share-switch.tsx`, and `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/passengers.ts`, `lib/driver-service.ts`, `lib/vehicle-catalog.ts`.
+`/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/app/(dispatch)/dispatch/new/mission-form.tsx`, `.../new/page.tsx`, `.../new/actions.ts`, `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/components/route-stops.tsx`, `service-class-fields.tsx`, `passenger-list.tsx`, `driver-service-fields.tsx`, `reference-field.tsx`, `date-time-picker.tsx`, `board-file-link.tsx`, `address-autocomplete.tsx`, `share-switch.tsx`, and `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/passengers.ts`, `lib/driver-service.ts`, `lib/vehicle-catalog.ts`.
 
 
 ---
@@ -440,7 +440,7 @@ Status pill labels via `lib/dispatch-status.ts` (concept-bearing status wording,
 
 12. **Calendar "Confirmed" KPI vs status filter mismatch is unexplained.** The KPI counts only `info` tone as "Confirmed," while the status dropdown separates "Pooled / Confirmed / In progress / Needs action." A user filtering by "Confirmed" in the dropdown vs clicking the "Confirmed" KPI may get different-feeling results with no note explaining the difference.
 
-Relevant files (all absolute): `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/app/(dispatch)/dispatch/page.tsx`, `.../calendar/page.tsx`, `.../drafts/page.tsx`, `.../history/page.tsx`, `.../settings/page.tsx`, `.../settings/actions.ts`, `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/components/{dispatch-shell,dispatch-calendar,trip-row,draft-actions,document-section,avatar-editor,help-legal-card,settings-tabs,share-switch,phone-share-toggle,board-file-link,status-steps,live-refresh}.tsx`, `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/dispatch-status.ts`.
+Relevant files (all absolute): `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/app/(dispatch)/dispatch/page.tsx`, `.../calendar/page.tsx`, `.../drafts/page.tsx`, `.../history/page.tsx`, `.../settings/page.tsx`, `.../settings/actions.ts`, `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/components/{dispatch-shell,dispatch-calendar,trip-row,draft-actions,document-section,avatar-editor,help-legal-card,settings-tabs,share-switch,phone-share-toggle,board-file-link,status-steps,live-refresh}.tsx`, `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/dispatch-status.ts`.
 
 
 ---
@@ -601,7 +601,7 @@ Terms confirmed against glossary: Business, Dispatcher, Driver, Guest, Pool, PDP
 
 13. **Payouts "coming soon" gives no timeline or current-state clarity.** `settings/page.tsx:139` — a Driver running real missions has no guidance on *how/when* they actually get paid in beta (the "weekly earnings via Stripe" line describes a future state, not what happens now).
 
-Key label files for reference: `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/mission-flow.ts` (button/step wording), `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/driver-service.ts` (dress/flag/language concept labels), `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/vehicle-catalog.ts` (tier derivation + `TIER_LABEL`), `/Users/phyrasshaidar/Documents/02_Cactus/PickUp/PickUp_project_dev/lib/format.ts` (`serviceClassLabel`, `missionStatusLabel`).
+Key label files for reference: `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/mission-flow.ts` (button/step wording), `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/driver-service.ts` (dress/flag/language concept labels), `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/vehicle-catalog.ts` (tier derivation + `TIER_LABEL`), `/Users/phyrasshaidar/Documents/02_Cactus/Kavenue/Kavenue_project_dev/lib/format.ts` (`serviceClassLabel`, `missionStatusLabel`).
 
 
 ---

@@ -721,6 +721,8 @@ real:
 1. **Every `pickupbedriven.com` hostname** — the DNS move hasn't happened; renaming these breaks the live site.
 2. **`Phyrass-H/Pickup-marketplace`** — the actual git remote and the deploy-verification `gh api` path.
 3. **The `PickUp_project_dev` directory** — the session cwd and the Claude project config path. Founder-owned.
+   **✅ Renamed 2026-08-06** to `02_Cactus/Kavenue/Kavenue_project_dev` (both levels). The `~/.claude/projects/` directory
+   is keyed to the folder path, so it had to move in the same operation or the history and memory would have been orphaned.
 4. **`PickUp Go`** (hard rule #3, a different product) and **La Poste's "Pickup" trademark** — renaming these makes the
    sentences that explain *why we rebranded* into nonsense. Same for historical/rebrand prose in the logs and D44/D50.
 5. **The transport term** — `pickup_at`, `pickup_address`, `prefill_pickup`, `isAirportPickup`, `nextPickupIso`, the

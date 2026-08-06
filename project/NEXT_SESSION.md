@@ -310,9 +310,10 @@ CURRENT STATE (live, deployed from `main`):
   - **Verified:** `tsc --noEmit` clean · `next build` green (24 routes) · **18 routes fetched in-browser against the real
     Supabase DB → 0 occurrences of "PickUp"** in rendered HTML, including the PWA manifest and both legal pages · no
     console errors · French legal copy checked for élision (Kavenue is consonant-initial, so "de Kavenue" is correct).
-  - **⚑ Founder actions still open (Claude deliberately did NOT do these):** rename the repo **directory**
-    `PickUp_project_dev` (it's this session's cwd + the Claude project config path); rename the **GitHub repo**
-    `Phyrass-H/Pickup-marketplace` (outward-facing, your account). **✅ The domain migration is DONE — S49, [[d60]].**
+  - **⚑ Founder actions:** **✅ The domain migration is DONE — S49, [[d60]].** **✅ The repo directory is DONE — S53,
+    2026-08-06:** the folder is now `02_Cactus/Kavenue/Kavenue_project_dev` (both levels renamed), and the matching
+    `~/.claude/projects/` directory moved with it, so the session history and memory survived. **Still open:** rename the
+    **GitHub repo** `Phyrass-H/Pickup-marketplace` (outward-facing, your account, and it breaks the git remote — yours).
     Also flagged, not
     touched: `.claude/settings.local.json` line 42 mentions the old brand inside a permission rule and line 32 has a stale
     `pickup_schema.sql` path (a dead entry — that path was already wrong pre-rename) — it's your permissions config, so
@@ -648,7 +649,8 @@ PWA manifest, README and the Dispatch topbar wordmark; the two brand-named doc f
 lenses (a mechanical reversibility check on all 209 changed lines found 0 collateral edits) + 18 routes in-browser.
 **Deliberately NOT renamed at the time** (each would have broken something real): every `pickupbedriven.com` hostname
 (**superseded — the DNS move shipped in S49, [[d60]]; the code is on `kavenue.fr` now**), the
-`Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev` directory, `PickUp Go`, La Poste's
+`Phyrass-H/Pickup-marketplace` repo slug, the `PickUp_project_dev` directory (**superseded — renamed 2026-08-06 to
+`Kavenue_project_dev`**), `PickUp Go`, La Poste's
 "Pickup" trademark, the `pickup_*` transport term/DB columns, the `pickup-dx-collapsed` localStorage key, and the
 `*@pickup.local` dev-login/seed identities (they map to REAL Supabase auth rows — renaming the string alone breaks
 dev-login). See the founder-action list at the end of this file.
@@ -710,8 +712,9 @@ looked correct in code and only fell to live probing); the **"Both"** mission ty
    glossary (Business/Dispatcher/Driver/Guest/Pool/PDP/Ceiling/SPEED WIN) was deliberately untouched.
    **✅ The domain migration SHIPPED in Session 49 ([[d60]])** — `kavenue.fr` is live (the `.com` waits until it's
    affordable), old domain removed, Google Workspace email running. Runbook: `project/DOMAIN_MIGRATION.md`.
-   **Still outstanding, founder-owned:** (1) the **repo directory** is still `PickUp_project_dev` and the **GitHub repo** is
-   still `Phyrass-H/Pickup-marketplace` — both are the founder's to rename (they'd break this session's cwd / the remote);
+   **Still outstanding, founder-owned:** (1) ✅ the **repo directory** was renamed 2026-08-06 — now
+   `02_Cactus/Kavenue/Kavenue_project_dev`; the **GitHub repo** is still `Phyrass-H/Pickup-marketplace`, the founder's to
+   rename (it breaks the git remote);
    (2) **Google Places** swap for address search — this was gated on the DNS move so the key could be restricted once,
    and **that gate is now lifted**. Related: the Mapbox public token turned out to have **no URL restrictions at all**
    (probed in S49), so if we stay on Mapbox it wants a new restricted token anyway. See [[d43]] [[d50]] [[d51]] [[d60]]

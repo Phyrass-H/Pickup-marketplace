@@ -1446,3 +1446,28 @@ The founder is renaming the working folder `02_Cactus/PickUp` → `02_Cactus/Kav
 `~/.claude/projects/` has to move with it or the history and memory are orphaned. Steps written to
 `02_Cactus/RENAME_STEPS.md` (outside both repos, so it survives the rename). **If any doc in this repo still
 shows an absolute path containing `02_Cactus/PickUp`, it is stale — nothing depends on it.**
+
+### Addendum, 2026-08-06 — the folder rename landed
+
+The rename from the previous entry is **done**, and the founder went one level further than planned: **both**
+levels are renamed, so the working directory is now `02_Cactus/Kavenue/Kavenue_project_dev` (not
+`Kavenue/PickUp_project_dev`). The landing repo sits beside it at `02_Cactus/Kavenue/kavenue-landing`.
+
+Claude Code keys its per-project storage to the folder path, so `~/.claude/projects/` had to move in the same
+operation. Verified after: all 9 memory files present, session history intact.
+
+⚑ **One thing worth remembering about this class of change:** the session doing the rename cannot perform it —
+its shell is inside the folder being moved, and Claude Code is mid-write into the very `~/.claude/projects/`
+directory being relocated. It has to be done by the founder from a plain Terminal with Claude Code quit. A
+guarded script (`02_Cactus/finish-rename.sh`) was written to make that a single command; both it and
+`02_Cactus/RENAME_STEPS.md` have since been deleted, having served their purpose.
+
+Stale references cleaned up in the same pass: `NEXT_SESSION.md`, `NEXT_MOVES_CHECKLIST.md` and `DECISIONS.md` now
+record the rename as done rather than outstanding; 10 absolute paths in `GUIDANCE_AUDIT.md` were repointed; the
+landing repo's `CLAUDE.md` cross-reference was fixed; and the long-flagged dead `pickup_schema.sql` entry in
+`.claude/settings.local.json` was removed (that file has not existed for some time — the path was already wrong
+before the rename). **Historical prose in the logs, CHANGELOG and DOMAIN_MIGRATION was deliberately left alone** —
+it describes what was true when written, and rewriting history to match the present makes the record useless.
+
+**Still founder-owned and still open:** the GitHub repo is `Phyrass-H/Pickup-marketplace`. Renaming it breaks the
+git remote, so it is not something to do casually mid-session.

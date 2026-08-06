@@ -546,3 +546,12 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
 - **The design and copy are deliberately not started.** A finished page was built and rejected; the next attempt
   starts from a preview and your direction, in its own session.
 - The old splash inside the app has been deleted, since nothing can reach it any more.
+
+## 2026-08-06 — the folder is called Kavenue now
+
+- **The project folder on your Mac is renamed** — `Kavenue/Kavenue_project_dev`, with the landing site beside it.
+  Your session history and everything Claude remembers about how you like to work came across intact.
+- Notes and checklists that still described the rename as "to do" have been brought up to date. The older entries
+  were left as they were — they're a record of what happened, not a description of today.
+- **One thing still has the old name: the GitHub project** (`Pickup-marketplace`). It's yours to rename when you
+  want to; nothing depends on it and nothing breaks if it stays.

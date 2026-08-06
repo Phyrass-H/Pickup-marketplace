@@ -3,7 +3,7 @@
 > **For a NEW, separate Claude Code project** that owns the public marketing site, independent of the product
 > repo. Founder's call, 2026-08-04: the landing page lives in its own repo, not inside the app.
 > Copy this file into the new project as its `CLAUDE.md` starting point.
-> Written from the product repo at `PickUp_project_dev` on 2026-08-04.
+> Written from the product repo on 2026-08-04 (then at `PickUp_project_dev`; renamed to `Kavenue_project_dev` 2026-08-06).
 
 ---
 

@@ -54,8 +54,8 @@ These honour "features & polish first." Pick freely.
 
 - [ ] **Google Places** swap for address search (the real POI fix — restrict the key once, after DNS).
 - [ ] **Domain migration** `pickupbedriven.com` → a Kavenue domain.
-- [x] **Code/copy rebrand** PickUp → Kavenue — **done S44** ([[d51]]). Still yours to do: rename the repo **folder**
-      (`PickUp_project_dev`) and the **GitHub repo** (`Phyrass-H/Pickup-marketplace`).
+- [x] **Code/copy rebrand** PickUp → Kavenue — **done S44** ([[d51]]). Repo **folder** renamed 2026-08-06 → now
+      `02_Cactus/Kavenue/Kavenue_project_dev`. Still yours: the **GitHub repo** (`Phyrass-H/Pickup-marketplace`).
 - [ ] URL-restrict the **Mapbox token** (do it during the domain move).
 
 ---
