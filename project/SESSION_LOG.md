@@ -1358,3 +1358,91 @@ Vercel `success`.
 one navigation behind the user's last action. Anything that (a) mirrors them into local state, (b) merges a patch
 onto them, or (c) computes a "next" value from them will misbehave under fast input. Own the intent locally; let the
 URL catch up. This session produced five separate bugs of that one shape.
+
+---
+
+## Session 53 — 2026-08-03/05 · The marketing site becomes its own project ([[d68]] follow-on; no product behaviour change)
+
+### What the founder asked for, and what I got wrong first
+
+*"I need to create a landing page that will introduce Kavenue the best way possible, a driver side a business
+side and a investor side, also an account sign-up sign-in for business or should this be a different link or
+place?"*
+
+**The sign-in question has a technical answer, not a preference:** each app subdomain holds a **host-only session
+cookie** (the [[d60]] design that lets one person be a Driver and a Business at once). A login form on the apex
+**cannot** set a cookie for `dispatch.kavenue.fr`. So the landing page links out; it never hosts a form. And
+sign-**up** must not be self-serve — a Business needs onboarding, and a Driver legally cannot work until their
+documents are verified (Doc 01: €300,000 for connecting Guests with unregistered VTC drivers, and the admin
+verification workspace is still unbuilt). The CTA is a capture, not an account.
+
+**⚑ Then I built a finished four-page landing preview and it was rejected wholesale** — *"I like just about
+nothing about it sorry, what I wanted is for you to tell me to set up everything for you."* The founder wanted
+the **foundation**, with design and copy going to a separate brainstorm session. Rule #1 (preview first, get
+sign-off) exists precisely to catch this and I skipped past it by building a complete thing. Recorded in the new
+repo's own `CLAUDE.md` so the next attempt starts from a preview.
+
+### The architecture conversation (worth keeping — it was a real decision)
+
+I recommended a route group **inside** this repo: same deploy, hard CSS wall via `app/(marketing)/` with its own
+layout. Argued the honest tradeoffs both ways — same repo risks a **shared build** (a broken landing page blocks
+a *product* deploy, though Vercel keeps serving the last good deployment, so the product never goes down);
+separate repo costs **brand-token drift** and a second thing to maintain, and buys a genuine security boundary
+(two sets of env vars, so a marketing page cannot even reach the service-role key).
+
+**Founder chose separate.** They reaffirmed after hearing the counter-argument — *"I would feel more comfortable
+not to work on the same repo"* — so that is the decision, not a compromise to revisit.
+
+### What shipped
+
+**New repo `Phyrass-H/kavenue-landing`** (private), local `../kavenue-landing`, its own Vercel project. Next 16 +
+TypeScript, **no Tailwind** so tokens lift across cleanly.
+- Brand tokens copied **verbatim** from this repo's `app/globals.css` + a minimal reset and **nothing else** —
+  the product's 3,000-line stylesheet is deliberately not copied, because its `.btn`/`.card`/`.row` collide with
+  anything a landing page wants. That collision is not hypothetical: it silently broke the first mockup's buttons
+  (the app's `.btn { width: 100% }` won on a property the landing CSS never declared).
+- A **holding page**, not a landing page: presentable, true, links both sign-ins. Its purpose is to let the
+  domain move happen **independently of the design work**.
+- `robots.ts` already excludes `/investors` (unlisted — noindex + not in nav, *not* secret); `sitemap.ts` lists
+  public pages only; full metadata + Open Graph.
+- Dev server on **:3100** so it never fights this app on :3000.
+- Its `CLAUDE.md` carries the agent/intermediary copy rules, the token block, the domain runbook, which claims
+  are true today vs which need checking, and the founder's working preferences.
+
+**The domain move — done and verified 2026-08-05.** `kavenue.fr` + `www.kavenue.fr` now belong to the landing
+project; `driver.` and `dispatch.` stayed on this one and were **never interrupted**. Verified before and after:
+apex 200 serving the landing project (its own `robots.txt` proves it), `www` still 308 → apex, both app
+subdomains still 307 → `/login` with `/login` reachable.
+- ⚑ **DNS at OVH was not touched.** Only the project↔hostname binding inside Vercel changed.
+- ⚑ **Vercel's "Redirect apex domains to www (recommended)" was UNCHECKED on purpose** — it would have inverted
+  the canonical domain, and `metadataBase` in both repos declares `kavenue.fr`.
+- ⚑ Order matters: remove from the old project, then add to the new one. Vercel refuses two projects claiming one
+  hostname, so the apex is unserved for the seconds in between.
+
+**This repo:** `components/landing-splash.tsx` and the `isProdDomain && roleSubOf === null` branch in
+`app/page.tsx` are **deleted** — unreachable once the apex moved, and unreachable branches rot. `lib/hosts.ts`
+untouched; `isProdDomain`/`roleSubOf` still enforce role-per-subdomain in the two route-group layouts. Built
+green, deployed `ab93849` → Vercel `success`, and all four hostnames re-verified *after* that deploy landed.
+
+### Also written this session
+- **`project/PRICING_BRIEF.md`** — a self-contained brief for the founder's pricing/commission brainstorm
+  elsewhere, so a fresh Claude can be briefed without a 1,400-line decision log. ⚑ It surfaces something the
+  founder was about to re-derive: **Doc 01's worked money-flow example already answers "is commission taken out
+  of the Pool price or added on top"** — Driver €100, Business €118, so it is **added on top**, which means a
+  mission needs **two** money figures where it has one today.
+- **`project/LANDING_HANDOFF.md`** — the same content that became the new repo's `CLAUDE.md`.
+- **`docs/migrations/2026-08-03_access_request.sql`** — written, **NOT applied**. A capture table for a real
+  contact form. The founder will decide at design time whether the site takes a form or just shows
+  `contact@kavenue.fr`; no migration is needed for the latter.
+
+### ⚑ The standing cost of the split — say this out loud in future sessions
+**Brand tokens now exist in two repos.** Change a colour here and it must change in
+`../kavenue-landing/app/globals.css` too, or the navy drifts and it shows the moment the two are open side by
+side. Both files carry a comment saying so.
+
+### Housekeeping
+The founder is renaming the working folder `02_Cactus/PickUp` → `02_Cactus/Kavenue` (the long-open task from
+[[d51]]). Claude Code keys its per-project storage to the folder path, so the matching directory under
+`~/.claude/projects/` has to move with it or the history and memory are orphaned. Steps written to
+`02_Cactus/RENAME_STEPS.md` (outside both repos, so it survives the rename). **If any doc in this repo still
+shows an absolute path containing `02_Cactus/PickUp`, it is stale — nothing depends on it.**
