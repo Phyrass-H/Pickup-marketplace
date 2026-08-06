@@ -73,6 +73,11 @@ CURRENT STATE (live, deployed from `main`):
   route-group layouts. Runbook + brand rules for the marketing site: **`project/LANDING_HANDOFF.md`**.
   ⚑ **Brand-token drift is the standing cost of the split:** the tokens are copied verbatim into the landing
   repo's `app/globals.css`. Change a colour here, change it there.
+  ⚑ **Landing decisions live in `../kavenue-landing/CLAUDE.md` §0 — NOT in this repo's DECISIONS.md.** As of
+  2026-08-06: **D-L1** English only for now (French is a later pass; no i18n routing yet) · **D-L2** *no geography
+  anywhere on the site* (no "French Riviera", no city names — it talks to everyone) · **D-L3** no Driver count, in
+  any wording. More will have been added since. **If you need to know what the public site says, read that file.**
+  The full context pack for that repo is `../kavenue-landing/brief/` (8 files, self-contained — don't duplicate it here).
 - **Custom domain + role subdomains — `kavenue.fr` since 2026-07-29 ([[d60]]):**
   `www.kavenue.fr` → 308 → apex (both now on the LANDING project) · `driver.kavenue.fr` = Driver app ·
   `dispatch.kavenue.fr` = Business/Dispatch (both still on this project).
