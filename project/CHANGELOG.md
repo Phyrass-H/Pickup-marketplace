@@ -5,6 +5,38 @@
 
 ---
 
+## 7 August 2026 — **Spend**: a proper back-office view of what your transport costs you
+- **A new page in Dispatch, next to History: Spend.** It answers three questions on one screen — what did we spend,
+  why is that different from last month, and what could we have avoided.
+- **One filter bar runs the whole page**, the CSV included. Pick a day, a week, a month, a year or your own two dates,
+  choose what to compare against, and everything below moves together. No two panels ever disagree about which dates
+  they're showing.
+- **The total leads, and two numbers explain it**: how many trips, and what a trip cost you on average.
+- **"What you got"** — a quiet line under the total, because a page about money going out shouldn't be the only story:
+  how many of your requests found a Driver, and how fast one took them. (Arrived-on-time is there too, honestly blank
+  until we have the data to fill it — we'd rather show you a dash than a guess.)
+- **One chart, not five.** Spend day by day, with last month drawn behind it as a grey line. Click any column and the
+  whole page narrows to that day.
+- **What it's made of** — trip fares, waiting, cancellation fees, no-shows. Click any one and the trip list below
+  shows you exactly those trips.
+- **What cost you money** — the avoidable part, gathered in one place: trips cancelled once a Driver was holding them,
+  Guests who never came down, waiting past the free window, and missions nobody took.
+- **Where the money went** — switch between Type, Class, Route, Driver and Desk. "Desk" is new anywhere in Kavenue:
+  if your night concierge and your day concierge both book cars, you can now see them separately. Click a Driver and
+  the whole page narrows to them.
+- **Export CSV** gives you exactly what's on screen, opens correctly in French Excel, and ends with a total row.
+- **Two rules the page will never break.** A trip a Driver took but never closed is shown with its agreed fare, clearly
+  marked, and left **out of every total** — counting it would inflate your spend with trips that may not have happened.
+  And an unfilled mission shows "—", never "€0", because nobody ever held it.
+- **A number we built and then deleted.** "You're 17 % under your Ceiling" was going to be the positive line on this
+  page. It's gone: raising your Ceiling makes that number *look* better while you actually pay more, and the reasons a
+  Ceiling moves — season, your standing, demand — mean nobody can read it anyway. "How fast a Driver took your trip"
+  says the same thing honestly, so that's what's there instead.
+- **A quiet fix to History on the way.** It was adding up trip fares but forgetting waiting charges, so it was
+  under-reporting any trip where a Driver waited and was paid for it. Both screens now count the same way.
+
+---
+
 ## 31 July 2026 (later) — The Earnings date picker works, and you can pick your own dates
 - **The broken calendar is fixed, and the reason it broke is worth knowing.** The date button wasn't opening a
   calendar of ours — it was secretly holding your phone's *own* date control, made invisible, and trying to poke it

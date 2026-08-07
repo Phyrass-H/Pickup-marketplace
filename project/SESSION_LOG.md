@@ -5,6 +5,91 @@
 
 ---
 
+## 2026-08-07 — Session 54 — DISPATCH SPEND (BACKLOG § S, pass 1)
+
+**Scope.** The founder opened by correcting the framing: *"it is actually spending right, we don't have access to their
+earning"* — and asked for a full pro analysis tool for the trips a Business creates, with graphics, filters and
+modularity, researched against the best available. So: research → brief → D25 preview → build.
+
+**Research (7 agents).** Three read our own ground truth (BACKLOG § S + § R, a field-by-field audit of what the schema
+can answer today, and what UI is already shipped and reusable); three read the outside world — B2B spend tools (Ramp ·
+Brex · Navan · Stripe · QuickBooks · Spendesk · Pleo), travel/ground-transport back-offices (Uber for Business · Bolt
+Business · TravelPerk · Egencia · Blacklane) and chart craft (FT Visual Vocabulary + charting-library trade-offs); one
+synthesised. Output: **`project/SPEND_BRIEF.md`** — 9 modules ranked ACT/KNOW and TODAY/MIGRATION, page architecture,
+filter model, charting decision, honesty rules, migrations, cuts, phasing.
+
+**⚑ The data audit was the most valuable thing in the session, and it is bleak.** The whole live DB holds 34 missions;
+the beta Business has 28; **exactly three have ever settled — 265,00 €**. Three of the four spend components are *real*
+zeros (no mission has ever been cancelled, no-showed, or accrued waiting — the O7/D48 paths have never run against live
+data). May 2026 is empty, so every "vs previous period" is against zero. And the single most striking fact: **603,50 €
+across 6 past trips a Driver took and never closed — 2,3× everything that settled.** That is § Q showing up as money.
+
+**Founder rulings.** (1) "Modular" = a **fixed pro layout + saved views via the URL**, not drag-to-rearrange widgets.
+(2) Pass 1 = modules 1–5 + trip list + CSV. (3) **No `cost_centre` migration** — the 20-char `reference` is the
+allocation hook for now. Pass 1 ships with **zero schema change**.
+
+**The positive-values conversation, which changed the design twice.** The founder asked whether a page that is all
+outgoing money could show anything positive. Four candidates were proposed; the founder **cut "Guests moved"** on their
+own correct reasoning (`passenger_names` is optional, `pax_count` often blank — a headcount we can only half-observe is
+worse than none). Then **"% under your Ceiling" was designed, built into the mockup, and cut.** The trap: under the PDP
+the fare *starts* at a percentage OF the Ceiling, so raising your Ceiling improves the metric while you pay more
+(100 € Ceiling → taken at 60 € = 40 % under; 200 € Ceiling → taken at 100 € = 50 % under, and 67 % more money). The
+founder then closed it properly with a better argument than the trap: *the movement can come from season, hotel class,
+demand* — so nobody can attribute it, and **a number nobody can read must not carry a positive framing**. It was
+replaced by the thing it was proxying for: **time-to-accept**, which has no Ceiling confound.
+
+**Built.** New `lib/spend.ts` (rowCost · spendTotals · breakdown · series · wasteLines · minutesToAccept),
+`lib/spend-filter.ts` (SpendQuery extends HistoryQuery; parseSpendQuery defaults to *this month* where History defaults
+to "any date"; comparisonSpan handles both anchor-stepped granularities and same-length custom ranges),
+`components/spend-filters.tsx`, `components/spend-chart.tsx` (hand-rolled server-rendered SVG),
+`app/(dispatch)/dispatch/spend/{page,loading}.tsx` + `export/route.ts`, `.dxs-*` CSS, and three shell registrations.
+
+**Reuse was the design constraint.** `parseHistoryQuery`/`applyHistoryQuery`/`historyFare`/`TripRow`/`date-cal.tsx`/the
+§ R filter vocabulary/the 8-column archive grid are all used as-is. No second calendar, no second filter vocabulary, no
+second exporter.
+
+**No charting library.** Recharts v3 is ~147 KB gzipped, ships a Redux runtime and forces `'use client'` so nothing
+server-renders. Two chart forms did not justify it; `components/spend-chart.tsx` is ~80 lines of scale maths and paints
+in the first server render. Click targets are real `<Link>`s layered over the SVG, so they are keyboard-reachable.
+
+**Three bugs found by probing the running page, not by reading.**
+1. **The breakdown counted unfilled missions as trips** — "Business · Van · 9 trips · 0,00 €" next to a euro column.
+   Cause: `historyFare` returns `{ fare: null, counted: true }` for an expired mission, which is *correct* for a total
+   (an unfilled trip really did cost zero) but wrong for a ranking of where money went. `!r.counted` alone does not
+   filter them; the predicate needs `isExpired(m)` too.
+2. **A zero-baseline delta rendered red.** "+265,00 €" and the hero pill were painted danger-red purely because May is
+   empty — an alarm about nothing. Both are neutral now when the previous period is zero.
+3. **A lone "Clear all" with no chips** when only a `lens` was active. The lens narrows the trip list, not the page, and
+   already announces itself above that list — so it no longer counts toward the global "narrowed" state.
+
+**One deliberate change to a shipped screen.** `HistoryResult.spend` sums the **fare only**, so Dispatch History was
+quietly under-reporting any trip a Driver waited on and was paid for — and would have disagreed with Spend for the same
+filter. History's summary bar and month bands now use the same `rowCost()` helper. Display-only; no per-row semantics
+changed.
+
+**Verified live against the real Supabase DB** (dev-login as the demo Business): 265,00 € · 3 settled trips · 20
+missions ordered · 45,0 % requests covered · 11 min median time-to-accept · 603,50 € agreed-not-settled · 11 unfilled
+with 1 710,00 € of Ceiling never spent — every figure matching a direct query of the DB. Day/week/month/year/range
+spans, both lenses, all five dimensions, and the CSV (`;` + French decimals + BOM + a total row) all exercised.
+`tsc --noEmit` clean, `next build` green (26 routes). Deployed `9849ecc`.
+
+**⚑ What the page cannot prove yet, and it is not the page's fault.** One Driver and one Dispatcher hold 100 % of
+everything, so the Driver and Desk breakdowns are single bars; three of the four components are zero; and the
+comparison period is empty. **Testing this properly wants a seeded fleet** — the S42 approach (tagged fleet, restored
+to a 34-mission baseline afterwards).
+
+**Also this session.** `project/IDEAS.md` gained the V2 entry for a Driver reporting a bad booking: the founder ruled
+out dedicated report buttons because the V2 in-app chat covers it, with the caveat kept on record that **chat gives
+resolution but not measurement** — a tagged chat (reason chips that both send a message and record a countable tag)
+preserves both, to be decided when the chat is designed. Confirmed from the code that **`mission_type` is read in two
+places and written nowhere**, so "at disposal" cannot currently be booked at all; the founder scheduled it as its own
+session, and IDEAS already carries the O12/V2 entry for it.
+
+**Next.** Passes 2–3 in `project/SPEND_BRIEF.md` § 9: booking-notice (lead time × fare × fill rate), committed-spend
+tail, Route breakdown, then service check (on-time from `status_event`) and the demand heatmap.
+
+---
+
 ## 2026-07-31 — Session 51 — EXPIRED TRIPS: the missing protocol (BACKLOG § P, [[d62]])
 
 **Scope.** The founder picked § P — item **A** of the three things they'd found by using the app. Five decisions were
