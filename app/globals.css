@@ -3320,18 +3320,59 @@ label.field > span.dhint {
 .dxs-band { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; align-items: start; }
 @media (max-width: 980px) { .dxs-band { grid-template-columns: 1fr; } }
 
+/* ---- what it's made of --------------------------------------------------
+   A real 3-column grid, not a flex row with the delta tacked on the end. Two
+   things were wrong with that: the amount and the delta ran together with no
+   gap, and the deltas didn't line up down the column — so the comparison read
+   as an afterthought glued to each price rather than a column of its own.  */
+.dxs-comp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 128px;
+  gap: 12px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-top: 1px solid #f4f5f8;
+  font-size: 13.5px;
+  color: inherit;
+  text-decoration: none;
+}
+.dxs-comp:first-of-type { border-top: 0; }
+.dxs-comp__l { color: var(--text-muted); font-size: 13px; min-width: 0; }
+.dxs-comp__n { color: var(--text-faint); font-size: 12px; }
+.dxs-comp__v {
+  text-align: right; font-weight: 500; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dxs-comp__v.dxs-zero { color: var(--text-faint); font-weight: 400; }
+/* The column head — the ONLY place the comparison is named, sitting directly
+   over the numbers it governs. */
+.dxs-comp--head {
+  padding: 0 0 8px;
+  border-top: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+.dxs-comp--head span:not(:first-child) { text-align: right; }
+.dxs-comp--head + .dxs-comp { border-top: 1px solid #f4f5f8; }
+@media (max-width: 1120px) {
+  .dxs-comp { grid-template-columns: minmax(0, 1fr) 88px 112px; gap: 10px; }
+}
+
 /* A component row that lenses the trip list. Only the list moves — the charts
    must not, or the headline total would disagree with the bars under it. */
 .dxs-lens { text-decoration: none; color: inherit; border-radius: 6px; }
 .dxs-lens:hover { background: var(--surface-2); }
 .dxs-lens.is-on { background: var(--accent-soft); }
-.dxs-lens.is-on .ebreak__l { color: var(--accent); }
+.dxs-lens.is-on .dxs-comp__l { color: var(--accent); }
 .dxs-lens:focus-visible { outline: none; box-shadow: var(--ring); }
-.ebreak b.dxs-zero { color: var(--text-faint); font-weight: 400; }
 .dxs-exc { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--border); }
-.dxs-exc .ebreak { border-top: 0; padding: 7px 0; font-size: 13px; }
-.dxs-exc .ebreak b, .dxs-exc .ebreak__l { color: var(--text-faint); font-weight: 400; }
-.dxs-d { font-size: 11.5px; color: var(--text-faint); min-width: 88px; text-align: right; font-variant-numeric: tabular-nums; }
+.dxs-exc .dxs-comp { border-top: 0; padding: 7px 0; font-size: 13px; }
+.dxs-exc .dxs-comp__v, .dxs-exc .dxs-comp__l { color: var(--text-faint); font-weight: 400; }
+.dxs-d {
+  font-size: 11.5px; color: var(--text-faint); text-align: right;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
 .dxs-d.up { color: var(--tone-success-fg); }
 .dxs-d.down { color: var(--tone-danger-fg); }
 

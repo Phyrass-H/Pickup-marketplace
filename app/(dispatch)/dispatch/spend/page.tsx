@@ -392,34 +392,43 @@ export default async function DispatchSpend({
       {/* ---- what it's made of | what cost you money ----------------------- */}
       <div className="dxs-band">
         <div className="dcard">
-          <p className="dcard__label dcard__label--split">
-            <span>What it’s made of</span>
-            {back && <em>vs {back.label}</em>}
-          </p>
+          <p className="dcard__label">What it’s made of</p>
+
+          {/* ⚑ The comparison is named ONCE, as a column head sitting directly
+              over the numbers it governs. It used to be an "vs May 2026" note in
+              the card's top-right corner, a long way from the figures — so a
+              "+45,00 € · +60 %" three rows down referred to nothing you could
+              see, and anyone coming back to the page had no way to recover what
+              it meant. */}
+          {back && (
+            <div className="dxs-comp dxs-comp--head">
+              <span />
+              <span>Amount</span>
+              <span>vs {back.label}</span>
+            </div>
+          )}
 
           {components.map((c) => {
             const body = (
               <>
-                <span className="ebreak__l">
-                  {c.label} <span className="ebreak__n">{c.n}</span>
+                <span className="dxs-comp__l">
+                  {c.label} <span className="dxs-comp__n">{c.n}</span>
                 </span>
-                <span className="ebreak__r">
-                  <b className={c.v === 0 ? "dxs-zero" : undefined}>{formatMoney(c.v)}</b>
-                  {back && <Delta now={c.v} was={c.was} />}
-                </span>
+                <b className={`dxs-comp__v${c.v === 0 ? " dxs-zero" : ""}`}>{formatMoney(c.v)}</b>
+                {back && <Delta now={c.v} was={c.was} />}
               </>
             );
             return c.lens && c.v > 0 ? (
               <Link
                 key={c.key}
                 href={href({ lens: query.lens === c.lens ? null : c.lens })}
-                className={`ebreak dxs-lens${query.lens === c.lens ? " is-on" : ""}`}
+                className={`dxs-comp dxs-lens${query.lens === c.lens ? " is-on" : ""}`}
                 scroll={false}
               >
                 {body}
               </Link>
             ) : (
-              <div key={c.key} className="ebreak">
+              <div key={c.key} className="dxs-comp">
                 {body}
               </div>
             );
@@ -430,28 +439,30 @@ export default async function DispatchSpend({
           <div className="dxs-exc">
             <Link
               href={href({ lens: query.lens === "unsettled" ? null : "unsettled" })}
-              className={`ebreak dxs-lens${query.lens === "unsettled" ? " is-on" : ""}`}
+              className={`dxs-comp dxs-lens${query.lens === "unsettled" ? " is-on" : ""}`}
               scroll={false}
             >
-              <span className="ebreak__l">
+              <span className="dxs-comp__l">
                 Agreed, not settled{" "}
-                <span className="ebreak__n">
+                <span className="dxs-comp__n">
                   {t.unsettledCount} trip{t.unsettledCount === 1 ? "" : "s"} a Driver hasn’t closed
                 </span>
               </span>
-              <b>{formatMoney(t.unsettled)}</b>
+              <b className="dxs-comp__v">{formatMoney(t.unsettled)}</b>
+              {back && <span className="dxs-d" />}
             </Link>
-            <div className="ebreak">
-              <span className="ebreak__l">
+            <div className="dxs-comp">
+              <span className="dxs-comp__l">
                 Unfilled{" "}
-                <span className="ebreak__n">
+                <span className="dxs-comp__n">
                   {t.unfilledCount} mission{t.unfilledCount === 1 ? "" : "s"}
                   {t.unfilledCeiling > 0
                     ? ` · ${formatMoney(t.unfilledCeiling)} of Ceiling never spent`
                     : ""}
                 </span>
               </span>
-              <b>—</b>
+              <b className="dxs-comp__v">—</b>
+              {back && <span className="dxs-d" />}
             </div>
           </div>
         </div>
