@@ -3228,3 +3228,165 @@ label.field > span.dhint {
 
 .ejump { text-align: center; margin: 4px 0 0; }
 .ejump a { font-size: 12.5px; color: var(--accent); font-weight: 500; text-decoration: none; }
+
+/* ==========================================================================
+   DISPATCH SPEND (.dxs-*) — /dispatch/spend
+   The Business's side of the money. Built on the shipped vocabulary: .dcard,
+   .ebreak, .rchip, .seg, .dxh-tools and the 8-column .dx-colhead--arch grid all
+   come from screens that already ship, so the two archive views can never drift
+   apart visually. Only what is genuinely new lives here.
+   ========================================================================== */
+.dxs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.dxs-fresh { font-size: 11.5px; color: var(--text-faint); white-space: nowrap; padding-top: 4px; }
+
+/* Applied filters sit BELOW the toolbar, never inside it, so the buttons don't
+   move under the cursor as chips accumulate. */
+.dxs-chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+.dxs-ac {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px;
+  border-radius: var(--radius-pill); background: var(--accent-soft);
+  border: 1px solid var(--blue-100); color: var(--accent); font-size: 12px;
+  font-family: inherit; cursor: pointer;
+}
+.dxs-ac:hover { background: var(--blue-100); }
+.dxs-ac span[aria-hidden] { opacity: 0.55; }
+.dxs-ac-clear {
+  font-size: 12px; color: var(--text-faint); background: none; border: none;
+  font-family: inherit; cursor: pointer; padding: 4px 2px;
+}
+.dxs-ac-clear:hover { color: var(--text); }
+
+/* ---- hero: one total in charge, two stats that qualify it ---------------- */
+.dxs-hero {
+  display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start;
+  margin-bottom: 0; border-bottom: 0;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+}
+.dxs-hero__main { flex: 1 1 320px; min-width: 260px; }
+.dxs-hero__stats { display: flex; }
+.dxs-stat { padding: 2px 22px; border-left: 1px solid #f0f1f4; min-width: 138px; }
+.dxs-stat:first-child { border-left: 0; }
+.dxs-stat__l { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+.dxs-stat__n {
+  font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin-top: 7px;
+  font-variant-numeric: tabular-nums;
+}
+.dxs-stat__d { font-size: 11.5px; margin-top: 5px; color: var(--text-faint); }
+
+/* ---- the service strip — attached under the hero, money above, service below */
+.dxs-serv {
+  background: var(--surface); border: 1px solid #ebedf1; border-top: 1px solid #f0f1f4;
+  border-radius: 0 0 16px 16px; padding: 13px 18px; margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+  display: flex; gap: 26px; flex-wrap: wrap; align-items: center;
+}
+.dxs-serv__t { font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.dxs-sv { font-size: 13px; color: var(--text-muted); display: inline-flex; align-items: baseline; gap: 7px; }
+.dxs-sv b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.dxs-sv b.dxs-sv__none { color: var(--text-faint); font-weight: 400; }
+.dxs-sv i { font-style: normal; color: var(--text-faint); font-size: 11.5px; }
+
+/* ---- the chart ---------------------------------------------------------- */
+.dxs-legend { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-faint); font-style: normal; }
+.dxs-sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-left: 8px; }
+.dxs-sw--now { background: var(--accent); }
+.dxs-sw--prev { background: var(--border-strong); }
+
+.dxs-chart { position: relative; }
+.dxs-chart__svg { display: block; width: 100%; height: 220px; }
+.dxs-chart__grid { stroke: #e3e6ea; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dxs-chart__axis { stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.dxs-chart__prev { fill: none; stroke: var(--border-strong); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+.dxs-chart__bar { fill: var(--accent); }
+/* preserveAspectRatio="none" stretches the viewBox, which would squash text with
+   it — so every label is drawn at a fixed size in screen pixels instead. */
+.dxs-chart__ytick, .dxs-chart__xtick { font-size: 11px; fill: #5f6b7c; }
+.dxs-chart__peak { font-size: 11px; font-weight: 500; fill: var(--accent); }
+.dxs-chart__svg text { font-family: var(--font-sans); }
+
+/* Real links over the bars: keyboard-reachable, focusable, and they survive
+   without JavaScript. */
+.dxs-chart__hit {
+  position: absolute; inset: 16px 10px 28px 52px; display: grid; gap: 0;
+}
+.dxs-chart__cell { border-radius: 3px; }
+.dxs-chart__cell:hover { background: rgba(37, 51, 76, 0.05); }
+.dxs-chart__cell:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.dxs-foot { font-size: 11px; color: var(--text-faint); margin: 12px 0 0; line-height: 1.5; }
+.dxs-none { font-size: 13px; color: var(--text-faint); margin: 0; padding: 18px 0; text-align: center; }
+
+/* ---- the two-column band ------------------------------------------------ */
+.dxs-band { display: grid; grid-template-columns: 1.25fr 1fr; gap: 12px; align-items: start; }
+@media (max-width: 980px) { .dxs-band { grid-template-columns: 1fr; } }
+
+/* A component row that lenses the trip list. Only the list moves — the charts
+   must not, or the headline total would disagree with the bars under it. */
+.dxs-lens { text-decoration: none; color: inherit; border-radius: 6px; }
+.dxs-lens:hover { background: var(--surface-2); }
+.dxs-lens.is-on { background: var(--accent-soft); }
+.dxs-lens.is-on .ebreak__l { color: var(--accent); }
+.dxs-lens:focus-visible { outline: none; box-shadow: var(--ring); }
+.ebreak b.dxs-zero { color: var(--text-faint); font-weight: 400; }
+.dxs-exc { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.dxs-exc .ebreak { border-top: 0; padding: 7px 0; font-size: 13px; }
+.dxs-exc .ebreak b, .dxs-exc .ebreak__l { color: var(--text-faint); font-weight: 400; }
+.dxs-d { font-size: 11.5px; color: var(--text-faint); min-width: 88px; text-align: right; font-variant-numeric: tabular-nums; }
+.dxs-d.up { color: var(--tone-success-fg); }
+.dxs-d.down { color: var(--tone-danger-fg); }
+
+/* ---- what cost you money ------------------------------------------------ */
+.dxs-w {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-top: 1px solid #f4f5f8; font-size: 13px;
+}
+.dxs-w:first-of-type { border-top: 0; }
+.dxs-w__l { color: var(--text-muted); }
+.dxs-w__n { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+.dxs-w__v { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dxs-w__v.zero { color: var(--text-faint); font-weight: 400; }
+
+/* ---- where the money went ----------------------------------------------- */
+.seg--tiny { padding: 3px; }
+.seg--tiny .seg-btn { padding: 5px 11px; font-size: 12px; text-decoration: none; }
+.dxs-brk { display: flex; flex-direction: column; }
+.dxs-r {
+  display: grid; grid-template-columns: minmax(140px, 1.6fr) 74px 100px 58px;
+  gap: 14px; align-items: center; padding: 9px 0; border-top: 1px solid #f4f5f8;
+  font-size: 13px; color: inherit; text-decoration: none;
+}
+.dxs-r:first-child { border-top: 0; }
+.dxs-r--link { border-radius: 6px; }
+.dxs-r--link:hover { background: var(--surface-2); }
+.dxs-r--link.is-on { background: var(--accent-soft); }
+.dxs-r--link:focus-visible { outline: none; box-shadow: var(--ring); }
+.dxs-r__lab { position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dxs-bar { display: block; height: 4px; border-radius: 2px; background: var(--accent); margin-top: 5px; }
+.dxs-r__num { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 12.5px; }
+.dxs-r__eur { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+.dxs-r__pc { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-faint); font-size: 12px; }
+.dxs-r--other .dxs-r__lab { color: var(--text-faint); }
+.dxs-r--other .dxs-bar { background: var(--border-strong); }
+@media (max-width: 620px) {
+  .dxs-r { grid-template-columns: minmax(110px, 1.4fr) 92px 54px; }
+  .dxs-r__num { display: none; }
+}
+
+/* ---- the trip list ------------------------------------------------------ */
+.dxs-listbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 20px 0 12px; }
+.dxs-listhead { font-size: 11.5px; font-weight: 500; color: var(--text-muted); margin: 0; }
+.dxs-lensnote { margin: 0; font-size: 12.5px; color: var(--text-muted); }
+.dxs-lensnote a { color: var(--accent); margin-left: 8px; }
+
+/* ---- loading skeleton (mirrors the real geometry so nothing jumps) ------- */
+.dxs-sk { background: var(--slate-100); border-radius: 6px; }
+.dx-pulse { animation: dx-pulse 1.3s ease-in-out infinite; }
+.dxs-sk--tools { height: 36px; max-width: 720px; margin: 0 0 12px; }
+.dxs-sk--label { height: 11px; width: 92px; margin-bottom: 14px; }
+.dxs-sk--total { height: 36px; width: 190px; }
+.dxs-sk--sub { height: 12px; width: 150px; margin-top: 9px; }
+.dxs-sk--pill { height: 24px; width: 210px; margin-top: 14px; border-radius: 999px; }
+.dxs-sk--stat { height: 20px; width: 84px; margin-top: 8px; }
+.dxs-sk--serv { height: 14px; width: 100%; max-width: 560px; }
+.dxs-sk--chart { height: 220px; border-radius: 8px; }
+.dxs-sk--row { height: 14px; margin: 15px 0; }

@@ -19,6 +19,7 @@ import {
   type Outcome,
   type Sort,
 } from "@/lib/history-filter";
+import { rowCost } from "@/lib/spend";
 import type { MissionRow, VehicleCategory } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -141,7 +142,14 @@ export default async function DispatchHistory({
     };
   });
 
-  const { rows: shown, matches, counts, spend } = applyHistoryQuery(rows, query);
+  const { rows: shown, matches, counts } = applyHistoryQuery(rows, query);
+
+  // ⚑ Waiting is part of the bill. HistoryResult.spend sums the FARE only, which
+  // left this screen quietly under-reporting a trip where the Driver waited and
+  // was paid for it — and would have disagreed with /dispatch/spend for the very
+  // same filter. rowCost() is the one definition both screens use.
+  let spend = 0;
+  for (const r of shown) spend += rowCost(r);
 
   // Classes that actually occur in this archive — a dropdown offering "First"
   // to a hotel that has never booked one is a filter that can only disappoint.
@@ -256,7 +264,7 @@ export default async function DispatchHistory({
       {[...groups.entries()].map(([monthKey, list]) => {
         const unfilled = list.filter((r) => isExpired(r.mission)).length;
         let monthSpend = 0;
-        for (const r of list) if (r.counted) monthSpend += r.fare ?? 0;
+        for (const r of list) monthSpend += rowCost(r);
         return (
           <section key={monthKey || "flat"} className="dx-sched">
             {monthKey && (

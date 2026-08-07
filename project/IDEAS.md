@@ -352,3 +352,21 @@ no-integration build; the feedback email waits for notifications.
   accessible vehicle + a Driver equipped/trained for it, so it belongs in the taxonomy, not the Driver card.
   Deferred out of the mission-form Driver section (2026-06-25, founder). Build it together with the **Bus
   tier / First-van / cargo-vehicle** expansion (see the vehicle-taxonomy V2 + Exception-tier notes).
+
+### A Driver telling the Business "this booking was wrong" — chat, not buttons (V2, founder 2026-08-07) 🅥
+- **The gap that surfaced.** Designing the Dispatch Spend page (§ S), the founder wanted an "experience" view —
+  disputes, arrived on time, **wrong flight number, wrong phone number**, dropped off on time. On-time and the
+  money outcomes (unfilled · no-show · late cancellation) are all computable from existing data. The data-quality
+  ones are **not**: nothing anywhere records that a booking detail was wrong, and a Driver has no channel to say so.
+- **Founder's call, same message: do NOT build report buttons.** The Driver gets an **in-app chat** in V2, so they
+  can report anything to the Business directly. A dedicated set of "wrong phone number" buttons would be a second,
+  narrower channel for something chat already covers — and it would land before the chat that makes it redundant.
+- **⚑ The one caveat worth keeping.** Chat solves **resolution**, not **measurement**. A free-text message tells the
+  Business about *that* trip; it never becomes a number on a page. If a "here's where your desk cost you money" view
+  is ever wanted (and § S's waste panel is already the start of one), the cheap way is a **tagged chat** — the Driver
+  picks a reason chip (*wrong phone · wrong flight · Guest not at pickup · address wrong*) that both sends the message
+  **and** records a countable tag. That preserves the founder's call (one channel, chat) while keeping the data.
+  Decide it when the chat is designed, not before — the tag list is worthless if it doesn't match what Drivers
+  actually report.
+- **Blocked on:** the V2 community/chat layer. Related: BACKLOG § O (trust & safety / disputes), § F2 (back-office),
+  and the § S waste panel, which already reports the *money* half of the same story.

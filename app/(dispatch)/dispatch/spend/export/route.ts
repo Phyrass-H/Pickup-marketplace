@@ -1,0 +1,200 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppContext } from "@/lib/app-context";
+import { parisDayKey } from "@/lib/dispatch-status";
+import { serviceClassLabel } from "@/lib/format";
+import { parsePassengers, passengerName } from "@/lib/passengers";
+import {
+  applyHistoryQuery,
+  bucketOf,
+  historyFare,
+  type HistoryRow,
+} from "@/lib/history-filter";
+import { minutesToAccept, rowCost } from "@/lib/spend";
+import { currentSpan, parseSpendQuery, type Lens } from "@/lib/spend-filter";
+import type { MissionRow } from "@/lib/database.types";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * ⚑ `;`, not `,` — the reader is a French hotel's accountant on Excel FR, where a
+ * comma is the DECIMAL separator and a comma-delimited file lands entirely in
+ * column A. Amounts are written French-style (58,17) to match. Copied wholesale
+ * from the History export so the two files open identically.
+ */
+const SEP = ";";
+
+function cell(v: string | number | null | undefined): string {
+  const s = v == null ? "" : String(v);
+  const risky = /^[=+\-@]/.test(s);
+  const body = risky ? `'${s}` : s;
+  return /["\n\r;]/.test(body) ? `"${body.replace(/"/g, '""')}"` : body;
+}
+
+const euro = (n: number | null) => (n == null ? "" : n.toFixed(2).replace(".", ","));
+
+const HEADERS = [
+  "Date",
+  "Time",
+  "Pickup",
+  "Drop-off",
+  "Type",
+  "Class",
+  "Flight",
+  "Guest",
+  "Reference",
+  "Driver",
+  "Desk",
+  "Outcome",
+  "Cost to you (EUR)",
+  "Of which waiting (EUR)",
+  "Agreed, not settled (EUR)",
+  "Ceiling (EUR)",
+  "Minutes to find a Driver",
+  "Note",
+];
+
+const OUTCOME_TEXT: Record<string, string> = {
+  completed: "Completed",
+  unfilled: "Unfilled",
+  cancelled: "Cancelled",
+};
+
+export async function GET(req: NextRequest) {
+  const ctx = await getAppContext();
+  if (!ctx.business) return new NextResponse("Not found", { status: 404 });
+
+  const query = parseSpendQuery(Object.fromEntries(req.nextUrl.searchParams));
+  const span = currentSpan(query);
+
+  const supabase = await createClient();
+  const [{ data }, { data: desks }] = await Promise.all([
+    supabase
+      .from("mission")
+      .select("*")
+      .eq("business_id", ctx.business.id)
+      .neq("status", "draft")
+      .lt("pickup_at", new Date().toISOString())
+      .order("pickup_at", { ascending: false }),
+    supabase.from("dispatcher").select("id, name").eq("business_id", ctx.business.id),
+  ]);
+
+  const missions: MissionRow[] = data ?? [];
+  const deskName = new Map((desks ?? []).map((d) => [d.id, d.name]));
+
+  const driverName = new Map<string, string>();
+  const driverId = new Map<string, string>();
+  const cars = new Map<
+    string,
+    { make: string | null; model: string | null; colour: string | null; plate: string | null }
+  >();
+  const assigned = missions.filter((m) => m.driver_id);
+  if (assigned.length > 0) {
+    const admin = createAdminClient();
+    const ids = [...new Set(assigned.map((m) => m.driver_id!))];
+    const [{ data: drivers }, { data: vehicles }] = await Promise.all([
+      admin.from("driver").select("id, first_name, last_name").in("id", ids),
+      admin.from("vehicle").select("driver_id, make, model, colour, plate").in("driver_id", ids),
+    ]);
+    const byId = new Map((drivers ?? []).map((d) => [d.id, d]));
+    const vehByDriver = new Map((vehicles ?? []).map((v) => [v.driver_id, v]));
+    for (const m of assigned) {
+      const d = byId.get(m.driver_id!);
+      if (!d) continue;
+      driverName.set(m.id, `${d.first_name} ${d.last_name}`);
+      driverId.set(m.id, d.id);
+      const v = vehByDriver.get(d.id);
+      if (v) cars.set(m.id, v);
+    }
+  }
+
+  const rows: HistoryRow[] = missions.map((m) => ({
+    mission: m,
+    driverId: driverId.get(m.id) ?? null,
+    driverName: driverName.get(m.id) ?? null,
+    car: cars.get(m.id) ?? null,
+    ...historyFare(m),
+  }));
+
+  // The SAME functions the page runs, including the lens. "Export CSV" promises
+  // exactly what's on screen, and this is the only way that promise survives the
+  // next filter anyone adds.
+  const { rows: shown } = applyHistoryQuery(rows, query);
+  const lensOf: Record<Lens, (r: HistoryRow) => boolean> = {
+    waiting: (r) => Number(r.mission.waiting_fee ?? 0) > 0,
+    noshow: (r) => r.mission.status === "completed" && r.mission.no_show,
+    cancelled: (r) => r.mission.status === "cancelled",
+    unsettled: (r) => !r.counted,
+  };
+  const listed = query.lens ? shown.filter(lensOf[query.lens]) : shown;
+
+  const lines = [HEADERS.join(SEP)];
+  let total = 0;
+  for (const r of listed) {
+    const m = r.mission;
+    const waiting = Number(m.waiting_fee ?? 0);
+    const bucket = bucketOf(m);
+    const cost = rowCost(r);
+    total += cost;
+    const took = minutesToAccept(m);
+    const note = m.no_show
+      ? "Guest no-show — charged in full"
+      : m.status === "cancelled"
+        ? m.cancelled_by === "driver"
+          ? "Cancelled by the Driver"
+          : "Cancelled by you"
+        : bucket === null
+          ? "Not closed by the Driver — excluded from the total"
+          : "";
+
+    lines.push(
+      [
+        parisDayKey(m.pickup_at),
+        new Intl.DateTimeFormat("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Europe/Paris",
+        }).format(new Date(m.pickup_at)),
+        m.pickup_address,
+        m.dropoff_address ?? "",
+        m.luggage_only ? "Luggage run" : "Transfer",
+        serviceClassLabel(m.category, m.required_body_type),
+        m.flight_number ?? "",
+        m.luggage_only
+          ? "Luggage run"
+          : parsePassengers(m.passenger_names).map(passengerName).filter(Boolean).join(" | ") ||
+            m.passenger_name ||
+            "",
+        m.reference ?? "",
+        driverName.get(m.id) ?? "",
+        deskName.get(m.dispatcher_id) ?? "",
+        bucket ? OUTCOME_TEXT[bucket] : "Not closed",
+        r.counted ? euro(cost) : "",
+        waiting > 0 && r.counted ? euro(waiting) : "",
+        r.counted ? "" : euro(r.fare),
+        euro(Number(m.ceiling)),
+        took == null ? "" : String(Math.round(took)),
+        note,
+      ]
+        .map(cell)
+        .join(SEP),
+    );
+  }
+
+  // A total row, because the first thing anyone does with this file is sum a
+  // column — and doing it by hand would include the unsettled trips the page
+  // deliberately excludes.
+  lines.push("");
+  lines.push([`Total ${span.fromDay} → ${span.toDay}`, "", "", "", "", "", "", "", "", "", "", "", euro(total)].map(cell).join(SEP));
+
+  // ﻿: without the BOM, Excel reads the file as Latin-1 and every French address
+  // comes out as "AÃ©roport". Sheets and Numbers ignore it.
+  return new NextResponse(`﻿${lines.join("\r\n")}\r\n`, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="kavenue-spend-${span.fromDay}_${span.toDay}.csv"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}

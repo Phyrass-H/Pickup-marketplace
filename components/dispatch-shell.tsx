@@ -11,6 +11,7 @@ import {
   CalendarDays,
   FileText,
   History as HistoryIcon,
+  Wallet,
   Settings as SettingsIcon,
   LogOut,
   ChevronDown,
@@ -22,6 +23,7 @@ const NAV = [
   { href: "/dispatch/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/dispatch/drafts", label: "Drafts", icon: FileText },
   { href: "/dispatch/history", label: "History", icon: HistoryIcon },
+  { href: "/dispatch/spend", label: "Spend", icon: Wallet },
 ] as const;
 
 const TITLES: Record<string, string> = {
@@ -29,6 +31,7 @@ const TITLES: Record<string, string> = {
   "/dispatch/calendar": "Calendar",
   "/dispatch/drafts": "Drafts",
   "/dispatch/history": "History",
+  "/dispatch/spend": "Spend",
   "/dispatch/new": "New mission",
   "/dispatch/settings": "Settings",
 };
@@ -106,7 +109,8 @@ export function DispatchShell({
   const wideMain =
     pathname === "/dispatch" ||
     pathname === "/dispatch/calendar" ||
-    pathname === "/dispatch/history";
+    pathname === "/dispatch/history" ||
+    pathname === "/dispatch/spend";
 
   // Up-to-two-letter monogram for the workspace tile when there's no logo.
   const initials =
