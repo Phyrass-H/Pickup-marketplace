@@ -107,28 +107,6 @@ function ServiceStrip({ t }: { t: SpendTotals }) {
   );
 }
 
-/**
- * ⚑ A delta against a ZERO baseline is not a trend, it's a first month — so it
- * stays neutral. Colouring "+265,00 €" red because May happens to be empty reads
- * as an alarm about nothing, which is exactly the kind of number a hotel learns
- * to ignore. Green/red only once there is something real to compare against.
- */
-function Delta({ now, was }: { now: number; was: number }) {
-  if (was === 0 && now === 0) return <span className="dxs-d">—</span>;
-  if (was === 0) return <span className="dxs-d">no comparison</span>;
-  const diff = now - was;
-  // Spending MORE is the bad direction for a Business — inverted against the
-  // Driver's Earnings screen, where the same arrow means the opposite thing.
-  const tone = diff === 0 ? "" : diff < 0 ? " up" : " down";
-  return (
-    <span className={`dxs-d${tone}`}>
-      {diff > 0 ? "+" : diff < 0 ? "−" : ""}
-      {formatMoney(Math.abs(diff))}
-      {` · ${diff >= 0 ? "+" : "−"}${Math.abs((diff / was) * 100).toFixed(0)} %`}
-    </span>
-  );
-}
-
 export default async function DispatchSpend({
   searchParams,
 }: {
@@ -250,10 +228,10 @@ export default async function DispatchSpend({
   }).format(new Date());
 
   const components = [
-    { key: "fares", label: "Trip fares", n: `${t.fareCount} trip${t.fareCount === 1 ? "" : "s"}`, v: t.fares, was: p.fares, lens: null },
-    { key: "waiting", label: "Waiting charges", n: t.waitingCount > 0 ? `${t.waitingCount} trip${t.waitingCount === 1 ? "" : "s"} · ${Math.round(t.waitingMinutes)} min` : "none", v: t.waiting, was: p.waiting, lens: "waiting" as Lens },
-    { key: "cancelled", label: "Cancellation fees", n: t.cancelCount > 0 ? `${t.cancelCount} cancellation${t.cancelCount === 1 ? "" : "s"}` : "none", v: t.cancelFees, was: p.cancelFees, lens: "cancelled" as Lens },
-    { key: "noshow", label: "No-shows", n: t.noShowCount > 0 ? `${t.noShowCount} no-show${t.noShowCount === 1 ? "" : "s"}` : "none", v: t.noShow, was: p.noShow, lens: "noshow" as Lens },
+    { key: "fares", label: "Trip fares", n: `${t.fareCount} trip${t.fareCount === 1 ? "" : "s"}`, v: t.fares, lens: null },
+    { key: "waiting", label: "Waiting charges", n: t.waitingCount > 0 ? `${t.waitingCount} trip${t.waitingCount === 1 ? "" : "s"} · ${Math.round(t.waitingMinutes)} min` : "none", v: t.waiting, lens: "waiting" as Lens },
+    { key: "cancelled", label: "Cancellation fees", n: t.cancelCount > 0 ? `${t.cancelCount} cancellation${t.cancelCount === 1 ? "" : "s"}` : "none", v: t.cancelFees, lens: "cancelled" as Lens },
+    { key: "noshow", label: "No-shows", n: t.noShowCount > 0 ? `${t.noShowCount} no-show${t.noShowCount === 1 ? "" : "s"}` : "none", v: t.noShow, lens: "noshow" as Lens },
   ];
 
   return (
@@ -394,20 +372,13 @@ export default async function DispatchSpend({
         <div className="dcard">
           <p className="dcard__label">What it’s made of</p>
 
-          {/* ⚑ The comparison is named ONCE, as a column head sitting directly
-              over the numbers it governs. It used to be an "vs May 2026" note in
-              the card's top-right corner, a long way from the figures — so a
-              "+45,00 € · +60 %" three rows down referred to nothing you could
-              see, and anyone coming back to the page had no way to recover what
-              it meant. */}
-          {back && (
-            <div className="dxs-comp dxs-comp--head">
-              <span />
-              <span>Amount</span>
-              <span>vs {back.label}</span>
-            </div>
-          )}
-
+          {/* ⚑ No comparison column here, deliberately. This section answers
+              "what is the total made of" — a composition. Hanging a change
+              column on it made the reader do work to find out what a lone
+              "+45,00 €" referred to, and the founder's rule is the right one:
+              good UX means not having to think. The comparison now lives where
+              it can be SEEN rather than read — the hero pill and the paired
+              bars on the chart. */}
           {components.map((c) => {
             const body = (
               <>
@@ -415,7 +386,6 @@ export default async function DispatchSpend({
                   {c.label} <span className="dxs-comp__n">{c.n}</span>
                 </span>
                 <b className={`dxs-comp__v${c.v === 0 ? " dxs-zero" : ""}`}>{formatMoney(c.v)}</b>
-                {back && <Delta now={c.v} was={c.was} />}
               </>
             );
             return c.lens && c.v > 0 ? (
@@ -449,7 +419,6 @@ export default async function DispatchSpend({
                 </span>
               </span>
               <b className="dxs-comp__v">{formatMoney(t.unsettled)}</b>
-              {back && <span className="dxs-d" />}
             </Link>
             <div className="dxs-comp">
               <span className="dxs-comp__l">
@@ -462,7 +431,6 @@ export default async function DispatchSpend({
                 </span>
               </span>
               <b className="dxs-comp__v">—</b>
-              {back && <span className="dxs-d" />}
             </div>
           </div>
         </div>

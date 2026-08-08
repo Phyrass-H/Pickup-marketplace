@@ -7,9 +7,9 @@ import type { SeriesPoint } from "@/lib/spend";
  *
  * ⚑ No charting library, on purpose. Recharts is ~147 KB gzipped, ships its own
  * state runtime and forces `'use client'`, so nothing would server-render and
- * the chart would flash in after hydration. This page needs exactly two forms
- * (columns + a step line); eighty lines of scale maths is the cheaper trade in
- * an app whose whole dependency list is Supabase, Geist and Lucide.
+ * the chart would flash in after hydration. This page needs one form (paired
+ * columns); eighty lines of scale maths is the cheaper trade in an app whose
+ * whole dependency list is Supabase, Geist and Lucide.
  *
  * The geometry is a fixed viewBox scaled by CSS: the bars keep their proportions
  * at any width, and there is no measure-then-draw pass.
@@ -47,7 +47,7 @@ export function SpendChart({
   periodLabel,
 }: {
   points: SeriesPoint[];
-  /** The comparison period, drawn behind as a grey step line. Null = off. */
+  /** The comparison period, drawn as a paler bar beside each one. Null = off. */
   compare: SeriesPoint[] | null;
   compareLabel: string | null;
   /** Where clicking a bucket goes. Null makes the bars inert. */
@@ -65,20 +65,36 @@ export function SpendChart({
   const top = ticks[ticks.length - 1] || 1;
   const y = (v: number) => MT + IH - (v / top) * IH;
   const bw = IW / points.length;
-  const bar = Math.max(2, Math.min(bw * 0.56, 34));
 
-  // The comparison is stretched onto THIS period's bucket count, so a 30-day
-  // month laid over a 31-day one still lines up week for week.
-  let stepPath = "";
-  if (compare && compare.length > 0 && compare.some((p) => p.amount > 0)) {
+  /**
+   * ⚑ The comparison is a SECOND BAR, not a line behind the bars.
+   *
+   * It was a grey step line, and the founder's reaction says everything about
+   * why that failed: *"oh I got it, the grey steps was previous period, I did
+   * [not] get what it was."* Two colours were already there — the problem was
+   * two different SHAPES. A line and a bar don't read as two of the same thing,
+   * so the eye has to be told what the line is instead of just seeing it.
+   *
+   * Paired bars need no legend to be understood. The widest case we ever render
+   * is a 31-day month, and this chart sits on the 1520px layout, so each bucket
+   * gets ~46px — two comfortable bars with a gap, not the thin forest you'd get
+   * on a narrow card.
+   */
+  const paired = Boolean(compare && compare.length > 0 && compare.some((p) => p.amount > 0));
+  const gap = paired ? Math.min(3, bw * 0.06) : 0;
+  const bar = paired
+    ? Math.max(2, Math.min((bw * 0.72 - gap) / 2, 22))
+    : Math.max(2, Math.min(bw * 0.56, 34));
+
+  // Stretched onto THIS period's bucket count, so a 30-day month laid against a
+  // 31-day one still lines up week for week.
+  const prevAt = (i: number) => {
+    if (!compare || compare.length === 0) return 0;
     const scale = compare.length / points.length;
-    for (let i = 0; i < points.length; i += 1) {
-      const v = compare[Math.min(compare.length - 1, Math.floor(i * scale))]?.amount ?? 0;
-      const x0 = ML + i * bw;
-      const x1 = ML + (i + 1) * bw;
-      stepPath += `${i === 0 ? "M" : "L"}${x0.toFixed(1)} ${y(v).toFixed(1)}L${x1.toFixed(1)} ${y(v).toFixed(1)}`;
-    }
-  }
+    return compare[Math.min(compare.length - 1, Math.floor(i * scale))]?.amount ?? 0;
+  };
+  const xNow = (i: number) => ML + i * bw + bw / 2 - (paired ? bar + gap / 2 : bar / 2);
+  const xPrev = (i: number) => ML + i * bw + bw / 2 + gap / 2;
 
   const peakIndex = points.reduce((best, p, i) => (p.amount > points[best].amount ? i : best), 0);
   // Enough x labels to orient, never so many they collide.
@@ -91,7 +107,7 @@ export function SpendChart({
         preserveAspectRatio="none"
         className="dxs-chart__svg"
         role="img"
-        aria-label={`Spend per ${points.length > 20 ? "day" : "bucket"} across ${periodLabel}, peaking at ${formatMoney(points[peakIndex].amount)}.${compareLabel ? ` The grey line behind is ${compareLabel}.` : ""}`}
+        aria-label={`Spend across ${periodLabel}, peaking at ${formatMoney(points[peakIndex].amount)}.${compareLabel ? ` Each bar is paired with a paler one for ${compareLabel}.` : ""}`}
       >
         {ticks.map((t) => (
           <g key={t}>
@@ -102,16 +118,33 @@ export function SpendChart({
           </g>
         ))}
 
-        {stepPath && <path d={stepPath} className="dxs-chart__prev" />}
+        {/* The previous period first, so a current bar never hides behind it. */}
+        {paired &&
+          points.map((p, i) => {
+            const v = prevAt(i);
+            if (v <= 0) return null;
+            return (
+              <rect
+                key={`prev-${p.key}`}
+                x={xPrev(i)}
+                y={y(v)}
+                width={bar}
+                height={Math.max(2, MT + IH - y(v))}
+                rx={1.5}
+                className="dxs-chart__bar dxs-chart__bar--prev"
+              >
+                <title>{`${compareLabel ?? "Previous period"} · ${formatMoney(v)}`}</title>
+              </rect>
+            );
+          })}
 
         {points.map((p, i) => {
           const h = Math.max(p.amount > 0 ? 2 : 0, MT + IH - y(p.amount));
           if (h === 0) return null;
-          const x = ML + i * bw + (bw - bar) / 2;
           return (
             <rect
               key={p.key}
-              x={x}
+              x={xNow(i)}
               y={y(p.amount)}
               width={bar}
               height={h}
@@ -125,7 +158,7 @@ export function SpendChart({
 
         {points[peakIndex].amount > 0 && (
           <text
-            x={ML + peakIndex * bw + bw / 2}
+            x={xNow(peakIndex) + bar / 2}
             y={y(points[peakIndex].amount) - 7}
             textAnchor="middle"
             className="dxs-chart__peak"

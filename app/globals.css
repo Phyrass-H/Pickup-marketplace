@@ -3290,14 +3290,16 @@ label.field > span.dhint {
 .dxs-legend { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-faint); font-style: normal; }
 .dxs-sw { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-left: 8px; }
 .dxs-sw--now { background: var(--accent); }
-.dxs-sw--prev { background: var(--border-strong); }
+.dxs-sw--prev { background: #c3ccda; }
 
 .dxs-chart { position: relative; }
 .dxs-chart__svg { display: block; width: 100%; height: 220px; }
 .dxs-chart__grid { stroke: #e3e6ea; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .dxs-chart__axis { stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.dxs-chart__prev { fill: none; stroke: var(--border-strong); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
 .dxs-chart__bar { fill: var(--accent); }
+/* The previous period: same shape, one step paler. A different HUE would shout
+   louder than the data it is only there to sit behind. */
+.dxs-chart__bar--prev { fill: #c3ccda; }
 /* preserveAspectRatio="none" stretches the viewBox, which would squash text with
    it — so every label is drawn at a fixed size in screen pixels instead. */
 .dxs-chart__ytick, .dxs-chart__xtick { font-size: 11px; fill: #5f6b7c; }
@@ -3327,8 +3329,8 @@ label.field > span.dhint {
    as an afterthought glued to each price rather than a column of its own.  */
 .dxs-comp {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px 128px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: baseline;
   padding: 11px 0;
   border-top: 1px solid #f4f5f8;
@@ -3344,20 +3346,6 @@ label.field > span.dhint {
   white-space: nowrap;
 }
 .dxs-comp__v.dxs-zero { color: var(--text-faint); font-weight: 400; }
-/* The column head — the ONLY place the comparison is named, sitting directly
-   over the numbers it governs. */
-.dxs-comp--head {
-  padding: 0 0 8px;
-  border-top: 0;
-  font-size: 11px;
-  color: var(--text-faint);
-  letter-spacing: 0.02em;
-}
-.dxs-comp--head span:not(:first-child) { text-align: right; }
-.dxs-comp--head + .dxs-comp { border-top: 1px solid #f4f5f8; }
-@media (max-width: 1120px) {
-  .dxs-comp { grid-template-columns: minmax(0, 1fr) 88px 112px; gap: 10px; }
-}
 
 /* A component row that lenses the trip list. Only the list moves — the charts
    must not, or the headline total would disagree with the bars under it. */
@@ -3369,12 +3357,6 @@ label.field > span.dhint {
 .dxs-exc { margin-top: 6px; padding-top: 10px; border-top: 1px dashed var(--border); }
 .dxs-exc .dxs-comp { border-top: 0; padding: 7px 0; font-size: 13px; }
 .dxs-exc .dxs-comp__v, .dxs-exc .dxs-comp__l { color: var(--text-faint); font-weight: 400; }
-.dxs-d {
-  font-size: 11.5px; color: var(--text-faint); text-align: right;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
-}
-.dxs-d.up { color: var(--tone-success-fg); }
-.dxs-d.down { color: var(--tone-danger-fg); }
 
 /* ---- what cost you money ------------------------------------------------ */
 .dxs-w {
