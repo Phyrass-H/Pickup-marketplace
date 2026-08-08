@@ -1,3 +1,4 @@
+import type React from "react";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import type { SeriesPoint } from "@/lib/spend";
@@ -95,6 +96,18 @@ export function SpendChart({
   };
   const xNow = (i: number) => ML + i * bw + bw / 2 - (paired ? bar + gap / 2 : bar / 2);
   const xPrev = (i: number) => ML + i * bw + bw / 2 + gap / 2;
+
+  /**
+   * ⚑ How much of a bucket the bars actually occupy, as a percentage — handed to
+   * CSS so the hover wash is exactly as wide as what it highlights.
+   *
+   * It was hard-coded at 72%, which is only right when the bar width is driven
+   * by the bucket. `bar` is CAPPED at 22 units so a sparse chart doesn't grow
+   * fat bars — and the moment that cap bites (a week view, a year view, and most
+   * of all a single-bucket day), the bars stop filling their 72% while the wash
+   * carried on covering it. A day view highlighted most of the chart.
+   */
+  const bandPct = ((paired ? 2 * bar + gap : bar) / bw) * 100;
 
   const peakIndex = points.reduce((best, p, i) => (p.amount > points[best].amount ? i : best), 0);
   // ⚑ With few enough buckets every bar can carry its own figure, which is what
@@ -210,7 +223,15 @@ export function SpendChart({
           tooltip lives here instead, and the hover wash is inset to the width of
           the two bars rather than the whole bucket + its gutters. */}
       {hrefFor && (
-        <div className="dxs-chart__hit" style={{ gridTemplateColumns: `repeat(${points.length}, 1fr)` }}>
+        <div
+          className="dxs-chart__hit"
+          style={
+            {
+              gridTemplateColumns: `repeat(${points.length}, 1fr)`,
+              "--dxs-band": `${bandPct.toFixed(3)}%`,
+            } as React.CSSProperties
+          }
+        >
           {points.map((p, i) => {
             const was = paired ? prevAt(i) : null;
             return (

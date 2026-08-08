@@ -3327,7 +3327,10 @@ label.field > span.dhint {
 .dxs-chart__cell::before {
   content: "";
   position: absolute;
-  inset: 0 14%;
+  /* Exactly the width of the bars in this bucket — set per chart by the
+     component, because a fixed fraction is only right when the bar width is
+     driven by the bucket rather than by the 22-unit cap. */
+  inset: 0 calc((100% - var(--dxs-band, 72%)) / 2);
   border-radius: 3px;
   transition: background var(--dur-fast) var(--ease);
 }
