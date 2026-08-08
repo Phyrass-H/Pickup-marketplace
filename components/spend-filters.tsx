@@ -188,9 +188,6 @@ export function SpendFilters({
               <X aria-hidden="true" />
             </button>
           )}
-          <p id="dxs-scope" className={`dxh-scope${focused ? " is-on" : ""}`}>
-            Guest · Driver · reference · address · flight · car
-          </p>
         </div>
 
         <div className="dxh-pop" ref={popRef}>
@@ -313,41 +310,51 @@ export function SpendFilters({
         </a>
       </div>
 
-      {/* Applied filters sit BELOW the controls, never inside them — otherwise the
-          toolbar reflows as chips accumulate and the buttons move under the
-          cursor. */}
-      {narrowed && (
-        <div className="dxs-chips">
-          {query.q && (
-            <button type="button" className="dxs-ac" onClick={() => search("")}>
-              “{query.q}” <span aria-hidden="true">×</span>
-              <span className="sr-only">Clear search</span>
+      {/* ⚑ ONE row under the toolbar, holding either the applied chips or the
+          "what does this search cover" hint — never both, never neither taking
+          space. The hint used to be absolutely positioned inside the search box,
+          so it occupied no height and everything underneath collided with it:
+          the chips row printed straight through it, and with no chips it ran
+          into the hero card. A fixed-height row also means focusing the search
+          can't shift the page. */}
+      <div className="dxs-subrow">
+        {narrowed ? (
+            <div className="dxs-chips">
+            {query.q && (
+              <button type="button" className="dxs-ac" onClick={() => search("")}>
+                “{query.q}” <span aria-hidden="true">×</span>
+                <span className="sr-only">Clear search</span>
+              </button>
+            )}
+            {query.driverId && (
+              <button type="button" className="dxs-ac" onClick={() => push({ driverId: null })}>
+                {driverName ?? "One Driver"} <span aria-hidden="true">×</span>
+                <span className="sr-only">Clear Driver filter</span>
+              </button>
+            )}
+            {query.category && (
+              <button type="button" className="dxs-ac" onClick={() => push({ category: null })}>
+                {categories.find((c) => c.key === query.category)?.label ?? query.category}{" "}
+                <span aria-hidden="true">×</span>
+                <span className="sr-only">Clear class filter</span>
+              </button>
+            )}
+            {query.outcome !== "all" && (
+              <button type="button" className="dxs-ac" onClick={() => push({ outcome: "all" })}>
+                {query.outcome} <span aria-hidden="true">×</span>
+                <span className="sr-only">Clear outcome filter</span>
+              </button>
+            )}
+            <button type="button" className="dxs-ac-clear" onClick={clearAll}>
+              Clear all
             </button>
-          )}
-          {query.driverId && (
-            <button type="button" className="dxs-ac" onClick={() => push({ driverId: null })}>
-              {driverName ?? "One Driver"} <span aria-hidden="true">×</span>
-              <span className="sr-only">Clear Driver filter</span>
-            </button>
-          )}
-          {query.category && (
-            <button type="button" className="dxs-ac" onClick={() => push({ category: null })}>
-              {categories.find((c) => c.key === query.category)?.label ?? query.category}{" "}
-              <span aria-hidden="true">×</span>
-              <span className="sr-only">Clear class filter</span>
-            </button>
-          )}
-          {query.outcome !== "all" && (
-            <button type="button" className="dxs-ac" onClick={() => push({ outcome: "all" })}>
-              {query.outcome} <span aria-hidden="true">×</span>
-              <span className="sr-only">Clear outcome filter</span>
-            </button>
-          )}
-          <button type="button" className="dxs-ac-clear" onClick={clearAll}>
-            Clear all
-          </button>
-        </div>
-      )}
+          </div>
+        ) : (
+          <p id="dxs-scope" className={`dxs-scope${focused ? " is-on" : ""}`}>
+            Guest · Driver · reference · address · flight · car
+          </p>
+        )}
+      </div>
     </>
   );
 }

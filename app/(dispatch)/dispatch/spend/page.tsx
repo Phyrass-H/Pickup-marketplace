@@ -331,6 +331,13 @@ export default async function DispatchSpend({
       <ServiceStrip t={t} />
 
       {/* ---- the one chart ------------------------------------------------- */}
+      {/* ⚑ No chart on a single-bucket view. "Spend over time" across one day is
+          the hero number drawn a second time as a bar — the founder's word was
+          "ridiculous", and they were right. Specified in SPEND_BRIEF § 2 module
+          3 ("Day → no chart at all, the tile carries it") and missed on the way
+          in. A week keeps its chart: seven days against seven is a real
+          comparison, and it's the view where every bar carries its own figure. */}
+      {points.length > 1 && (
       <div className="dcard">
         <div className="dcard__label dcard__label--split">
           <span>Spend over time</span>
@@ -366,6 +373,7 @@ export default async function DispatchSpend({
           figures; click it to narrow the whole page to that {bucket}.
         </p>
       </div>
+      )}
 
       {/* ---- what it's made of | what cost you money ----------------------- */}
       <div className="dxs-band">
