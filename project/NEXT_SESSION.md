@@ -519,7 +519,34 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ NEXT SESSION STARTS HERE — the founder picks. Nothing is pre-selected; open with these in 2–3 lines (rule #4).**
+**★ SESSION-54 — DISPATCH SPEND SHIPPED (2026-08-07/08). START HERE NEXT TIME.**
+`/dispatch/spend` is live: total + what makes it up + spend-over-time (paired bars vs the previous period) + a
+breakdown by Type · Class · Route · Driver · Desk + "What went wrong" + the trip list + CSV. Pass 1 of **BACKLOG § S**.
+Full brief, founder rulings, and what is deliberately deferred to passes 2–3: **`project/SPEND_BRIEF.md`**.
+Deployed `7378291`. Detail in SESSION_LOG (Session 54 and 54 part B).
+
+**⚑ FIRST THING: there is seeded test data in the LIVE DB.** 237 missions over 3 months, 6 Drivers, 3 desks on
+**Le Grand Hôtel (demo)** — it exists because 3 settled trips could not test anything. It shows in Spend, History,
+Calendar and the Schedule's past. The founder's own 28 missions are untouched and excluded from cleanup.
+Remove it with **`node .local/seed/seed-fleet.mjs --undo`** (git-ignored, deletes by recorded id, never by pattern;
+`.local/seed/README.md` explains it). **Decide early whether to keep it** — most § S follow-on work wants it there.
+
+**⚑ THE HONEST STATE OF THE MONEY.** Everything was verified by hand this session and the numbers agree across the
+page, the CSV and History (5 879,69 € on all three for the same filter). But an adversarial audit of code that had
+ALREADY been shipped-and-verified found **17 real defects**, three of them wrong money — including a default landing
+view that compared 8 days of one month against 31 of another and painted the gap green. The lesson is not "look
+harder": it is that **§ H2's automated tests are now the highest-value engineering item in the backlog**, ahead of any
+new feature. Money functions first — `settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · the
+currentSpan/comparisonSpan pair. Nothing is charged in beta, so the risk today is trust, not euros.
+- **Not yet exercised end-to-end:** the seeded fees were written by a JS mirror of the app's rules, not by the real
+  RPCs. Page arithmetic over those columns is tested; `RPC writes fee → page reads it` is not.
+
+**What § S still owes (all in SPEND_BRIEF § 9):** booking-notice (lead time × fare × fill rate), committed-spend tail,
+Route breakdown polish, then service check (on-time from `status_event`) and the demand heatmap. "Arrived on time"
+stays blank until check-in data exists. `?filter=` has no control on Spend (URL-only; the unfilled case is covered by
+its own lens).
+
+**★ THE OLDER MENU — the founder picks. Nothing is pre-selected; open with these in 2–3 lines (rule #4).**
 The obvious candidates, in the order they'd help most:
 1. **§ S — Dispatch-side Earnings / spend** ("a real one, complete and pro"): the founder already asked for it, it
    **wants charts and desktop-class controls** (unlike the Driver's, [[d59]]), `settledFare()` already solves the maths,

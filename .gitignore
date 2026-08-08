@@ -31,3 +31,7 @@ Thumbs.db
 
 # ----- Claude Design handoff bundle (reference only — kept local, not committed) -----
 .design-handoff/
+
+# Local-only test tooling (the seeded-fleet script + its manifest).
+# Writes to the live DB, so it is deliberately NOT committed — same call as S42.
+.local/
