@@ -3293,6 +3293,7 @@ label.field > span.dhint {
 .dxs-sw--prev { background: #c3ccda; }
 
 .dxs-chart { position: relative; }
+.dxs-chart__hit { overflow: visible; }
 .dxs-chart__svg { display: block; width: 100%; height: 220px; }
 .dxs-chart__grid { stroke: #e3e6ea; stroke-width: 1; vector-effect: non-scaling-stroke; }
 .dxs-chart__axis { stroke: var(--border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -3304,6 +3305,7 @@ label.field > span.dhint {
    it — so every label is drawn at a fixed size in screen pixels instead. */
 .dxs-chart__ytick, .dxs-chart__xtick { font-size: 11px; fill: #5f6b7c; }
 .dxs-chart__peak { font-size: 11px; font-weight: 500; fill: var(--accent); }
+.dxs-chart__val { font-size: 10.5px; font-weight: 500; fill: #5f6b7c; }
 .dxs-chart__svg text { font-family: var(--font-sans); }
 
 /* Real links over the bars: keyboard-reachable, focusable, and they survive
@@ -3311,9 +3313,56 @@ label.field > span.dhint {
 .dxs-chart__hit {
   position: absolute; inset: 16px 10px 28px 52px; display: grid; gap: 0;
 }
-.dxs-chart__cell { border-radius: 3px; }
-.dxs-chart__cell:hover { background: rgba(37, 51, 76, 0.05); }
-.dxs-chart__cell:focus-visible { outline: none; box-shadow: var(--ring); }
+.dxs-chart__cell { position: relative; }
+/* ⚑ The wash sits on a pseudo-element inset to the bars' own width (they occupy
+   72% of the bucket, centred), not on the full grid cell. Painting the whole
+   bucket highlighted the gutters either side and read as three columns. */
+.dxs-chart__cell::before {
+  content: "";
+  position: absolute;
+  inset: 0 14%;
+  border-radius: 3px;
+  transition: background var(--dur-fast) var(--ease);
+}
+.dxs-chart__cell:hover::before { background: rgba(37, 51, 76, 0.06); }
+.dxs-chart__cell:focus-visible { outline: none; }
+.dxs-chart__cell:focus-visible::before { box-shadow: var(--ring); background: rgba(37, 51, 76, 0.06); }
+
+/* The tooltip. CSS-only and server-rendered — no JS, no hydration, and it can't
+   disagree with the bar it describes because both read the same point. */
+.dxs-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 3;
+  display: none;
+  min-width: 152px;
+  padding: 9px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.dxs-chart__cell:hover .dxs-tip,
+.dxs-chart__cell:focus-visible .dxs-tip { display: block; }
+/* The first and last buckets would push their tooltip off the card. */
+.dxs-chart__cell:first-child .dxs-tip { left: 0; transform: none; }
+.dxs-chart__cell:last-child .dxs-tip { left: auto; right: 0; transform: none; }
+.dxs-tip b { display: block; font-weight: 500; color: var(--text); margin-bottom: 5px; }
+.dxs-tip__row {
+  display: flex; align-items: baseline; gap: 7px;
+  color: var(--text); font-variant-numeric: tabular-nums;
+}
+.dxs-tip__row--prev { color: var(--text-muted); margin-top: 2px; }
+.dxs-tip__row em { font-style: normal; color: var(--text-faint); font-size: 11px; margin-left: auto; padding-left: 10px; }
+.dxs-tip__sw { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.dxs-tip__sw--now { background: var(--accent); }
+.dxs-tip__sw--prev { background: #c3ccda; }
 
 .dxs-foot { font-size: 11px; color: var(--text-faint); margin: 12px 0 0; line-height: 1.5; }
 .dxs-none { font-size: 13px; color: var(--text-faint); margin: 0; padding: 18px 0; text-align: center; }

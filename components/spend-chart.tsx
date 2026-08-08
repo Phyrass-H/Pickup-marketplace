@@ -97,6 +97,12 @@ export function SpendChart({
   const xPrev = (i: number) => ML + i * bw + bw / 2 + gap / 2;
 
   const peakIndex = points.reduce((best, p, i) => (p.amount > points[best].amount ? i : best), 0);
+  // ⚑ With few enough buckets every bar can carry its own figure, which is what
+  // the founder actually wanted ("hard to understand the amount at a glance").
+  // Past ~10 the labels start colliding, so only the highest keeps one — and it
+  // says "Highest" now, because an unexplained lone number on a SPEND chart got
+  // read as "best revenue", which is the opposite of what it means.
+  const labelAll = points.length <= 10;
   // Enough x labels to orient, never so many they collide.
   const stride = Math.max(1, Math.ceil(points.length / 8));
 
@@ -156,16 +162,30 @@ export function SpendChart({
           );
         })}
 
-        {points[peakIndex].amount > 0 && (
-          <text
-            x={xNow(peakIndex) + bar / 2}
-            y={y(points[peakIndex].amount) - 7}
-            textAnchor="middle"
-            className="dxs-chart__peak"
-          >
-            {formatMoney(points[peakIndex].amount)}
-          </text>
-        )}
+        {labelAll
+          ? points.map((p, i) =>
+              p.amount > 0 ? (
+                <text
+                  key={`v-${p.key}`}
+                  x={xNow(i) + bar / 2}
+                  y={y(p.amount) - 7}
+                  textAnchor="middle"
+                  className="dxs-chart__val"
+                >
+                  {formatMoney(p.amount)}
+                </text>
+              ) : null,
+            )
+          : points[peakIndex].amount > 0 && (
+              <text
+                x={xNow(peakIndex) + bar / 2}
+                y={y(points[peakIndex].amount) - 7}
+                textAnchor="middle"
+                className="dxs-chart__peak"
+              >
+                Highest · {formatMoney(points[peakIndex].amount)}
+              </text>
+            )}
 
         <line x1={ML} x2={W - MR} y1={MT + IH} y2={MT + IH} className="dxs-chart__axis" />
         {points.map((p, i) =>
@@ -184,18 +204,43 @@ export function SpendChart({
       </svg>
 
       {/* The click targets live outside the SVG so they are real links — keyboard
-          reachable, focusable, and they survive with JavaScript disabled. */}
+          reachable, focusable, and they survive with JavaScript disabled.
+          ⚑ They also OCCLUDE the bars, which is why each <rect>'s own <title>
+          never fired: the pointer was always on this layer, not on the bar. The
+          tooltip lives here instead, and the hover wash is inset to the width of
+          the two bars rather than the whole bucket + its gutters. */}
       {hrefFor && (
         <div className="dxs-chart__hit" style={{ gridTemplateColumns: `repeat(${points.length}, 1fr)` }}>
-          {points.map((p) => (
-            <Link
-              key={`hit-${p.key}`}
-              href={hrefFor(p)}
-              scroll={false}
-              className="dxs-chart__cell"
-              aria-label={`${p.label}: ${formatMoney(p.amount)}, ${p.trips} trip${p.trips === 1 ? "" : "s"}. Narrow to this period.`}
-            />
-          ))}
+          {points.map((p, i) => {
+            const was = paired ? prevAt(i) : null;
+            return (
+              <Link
+                key={`hit-${p.key}`}
+                href={hrefFor(p)}
+                scroll={false}
+                className="dxs-chart__cell"
+                aria-label={`${p.full}: ${formatMoney(p.amount)}, ${p.trips} trip${p.trips === 1 ? "" : "s"}. Narrow to this period.`}
+              >
+                <span className="dxs-tip" aria-hidden="true">
+                  <b>{p.full}</b>
+                  <span className="dxs-tip__row">
+                    <i className="dxs-tip__sw dxs-tip__sw--now" />
+                    {formatMoney(p.amount)}
+                    <em>
+                      {p.trips} trip{p.trips === 1 ? "" : "s"}
+                    </em>
+                  </span>
+                  {was != null && (
+                    <span className="dxs-tip__row dxs-tip__row--prev">
+                      <i className="dxs-tip__sw dxs-tip__sw--prev" />
+                      {formatMoney(was)}
+                      <em>{compareLabel}</em>
+                    </span>
+                  )}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

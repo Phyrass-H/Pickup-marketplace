@@ -362,15 +362,15 @@ export default async function DispatchSpend({
         )}
         <p className="dxs-foot">
           Each column is one {bucket} of {span.label}, at the fare the Driver accepted
-          {back ? "; the grey line behind is the same shape for " + back.label : ""}. Click a column
-          to narrow the whole page to it.
+          {back ? `, paired with the same ${bucket} of ${back.label}` : ""}. Hover a column for the
+          figures; click it to narrow the whole page to that {bucket}.
         </p>
       </div>
 
       {/* ---- what it's made of | what cost you money ----------------------- */}
       <div className="dxs-band">
         <div className="dcard">
-          <p className="dcard__label">What it’s made of</p>
+          <p className="dcard__label">What makes up the total</p>
 
           {/* ⚑ No comparison column here, deliberately. This section answers
               "what is the total made of" — a composition. Hanging a change
@@ -436,7 +436,7 @@ export default async function DispatchSpend({
         </div>
 
         <div className="dcard">
-          <p className="dcard__label">What cost you money</p>
+          <p className="dcard__label">What went wrong</p>
           {waste.map((w) => (
             <div key={w.key} className="dxs-w">
               <span className="dxs-w__l">

@@ -299,7 +299,10 @@ export type Bucket = "day" | "week" | "month";
 export interface SeriesPoint {
   /** Inclusive Paris day key the bucket starts on — also the click target. */
   key: string;
+  /** The short axis tick: "9", "9 Jul", "Jul". */
   label: string;
+  /** The whole thing, for a tooltip: "Thursday 9 July", "9–15 July", "July 2026". */
+  full: string;
   amount: number;
   trips: number;
 }
@@ -340,6 +343,9 @@ export function autoBucket(fromDay: string, toDay: string): Bucket {
 }
 
 const D_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", timeZone: "UTC" });
+const FULL_DAY = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+const FULL_DM = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
+const FULL_MY = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 const DM_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 const M_LABEL = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
 
@@ -349,6 +355,16 @@ function labelFor(key: string, bucket: Bucket): string {
   if (bucket === "day") return D_LABEL.format(at);
   if (bucket === "week") return DM_LABEL.format(at);
   return M_LABEL.format(at);
+}
+
+/** The spelled-out bucket, for a tooltip that has room to be unambiguous. */
+function fullLabel(key: string, bucket: Bucket): string {
+  const [y, m, d] = key.split("-").map(Number);
+  const at = Date.UTC(y, m - 1, d);
+  if (bucket === "day") return FULL_DAY.format(at);
+  if (bucket === "month") return FULL_MY.format(at);
+  const end = new Date(at + 6 * 86_400_000);
+  return `${FULL_DM.format(at)} – ${FULL_DM.format(end)}`;
 }
 
 /**
@@ -369,7 +385,13 @@ export function series(
   // Hard stop: a hand-edited URL could produce an absurd span, and an unbounded
   // while-loop on a server render is not a thing worth risking.
   for (let i = 0; i < 400 && cursor <= toDay; i += 1) {
-    points.set(cursor, { key: cursor, label: labelFor(cursor, bucket), amount: 0, trips: 0 });
+    points.set(cursor, {
+      key: cursor,
+      label: labelFor(cursor, bucket),
+      full: fullLabel(cursor, bucket),
+      amount: 0,
+      trips: 0,
+    });
     cursor =
       bucket === "day"
         ? addDays(cursor, 1)
