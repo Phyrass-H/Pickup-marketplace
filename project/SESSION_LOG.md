@@ -5,6 +5,65 @@
 
 ---
 
+## 2026-08-08 — Session 54, part B — the Spend page in the founder's hands, then audited
+
+**Shape of this stretch.** The founder tested the page against real volume and found things by using it; then asked
+*"is everything wired?"*, which turned into a proper adversarial audit. Six deploys: `f04a91f` · `0b10759` ·
+`b1cc85d` · `0bf4f08` · `3a76471` · `7378291`.
+
+**A seeded fleet, because the real archive couldn't test anything.** 3 settled trips and one Driver proves nothing.
+Seeded **237 missions over 3 months** onto the demo Business — 6 Drivers with real cars, **3 desks** (Concierge day /
+night / Events) so the Desk breakdown finally has something to rank, and a realistic outcome mix (166 completed · 22
+cancelled with ramp-computed fees · 10 no-shows · 23 unfilled · 16 never closed), **16 520,59 €** settled. Fees use the
+app's own rules, so a wrong number on screen is the page's fault, not the data's. Everything past-dated, so the Pool and
+today's Schedule stay clean. Script + manifest in the session scratchpad; `--undo` deletes by recorded id.
+- **⚑ The trap, worth remembering:** `stops_reached` is NOT NULL, and **PostgREST writes NULL into any key missing from
+  some rows of a batch insert**. An uneven row shape killed the first run half-way. The script now spreads every row
+  over a template of all keys and writes its manifest incrementally, so a partial failure stays undoable.
+
+**Founder-found, in order.** Delta column crushed against the amount (`.ebreak__r` existed in the approved mockup and
+never reached globals.css) → rebuilt as an aligned grid with a named column head; then **the whole delta column deleted**
+— *"a good UX means the user don't need to think"* — because a change column on a composition list made the reader work
+out what a lone "+45,00 €" referred to. **The grey step line failed** (*"oh I got it, the grey steps was previous
+period"*) → paired bars, founder's pick of three options. **Hover wash overhanging on the left** → twice wrong before it
+was right: first the overlay was inset in literal pixels while the SVG is stretched by `preserveAspectRatio="none"`
+(52 units renders ~73px), then the band was hard-coded at 72% which is only true when the 22-unit bar cap doesn't bite —
+measured 5.0% on a day, 35.1% on a week. Now derived from the same geometry that places the bars. **"Does it look
+ridiculous per day?"** → yes, and SPEND_BRIEF § 2 module 3 had already said *"Day → no chart at all"*; built it anyway,
+now gated. **Search hint colliding** → hint and chips share one fixed-height row.
+
+**Then the audit.** Five lenses (dead wiring · money · page-vs-CSV-vs-History parity · edge cases · copy), each finding
+attacked by a skeptic instructed to default to "not real". 25 verdicts survived → **17 distinct defects**, all fixed in
+`7378291`. The three that mattered most:
+1. **The default view lied every month.** `currentSpan` returned the whole calendar month while the query only returns
+   past trips, so 8 days of August were measured against all 31 of July — and the shortfall painted **green**. Span is
+   clamped to today; `comparisonSpan` truncates the previous period to the same day count.
+2. **History's CSV stopped matching History's screen** — caused by this session's own waiting fix, which touched the
+   summary and not the export. Both now write `rowCost` under one header. Verified 5 879,69 € on both.
+3. **Comparison bars duplicated and dropped days.** `compare[floor(i * len / len)]` drew 1, 10 and 19 February twice
+   against March and never drew 11 January against February. Aligned by position now.
+Also: cost-per-trip divided cancelled-trip waiting by a completed-trip count; the CSV total row was a lens subtotal
+labelled as the period total; the CSV wrote `0,00` where the screen writes `—`; chart tooltips counted unfilled and
+cancelled missions as trips while the hero didn't; a trip row said *"incl. N waiting"* under an amount that excluded it;
+the legend/footnote/aria announced comparison bars the chart doesn't draw when the previous period is empty; "6
+unfilled" was a dead end (new `unfilled` lens, every waste line is a link); lens clicks changed content 1500px below the
+fold and never scrolled there; `aria-describedby` dangled the moment a chip replaced the hint; the loading skeleton drew
+a chart the day view never renders.
+
+**⚑ And the visual one, which was self-inflicted.** `preserveAspectRatio="none"` stretches the SVG's **text** along with
+its geometry — every axis label rendered ~47 % wider than tall on the 1520px layout. Labels moved to an HTML overlay
+positioned in percentages; only geometry stays in the SVG. Verified 19 label spans, 0 `<text>` nodes.
+
+**Lesson worth keeping.** Three separate fixes to the hover band were each verified on ONE period and each shipped
+wrong. Measuring painted geometry across *every* period is what finally settled it — and it was the founder asking *"did
+you do it on all periods?"* that forced it.
+
+**Still open, deliberately.** `?filter=` has no control on Spend (URL-only; the unfilled case is covered by a lens).
+Modules 6–9 of the brief are phase 2/3. "Arrived on time" stays blank until check-in data exists. The seeded fleet is
+still live in the DB until the founder runs `--undo`.
+
+---
+
 ## 2026-08-07 — Session 54 — DISPATCH SPEND (BACKLOG § S, pass 1)
 
 **Scope.** The founder opened by correcting the framing: *"it is actually spending right, we don't have access to their

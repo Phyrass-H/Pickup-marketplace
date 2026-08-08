@@ -5,6 +5,37 @@
 
 ---
 
+## 8 August 2026 — Spend, used in anger and then pulled apart
+- **Test data, so the page could actually be judged.** Three real trips proved nothing, so the demo hotel now has
+  **237 trips across three months** — six Drivers with real cars, three booking desks, and a realistic mix of
+  completed, cancelled, no-show, unfilled and never-closed trips. Every euro is worked out by the app's own rules, so
+  anything odd on screen is the page's fault and not the data's. It can be removed in one command.
+- **The chart's comparison is now a second bar, not a grey line.** Two shapes didn't read as two of the same thing.
+  Two colours, one shape — this month solid, last month pale, side by side.
+- **Hover any column** and you get the date, what you spent, how many trips, and last period's figure underneath.
+- **No chart on a single day.** A "spend over time" chart covering one day was just the big number drawn again.
+- **"What it's made of" → "What makes up the total"**, and **"What cost you money" → "What went wrong"**.
+- **The comparison column is gone** from that list. A "+45,00 €" sitting next to a price made you work out what it was
+  measuring; the comparison now lives where you can see it — the pill under the total, and the chart.
+
+**Then we audited the page properly, and it was not all fine.** Seventeen things were wrong; all are fixed. The three
+worth knowing about:
+- **The page you land on was misleading you every month.** Opening Spend on the 8th compared eight days of this month
+  against *all thirty-one* of last month — and showed the difference as good news in green. It now compares the same
+  number of days on both sides: "August 2026 · compared with 1 July – 8 July".
+- **History's downloaded file didn't match History's screen.** We'd started counting waiting charges in the on-screen
+  total earlier that day and hadn't updated the file. Both now say the same number.
+- **The comparison bars were quietly wrong.** Comparing March with February drew three February days twice, and
+  comparing February with January skipped a day entirely. Day 1 now sits beside day 1.
+
+Also fixed: cost per trip counted waiting from cancelled trips; the exported file called a filtered subtotal a period
+total; it wrote "0,00 €" where the screen honestly says "—"; hovering a column counted trips nobody drove; a trip row
+said "including waiting" about money it wasn't including; the chart claimed a comparison it wasn't drawing when last
+month was empty; "6 unfilled" was a dead end you couldn't click; and the chart's own labels were being stretched about
+half again as wide as they should be.
+
+---
+
 ## 7 August 2026 — **Spend**: a proper back-office view of what your transport costs you
 - **A new page in Dispatch, next to History: Spend.** It answers three questions on one screen — what did we spend,
   why is that different from last month, and what could we have avoided.
