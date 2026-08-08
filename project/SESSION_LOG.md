@@ -1631,3 +1631,73 @@ build i18n routing yet), **D-L2** (*no geography at all* — no "French Riviera"
 everyone) and **D-L3** (no Driver count, in any wording). Those supersede what the brief originally said about
 the beta being Riviera-specific — the facts are still true internally, they just don't go on the page. **If a
 future product session needs to know what the public site claims, read that file, not this one.**
+
+### Session 55, 2026-08-08 — the money functions get a test suite (§ H2)
+
+**Why now.** S54 closed with the honest finding that an adversarial audit of the Spend page — code that had
+already been *shipped and hand-verified* — turned up **17 real defects, three of them wrong money**. The
+NEXT_SESSION handoff drew the right conclusion and ranked § H2's automated tests above any new feature. This
+session builds the first half of that: the pure money/period functions.
+
+**Harness — zero new dependencies.** Node 22.22 strips TypeScript natively and ships `node:test`, so the suite
+runs the app's own modules with no bundler, no build step and nothing added to `package.json`'s dependency
+trees. The only piece of glue is **`test/register.mjs`**, a `module.registerHooks()` resolve hook mapping
+`@/x` → `<repo>/x.ts` — the same mapping tsconfig's `paths` already declares, which Node knows nothing about.
+Consequence worth stating: the tests import **the same modules the app imports**; there is no compiled copy of
+the money rules that can drift.
+- `npm test` → `node --test --test-reporter=spec --import ./test/register.mjs "test/**/*.test.ts"`.
+- Test files live under `test/`, so `tsconfig`'s `**/*.ts` include type-checks them for free — `tsc --noEmit`
+  covers the tests too. They import the factory via `@/test/support/factories` (not a relative `.ts` path),
+  which keeps `allowImportingTsExtensions` off and matches the repo's own import idiom everywhere else.
+- `--disable-warning=MODULE_TYPELESS_PACKAGE_JSON` only silences Node's "add `type: module`" perf notice.
+  Adding `"type": "module"` to `package.json` would have changed module semantics repo-wide for a warning
+  about reparsing — not worth it.
+
+**178 tests, 36 suites, across six files.** `test/README.md` is the founder-facing entry point.
+- **`pdp.test.ts` (18)** — the climb (whole steps only, clamped at the Ceiling, never runs backwards, a
+  RE-POOLED mission restarts from `pooled_at`) and, the point of the file, **`settledFare` frozen at accept**:
+  the S48b bug is now one assertion (`settledFare === 70` while `currentFare` a week later is 100).
+- **`cancellation.test.ts` (35)** — the D45 ramp at every hour (free while pooled · free >5h · 50% at −5h ·
+  +10%/h · 100% at pickup and after, and a sweep asserting it never leaves 0–100); the D48 waiting meter
+  (nothing inside the courtesy wait, a whole minute one second past it, €40 city / €60 airport ceilings, the
+  `capped` flag, `guest_ready_at` moving the whole meter); the **airport predicate across six spellings**
+  including NFC *and* NFD accents — the S42 bug that quietly cost every airport pickup 40 minutes of paid
+  wait; and **`noShowAvailableAt` with a 33h-early `arrived`**, the S41 exploit, pinned.
+- **`spend.test.ts` (37)** — `rowCost`, `spendTotals` (the four components and their total), the § Q unclosed
+  trip shown-but-excluded, the unfilled mission and its unspent Ceiling, the `tripWaiting` vs `waiting` split
+  behind cost-per-trip, fill rate, median-to-accept odd and even, `breakdown` (rollup, exclusions, shares
+  summing to 100), `autoBucket` boundaries at 31/32/182/183 days, and `series` (empty buckets kept, Monday
+  weeks, year-end rollover, and a 00:30-Paris pickup landing on the right day).
+- **`spend-filter.test.ts` (24)** — the pair that produced the worst audit finding. `currentSpan` clamps a
+  running period to today; `comparisonSpan` truncates the other side to match. A loop asserts `days === days`
+  for **every period × comparison the UI offers**, so a future period type can't reintroduce it.
+- **`earnings.test.ts` (31)** — `parseDayParam` rejecting 31 February and friends, Paris day bucketing summer
+  and winter, `periodRange` for all five periods incl. year-boundary steps and February's length, **the DST
+  days asserted as 23 and 25 hours**, and `totalsFor` / `missionAmount`.
+- **`history-filter.test.ts` (33)** — `historyFare`'s four branches (incl. an unparseable fee treated as
+  absent, not NaN), `bucketOf`, the date filter comparing **Paris** days, chip counts computed before the
+  outcome filter, fare sorting putting the fareless row last **in both directions**, and a block asserting the
+  cross-screen invariant: `Σ rowCost(rows) === spendTotals(rows).total`, holding **under every outcome
+  filter**. That is the property behind "5 879,69 € on the page, the CSV and History"; it was verified by hand
+  once and had nothing holding it there.
+
+**PostgREST string-numerics are tested as a first-class hazard.** `numeric` arrives over the wire as text, so
+`70 + "12"` is `"7012"`. `rowCost`, `cancelCompensation` and `totalsFor` each get an explicit string-input test.
+
+**Verified:** `tsc --noEmit` clean (the whole repo, tests included) · `npm test` 178/178 · `next build` green,
+24 routes. The build needed placeholder env vars in this remote session — there is no `.env.local` here, so a
+cloud session can compile and type-check but cannot collect page data or reach the real Supabase DB. The
+placeholder file was deleted after the build; it is git-ignored either way.
+
+**⚑ Noted, not changed (no behaviour touched this session):** `currentSpan(q, now)` / `comparisonSpan(q, now)`
+take a `now`, but reach `parseAnchor(q.anchor ?? q.from ?? undefined)`, and `parseAnchor` falls back to the
+**real** clock when handed nothing. Harmless today — `parseSpendQuery` always sets an anchor, and production
+only ever passes the real clock — but it means those two functions are not fully injectable, and a test must
+pass an anchor to be deterministic. All the tests here do.
+
+**⚑ Still uncovered, and the honest next item:** these are pure functions. The **SQL RPCs** (`accept_mission`,
+`driver_cancel_mission`, `business_cancel_mission`, `mark_no_show`, `business_declare_no_show`,
+`mission_waiting()`) are the other half of the money and are exercised only by live probing. S54 already
+flagged the gap precisely: the seeded fees were written by a **JS mirror** of the app's rules, not by the real
+RPCs, so `RPC writes fee → page reads it` has never been tested end to end. That needs a DB, so it belongs in
+a session with `.env.local` — not a remote one.

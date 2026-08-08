@@ -5,6 +5,27 @@
 
 ---
 
+## 8 August 2026 — the money now has tests holding it in place
+
+- **178 automated checks over every function that decides money.** What a Driver is paid, what a Business is
+  billed, the cancellation fee at each hour, the waiting meter and its ceilings, and every date period the two
+  Earnings screens can show. They run in about a second with `npm test` and nothing new was installed to do it.
+- **Why this and not a new feature.** Yesterday's audit found seventeen things wrong with a page that had
+  already shipped *and* been checked by hand. Checking by hand proves a number once, on one day, with one set
+  of trips — and then holds nothing in place. These checks do.
+- **The three bugs that cost real money are now pinned so they cannot come back.** A completed trip getting
+  more expensive with time (a €70 job reading €100 a week later). An airport pickup written with an accent
+  being treated as a city one, quietly losing the Driver forty minutes of paid waiting. And the landing view
+  comparing eight days of this month against thirty-one of last.
+- **The two screens can no longer disagree.** There is now a check saying History's total and Spend's total
+  must come out the same for the same filter — the thing that was true when it was measured, and had nothing
+  keeping it true.
+- **What this does not cover, honestly.** The rules that live in the database itself — the ones that actually
+  write a fee when someone cancels — are not covered yet. They need a live database to test against. That is
+  the next piece.
+
+---
+
 ## 8 August 2026 — Spend, used in anger and then pulled apart
 - **Test data, so the page could actually be judged.** Three real trips proved nothing, so the demo hotel now has
   **237 trips across three months** — six Drivers with real cars, three booking desks, and a realistic mix of

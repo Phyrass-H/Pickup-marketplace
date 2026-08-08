@@ -519,7 +519,24 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-54 — DISPATCH SPEND SHIPPED (2026-08-07/08). START HERE NEXT TIME.**
+**★ SESSION-55 — ✅ § H2 MONEY TESTS SHIPPED (2026-08-08). START HERE NEXT TIME.**
+`npm test` → **178 tests, 36 suites, 0 failures**, in about a second, with **no new dependency**: Node 22 strips
+TypeScript and runs `node:test` natively, and `test/register.mjs` (a `module.registerHooks` resolve hook) teaches it
+the `@/…` alias, so the tests import **the same modules the app imports**. Covered: `settledFare`/`currentFare` ·
+`businessCancelPct` · the D48 waiting meter + the airport predicate · `rowCost`/`spendTotals`/`breakdown`/`series` ·
+**`currentSpan`/`comparisonSpan`** · `periodRange`+`totalsFor` · `historyFare`/`applyHistoryQuery` — plus the
+cross-screen invariant **`Σ rowCost === spendTotals.total`, under every outcome filter**, which is the property
+behind "5 879,69 € on the page, the CSV and History". Entry point for a human: **`test/README.md`**. Detail in
+SESSION_LOG (Session 55).
+- **⚑ The remaining half of the money is SQL and is still untested.** `accept_mission` · the four cancel/no-show
+  RPCs · `mission_waiting()`. S54's flag stands verbatim: the seeded fees came from a **JS mirror** of the rules, not
+  the real RPCs, so **`RPC writes fee → page reads it` has never been tested end to end.** That needs a live DB, so
+  it wants a session with `.env.local` — a remote/cloud session cannot do it.
+- **⚑ Noted, not changed:** `currentSpan(q, now)` / `comparisonSpan(q, now)` fall through to `parseAnchor`, which
+  reads the **real** clock when handed no anchor. Harmless (parseSpendQuery always sets one) but they are not fully
+  injectable — pass an anchor in any test.
+
+**★ SESSION-54 — DISPATCH SPEND SHIPPED (2026-08-07/08).**
 `/dispatch/spend` is live: total + what makes it up + spend-over-time (paired bars vs the previous period) + a
 breakdown by Type · Class · Route · Driver · Desk + "What went wrong" + the trip list + CSV. Pass 1 of **BACKLOG § S**.
 Full brief, founder rulings, and what is deliberately deferred to passes 2–3: **`project/SPEND_BRIEF.md`**.
@@ -538,8 +555,10 @@ view that compared 8 days of one month against 31 of another and painted the gap
 harder": it is that **§ H2's automated tests are now the highest-value engineering item in the backlog**, ahead of any
 new feature. Money functions first — `settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · the
 currentSpan/comparisonSpan pair. Nothing is charged in beta, so the risk today is trust, not euros.
+**→ ✅ DONE in S55 — all five, plus their neighbours. See the S55 block above.**
 - **Not yet exercised end-to-end:** the seeded fees were written by a JS mirror of the app's rules, not by the real
-  RPCs. Page arithmetic over those columns is tested; `RPC writes fee → page reads it` is not.
+  RPCs. Page arithmetic over those columns is tested; `RPC writes fee → page reads it` is not. **Still true after
+  S55** — that half is SQL and needs a live DB.
 
 **What § S still owes (all in SPEND_BRIEF § 9):** booking-notice (lead time × fare × fill rate), committed-spend tail,
 Route breakdown polish, then service check (on-time from `status_event`) and the demand heatmap. "Arrived on time"

@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --test-reporter=spec --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
