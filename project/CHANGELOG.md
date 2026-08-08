@@ -5,6 +5,30 @@
 
 ---
 
+## 8 August 2026 — the money now checks itself
+
+- **242 automatic checks on every number the app works out.** Until today, the only thing standing between a
+  wrong fare and your screen was someone noticing. Now there's a command (`npm test`) that re-checks the whole of
+  the money — fares, waiting, cancellation fees, no-shows, what a Driver earned, what a hotel spent, and the date
+  ranges all of it is cut by — in about a second and a half. Nothing about the app itself changed; this is a
+  safety net under what's already there.
+- **Every money bug we've had is now written down as a test.** The trip that got more expensive after it
+  finished, the airport that was read as a city because of the accent in "Aéroport", the Driver who could file a
+  no-show hours early, the comparison that measured 8 days of one month against 31 of another — each one now has
+  a check that goes red if it ever comes back.
+- **Three promises are now checked, not just believed.** That what a hotel is charged is exactly what the Driver
+  is paid, on every kind of trip. That the archive, the Spend page and the exported spreadsheet always add up to
+  the same total, whatever you filter by. And that the price agreed when a Driver accepted is the price
+  everything else is worked out from.
+- **The safety net was tested for holes.** Two real bugs were deliberately put back into the code to make sure
+  the checks actually caught them — they did, loudly — and then removed. A test that can't fail isn't protecting
+  anything.
+- **Two small things were found on the way, and neither was quietly changed.** There's an unused total inside
+  the archive code that adds up fares but forgets waiting — harmless today because nothing reads it, and worth
+  deleting before someone does. And when you look at **Today** on the Spend page, it compares this morning
+  against all of yesterday, which isn't a fair fight; fixing it properly means deciding what "today so far"
+  should be compared with, which is your call, not a technical one. Both are written up rather than guessed at.
+
 ## 8 August 2026 — Spend, used in anger and then pulled apart
 - **Test data, so the page could actually be judged.** Three real trips proved nothing, so the demo hotel now has
   **237 trips across three months** — six Drivers with real cars, three booking desks, and a realistic mix of

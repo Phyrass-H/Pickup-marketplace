@@ -5,6 +5,100 @@
 
 ---
 
+## 2026-08-08 — Session 55 — AUTOMATED TESTS on the money (BACKLOG § H2, first pass)
+
+**Why this and not a feature.** S54's own close named it: an adversarial audit of code that had already been
+shipped *and* hand-verified turned up 17 real defects, three of them wrong money. The lesson recorded there was
+that § H2's automated tests had become the highest-value engineering item in the backlog, ahead of any new
+feature. The founder picked it from the menu. Nothing is charged in beta, so the risk being bought down is
+**trust**, not euros.
+
+**Session constraint, worth recording.** This ran as a **remote (cloud) session**, not on the founder's Mac:
+no `.env.local`, so no live-Supabase reads and no browser verification, and pushes go to
+`claude/new-session-e0zlki` rather than straight to `main`. That is exactly why the money functions were the
+right pick — they are pure, and they are the one part of the app that can be verified at full strength with no
+DB and no browser.
+
+**What landed.** `vitest` as a dev dependency (`npm test` / `npm run test:watch`), `vitest.config.ts` aliasing
+`@/` to the same paths `tsconfig` uses so a test imports exactly what the app imports, and **242 tests over 7
+files** running in ~1.5 s:
+
+| file | covers |
+| --- | --- |
+| `tests/pdp.test.ts` | `currentFare` · `settledFare` · `isAtCeiling` — the climb, the Ceiling clamp, SPEED WIN vs standard, `pooled_at` re-pool origin, rounding |
+| `tests/cancellation.test.ts` | the airport predicate · courtesy wait · `waitingAt` meter · `noShowAvailableAt` · `businessCancelPct` · `cancelCompensation` |
+| `tests/earnings.test.ts` | the Paris calendar (`dayKey`, `periodRange`, `parseDayParam`) + `totalsFor` / `missionAmount` |
+| `tests/spend.test.ts` | `rowCost` · `spendTotals` · `breakdown` · `series` · `autoBucket` · `wasteLines` |
+| `tests/history-filter.test.ts` | `historyFare` · `fold` / `highlightSegments` · `matchRow` · `parseHistoryQuery` · `applyHistoryQuery` |
+| `tests/spend-filter.test.ts` | `currentSpan` / `comparisonSpan` — the pair behind the S54 landing-view defect |
+| `tests/money-invariants.test.ts` | the cross-file identities (below) |
+
+**The fixture is typed `MissionRow`, deliberately.** `tsconfig` includes `tests/`, so the day a money-critical
+column is added to the schema the fixture stops compiling and the suite has to acknowledge it. A loose object
+would have let the tests drift away from the table they claim to test.
+
+**The regressions that are now pinned** — each one a bug that actually shipped, written as a test that fails if
+it comes back: `settledFare` freezing at `accepted_at` (S48b — a trip accepted at €70 read €100 a week later);
+the `roport` airport predicate across NFC/NFD/unaccented forms (S42 — the accented-airport 20-vs-60-minute bug,
+with the two normalisations **built rather than typed**, since an editor silently normalises a pasted literal
+and would make the case vacuous); the no-show clock running from the Guest's due time so a Driver tapping
+`arrived` 33h early cannot bring the report forward (S41); `comparisonSpan` truncating a part-finished period so
+8 days of August are measured against 8 days of July, not 31 (S54); waiting settled on a *cancelled* trip
+staying out of cost-per-trip; and `series` counting only trips that ran.
+
+**The three cross-file invariants** are the ones the founder checks by hand, now checked automatically:
+1. **What the Business is charged is what the Driver is paid** — `spendTotals(...).total === totalsFor(...).total`
+   for every ending (completed · completed-with-waiting · no-show · no-show-with-waiting · cancelled ·
+   cancelled-with-waiting) and for a mixed period. This encodes [[d59]]: the Pool price *is* the Driver's price.
+2. **The archive, the Spend page and the CSV total the same rows to the same number** — the 5 879,69 € agreement,
+   asserted over the shared `applyHistoryQuery` → `rowCost` path, and re-asserted under four different filters
+   so "Export CSV = exactly what's on screen" cannot quietly stop being true.
+3. **`settledFare` is the one basis** — a fare, a no-show charge and a cancellation basis all price off the same
+   frozen number, and reading a closed trip twice gives the same answer.
+
+**The suite was proved able to fail.** Two mutations were applied to `lib/` and reverted: reverting `settledFare`
+to the live climb → **28 failures across 5 files**; disabling the `comparisonSpan` truncation → **4 failures**.
+A green suite that cannot go red is worth nothing, so this check belongs with any future addition to it.
+
+**Verified:** 242/242 green · `tsc --noEmit` clean (tests included) · `next build` green. The build needs env
+values to exist at page-data collection, so it was run once with placeholders to confirm the only failure in this
+container is the absent `.env.local` and nothing to do with the change. Nothing under `app/`, `components/` or
+`lib/` was modified — this commit adds tests and a dev dependency, and changes no product behaviour.
+
+### Two things found while writing the tests — both flagged, neither fixed
+
+Both are pinned by a test that documents current behaviour with a `⚑` comment, so a change to either is a
+deliberate act rather than an accident.
+
+1. **`HistoryResult.spend` is dead and disagrees with both screens.** `applyHistoryQuery` returns a `spend` that
+   sums **fares only**, while `/dispatch/history` and `/dispatch/spend` both ignore it and re-total with
+   `rowCost` — which adds waiting. So the field is off by exactly the waiting on any period where a Driver
+   waited. Nothing reads it today (checked all four call sites), which is the only reason it has never been
+   wrong on screen. **Recommend deleting the field**; it is a trap sitting inside the one function both money
+   screens run.
+2. **The `day` period can never be "partial", so "Today vs yesterday" is unfair.** `partial` is a
+   day-granularity test (`today < toDay`), and today's own period *ends* on today — so no truncation happens and
+   today-so-far is compared against all of yesterday. At 09:00 that is three hours measured against
+   twenty-four: the same class of unfairness the month case was fixed for in S54. It **cannot** be fixed the
+   same way — a day has no smaller unit here to truncate to. An honest version compares against yesterday up to
+   the same clock time, which is a **product decision, not a refactor**, so it was left alone.
+
+### What this does NOT cover — say it plainly
+
+- **`RPC writes fee → page reads it` is still untested end to end.** These are tests of the TypeScript money
+  functions. The SQL side (`accept_mission`, the four cancel/no-show RPCs, `mission_waiting()`) is mirrored in
+  `lib/`, and the tests pin the mirror — they do not prove the two agree. S54 already flagged that the seeded
+  fees were written by a JS mirror rather than the real RPCs; that gap is unchanged.
+- **No React, no server actions, no RLS.** Deliberate: those need a DB and a browser, which this session had
+  neither of, and the money functions were the highest-value target regardless.
+- **No CI.** The suite runs on demand (`npm test`). Wiring it to run on push is a small, separate job — worth
+  doing, and worth doing where a failing check can actually block something.
+
+**Next on § H2, in order:** delete `HistoryResult.spend`; decide the Today-comparison question; then CI, so the
+suite runs without anyone remembering to run it.
+
+---
+
 ## 2026-08-08 — Session 54, part B — the Spend page in the founder's hands, then audited
 
 **Shape of this stretch.** The founder tested the page against real volume and found things by using it; then asked
