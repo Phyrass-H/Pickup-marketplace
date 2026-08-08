@@ -3310,8 +3310,15 @@ label.field > span.dhint {
 
 /* Real links over the bars: keyboard-reachable, focusable, and they survive
    without JavaScript. */
+/* ⚑ PERCENTAGES, not pixels. The SVG is stretched with preserveAspectRatio
+   "none", so its 52-unit left margin renders as ~73px once the 1000-unit
+   viewBox is scaled onto a ~1400px card — while this overlay was inset by a
+   literal 52px. Every cell therefore sat ~20px to the LEFT of the bars it was
+   supposed to cover, which is the hover wash overhanging on one side only.
+   52/1000 and 10/1000 track the SVG's own margins at any width. The vertical
+   insets stay in pixels because the height is fixed 1:1 with the viewBox. */
 .dxs-chart__hit {
-  position: absolute; inset: 16px 10px 28px 52px; display: grid; gap: 0;
+  position: absolute; inset: 16px 1% 28px 5.2%; display: grid; gap: 0;
 }
 .dxs-chart__cell { position: relative; }
 /* ⚑ The wash sits on a pseudo-element inset to the bars' own width (they occupy
