@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
-import { parisDayKey } from "@/lib/dispatch-status";
+import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { serviceClassLabel } from "@/lib/format";
 import { parsePassengers, passengerName } from "@/lib/passengers";
 import {
@@ -12,7 +12,7 @@ import {
   type HistoryRow,
 } from "@/lib/history-filter";
 import { minutesToAccept, rowCost } from "@/lib/spend";
-import { currentSpan, parseSpendQuery, type Lens } from "@/lib/spend-filter";
+import { currentSpan, LENS_LABEL, parseSpendQuery, type Lens } from "@/lib/spend-filter";
 import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -126,6 +126,7 @@ export async function GET(req: NextRequest) {
     noshow: (r) => r.mission.status === "completed" && r.mission.no_show,
     cancelled: (r) => r.mission.status === "cancelled",
     unsettled: (r) => !r.counted,
+    unfilled: (r) => isExpired(r.mission),
   };
   const listed = query.lens ? shown.filter(lensOf[query.lens]) : shown;
 
@@ -141,9 +142,9 @@ export async function GET(req: NextRequest) {
     const note = m.no_show
       ? "Guest no-show — charged in full"
       : m.status === "cancelled"
-        ? m.cancelled_by === "driver"
-          ? "Cancelled by the Driver"
-          : "Cancelled by you"
+        ? `${m.cancelled_by === "driver" ? "Cancelled by the Driver" : "Cancelled by you"}${
+            m.cancellation_fee == null ? " — fee not set" : ""
+          }`
         : bucket === null
           ? "Not closed by the Driver — excluded from the total"
           : "";
@@ -170,7 +171,11 @@ export async function GET(req: NextRequest) {
         driverName.get(m.id) ?? "",
         deskName.get(m.dispatcher_id) ?? "",
         bucket ? OUTCOME_TEXT[bucket] : "Not closed",
-        r.counted ? euro(cost) : "",
+        // ⚑ Blank, never "0,00", when nothing was charged. An unfilled mission
+        // and a legacy cancellation with no fee recorded both reach here as
+        // counted rows with a null fare; writing 0,00 asserts the trip cost
+        // nothing, where the screen honestly shows "—".
+        r.counted && (r.fare != null || waiting > 0) ? euro(cost) : "",
         waiting > 0 && r.counted ? euro(waiting) : "",
         r.counted ? "" : euro(r.fare),
         euro(Number(m.ceiling)),
@@ -185,8 +190,22 @@ export async function GET(req: NextRequest) {
   // A total row, because the first thing anyone does with this file is sum a
   // column — and doing it by hand would include the unsettled trips the page
   // deliberately excludes.
+  //
+  // ⚑ It names what was actually summed. Every filter in the URL narrows these
+  // rows, so a lens subtotal labelled "Total 1 July → 31 July" claimed to be the
+  // period total while disagreeing with the page's own headline by design.
+  const narrowedBy = [
+    query.lens ? LENS_LABEL[query.lens] : null,
+    query.q ? `search “${query.q}”` : null,
+    query.category ? `class ${query.category}` : null,
+    query.driverId ? "one Driver" : null,
+    query.outcome !== "all" ? query.outcome : null,
+  ].filter(Boolean);
+  const label = narrowedBy.length
+    ? `Total shown (${narrowedBy.join(", ")}) ${span.fromDay} → ${span.toDay}`
+    : `Total ${span.fromDay} → ${span.toDay}`;
   lines.push("");
-  lines.push([`Total ${span.fromDay} → ${span.toDay}`, "", "", "", "", "", "", "", "", "", "", "", euro(total)].map(cell).join(SEP));
+  lines.push([label, "", "", "", "", "", "", "", "", "", "", "", euro(total)].map(cell).join(SEP));
 
   // ﻿: without the BOM, Excel reads the file as Latin-1 and every French address
   // comes out as "AÃ©roport". Sheets and Numbers ignore it.

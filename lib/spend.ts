@@ -48,6 +48,8 @@ export interface SpendTotals {
   waiting: number;
   waitingMinutes: number;
   waitingCount: number;
+  /** The slice of `waiting` that sits on trips that actually RAN. */
+  tripWaiting: number;
   cancelFees: number;
   cancelCount: number;
   noShow: number;
@@ -79,6 +81,7 @@ const EMPTY: SpendTotals = {
   waiting: 0,
   waitingMinutes: 0,
   waitingCount: 0,
+  tripWaiting: 0,
   cancelFees: 0,
   cancelCount: 0,
   noShow: 0,
@@ -146,6 +149,11 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
     }
 
     if (m.status === "completed") {
+      // ⚑ Only waiting on a trip that ran belongs in cost-per-trip. `t.waiting`
+      // also holds waiting settled onto a CANCELLED mission (business_cancel
+      // settles it), and dividing that by a completed-trip count charged the
+      // trips that happened for time spent on one that didn't.
+      t.tripWaiting += waiting;
       const fare = settledFare(m);
       if (m.no_show) {
         t.noShow += fare;
@@ -159,7 +167,7 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
 
   t.total = t.fares + t.noShow + t.waiting + t.cancelFees;
   t.trips = t.fareCount + t.noShowCount;
-  t.costPerTrip = t.trips > 0 ? (t.fares + t.noShow + t.waiting) / t.trips : null;
+  t.costPerTrip = t.trips > 0 ? (t.fares + t.noShow + t.tripWaiting) / t.trips : null;
   t.fillRate = t.ordered > 0 ? (t.filledCount / t.ordered) * 100 : null;
 
   if (accepts.length > 0) {
@@ -407,7 +415,11 @@ export function series(
     const p = points.get(startOf(dayOf(r.mission.pickup_at)));
     if (!p) continue;
     p.amount += rowCost(r);
-    if (r.counted) p.trips += 1;
+    // ⚑ The same population the hero counts. `counted` is true for an unfilled
+    // and for a cancelled mission (both are correctly-zero contributions to a
+    // TOTAL), so counting it here made a tooltip say "2 trips" on a day nobody
+    // drove — and clicking that column landed on a page saying "1 trip".
+    if (r.counted && !isExpired(r.mission) && r.mission.status === "completed") p.trips += 1;
   }
 
   return [...points.values()];
@@ -430,7 +442,7 @@ export function wasteLines(t: SpendTotals): WasteLine[] {
       label: "Cancellation fees",
       detail:
         t.cancelCount > 0
-          ? `${t.cancelCount} trip${t.cancelCount === 1 ? "" : "s"} cancelled once a Driver held them`
+          ? `${t.cancelCount} cancelled${t.cancelFees > 0 ? " after a Driver took them" : " — no fee applied"}`
           : "none this period",
       amount: t.cancelFees,
       count: t.cancelCount,

@@ -13,6 +13,7 @@ import {
   parseHistoryQuery,
   type HistoryRow,
 } from "@/lib/history-filter";
+import { rowCost } from "@/lib/spend";
 import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -52,7 +53,7 @@ const HEADERS = [
   "Plate",
   "Class",
   "Outcome",
-  "Fare (EUR)",
+  "Cost to you (EUR)",
   "Agreed, not settled (EUR)",
   "Of which waiting (EUR)",
   "Note",
@@ -157,7 +158,13 @@ export async function GET(req: NextRequest) {
         car?.plate ?? "",
         serviceClassLabel(m.category, m.required_body_type),
         bucket ? OUTCOME_TEXT[bucket] : "Not closed",
-        r.counted ? euro(r.fare) : "",
+        // ⚑ rowCost, not r.fare. The summary bar on /dispatch/history now counts
+        // waiting (it is part of a hotel's bill), so a "Fare" column that
+        // excluded it made the file disagree with the screen that produced it —
+        // while the next column, "Of which waiting", told the reader the waiting
+        // was already inside. Same definition on both surfaces now, and the same
+        // column name the Spend export uses.
+        r.counted && (r.fare != null || waiting > 0) ? euro(rowCost(r)) : "",
         r.counted ? "" : euro(r.fare),
         waiting > 0 ? euro(waiting) : "",
         note,

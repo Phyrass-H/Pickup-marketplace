@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { categoryLabel, formatMoney, formatMonth } from "@/lib/format";
-import { parisDayKey } from "@/lib/dispatch-status";
+import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { TripRow, type DriverContact } from "@/components/trip-row";
 import { SpendFilters } from "@/components/spend-filters";
 import { SpendChart } from "@/components/spend-chart";
@@ -30,6 +30,7 @@ import {
   comparisonSpan,
   currentSpan,
   LENS_LABEL,
+  LENSES,
   parseSpendQuery,
   queryForSpan,
   spendHref,
@@ -184,7 +185,13 @@ export default async function DispatchSpend({
 
   const bucket = autoBucket(span.fromDay, span.toDay);
   const points = series(shown, span.fromDay, span.toDay, bucket);
-  const prevPoints = back ? series(prevRows, back.fromDay, back.toDay, bucket) : null;
+  const prevSeries = back ? series(prevRows, back.fromDay, back.toDay, bucket) : null;
+  // ⚑ Computed ONCE and used by the chart, its legend, its footnote and its
+  // aria-label. They each decided separately before, so a hotel's first month —
+  // comparison on, previous period empty — got a legend swatch and a screen
+  // reader announcement for paler bars that were never drawn.
+  const paired = Boolean(prevSeries && prevSeries.some((p) => p.amount > 0));
+  const prevPoints = paired ? prevSeries : null;
 
   const dims = breakdown(shown, query.dim, deskName);
   const dimMax = Math.max(...dims.map((d) => d.amount), 1);
@@ -195,6 +202,7 @@ export default async function DispatchSpend({
     noshow: (r) => r.mission.status === "completed" && r.mission.no_show,
     cancelled: (r) => r.mission.status === "cancelled",
     unsettled: (r) => !r.counted,
+    unfilled: (r) => isExpired(r.mission),
   };
   const listed = query.lens ? shown.filter(lensOf[query.lens]) : shown;
 
@@ -341,7 +349,7 @@ export default async function DispatchSpend({
       <div className="dcard">
         <div className="dcard__label dcard__label--split">
           <span>Spend over time</span>
-          {back && (
+          {paired && back && (
             <span className="dxs-legend">
               <i className="dxs-sw dxs-sw--now" aria-hidden="true" />
               {span.label}
@@ -368,7 +376,7 @@ export default async function DispatchSpend({
           />
         )}
         <p className="dxs-foot">
-          Each column is one {bucket} of {span.label}, at the fare the Driver accepted
+          Each column is one {bucket} of {span.label}, waiting and fees included
           {back ? `, paired with the same ${bucket} of ${back.label}` : ""}. Hover a column for the
           figures; click it to narrow the whole page to that {bucket}.
         </p>
@@ -399,9 +407,8 @@ export default async function DispatchSpend({
             return c.lens && c.v > 0 ? (
               <Link
                 key={c.key}
-                href={href({ lens: query.lens === c.lens ? null : c.lens })}
+                href={`${href({ lens: query.lens === c.lens ? null : c.lens })}#trips`}
                 className={`dxs-comp dxs-lens${query.lens === c.lens ? " is-on" : ""}`}
-                scroll={false}
               >
                 {body}
               </Link>
@@ -416,9 +423,8 @@ export default async function DispatchSpend({
               with trips that may never have happened. */}
           <div className="dxs-exc">
             <Link
-              href={href({ lens: query.lens === "unsettled" ? null : "unsettled" })}
+              href={`${href({ lens: query.lens === "unsettled" ? null : "unsettled" })}#trips`}
               className={`dxs-comp dxs-lens${query.lens === "unsettled" ? " is-on" : ""}`}
-              scroll={false}
             >
               <span className="dxs-comp__l">
                 Agreed, not settled{" "}
@@ -428,34 +434,63 @@ export default async function DispatchSpend({
               </span>
               <b className="dxs-comp__v">{formatMoney(t.unsettled)}</b>
             </Link>
-            <div className="dxs-comp">
-              <span className="dxs-comp__l">
-                Unfilled{" "}
-                <span className="dxs-comp__n">
-                  {t.unfilledCount} mission{t.unfilledCount === 1 ? "" : "s"}
-                  {t.unfilledCeiling > 0
-                    ? ` · ${formatMoney(t.unfilledCeiling)} of Ceiling never spent`
-                    : ""}
+            {t.unfilledCount > 0 ? (
+              <Link
+                href={`${href({ lens: query.lens === "unfilled" ? null : "unfilled" })}#trips`}
+                className={`dxs-comp dxs-lens${query.lens === "unfilled" ? " is-on" : ""}`}
+              >
+                <span className="dxs-comp__l">
+                  Unfilled{" "}
+                  <span className="dxs-comp__n">
+                    {t.unfilledCount} mission{t.unfilledCount === 1 ? "" : "s"}
+                    {t.unfilledCeiling > 0
+                      ? ` · ${formatMoney(t.unfilledCeiling)} of Ceiling never spent`
+                      : ""}
+                  </span>
                 </span>
-              </span>
-              <b className="dxs-comp__v">—</b>
-            </div>
+                <b className="dxs-comp__v">—</b>
+              </Link>
+            ) : (
+              <div className="dxs-comp">
+                <span className="dxs-comp__l">
+                  Unfilled <span className="dxs-comp__n">none</span>
+                </span>
+                <b className="dxs-comp__v">—</b>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="dcard">
           <p className="dcard__label">What went wrong</p>
-          {waste.map((w) => (
-            <div key={w.key} className="dxs-w">
-              <span className="dxs-w__l">
-                {w.label}
-                <span className="dxs-w__n">{w.detail}</span>
-              </span>
-              <span className={`dxs-w__v${!w.amount ? " zero" : ""}`}>
-                {w.amount == null ? "no cost" : formatMoney(w.amount)}
-              </span>
-            </div>
-          ))}
+          {waste.map((w) => {
+            const body = (
+              <>
+                <span className="dxs-w__l">
+                  {w.label}
+                  <span className="dxs-w__n">{w.detail}</span>
+                </span>
+                <span className={`dxs-w__v${!w.amount ? " zero" : ""}`}>
+                  {w.amount == null ? "no cost" : formatMoney(w.amount)}
+                </span>
+              </>
+            );
+            // Every line here names a set of trips; each one is now reachable.
+            const lens = w.count > 0 ? (w.key as Lens) : null;
+            return lens && LENS_LABEL[lens] ? (
+              <Link
+                key={w.key}
+                href={`${href({ lens: query.lens === lens ? null : lens })}#trips`}
+                className={`dxs-w dxs-lens${query.lens === lens ? " is-on" : ""}`}
+              >
+                {body}
+              </Link>
+            ) : (
+              <div key={w.key} className="dxs-w">
+                {body}
+              </div>
+            );
+          })}
           <p className="dxs-foot">
             {avoid > 0
               ? `${formatMoney(avoid)} of this period — ${((avoid / (t.total || 1)) * 100).toFixed(1).replace(".", ",")} % of what you spent. Most of it is timing your desk controls: how late a trip is cancelled, and whether the Guest is ready when the Driver arrives.`
@@ -533,7 +568,7 @@ export default async function DispatchSpend({
       </div>
 
       {/* ---- every trip ----------------------------------------------------- */}
-      <div className="dxs-listbar">
+      <div className="dxs-listbar" id="trips">
         <p className="dxs-listhead">Every trip</p>
         {query.lens && (
           <p className="dxs-lensnote">
@@ -555,14 +590,23 @@ export default async function DispatchSpend({
       ) : (
         [...groups.entries()].map(([monthKey, list]) => {
           let monthSpend = 0;
-          for (const r of list) monthSpend += rowCost(r);
+          let monthTrips = 0;
+          for (const r of list) {
+            monthSpend += rowCost(r);
+            // ⚑ Count what the euros come from. Printing `list.length` beside a
+            // sum meant "4 trips · 0,00 €" under an unsettled lens — two numbers
+            // describing different populations.
+            if (r.counted && !isExpired(r.mission) && r.mission.status === "completed") monthTrips += 1;
+          }
           return (
             <section key={monthKey || "flat"} className="dx-sched">
               {monthKey && (
                 <div className="dx-day" id={`day-${monthKey}`}>
                   <h2>{formatMonth(monthKey)}</h2>
                   <span className="dx-count">
-                    {list.length} trip{list.length === 1 ? "" : "s"} · {formatMoney(monthSpend)}
+                    {list.length} row{list.length === 1 ? "" : "s"}
+                    {monthTrips !== list.length ? ` · ${monthTrips} settled` : ""} ·{" "}
+                    {formatMoney(monthSpend)}
                   </span>
                 </div>
               )}
@@ -582,7 +626,11 @@ export default async function DispatchSpend({
                   mission={r.mission}
                   driver={contacts.get(r.mission.id) ?? null}
                   archived
-                  fare={r.fare}
+                  // Settled rows show what the trip actually cost — waiting
+                  // included — so the row sums to the bar above it and the
+                  // "incl. … waiting" note under it is finally true. A row that
+                  // isn't settled keeps showing its agreed fare, greyed.
+                  fare={r.counted ? rowCost(r) : r.fare}
                   farePending={!r.counted}
                   query={query.q}
                   matchedOn={matches.get(r.mission.id) ?? null}

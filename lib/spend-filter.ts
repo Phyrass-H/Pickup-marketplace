@@ -16,6 +16,7 @@ import {
   type HistoryQuery,
 } from "@/lib/history-filter";
 import { parseAnchor, parseDayParam, periodRange, todayAnchor } from "@/lib/earnings";
+import { parisDayKey } from "@/lib/dispatch-status";
 import { DIMS, type Dim } from "@/lib/spend";
 
 export const CMPS = ["prev", "year", "none"] as const;
@@ -32,7 +33,7 @@ export const CMP_LABEL: Record<Cmp, string> = {
  * (all/completed/unfilled/cancelled) stays exactly as it is; these narrow the
  * trip list by which COMPONENT of the bill a row belongs to.
  */
-export const LENSES = ["waiting", "noshow", "cancelled", "unsettled"] as const;
+export const LENSES = ["waiting", "noshow", "cancelled", "unsettled", "unfilled"] as const;
 export type Lens = (typeof LENSES)[number];
 
 export const LENS_LABEL: Record<Lens, string> = {
@@ -40,6 +41,7 @@ export const LENS_LABEL: Record<Lens, string> = {
   noshow: "no-shows",
   cancelled: "cancellation fees",
   unsettled: "trips not settled",
+  unfilled: "missions nobody took",
 };
 
 export interface SpendQuery extends HistoryQuery {
@@ -100,9 +102,41 @@ export interface Span {
   fromDay: string;
   toDay: string;
   label: string;
+  /** True when the period contains today, so it holds only the days so far. */
+  partial?: boolean;
+  /** Inclusive day count — what the comparison must be truncated to match. */
+  days: number;
 }
 
-/** The applied period, as inclusive Paris day keys. */
+const DAY_MS = 86_400_000;
+function dayCount(fromDay: string, toDay: string): number {
+  const [ay, am, ad] = fromDay.split("-").map(Number);
+  const [by, bm, bd] = toDay.split("-").map(Number);
+  return Math.max(1, (Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / DAY_MS + 1);
+}
+function addDays(day: string, n: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+const SPAN_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
+function spanLabel(fromDay: string, toDay: string): string {
+  const [ay, am, ad] = fromDay.split("-").map(Number);
+  const [by, bm, bd] = toDay.split("-").map(Number);
+  const a = SPAN_LABEL.format(Date.UTC(ay, am - 1, ad));
+  if (fromDay === toDay) return a;
+  return `${a} – ${SPAN_LABEL.format(Date.UTC(by, bm - 1, bd))}`;
+}
+
+/**
+ * The applied period, as inclusive Paris day keys.
+ *
+ * ⚑ CLAMPED TO TODAY. The mission query only ever returns past trips, so the
+ * current month holds the days that have happened — but periodRange returns the
+ * whole calendar month. Measuring 8 days of August against all 31 of July
+ * produced a −77 % drop painted GREEN on the default landing view, every month,
+ * for every hotel. The span now ends today, and comparisonSpan truncates the
+ * previous period to the same number of days so the two are comparable.
+ */
 export function currentSpan(q: SpendQuery, now: Date = new Date()): Span {
   const r = periodRange(
     q.period ?? "month",
@@ -110,7 +144,16 @@ export function currentSpan(q: SpendQuery, now: Date = new Date()): Span {
     now,
     q.period === "range" && q.from && q.to ? { from: q.from, to: q.to } : null,
   );
-  return { fromDay: r.fromDay, toDay: r.toDay, label: r.label };
+  const today = parisDayKey(now);
+  const partial = today >= r.fromDay && today < r.toDay;
+  const toDay = partial ? today : r.toDay;
+  return {
+    fromDay: r.fromDay,
+    toDay,
+    label: r.label,
+    partial,
+    days: dayCount(r.fromDay, toDay),
+  };
 }
 
 /**
@@ -126,17 +169,35 @@ export function comparisonSpan(q: SpendQuery, now: Date = new Date()): Span | nu
   const anchor = parseAnchor(q.anchor ?? q.from ?? undefined);
   const custom = period === "range" && q.from && q.to ? { from: q.from, to: q.to } : null;
   const r = periodRange(period, anchor, now, custom);
+  const here = currentSpan(q, now);
+
+  let from: string;
+  let to: string;
+  let label: string;
 
   if (period === "range") {
     const c = q.cmp === "year" ? r.lastYearCustom : r.prevCustom;
     if (!c) return null;
     const back = periodRange("range", anchor, now, c);
-    return { fromDay: back.fromDay, toDay: back.toDay, label: back.label };
+    from = back.fromDay;
+    to = back.toDay;
+    label = back.label;
+  } else {
+    const anchorIso = q.cmp === "year" ? r.lastYear : r.prev;
+    const back = periodRange(period, parseAnchor(anchorIso), now);
+    from = back.fromDay;
+    to = back.toDay;
+    label = back.label;
   }
 
-  const anchorIso = q.cmp === "year" ? r.lastYear : r.prev;
-  const back = periodRange(period, parseAnchor(anchorIso), now);
-  return { fromDay: back.fromDay, toDay: back.toDay, label: back.label };
+  // Same number of days on both sides. A part-finished month compared with a
+  // whole one is not a comparison, it is a subtraction dressed as one.
+  if (here.partial) {
+    to = addDays(from, here.days - 1);
+    label = spanLabel(from, to);
+  }
+
+  return { fromDay: from, toDay: to, label, days: dayCount(from, to) };
 }
 
 /**

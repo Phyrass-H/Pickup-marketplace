@@ -149,7 +149,11 @@ export default async function DispatchHistory({
   // was paid for it — and would have disagreed with /dispatch/spend for the very
   // same filter. rowCost() is the one definition both screens use.
   let spend = 0;
-  for (const r of shown) spend += rowCost(r);
+  let waitingPart = 0;
+  for (const r of shown) {
+    spend += rowCost(r);
+    if (r.counted) waitingPart += Number(r.mission.waiting_fee ?? 0);
+  }
 
   // Classes that actually occur in this archive — a dropdown offering "First"
   // to a hotel that has never booked one is a filter that can only disappoint.
@@ -217,6 +221,9 @@ export default async function DispatchHistory({
               {narrowed && counts.all !== missions.length ? ` of ${missions.length}` : ""}
               {" · "}
               {formatMoney(spend)}
+              {waitingPart > 0 && (
+                <span className="dxh-sum__sub"> incl. {formatMoney(waitingPart)} waiting</span>
+              )}
               {query.outcome === "all" && counts.unfilled > 0 && (
                 <>
                   {" · "}
@@ -296,7 +303,7 @@ export default async function DispatchHistory({
                 mission={r.mission}
                 driver={contacts.get(r.mission.id) ?? null}
                 archived
-                fare={r.fare}
+                fare={r.counted ? rowCost(r) : r.fare}
                 farePending={!r.counted}
                 query={query.q}
                 matchedOn={matches.get(r.mission.id) ?? null}

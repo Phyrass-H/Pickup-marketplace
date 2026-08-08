@@ -317,7 +317,11 @@ export function SpendFilters({
           the chips row printed straight through it, and with no chips it ran
           into the hero card. A fixed-height row also means focusing the search
           can't shift the page. */}
-      <div className="dxs-subrow">
+      {/* ⚑ The id lives on the always-present wrapper. It used to sit on the
+          hint paragraph, which unmounts the moment a chip appears — so the
+          input's aria-describedby dangled as soon as you typed anything, and a
+          screen-reader user stopped being told what the search covers. */}
+      <div className="dxs-subrow" id="dxs-scope">
         {narrowed ? (
             <div className="dxs-chips">
             {query.q && (
@@ -350,7 +354,7 @@ export function SpendFilters({
             </button>
           </div>
         ) : (
-          <p id="dxs-scope" className={`dxs-scope${focused ? " is-on" : ""}`}>
+          <p className={`dxs-scope${focused ? " is-on" : ""}`}>
             Guest · Driver · reference · address · flight · car
           </p>
         )}

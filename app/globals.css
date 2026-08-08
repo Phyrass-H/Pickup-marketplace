@@ -980,6 +980,7 @@ textarea::placeholder {
 .dxh-sum { margin: 0; font-size: 13px; color: var(--text-muted); }
 .dxh-sum b { color: var(--text); font-weight: 600; }
 .dxh-sum__bad { color: var(--tone-danger-fg); }
+.dxh-sum__sub { color: var(--text-faint); }
 .rchip__n { color: var(--text-faint); }
 
 /* ---- History toolbar (S52): search · date range · Driver · class · sort · export.
@@ -3309,12 +3310,22 @@ label.field > span.dhint {
 /* The previous period: same shape, one step paler. A different HUE would shout
    louder than the data it is only there to sit behind. */
 .dxs-chart__bar--prev { fill: #c3ccda; }
-/* preserveAspectRatio="none" stretches the viewBox, which would squash text with
-   it — so every label is drawn at a fixed size in screen pixels instead. */
-.dxs-chart__ytick, .dxs-chart__xtick { font-size: 11px; fill: #5f6b7c; }
-.dxs-chart__peak { font-size: 11px; font-weight: 500; fill: var(--accent); }
-.dxs-chart__val { font-size: 10.5px; font-weight: 500; fill: #5f6b7c; }
-.dxs-chart__svg text { font-family: var(--font-sans); }
+/* ⚑ Labels are HTML, not SVG <text>. preserveAspectRatio="none" scales the
+   viewBox non-uniformly, and it stretched every glyph with it — ~47 % wider than
+   tall on the 1520px layout. Positioned in percentages so they still track the
+   stretched geometry, but rendered as ordinary type. */
+.dxs-chart__labels { position: absolute; inset: 0; pointer-events: none; }
+.dxs-chart__labels > span {
+  position: absolute; white-space: nowrap; font-variant-numeric: tabular-nums;
+  transform: translate(-50%, -50%);
+}
+.dxs-chart__ytick {
+  font-size: 11px; color: #5f6b7c; transform: translateY(-50%);
+  padding-right: 10px;
+}
+.dxs-chart__xtick { font-size: 11px; color: #5f6b7c; transform: translateX(-50%); }
+.dxs-chart__peak { font-size: 11px; font-weight: 500; color: var(--accent); transform: translateX(-50%); }
+.dxs-chart__val { font-size: 10.5px; font-weight: 500; color: #5f6b7c; transform: translateX(-50%); }
 
 /* Real links over the bars: keyboard-reachable, focusable, and they survive
    without JavaScript. */
@@ -3431,6 +3442,10 @@ label.field > span.dhint {
   padding: 10px 0; border-top: 1px solid #f4f5f8; font-size: 13px;
 }
 .dxs-w:first-of-type { border-top: 0; }
+a.dxs-w { text-decoration: none; color: inherit; border-radius: 6px; }
+a.dxs-w:hover { background: var(--surface-2); }
+a.dxs-w.is-on { background: var(--accent-soft); }
+a.dxs-w.is-on .dxs-w__l { color: var(--accent); }
 .dxs-w__l { color: var(--text-muted); }
 .dxs-w__n { display: block; font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
 .dxs-w__v { font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }

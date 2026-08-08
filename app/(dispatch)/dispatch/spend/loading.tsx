@@ -40,10 +40,11 @@ export default function Loading() {
         <div className="dxs-sk dxs-sk--serv dx-pulse" />
       </div>
 
-      <div className="dcard">
-        <div className="dxs-sk dxs-sk--label dx-pulse" />
-        <div className="dxs-sk dxs-sk--chart dx-pulse" />
-      </div>
+      {/* ⚑ No chart block. The skeleton can't read searchParams, so it can't
+          know whether the page it precedes will render a chart — and the day
+          view (reached by clicking a column, the primary route into it) never
+          does. Reserving 270px for a card that doesn't arrive is a worse jump
+          than not reserving it. The cards below still hold the page's shape. */}
 
       <div className="dxs-band">
         <div className="dcard">
