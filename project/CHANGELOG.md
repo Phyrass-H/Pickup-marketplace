@@ -5,6 +5,37 @@
 
 ---
 
+## 9 August 2026 — the last six from the audit, and the list is done
+
+The August audit found 17 problems. All 17 are now either fixed or written up. Six went in today; three
+of them needed a real decision, so those are spelled out.
+
+- **A cancellation fee can no longer be talked down to nothing.** The app has always sent the trip's real
+  price along with a cancellation. But nothing stopped someone sending the request *without* it — and the
+  database would then record a fee of **0,00 €** on a cancellation that owed the full fare. Same trick on the
+  Driver's side: their 100% penalty recorded as blank, which showed in their own history as a dash. The
+  database now refuses to record a fee based on less than what the trip was listed at. **Being straight
+  with you: it's a floor, not a fence** — someone could still understate down to the listed price, roughly
+  half the fare. Closing that completely would mean teaching the database to work out fares itself, which
+  would give us two places that calculate money instead of one, and that's how the numbers drift apart.
+  It also doesn't yet cover no-shows.
+- **A Driver could accept a trip their car doesn't fit.** A saloon Driver could take a van-only luggage run —
+  the checks were all in the app, and the app isn't the only way in. The database now checks the class, the
+  body type and the luggage opt-in when a Driver accepts. **The honest limit:** it checks the car a Driver
+  has *declared*, not the car they actually own — anyone can change their own vehicle details in Settings.
+  What changes is that the claim is now on the record instead of invisible.
+- **You could have a change request and a release request waiting on the same trip at once**, and the
+  Driver's answer order decided the money: accept the change first and the trip's price is permanently
+  raised — then the release hands that raised price to the next Driver. **From now on the newest request
+  replaces the older one**, so the Driver is only ever asked one thing. ⚑ **The cost, and it's yours to
+  overturn:** if you send a release and the Driver declines it, your change request is gone and you'd have to
+  type it again. The release screen now warns you before you send, and the schedule says it too.
+- **The archive was hiding waiting charges.** A cancelled or no-show trip showed one figure that quietly had
+  the waiting inside it. Now it says so: *"Charged in full · incl. 33,00 € waiting"*.
+- **A Driver can now tell you why they kept a trip.** When you asked for a release and they said no, the app
+  offered no way to explain and you saw nothing. They can now pick a reason and you see it.
+- **Three notes in the code that were simply out of date** about how a cancelled trip returns to the Pool.
+
 ## 9 August 2026 — six quiet defects closed (the list from the audit)
 
 Nothing here changes how the app looks or what anything costs. These are the six problems from the August

@@ -213,7 +213,14 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     100% and a fixed €X), a **multiplier** that scales as pickup nears, or a non-monetary cost (reliability marks that a
     Driver can actually see — itself an open founder conversation). Pairs with the reliability-marks discussion and with
     the postpone-then-cancel laundering note below.
-  - 🔒 **`p_fare_snapshot` is client-supplied / forgeable — and worse than "forgeable": it is OMITTABLE.** Confirmed
+  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_fee_basis_band.sql` (S57b).** The basis is
+    CLAMPED into `[least(pdp_start ?? ceiling/2, ceiling), ceiling]` rather than recomputed — porting the PDP
+    into SQL would make Postgres a second authority on the fare, against `lib/pdp.ts`'s own header. Provable
+    no-op on every honest call; pinned by `tests/money-invariants.test.ts` § 4. ⚑ **A floor, not a fence** —
+    understatement down to `pdp_start` (up to 50%) still succeeds. ⚑ **`mark_no_show` and
+    `business_declare_no_show` keep the identical SQL hole**; all four signatures now REQUIRE the basis in
+    TypeScript, which closes the app-side path only. ⚑ One honest-path change: an amendment committing between
+    the modal's read and the RPC's lock now records MORE than the modal quoted. *Original finding:* confirmed
     2026-08-09 by the drift audit. The parameter is `numeric default null` and the write is
     `round(coalesce(p_fare_snapshot, 0) * v_pct / 100, 2)`, so calling
     `supabase.rpc('business_cancel_mission', { p_mission_id })` from the browser with the Dispatcher's own JWT —
@@ -321,12 +328,26 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     the Driver's side but billed to the Business.**
     `app/(app)/rides/history/page.tsx:157` — the archive line and the trip card show the fare, never the settled
     `waiting_fee`, so a Driver paid for 30 minutes of waiting cannot see that they were.
-  - 💶 **A pending amendment and a pending release can both be live, and neither supersedes the other.** Accepting
-    the amendment first permanently raises the ceiling on a trip the Business is giving away free
-    (`2026-07-19_agreed_release.sql:106` vs `dispatch/[id]/amend/actions.ts:100`).
-  - 💶 **`accept_mission` enforces NONE of the Pool's matching rules** — the whole vehicle/zone/luggage match is
-    TypeScript-only in `app/(app)/pool/page.tsx:99-125`. Reproducible today via the dev `?all=1` branch: a sedan
-    Driver can accept a luggage-only Van run. The SQL only checks time, status and the slot conflict.
+  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_one_live_ask.sql` (S57b).** ONE LIVE ASK
+    per mission, enforced at PROPOSE time on both sides: `propose_release` supersedes a pending amendment, and
+    a `before insert` trigger on `mission_amendment` supersedes a pending release (it must be SQL — that side
+    is a client INSERT, and `mission_release` has no client write policy). Also closes two-pending-amendments,
+    which was TypeScript-only and broke a `.maybeSingle()`. ⚑ Founder ruling APPLIED, reversible: the newest
+    ask replaces the older. Cost: the amend form doesn't prefill from a retired proposal, so a declined
+    release means retyping the change — now stated in the release modal BEFORE the tap. *Original finding:*
+    accepting the amendment first permanently raises the ceiling on a trip the Business is giving away free.
+  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_accept_mission_eligibility.sql` (S57b).**
+    Three enum comparisons (category · required body · luggage consent) inside the RPC under the existing row
+    lock. Radius and `required_make` stay out, deliberately a strict superset of the Pool filter so drift can
+    only hide a trip, never refuse one. ⚑ **Honest limit:** it checks the DECLARED car — `/settings/vehicle`
+    re-declares make/body/luggage through the service role with no `verified` gate — so the lie becomes public
+    and persistent rather than impossible. ⚑ `?all=1` becomes LISTING-only; three rendered strings corrected.
+    A `driver.pool_bypass_until` column was designed then dropped (the demo is already served by
+    `/settings/vehicle` and the six seeded per-tier Drivers). **OPTIONAL companion, NOT written as a migration
+    — needs a founder ruling:** revoke browser-role writes on `driver`/`vehicle`. It buys only the two states
+    the app can't produce (category disagreeing with make/model; luggage opt-in on a sedan) and costs a
+    standing rule that any future client-side write 403s. *Original finding:* the whole vehicle/zone/luggage
+    match was TypeScript-only in `app/(app)/pool/page.tsx`; a sedan Driver could accept a luggage-only Van run.
   **Behaviour:**
   - ✅ **FIXED 2026-08-09 (S57) — `docs/migrations/2026-08-10_repool_clears_check_in.sql`, applied by the founder and verified live (all three re-pool paths, both sides of the 24h window, plus the SPEED-WIN pricing itself).** *Finding:*
     no re-pool path clears `checked_in_at` (driver cancel · reclaim · agreed release), so Driver B inherits Driver
@@ -364,11 +385,14 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     `Record<StatusEventStatus, string>` with four keys, and `advanceStatus` must keep refusing `"cancelled"` at
     compile time); and `mission_cancellation` was missing `waiting_minutes` / `waiting_rate` / `waiting_fee`
     entirely, which all three cancel RPCs write.
-  - A cancelled trip's archive line folds the waiting fee into "Your cancellation fee" and never names it
-    (`components/trip-row.tsx:260`).
-  - `respond_to_release`'s decline reason is dead — the RPC stores it, the only caller hardcodes `null`, no UI
-    reads it (`components/release-card.tsx:36`).
-  - Driver-cancel comments claim an unconditional SPEED WIN re-pool; the RPC branches on 24 h ([[d46]]).
+  - ✅ **FIXED 2026-08-09 (S57b, deployed `0bf3f3f`)** — the note now suffixes `· incl. N € waiting` on the
+    cancelled AND no-show branches (the amount above it is `rowCost`, which includes waiting on every settled
+    row). Not on a `farePending` row, which shows the bare agreed fare and is in no total.
+  - ✅ **FIXED 2026-08-09 (S57b, deployed `0bf3f3f`)** — the Driver gets the amendment card's two-step decline
+    with its OWN reason list (`lib/releases.ts` — a release is not an amendment), and the Business sees
+    `Reason: …`. Both cards now promise "they'll see it" at the ask, per [[d57]]. Verified end to end.
+  - ✅ **FIXED 2026-08-09 (S57b, deployed `0bf3f3f`)** — four comments corrected to the [[d46]] window.
+    Reclaim genuinely IS always SPEED WIN (gated to pickup within 60 min) and now says why.
   **Refuted — do NOT re-file** (each was checked against the authoritative migration and failed): `mark_no_show`
   storing a NULL fee_amount; three call sites branching on `cancelled_by === 'driver'`; `driver_cancel_mission`
   discarding accrued waiting; `business_declare_no_show` lacking the on-site floor; the `guest_ready_at` ramp

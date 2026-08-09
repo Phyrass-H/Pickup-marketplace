@@ -539,8 +539,27 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-57 — THE SIX DRIFT-AUDIT DEFECTS THAT NEEDED NO DECISION (2026-08-09, Mac). START HERE NEXT TIME.**
-Deployed `06aae27`, Vercel `success`. `npm test` = **273**. Detail: SESSION_LOG S57.
+**★ SESSION-57 — ALL 17 DRIFT-AUDIT DEFECTS ARE NOW CLOSED OR WRITTEN (2026-08-09, Mac). START HERE NEXT TIME.**
+Deployed `06aae27` · `0bf3f3f` · `ed9d660`, all Vercel `success`. `npm test` = **294**. Detail: SESSION_LOG S57 and S57 part B.
+
+**⚑⚑ FIRST THING — THREE MIGRATIONS ARE WRITTEN AND NOT YET APPLIED.** The TypeScript half of each is already
+live and safe without them; the SQL is what actually closes the hole. Ask the founder to paste them into the
+Supabase SQL editor. All three are `create or replace` (+ one trigger), idempotent, safe to re-run.
+1. `docs/migrations/2026-08-11_fee_basis_band.sql` — **the €0 fee hole.** Omit `p_fare_snapshot` and the
+   database records a 0,00 € cancellation fee (NULL on the Driver side). Clamps the basis into a band the
+   mission's own columns prove. ⚑ A floor, not a fence, and it does NOT cover the two no-show doors.
+2. `docs/migrations/2026-08-11_accept_mission_eligibility.sql` — **a Driver could accept a trip their car
+   doesn't fit.** ⚑ Changes the founder's own testing flow: `?all=1` becomes LISTING-only, so to demo another
+   tier, change the car in `/settings/vehicle` or sign in as a seeded per-tier Driver
+   (`/api/dev-login?email=seed.<first>@kavenue.test`).
+3. `docs/migrations/2026-08-11_one_live_ask.sql` — **a pending change and a pending release could both be
+   live**, and the answer order moved money. ⚑ Carries a founder ruling (newest ask replaces the older);
+   reversible by dropping `trg_amendment_replaces_release` and re-pasting the 2026-07-19 `propose_release`.
+**Verify after applying** — re-run `.local/probe/migrations-2026-08-10.ts` (expect 68/68) and
+`.local/probe/write-test.ts` (170) and `diff-sql-vs-lib.ts` (649); then write a probe for the three new rules.
+
+**⚑ ONE OPTIONAL THING, deliberately NOT written as a migration** — revoking browser-role writes on
+`driver`/`vehicle`. It buys only the two states the app can't produce and costs a standing rule. Founder's call.
 
 **✅ Both migrations were applied by the founder the same day and verified live — 68/68.**
 `docs/migrations/2026-08-10_repool_clears_check_in.sql` and `2026-08-10_amendment_lock_order.sql`.
@@ -563,12 +582,12 @@ strands it; the `hasCheckedIn` scaffold would have left the row permanently red;
 needed a post-lock assert because `p_amendment_business_update` is USING-only). Read the corrections before
 applying any remaining plan. They are in the S56 session's `tasks/wrw5wnrkj.output`, under `.result.checks`.
 
-**★ WHAT'S LEFT OF THE 17: six.** All in BACKLOG § H2. Two are quick cosmetics
-(`respond_to_release`'s dead decline reason; the driver-cancel comments claiming an unconditional SPEED WIN).
-Three need a founder decision or a real design: `accept_mission` enforcing none of the Pool's matching rules
-(**blocked** — a TS-only check does not bind a direct RPC caller, and dev/prod share one Supabase project, so
-it is a SQL backstop or an additive `driver.demo_bypass` column), the pending amendment-vs-release supersede
-gap, and mid-run cancel visibility. Plus the €0-fee hole below.
+**★ WHAT'S LEFT OF THE 17: nothing outstanding as a decision.** All 17 are fixed, written as a migration, or
+recorded with an honest limit — see BACKLOG § H2, which now names what each fix does NOT close. The three
+biggest residuals, all logged there: fee-basis **understatement down to `pdp_start`** still succeeds (closing
+it means a SQL pricing engine, which contradicts `lib/pdp.ts` being the single fare authority); the two
+**no-show doors** keep the omittable-basis hole in SQL; and `accept_mission` checks the **declared** car, not
+a real one. **CI is now the top engineering item** (~30 min) — the founder deferred it once today.
 
 ---
 

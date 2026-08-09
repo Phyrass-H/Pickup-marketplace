@@ -5,6 +5,108 @@
 
 ---
 
+## 2026-08-09 — Session 57 part B — THE LAST SIX OF THE 17
+
+Founder: *"do the 6 left"*. Deployed `0bf3f3f` (the three cosmetics) and `ed9d660` (the three judgement
+calls). `npm test` = **294**. **Three migrations written and NOT YET APPLIED** — they are the founder's to run.
+
+### The three cosmetics (`0bf3f3f`)
+
+- **The archive folded the waiting fee into the amount and named it only on a completed trip.** `rowCost()`
+  adds waiting to every *settled* row, and the history page passes `rowCost(r)` as the displayed number
+  (`history/page.tsx:306`) — so a cancellation and a no-show both had the waiting inside the figure with
+  nothing saying so, on the two endings most likely to be queried. Now `… · incl. 33,00 € waiting`.
+  Deliberately NOT on a `farePending` row: that one shows the bare agreed fare and is excluded from every
+  total, so there is no waiting folded into it. Read back from the live archive.
+- **`respond_to_release`'s decline reason was dead** — the RPC stored it, the only caller hardcoded `null`,
+  nothing rendered it. The Driver now gets the amendment card's two-step decline, and the Business sees
+  `Reason: …`. ⚑ The reasons are their **own** list in `lib/releases.ts`, not the amendment's: an amendment
+  asks *"will you take these new terms?"* and a release asks *"will you give this trip up?"*, so
+  "Schedule too tight" is not an answer to the second. Both cards now promise the same thing at the ask
+  ("they'll see it · optional") — the Business has always been shown the amendment reason, so that card was
+  under-promising, and [[d57]]'s rule is to change the promise before the text.
+- **Comments claiming a driver cancel always re-pools as SPEED WIN.** It has been the [[d46]] 24h window
+  since July. Reclaim genuinely is always SPEED WIN — gated to pickup within 60 min — and now says why.
+
+### The three judgement calls (`ed9d660`) — designed, then refuted, then applied
+
+A 13-agent workflow: one grounding pass, three designs, **two adversarial lenses each** (correctness and
+blast radius), then a settle pass folding the refutations in. **Every plan was refuted at least once**, and
+in each case the refutation changed the work — which is now the third session running where that has been
+true. Worth keeping as method: the refuters also caught *each other*, and the settle pass overruled two of
+their claims (a wrong test count of 281, and a wrong pair of line numbers both refuters agreed on).
+
+**(A) The €0 fee hole — `docs/migrations/2026-08-11_fee_basis_band.sql`.** `p_fare_snapshot` is not merely
+forgeable, it is **omittable**: leave the argument out and `business_cancel_mission` writes
+`round(coalesce(null,0) * pct / 100, 2)` = **0,00 €**, while `driver_cancel_mission` has no coalesce at all
+and writes NULL — so a Driver's 100% penalty renders as **"—"** in their own archive
+(`rides/history/page.tsx:184`) and the manual settler gets no figure.
+- **The fix is a band, not a recomputation.** `floor = least(coalesce(pdp_start, ceiling*0.5), ceiling)`,
+  `basis = round(least(greatest(coalesce(p_fare_snapshot,0), floor), ceiling), 2)`. Porting the PDP into
+  plpgsql was considered and rejected: it would make Postgres a second authority on the fare and contradict
+  `lib/pdp.ts`'s own header ("the SINGLE place fare is computed"). The band is provable from that file —
+  every branch returns `min(…, ceiling)` and the step count is floored at zero — so it is a **no-op on every
+  honest call** and bites only on an omitted or understated one.
+- **It is a floor, not a fence.** A forger can still understate to `pdp_start`: over the 271 live rows
+  `pdp_start/ceiling` runs 0.50–1.00, so worst case is 50% off on a standard curve, 30% on SPEED WIN, exact
+  after an amendment. Written down rather than glossed.
+- **`mark_no_show` and `business_declare_no_show` have the identical SQL hole and are NOT fixed here.** What
+  they got is the app-side half: all four RPC signatures now **require** the basis, so omitting it is a
+  compile error. Say that plainly — the type does not imply the SQL is guarded.
+- **One honest-path behaviour change**, surfaced by a refuter: if an amendment commits between the cancel
+  modal's read and the RPC's lock, the floor becomes `new_fare` and the clamp records **more** than the modal
+  quoted. Rare, arguably truer, and exactly the drift `.local/probe/quote-drift.ts` exists to police — so it
+  is logged, not hidden.
+- New drift pin: `tests/money-invariants.test.ts` § 4 transcribes the SQL clamp and asserts it is the identity
+  on `settledFare` across five curves. **Proved able to fail** — removing the ceiling clamp from `settledFare`
+  turns 5 red.
+
+**(B) `accept_mission` enforced none of the Pool's matching rules —
+`docs/migrations/2026-08-11_accept_mission_eligibility.sql`.** The whole vehicle/zone/luggage match was
+TypeScript, while RLS hands every Driver every pooled mission id and the RPC is reachable with a Driver JWT.
+Now three enum comparisons inside the RPC, under the existing row lock, in the house order (mission first;
+the `driver` read takes no lock and cannot join a deadlock cycle). Radius and `required_make` stay out —
+deliberately a strict superset of the Pool filter, so drift can only ever hide a trip, never refuse one.
+- ⚑ **The honest limit, and the first draft got it wrong.** It checks that your accept matches your
+  **declared** car, not that the car is real: `/settings/vehicle` re-declares make, model, body type and the
+  luggage opt-in through the **service role** with no `verified` gate. What changes is the shape of the lie —
+  public, attributable and persistent instead of invisible and per-request.
+- ⚑ **The dev `?all=1` bypass is now LISTING-only** (SQL cannot read `NODE_ENV`; dev and prod share one
+  Supabase project). Three **rendered** strings said the filters were off — corrected rather than left lying.
+  A `driver.pool_bypass_until` column was designed and then **dropped**: the demo it existed for is already
+  served twice over by `/settings/vehicle` and by the six seeded per-tier Drivers.
+- **Verified live** on planted matching / mismatched / luggage-only pooled trips: Accept · notice · notice,
+  with `?all=1` still listing all three.
+
+**(C) A pending change and a pending release could both be live — `docs/migrations/2026-08-11_one_live_ask.sql`.**
+Accepting the amendment first raises `ceiling`/`base_fare`/`pdp_start` to `new_fare`, and the release then
+re-pools off that raised ceiling. One live ask per mission now, enforced at **propose** time on both sides:
+`propose_release` supersedes a pending amendment, and a `before insert` trigger on `mission_amendment`
+supersedes a pending release. It has to be SQL on that side — the amendment is a **client INSERT**, not an
+RPC, and `mission_release` has no client write policy by design. The trigger also closes
+**two pending amendments**, which was TypeScript-only and broke the `.maybeSingle()` on the Driver's page.
+- ⚑ **The founder ruling, applied as recommended and reversible:** the newest ask REPLACES the older one.
+  The cost is real and was hidden by the first draft — the amend form does not prefill from a retired
+  proposal, so a Business that sends a release and is then declined must retype the whole change. A refuter
+  also caught that the release modal promised *"the trip stays exactly as agreed"* on the very screen that
+  destroys the change request; the modal and the schedule now say the cost **before** the tap.
+- Deliberately unchanged: the respond side, and the Driver's page still loads both cards — if a legacy pair
+  ever existed, showing both beats stranding one.
+
+### Verification
+
+`tsc` clean · **294 tests** · `next build` green in a detached worktree (the shared `.next` belongs to
+another chat's dev server) · the eligibility gate, the Pool copy, the archive waiting line and the release
+decline all read back from the running app against the real DB · every probe undone, **271-mission baseline**.
+
+⚑ **Two probe lessons.** An insert whose error is never checked reports success and silently does nothing —
+three planted rows "existed" for two commands before the missing `if (error)` showed
+`invalid input value for enum vehicle_category: "first"` (the tier is `luxury` in SQL and only *labelled*
+"First"). And the `.local/probe/*.ts` scripts must be run with **`node`**, not `npx tsx` — no
+`"type": "module"` in package.json, so tsx compiles them as CJS and top-level await fails.
+
+---
+
 ## 2026-08-09 — Session 57 — the six drift-audit defects that needed no decision
 
 Local session on the Mac, clean tree at `d8da366`. The founder's stated order put "the rest of the 17" first;
