@@ -4,11 +4,26 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, RefreshCw, AlertTriangle, Phone } from "lucide-react";
 import { businessCancelMission, reclaimMission } from "@/app/(dispatch)/dispatch/actions";
-import { businessCancelPct } from "@/lib/cancellation";
-import { formatMoney } from "@/lib/format";
+import { businessCancelPct, cancelFeeAmount, nextCancelRaise } from "@/lib/cancellation";
+import { formatMoney, formatTime } from "@/lib/format";
+
+// How long until `iso`, in the plainest words that are still precise enough to act on.
+// Under a minute we count seconds, because that is exactly when someone is deciding.
+function untilWords(iso: string, now: number): string {
+  const secs = Math.max(0, Math.round((Date.parse(iso) - now) / 1000));
+  if (secs < 60) return `in ${secs} sec`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `in ${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `in ${h} h ${m} min` : `in ${h} h`;
+}
 
 // The fee ramp, for the reference row in the cancel modal. Free >5h, then 50% at −5h
 // climbing +10%/h to 100% at pickup (mirrors businessCancelPct / the SQL).
+// ⚑ The real rule steps every HALF hour; these hourly columns are the landmarks on that
+// staircase and are each exactly right — the tread boundaries in between are shown by the
+// live "next raise" line instead, which is the one a Business actually acts on.
 const RAMP = [
   { label: ">5h", pct: 0 },
   { label: "5h", pct: 50 },
@@ -40,11 +55,17 @@ export function BusinessCancel({
   const [error, setError] = useState<string | null>(null);
 
   // Clock only while the modal is open (client-only → no hydration concern; the modal
-  // is opened by a click). Re-tick every 30s so a lingering modal stays accurate.
+  // is opened by a click).
+  //
+  // Every SECOND, not every 30 — but note what that is for. The fee itself is a half-hour
+  // step, so it does not move between ticks; what moves is the COUNTDOWN to the next raise,
+  // and a countdown that jumps 30 seconds at a time is worse than none. The one moment the
+  // fee does change, the second-tick makes it change on screen the instant it changes in the
+  // database, which is the whole point of dropping the slope.
   useEffect(() => {
     if (!open) return;
     setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 30_000);
+    const t = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(t);
   }, [open]);
 
@@ -63,8 +84,17 @@ export function BusinessCancel({
 
   const hours = now != null ? (new Date(pickupAtIso).getTime() - now) / 3_600_000 : 0;
   const pct = businessCancelPct(hours, hasDriver);
-  const feeAmount = Math.round((fare * pct) / 100 * 100) / 100;
+  const feeAmount = cancelFeeAmount(fare, pct);
   const activeIdx = !hasDriver || hours > 5 ? 0 : hours <= 0 ? 6 : Math.min(6, 6 - Math.ceil(hours));
+
+  // The deadline, not just the price. A half-hour step is only safe if you can SEE the edge
+  // coming — otherwise someone cancels two minutes late and pays five points more with no
+  // warning. `null` once there is nothing left to rise to (already 100%, or no Driver).
+  const raise = now != null ? nextCancelRaise(hours, hasDriver) : null;
+  const raiseAtIso = raise
+    ? new Date(new Date(pickupAtIso).getTime() - raise.atHoursToPickup * 3_600_000).toISOString()
+    : null;
+  const raiseFee = raise ? cancelFeeAmount(fare, raise.pct) : 0;
 
   return (
     <>
@@ -115,6 +145,12 @@ export function BusinessCancel({
                     ? "More than 5 hours before pickup — no fee."
                     : "No Driver has taken this yet — no fee."}
                 </div>
+                {raise && raiseAtIso && (
+                  <div style={{ color: "var(--tone-success-fg)", fontSize: 12.5, marginTop: 8, opacity: 0.9 }}>
+                    Free until <strong style={{ fontWeight: 600 }}>{formatTime(raiseAtIso)}</strong> — then{" "}
+                    {raise.pct}% ({formatMoney(raiseFee)}), {untilWords(raiseAtIso, now)}
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -124,6 +160,19 @@ export function BusinessCancel({
                     <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{Math.round(pct)}%</span>
                     <span style={{ fontSize: 18, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(feeAmount)}</span>
                     <span style={{ fontSize: 12, color: "var(--tone-danger-fg)" }}>of {formatMoney(fare)}</span>
+                  </div>
+                  {/* This price HOLDS until the moment below — that is the deal the step
+                      buys. Say when it ends, what it becomes, and how long that is. */}
+                  <div style={{ color: "var(--tone-danger-fg)", fontSize: 12.5, marginTop: 8, opacity: 0.9 }}>
+                    {raise && raiseAtIso ? (
+                      <>
+                        This price holds until{" "}
+                        <strong style={{ fontWeight: 600 }}>{formatTime(raiseAtIso)}</strong> — then {raise.pct}% (
+                        {formatMoney(raiseFee)}), {untilWords(raiseAtIso, now)}
+                      </>
+                    ) : (
+                      "This is the highest it goes."
+                    )}
                   </div>
                 </div>
                 <div className="muted small" style={{ marginBottom: 6 }}>How the fee grows as pickup nears</div>

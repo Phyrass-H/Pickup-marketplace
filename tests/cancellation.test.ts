@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 import {
   businessCancelPct,
   cancelCompensation,
+  cancelFeeAmount,
   guestDueAt,
   isAirportPickup,
+  nextCancelRaise,
   noShowAvailableAt,
   noShowWaitMinutes,
   waitingAt,
@@ -237,6 +239,49 @@ describe("businessCancelPct — the D45 ramp", () => {
     expect(businessCancelPct(1, true)).toBe(90);
   });
 
+  // ── the half-hour STEP (2026-08-09) ────────────────────────────────────────
+  // The ramp used to be a slope, so the fee a Business was quoted was never quite the fee
+  // it was charged (measured live: +0,41 € on a 480 € trip over a 30-second dwell). These
+  // pin the step so it cannot quietly go back to sliding.
+  it("HOLDS FLAT inside a half-hour tread — the property the whole change exists for", () => {
+    // Anywhere in (4h30, 5h] the answer is 50 %, so quote == charge.
+    for (const h of [5, 4.99, 4.75, 4.6, 4.51, 4.5001]) {
+      expect(businessCancelPct(h, true)).toBe(50);
+    }
+    // …and anywhere in (0h30, 1h] it is 90 %.
+    for (const h of [1, 0.9, 0.75, 0.6, 0.5001]) {
+      expect(businessCancelPct(h, true)).toBe(90);
+    }
+  });
+
+  it("steps by exactly 5 points, and only on a half-hour boundary", () => {
+    expect(businessCancelPct(4.5001, true)).toBe(50);
+    expect(businessCancelPct(4.5, true)).toBe(55); // the boundary belongs to the dearer band
+    expect(businessCancelPct(4.0001, true)).toBe(55);
+    expect(businessCancelPct(4, true)).toBe(60);
+  });
+
+  it("rounds in the BUSINESS's favour — the cheaper rate holds to the boundary", () => {
+    // On the old slope, 4h36 out cost 54 %. It now costs 50 % until T−4h30.
+    expect(businessCancelPct(4.6, true)).toBe(50);
+    expect(businessCancelPct(2.9, true)).toBe(70);
+    expect(businessCancelPct(0.4, true)).toBe(95);
+  });
+
+  it("only ever takes multiples of 5, across the whole ramp", () => {
+    for (let h = 0; h <= 5; h += 1 / 60) {
+      expect(businessCancelPct(h, true) % 5).toBe(0);
+    }
+  });
+
+  it("keeps every landmark the old slope had, so nothing on an hour moved", () => {
+    const landmarks: Array<[number, number]> = [
+      [5, 50], [4.5, 55], [4, 60], [3.5, 65], [3, 70], [2.5, 75],
+      [2, 80], [1.5, 85], [1, 90], [0.5, 95], [0, 100],
+    ];
+    for (const [h, pct] of landmarks) expect(businessCancelPct(h, true)).toBe(pct);
+  });
+
   it("reaches 100 % at the pickup time and stays there afterwards", () => {
     expect(businessCancelPct(0, true)).toBe(100);
     expect(businessCancelPct(-0.5, true)).toBe(100);
@@ -259,6 +304,87 @@ describe("businessCancelPct — the D45 ramp", () => {
       const pct = businessCancelPct(h, true);
       expect(pct).toBeGreaterThanOrEqual(prev);
       prev = pct;
+    }
+  });
+});
+
+describe("cancelFeeAmount — the modal's euro figure must equal the cent Postgres stores", () => {
+  // Exact decimal, halves away from zero — what Postgres `round(numeric, 2)` does. Pure
+  // integer arithmetic (fare cents × pct never exceeds 10^7, well inside a safe integer),
+  // so the reference contains no float and cannot drift the same way the subject did.
+  const pgRoundCents = (fareCents: number, pct: number): number => {
+    const total = fareCents * pct; // = fee in cents × 100
+    return Math.floor(total / 100) + (total % 100 >= 50 ? 1 : 0);
+  };
+
+  it("rounds the exact half-cent UP, as the database does", () => {
+    // The live failure, 2026-08-09: 85,50 € at 95 % is exactly 81,225 €. SQL stored 81,23;
+    // the old float formula produced 81,22 and would have under-quoted every such trip.
+    expect(85.5 * 0.95).toBeCloseTo(81.225, 10);
+    expect(cancelFeeAmount(85.5, 95)).toBe(81.23);
+    expect(Math.round((85.5 * 95) / 100 * 100) / 100).toBe(81.22); // the bug, pinned
+  });
+
+  it("agrees with exact decimal on every fare cent at every step of the ramp", () => {
+    // The step made pct a multiple of 5, which is exactly what makes ties common: at 95 %
+    // one fare in twenty lands on a half-cent. Sweep them all rather than sampling — but
+    // compare with plain arithmetic and assert ONCE, or a million expect() calls take
+    // longer than the whole rest of the suite.
+    const pcts = [50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+    const bad: string[] = [];
+    let ties = 0;
+    for (const pct of pcts) {
+      for (let cents = 1; cents <= 100_000; cents++) {
+        if ((cents * pct) % 100 === 50) ties++;
+        const want = pgRoundCents(cents, pct) / 100;
+        const got = cancelFeeAmount(cents / 100, pct);
+        if (got !== want && bad.length < 5) bad.push(`${cents / 100} € × ${pct}% → ${got}, want ${want}`);
+      }
+    }
+    expect(bad).toEqual([]);
+    expect(ties).toBeGreaterThan(0); // the sweep genuinely exercised the tie case
+  });
+
+  it("is zero when the cancellation is free", () => {
+    expect(cancelFeeAmount(123.45, 0)).toBe(0);
+  });
+});
+
+describe("nextCancelRaise — the deadline the modal counts down to", () => {
+  it("is nothing at all when no Driver holds the trip", () => {
+    expect(nextCancelRaise(2, false)).toBeNull();
+  });
+
+  it("while still free, points at the moment the ramp switches on", () => {
+    expect(nextCancelRaise(9, true)).toEqual({ atHoursToPickup: 5, pct: 50 });
+    expect(nextCancelRaise(5.01, true)).toEqual({ atHoursToPickup: 5, pct: 50 });
+  });
+
+  it("points at the next half-hour boundary, and the price on the far side", () => {
+    expect(nextCancelRaise(4.6, true)).toEqual({ atHoursToPickup: 4.5, pct: 55 });
+    expect(nextCancelRaise(4.5, true)).toEqual({ atHoursToPickup: 4, pct: 60 });
+    expect(nextCancelRaise(0.6, true)).toEqual({ atHoursToPickup: 0.5, pct: 95 });
+  });
+
+  it("names pickup itself as the last raise, to 100 %", () => {
+    expect(nextCancelRaise(0.3, true)).toEqual({ atHoursToPickup: 0, pct: 100 });
+  });
+
+  it("is null once there is nothing left to rise to", () => {
+    expect(nextCancelRaise(0, true)).toBeNull();
+    expect(nextCancelRaise(-2, true)).toBeNull();
+  });
+
+  it("always names a raise that is genuinely dearer than now — never a fake deadline", () => {
+    for (let h = 0; h <= 6; h += 1 / 60) {
+      const now = businessCancelPct(h, true);
+      const next = nextCancelRaise(h, true);
+      if (next) {
+        expect(next.pct).toBeGreaterThan(now);
+        expect(next.atHoursToPickup).toBeLessThan(h);
+      } else {
+        expect(now).toBe(100);
+      }
     }
   });
 });

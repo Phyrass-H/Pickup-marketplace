@@ -117,14 +117,88 @@ export function noShowAvailableAt(
   return new Date(Math.max(windowEnds, floorEnds));
 }
 
+// The fee ramp moves in HALF-HOUR STEPS, not continuously (founder, 2026-08-09).
+//
+// It used to be a slope: pct = 50 + 10 × (5 − hours), recomputed off the clock, so it rose
+// every second. Two things were wrong with that. The number a Business was QUOTED was never
+// the number it was CHARGED — the modal reads the client clock, the RPC reads the server
+// clock at execution, and on a €480 trip thirty seconds of hesitation cost 41 cents more
+// than the screen said. And a slope cannot be explained: "cancel before 14:30 and it's 60%"
+// fits on a card, "the fee rises at ten points an hour" does not.
+//
+// A step fixes both. Inside a tread the fee is CONSTANT, so quote == charge, and the rule is
+// something a receptionist can plan around. The cost is a cliff at each boundary — 5 points,
+// so €24 on a €480 trip — which is why the modal must show the next raise and count down to
+// it (components/dispatch-cancel.tsx). A deadline you can see is not a trap.
+export const CANCEL_STEP_HOURS = 0.5;
+
+// Where the ramp starts biting, and the pct at that moment.
+const CANCEL_RAMP_HOURS = 5;
+const CANCEL_RAMP_START_PCT = 50;
+const CANCEL_PCT_PER_HOUR = 10;
+
+/** Hours-to-pickup rounded UP to the top of its half-hour tread — the Business's favour. */
+function treadTop(hoursToPickup: number): number {
+  return Math.ceil(hoursToPickup / CANCEL_STEP_HOURS) * CANCEL_STEP_HOURS;
+}
+
 // Business-cancel fee %, by hours-to-pickup. FREE while still pooled (no Driver
-// committed). Once a Driver holds it: free >5h; 50% at −5h; +10%/h (linear, 5%/30 min)
-// → 100% at pickup. Mirrors business_cancel_mission().
+// committed). Once a Driver holds it: free >5h; 50% at −5h; then +5 points every half hour
+// → 100% at pickup. Rounding is in the BUSINESS's favour: the cheaper rate holds until the
+// boundary is actually crossed, so 50% runs all the way to T−4h30, not to T−4h59.
+// Mirrors business_cancel_mission() — see docs/migrations/2026-08-09_cancel_fee_30min_steps.sql.
 export function businessCancelPct(hoursToPickup: number, hasDriver: boolean): number {
   if (!hasDriver) return 0;
-  if (hoursToPickup > 5) return 0;
+  if (hoursToPickup > CANCEL_RAMP_HOURS) return 0;
   if (hoursToPickup < 0) return 100;
-  return Math.min(100, Math.max(50, 50 + 10 * (5 - hoursToPickup)));
+  const pct = CANCEL_RAMP_START_PCT + CANCEL_PCT_PER_HOUR * (CANCEL_RAMP_HOURS - treadTop(hoursToPickup));
+  return Math.min(100, Math.max(CANCEL_RAMP_START_PCT, pct));
+}
+
+/**
+ * The euro fee for a given fare and pct — rounded EXACTLY the way Postgres rounds it.
+ *
+ * ⚑ This exists because the half-hour step created a bug that the slope had hidden. SQL
+ * computes `round(fare * pct / 100, 2)` in exact decimal numeric, rounding halves AWAY FROM
+ * ZERO. The modal computed the same thing in float64 as `Math.round(fare * pct / 100 * 100)
+ * / 100`. Those agree until the true answer lands on an exact half-cent — and then float
+ * loses, because a value like 81.225 is stored as 81.2249999999999943 and rounds DOWN.
+ *
+ * While the ramp was a slope, pct was an arbitrary long decimal (95.0062…) and an exact
+ * half-cent essentially never occurred — a 5-million-pair sweep on 2026-08-09 found zero.
+ * The step made pct a multiple of 5, and ties became routine: at 95 %, every fare whose
+ * cents are ≡ 10 (mod 20) ties, which is one fare in twenty. Caught live by the § H2 write
+ * test on a 85,50 € trip — SQL stored 81,23 €, the modal said 81,22 €.
+ *
+ * Working in integer cents removes the float entirely: `fare * 100` is rounded to cents
+ * first (so an inexact literal like 47.99 is pinned), the multiply by an integer pct is
+ * exact, and the `/ 100` lands on a value with at most one binary-exact decimal place.
+ */
+export function cancelFeeAmount(fare: number, pct: number): number {
+  const cents = Math.round(Math.round(fare * 100) * pct) / 100;
+  return Math.round(cents) / 100;
+}
+
+/**
+ * The next time this trip gets more expensive to cancel, and what it becomes — so the modal
+ * can show a deadline instead of a number that silently jumps.
+ *
+ * Returns hours-to-pickup AT the raise (count down to `pickup_at` minus that), and the pct
+ * on the far side. `null` once there is nothing left to rise to.
+ */
+export function nextCancelRaise(
+  hoursToPickup: number,
+  hasDriver: boolean,
+): { atHoursToPickup: number; pct: number } | null {
+  if (!hasDriver) return null;
+  // Still free: the next event is the ramp switching on at T−5h, and it starts at 50%.
+  if (hoursToPickup > CANCEL_RAMP_HOURS) {
+    return { atHoursToPickup: CANCEL_RAMP_HOURS, pct: CANCEL_RAMP_START_PCT };
+  }
+  // Already at the ceiling — nothing above 100%.
+  if (businessCancelPct(hoursToPickup, true) >= 100) return null;
+  const at = treadTop(hoursToPickup) - CANCEL_STEP_HOURS;
+  return { atHoursToPickup: at, pct: businessCancelPct(Math.max(0, at), true) };
 }
 
 // What a Driver is owed on a trip that ended cancelled: the policy fee (50–100% of
