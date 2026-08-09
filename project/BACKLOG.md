@@ -272,6 +272,15 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     Postgres `now()`. Fails safe and self-heals (the RPC re-checks and its message is surfaced), but device skew can show a
     button state the server disagrees with. Pass a server `now` from the RSC if it ever matters.
 
+- 💶 **The tread is never re-checked between the click and the RPC — a boundary cancel can settle 5 points dearer
+  than the button promised.** (Adversarial review of the step, 2026-08-09.) `businessCancelMission(missionId,
+  reason)` carries no expected pct or amount, and `business_cancel_mission` recomputes `v_hours` from server
+  `now()` at execution. Inside a tread that is harmless — it is the whole point of the step. **At the edge it is
+  not:** client-clock skew plus network latency can carry execution across the boundary, so a modal reading
+  "50% · 240,00 €" charges 264,00 € on a €480 trip, with no error and no notice. The step did not create the
+  hazard, it **converted it from a sub-euro slope drift into a discrete 5-point jump**. Fix = pass the quoted pct
+  and have the RPC either honour it for a short grace window or reject with "the price changed, look again" —
+  a founder policy call (honour vs reject), not just code. Beta-mitigated: nothing is charged.
 - **SQL ↔ TypeScript drift audit (2026-08-09, S56) — 17 confirmed, 8 refuted.** 30 agents: five finders by rule
   area, then an adversarial refutation pass on every claim. The refuted eight are listed at the bottom so nobody
   re-files them. Nothing here is a regression from the 30-minute step; these are pre-existing.

@@ -5,18 +5,32 @@ import { useRouter } from "next/navigation";
 import { Ban, RefreshCw, AlertTriangle, Phone } from "lucide-react";
 import { businessCancelMission, reclaimMission } from "@/app/(dispatch)/dispatch/actions";
 import { businessCancelPct, cancelFeeAmount, nextCancelRaise } from "@/lib/cancellation";
-import { formatMoney, formatTime } from "@/lib/format";
+import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
+import { parisDayKey } from "@/lib/dispatch-status";
 
 // How long until `iso`, in the plainest words that are still precise enough to act on.
 // Under a minute we count seconds, because that is exactly when someone is deciding.
+//
+// FLOOR, never round: this is a deadline with money on the other side of it, so the number
+// must never claim more time than there is. Rounding to the nearest minute overstated by up
+// to 30 s (at 1 min 30 s left it read "in 2 min"), which is exactly long enough for someone
+// to act on it and cross the boundary. Understating is harmless; overstating costs 5 points.
 function untilWords(iso: string, now: number): string {
-  const secs = Math.max(0, Math.round((Date.parse(iso) - now) / 1000));
+  const secs = Math.max(0, Math.floor((Date.parse(iso) - now) / 1000));
   if (secs < 60) return `in ${secs} sec`;
-  const mins = Math.round(secs / 60);
+  const mins = Math.floor(secs / 60);
   if (mins < 60) return `in ${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m ? `in ${h} h ${m} min` : `in ${h} h`;
+}
+
+// A deadline shown as a bare "04:00" reads as today. The ramp only bites inside the last
+// five hours, but the FREE state's deadline is 5 h before pickup and a trip can be booked
+// days out — so "Free until 04:00" could mean a time eleven hours in the past. Show the date
+// too whenever the deadline is not today.
+function deadlineWords(iso: string, now: number): string {
+  return parisDayKey(iso) === parisDayKey(new Date(now)) ? formatTime(iso) : formatDateTime(iso);
 }
 
 // The fee ramp, for the reference row in the cancel modal. Free >5h, then 50% at −5h
@@ -147,7 +161,7 @@ export function BusinessCancel({
                 </div>
                 {raise && raiseAtIso && (
                   <div style={{ color: "var(--tone-success-fg)", fontSize: 12.5, marginTop: 8, opacity: 0.9 }}>
-                    Free until <strong style={{ fontWeight: 600 }}>{formatTime(raiseAtIso)}</strong> — then{" "}
+                    Free until <strong style={{ fontWeight: 600 }}>{deadlineWords(raiseAtIso, now)}</strong> — then{" "}
                     {raise.pct}% ({formatMoney(raiseFee)}), {untilWords(raiseAtIso, now)}
                   </div>
                 )}
@@ -167,11 +181,11 @@ export function BusinessCancel({
                     {raise && raiseAtIso ? (
                       <>
                         This price holds until{" "}
-                        <strong style={{ fontWeight: 600 }}>{formatTime(raiseAtIso)}</strong> — then {raise.pct}% (
+                        <strong style={{ fontWeight: 600 }}>{deadlineWords(raiseAtIso, now)}</strong> — then {raise.pct}% (
                         {formatMoney(raiseFee)}), {untilWords(raiseAtIso, now)}
                       </>
                     ) : (
-                      "This is the highest it goes."
+                      "The percentage stops here — any waiting already run is billed on top."
                     )}
                   </div>
                 </div>
@@ -197,8 +211,14 @@ export function BusinessCancel({
                         <div style={{ fontSize: 11, color: on ? "#fde8e5" : b.pct === 0 ? "var(--tone-success-fg)" : "var(--tone-danger-fg)" }}>
                           {on ? "now" : b.label}
                         </div>
+                        {/* The highlighted cell prints the LIVE pct, not the column's.
+                            activeIdx buckets by whole hours, so at T−4h18 it lit the "5h"
+                            column and printed 50% while the headline said 55% — two prices
+                            24 € apart on one card, for half of every hour of the ramp. The
+                            column values are all correct as landmarks; only the cell that
+                            claims to be "now" has to agree with the number above it. */}
                         <div style={{ fontSize: 13, fontWeight: 600, color: on ? "#fff" : b.pct === 0 ? "var(--tone-success-fg)" : "var(--tone-danger-fg)" }}>
-                          {b.pct === 0 ? "Free" : `${b.pct}%`}
+                          {on ? (pct === 0 ? "Free" : `${pct}%`) : b.pct === 0 ? "Free" : `${b.pct}%`}
                         </div>
                       </div>
                     );
@@ -253,7 +273,17 @@ export function BusinessCancel({
                 disabled={pending || now == null}
                 style={{ flex: 1.4, background: "var(--tone-danger-fg)", color: "#fff", border: "none", borderRadius: 8, padding: 11, fontSize: 14, fontWeight: 600, cursor: "pointer" }}
               >
-                {pending ? "…" : pct === 0 ? "Cancel trip" : `Cancel — accept ${formatMoney(feeAmount)}`}
+                {/* `hours` falls back to 0 before the clock initialises, which reads as
+                    "pickup is now" → 100 %. The body says "Calculating…" but the button was
+                    already painting the full fare, so the first frame of a FREE cancel could
+                    flash "Cancel — accept 480,00 €". Say nothing until the clock is real. */}
+                {pending
+                  ? "…"
+                  : now == null
+                    ? "Cancel trip"
+                    : pct === 0
+                      ? "Cancel trip"
+                      : `Cancel — accept ${formatMoney(feeAmount)}`}
               </button>
             </div>
           </div>
