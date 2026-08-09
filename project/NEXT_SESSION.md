@@ -542,21 +542,13 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 **★ SESSION-57 — ALL 17 DRIFT-AUDIT DEFECTS ARE NOW CLOSED OR WRITTEN (2026-08-09, Mac). START HERE NEXT TIME.**
 Deployed `06aae27` · `0bf3f3f` · `ed9d660`, all Vercel `success`. `npm test` = **294**. Detail: SESSION_LOG S57 and S57 part B.
 
-**⚑⚑ FIRST THING — THREE MIGRATIONS ARE WRITTEN AND NOT YET APPLIED.** The TypeScript half of each is already
-live and safe without them; the SQL is what actually closes the hole. Ask the founder to paste them into the
-Supabase SQL editor. All three are `create or replace` (+ one trigger), idempotent, safe to re-run.
-1. `docs/migrations/2026-08-11_fee_basis_band.sql` — **the €0 fee hole.** Omit `p_fare_snapshot` and the
-   database records a 0,00 € cancellation fee (NULL on the Driver side). Clamps the basis into a band the
-   mission's own columns prove. ⚑ A floor, not a fence, and it does NOT cover the two no-show doors.
-2. `docs/migrations/2026-08-11_accept_mission_eligibility.sql` — **a Driver could accept a trip their car
-   doesn't fit.** ⚑ Changes the founder's own testing flow: `?all=1` becomes LISTING-only, so to demo another
-   tier, change the car in `/settings/vehicle` or sign in as a seeded per-tier Driver
-   (`/api/dev-login?email=seed.<first>@kavenue.test`).
-3. `docs/migrations/2026-08-11_one_live_ask.sql` — **a pending change and a pending release could both be
-   live**, and the answer order moved money. ⚑ Carries a founder ruling (newest ask replaces the older);
-   reversible by dropping `trg_amendment_replaces_release` and re-pasting the 2026-07-19 `propose_release`.
-**Verify after applying** — re-run `.local/probe/migrations-2026-08-10.ts` (expect 68/68) and
-`.local/probe/write-test.ts` (170) and `diff-sql-vs-lib.ts` (649); then write a probe for the three new rules.
+**✅ All three migrations were applied by the founder the same day and verified live — 23/23.**
+`2026-08-11_fee_basis_band` · `2026-08-11_accept_mission_eligibility` · `2026-08-11_one_live_ask`.
+New re-runnable probe **`.local/probe/migrations-2026-08-11.ts`**; run it after any change to the cancel
+RPCs, `accept_mission`, `propose_release` or the `trg_amendment_replaces_release` trigger. Regression cover
+ran first and stayed green: `diff-sql-vs-lib` 649 · `write-test` 170 · `migrations-2026-08-10` 68.
+⚑ **One workflow change for the founder:** `?all=1` is now LISTING-only. To demo another tier, change the
+car in `/settings/vehicle`, or sign in as a seeded per-tier Driver (`/api/dev-login?email=…`).
 
 **⚑ ONE OPTIONAL THING, deliberately NOT written as a migration** — revoking browser-role writes on
 `driver`/`vehicle`. It buys only the two states the app can't produce and costs a standing rule. Founder's call.

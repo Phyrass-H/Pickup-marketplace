@@ -213,7 +213,7 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     100% and a fixed €X), a **multiplier** that scales as pickup nears, or a non-monetary cost (reliability marks that a
     Driver can actually see — itself an open founder conversation). Pairs with the reliability-marks discussion and with
     the postpone-then-cancel laundering note below.
-  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_fee_basis_band.sql` (S57b).** The basis is
+  - ✅ **FIXED 2026-08-09 (S57b) — `docs/migrations/2026-08-11_fee_basis_band.sql`, applied by the founder and verified live (an omitted basis at T−1h now records 120,00 € → 108,00 € where it recorded 0,00 €; honest calls unchanged across write-test's 170).** The basis is
     CLAMPED into `[least(pdp_start ?? ceiling/2, ceiling), ceiling]` rather than recomputed — porting the PDP
     into SQL would make Postgres a second authority on the fare, against `lib/pdp.ts`'s own header. Provable
     no-op on every honest call; pinned by `tests/money-invariants.test.ts` § 4. ⚑ **A floor, not a fence** —
@@ -328,7 +328,7 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     the Driver's side but billed to the Business.**
     `app/(app)/rides/history/page.tsx:157` — the archive line and the trip card show the fare, never the settled
     `waiting_fee`, so a Driver paid for 30 minutes of waiting cannot see that they were.
-  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_one_live_ask.sql` (S57b).** ONE LIVE ASK
+  - ✅ **FIXED 2026-08-09 (S57b) — `docs/migrations/2026-08-11_one_live_ask.sql`, applied and verified live in both directions, plus the money case: a 400 € pending amendment is retired and the trip re-pools off its original 200 € ceiling.** ONE LIVE ASK
     per mission, enforced at PROPOSE time on both sides: `propose_release` supersedes a pending amendment, and
     a `before insert` trigger on `mission_amendment` supersedes a pending release (it must be SQL — that side
     is a client INSERT, and `mission_release` has no client write policy). Also closes two-pending-amendments,
@@ -336,7 +336,7 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     ask replaces the older. Cost: the amend form doesn't prefill from a retired proposal, so a declined
     release means retyping the change — now stated in the release modal BEFORE the tap. *Original finding:*
     accepting the amendment first permanently raises the ceiling on a trip the Business is giving away free.
-  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-11_accept_mission_eligibility.sql` (S57b).**
+  - ✅ **FIXED 2026-08-09 (S57b) — `docs/migrations/2026-08-11_accept_mission_eligibility.sql`, applied and verified live (match accepts; wrong tier / wrong body / un-opted luggage all refused; the same luggage run accepts once opted in).**
     Three enum comparisons (category · required body · luggage consent) inside the RPC under the existing row
     lock. Radius and `required_make` stay out, deliberately a strict superset of the Pool filter so drift can
     only hide a trip, never refuse one. ⚑ **Honest limit:** it checks the DECLARED car — `/settings/vehicle`

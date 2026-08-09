@@ -93,6 +93,33 @@ RPC, and `mission_release` has no client write policy by design. The trigger als
 - Deliberately unchanged: the respond side, and the Driver's page still loads both cards — if a legacy pair
   ever existed, showing both beats stranding one.
 
+### Applied by the founder the same day, then verified — 23/23
+
+**Regression cover first**, because four RPCs were replaced: `diff-sql-vs-lib` **649/0**, `write-test`
+**170/0** (which is also the proof the clamp is a no-op on honest money — every one of its 170 stamped
+numbers is unchanged), `migrations-2026-08-10` **68/68**. New re-runnable probe:
+**`.local/probe/migrations-2026-08-11.ts`**.
+
+- **(A) The band.** On a ceiling 200 / `pdp_start` 120 trip: an honest 150 passes through untouched; an
+  **omitted** basis an hour before pickup now records **120,00 € basis → 108,00 € fee where it recorded
+  0,00 €**; the Driver side records 120,00 € where it recorded NULL; 99 999 is capped to the ceiling; 1 is
+  lifted to 120; a null `pdp_start` falls back to 100. A genuinely free cancel still records the basis with
+  a 0,00 € fee.
+  ⚑ **The first version of this probe passed for the wrong reason** — case A2 sat 6 hours out, where the
+  cancel is free, so `0 × anything` is 0 and it proved nothing. Moved inside the fee window. A green test
+  that would be green anyway is worse than no test.
+- **(B) Eligibility.** A matching car accepts; wrong tier, wrong body and a luggage run the Driver hasn't
+  opted into are all refused with `Not eligible for this mission`; and the *same* luggage run accepts once
+  `accepts_luggage_runs` is flipped — the flag is snapshotted and restored.
+- **(C) One live ask.** Both directions (release retires a pending change; a change INSERT retires a pending
+  release, via the trigger), a second amendment retires the first, and the money case end to end: with a
+  400 € amendment pending, the release retires it, `respond_to_amendment` then refuses, and the trip
+  re-pools at **100,00 € = 0.5 × its original 200 € ceiling** — not off the inflated 400.
+  ⚑ A label in the first run claimed the SPEED-WIN branch; the case sits 59h out, so it is the ≥24h branch.
+  The value was right and the label was wrong — corrected, because a misleading green is a future trap.
+
+Driver row and 271-mission baseline restored after every run.
+
 ### Verification
 
 `tsc` clean · **294 tests** · `next build` green in a detached worktree (the shared `.next` belongs to
