@@ -281,7 +281,18 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
   hazard, it **converted it from a sub-euro slope drift into a discrete 5-point jump**. Fix = pass the quoted pct
   and have the RPC either honour it for a short grace window or reject with "the price changed, look again" —
   a founder policy call (honour vs reject), not just code. Beta-mitigated: nothing is charged.
-- **SQL ↔ TypeScript drift audit (2026-08-09, S56) — 17 confirmed, 8 refuted.** 30 agents: five finders by rule
+- **SQL ↔ TypeScript drift audit (2026-08-09, S56) — 17 confirmed, 8 refuted. 9 now closed; 2 written and
+  awaiting the founder; 6 left.** S57 took the six that needed no founder ruling — four shipped in TypeScript
+  (`06aae27`), two written as migrations. **Still open and needing a decision or a bigger job:** the pending
+  amendment-vs-release supersede gap · `accept_mission` enforcing none of the Pool's matching rules (blocked on
+  its own founder question — a TS-only check does not bind a direct RPC caller, and dev/prod share one Supabase
+  project, so the honest options are a SQL backstop or an additive `driver.demo_bypass` column) · `p_fare_snapshot`
+  being omittable · mid-run cancel visibility · and three cosmetics (the folded waiting label on a cancelled
+  archive line, `respond_to_release`'s dead decline reason, the wrong driver-cancel comments). **Parked as its own
+  item, found by the S57 plan check:** `p_amendment_business_update` is USING-only, so a Business can mutate
+  `new_fare` on a proposal the Driver has already read — an RLS decision, unrelated to the lock order. Also noted:
+  `rides/actions.ts:42-46` will still pass any raw Postgres message under 120 chars to the Driver once the
+  deadlock source is gone. 30 agents: five finders by rule
   area, then an adversarial refutation pass on every claim. The refuted eight are listed at the bottom so nobody
   re-files them. Nothing here is a regression from the 30-minute step; these are pre-existing.
   **Money:**
@@ -316,22 +327,42 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     TypeScript-only in `app/(app)/pool/page.tsx:99-125`. Reproducible today via the dev `?all=1` branch: a sedan
     Driver can accept a luggage-only Van run. The SQL only checks time, status and the slot conflict.
   **Behaviour:**
-  - 🔁 **No re-pool path clears `checked_in_at`** (driver cancel · reclaim · agreed release), so Driver B inherits
-    Driver A's check-in and the Business sees a trip as "Checked in" that nobody has confirmed.
-  - 🔒 **`respond_to_amendment` locks amendment→mission**, inverting the mission→amendment order every other RPC
-    uses — the exact deadlock the release path was fixed for (`2026-07-07_mission_amendment.sql:112`).
-  - 👁 **The Business's "Change pending" card renders on trips where `respond_to_amendment` will refuse**
-    (`components/trip-row.tsx:517`) — the release card is status-gated, the amendment card is not.
-  - 🧹 **Every SQL terminal path clears pending negotiation rows; the TypeScript completion path clears neither.**
-    A normally-completed trip can leave a permanently `proposed` amendment/release, which is what feeds the
-    un-gated card above.
-  - ⏱ **The Business edit gate reads the raw `status` column instead of the SQL expiry boundary**
-    (`dispatch/[id]/edit/page.tsx:64`), so a past-due trip stays editable until some other page happens to sweep.
+  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-10_repool_clears_check_in.sql` (S57).** *Finding:*
+    no re-pool path clears `checked_in_at` (driver cancel · reclaim · agreed release), so Driver B inherits Driver
+    A's check-in, the Business is shown "Checked in" for a trip nobody confirmed, **and the red "Not checked in"
+    wash is suppressed** because that branch returns first. Driver B also never sees the button and never appears
+    in the My Rides badge. The migration is a mechanically-extracted **6-of-210-line diff** of the three re-pooling
+    RPCs + a scoped one-shot repair (0 rows to repair as of 2026-08-09). ⚑ The optional `hasCheckedIn()` TS guard
+    from the fix plan was **dropped on the plan check's advice** — it would have left the Business's row
+    permanently red with nothing able to clear it.
+  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-10_amendment_lock_order.sql` (S57).** *Finding:*
+    `respond_to_amendment` locks amendment→mission, inverting the order every other RPC uses
+    (`2026-07-07_mission_amendment.sql:112`) — an AB-BA deadlock the Driver would read verbatim as "deadlock
+    detected". ⚑ Carries a correction the plan lacked: the unlocked `mission_id` read is guarded by a **post-lock
+    assert**, because `p_amendment_business_update` is USING-only and the Business *can* PATCH `mission_id`.
+  - ✅ **FIXED 2026-08-09 (S57, deployed `06aae27`)** — both pending cards now swap their framing outside
+    accepted/confirmed ("The trip has moved on…" + **Dismiss**) instead of promising an answer the RPC refuses.
+    ⚑ Deliberately NOT hidden, which was the plan's fix: hiding strands the `proposed` row with no way to clear
+    it, and a stranded row masks the older `accepted` one (`dispatch/page.tsx:186-191` keeps only the latest
+    non-superseded per mission). *Original finding:* the Business's "Change pending" card rendered on trips where
+    `respond_to_amendment` will refuse (`components/trip-row.tsx:517`); the release card was status-gated.
+  - ✅ **FIXED 2026-08-09 (S57, deployed `06aae27`)** — `advanceStatus` now supersedes both, mirroring the SQL
+    (`status='superseded', responded_at=now()`) through the service role. *Original finding:* every SQL terminal
+    path clears pending negotiation rows; the TypeScript completion path cleared neither, so a normally-completed
+    trip could leave a permanently `proposed` amendment/release.
+  - ✅ **FIXED 2026-08-09 (S57, deployed `06aae27`)** — one `canEditInfo()` in `lib/dispatch-status.ts` for the
+    page and the schedule row, plus `.or('status.neq.pooled,pickup_at.gt.<iso>')` on the action's atomic UPDATE
+    (a blanket `pickup_at` floor would be **wrong** — a `confirmed` trip past pickup is exactly when a phone
+    number gets fixed). Cross-checked against the filter over all 271 live missions, 0 disagreements. *Original
+    finding:* the Business edit gate read the raw `status` column instead of the § P expiry boundary
+    (`dispatch/[id]/edit/page.tsx:64`), so a past-due trip stayed editable until some other page swept.
   **Cosmetic / stale:**
-  - `lib/database.types.ts:422/437` — `mission_cancellation.kind` is missing **`'business_no_show'`**; the DB
-    constraint has allowed it since `2026-07-22_waiting_fee.sql:78` and the RPC writes it (proved live in S56).
-  - `lib/database.types.ts:69` — `StatusEventStatus` declares 4 values; the CHECK constraint allows 8, including
-    the `'expired'` the sweep writes. Latent until someone renders a timeline.
+  - ✅ **FIXED 2026-08-09 (S57, deployed `06aae27`) — stale in THREE places, not two.** `kind` → new
+    `CancellationKind` incl. `'business_no_show'`; `StatusEventStatus` widened to all 8 **and split** into a new
+    `MissionStep = Extract<…>` (widening alone does not compile — `lib/mission-flow.ts:13`/:21 declare
+    `Record<StatusEventStatus, string>` with four keys, and `advanceStatus` must keep refusing `"cancelled"` at
+    compile time); and `mission_cancellation` was missing `waiting_minutes` / `waiting_rate` / `waiting_fee`
+    entirely, which all three cancel RPCs write.
   - A cancelled trip's archive line folds the waiting fee into "Your cancellation fee" and never names it
     (`components/trip-row.tsx:260`).
   - `respond_to_release`'s decline reason is dead — the RPC stores it, the only caller hardcodes `null`, no UI

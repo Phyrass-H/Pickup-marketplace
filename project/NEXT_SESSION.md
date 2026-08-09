@@ -539,8 +539,43 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-56 — THE SQL SIDE PROVEN · THE CANCEL FEE STEPS · THE WAITING MODEL COMPLETED (2026-08-09, Mac).
-START HERE NEXT TIME.** Deployed `7a37ee5`, Vercel `success`. `npm test` = **266**. Two migrations applied by the
+**★ SESSION-57 — THE SIX DRIFT-AUDIT DEFECTS THAT NEEDED NO DECISION (2026-08-09, Mac). START HERE NEXT TIME.**
+Deployed `06aae27`, Vercel `success`. `npm test` = **273**. Detail: SESSION_LOG S57.
+
+**⚑ FIRST THING — TWO MIGRATIONS ARE WRITTEN AND NOT YET APPLIED.** Ask the founder to run them, in this order,
+in the Supabase SQL editor. Both are `create or replace` only — no DDL, idempotent, safe to re-run.
+1. `docs/migrations/2026-08-10_repool_clears_check_in.sql` — a re-pool leaves the previous Driver's
+   `checked_in_at` on the trip, so the Business is shown "Checked in" for a trip nobody confirmed (and the red
+   "Not checked in" wash is suppressed), while the new Driver is never asked. Built as a proven **6-of-210-line
+   diff** of the three re-pooling RPCs; carries a scoped one-shot repair that matches **0 rows today**.
+2. `docs/migrations/2026-08-10_amendment_lock_order.sql` — `respond_to_amendment` takes its locks in the
+   opposite order to every other RPC (AB-BA; the Driver would read "deadlock detected").
+**Until they run, those two defects are still live in production.** Nothing else waits on them.
+
+**What shipped in TypeScript** (all four verified live, DB restored to its 271-mission baseline): the completion
+path now supersedes pending amendment/release rows · the two pending cards stop promising an answer the RPC
+would refuse (they say "The trip has moved on…" and offer **Dismiss** — deliberately NOT hidden, which would
+strand the row) · one `canEditInfo()` replaces the pre-departure edit rule that had drifted across three
+files, plus the missing expiry half on the server action's atomic UPDATE · `database.types.ts` was stale in
+**three** places, not two.
+
+**⚑ Method note worth keeping.** The S56 fix plans were used rather than re-derived, and **the plan-check
+corrections changed the work three times** — in each case the plan's obvious fix was wrong (hiding the card
+strands it; the `hasCheckedIn` scaffold would have left the row permanently red; the unlocked `mission_id` read
+needed a post-lock assert because `p_amendment_business_update` is USING-only). Read the corrections before
+applying any remaining plan. They are in the S56 session's `tasks/wrw5wnrkj.output`, under `.result.checks`.
+
+**★ WHAT'S LEFT OF THE 17: six.** All in BACKLOG § H2. Two are quick cosmetics
+(`respond_to_release`'s dead decline reason; the driver-cancel comments claiming an unconditional SPEED WIN).
+Three need a founder decision or a real design: `accept_mission` enforcing none of the Pool's matching rules
+(**blocked** — a TS-only check does not bind a direct RPC caller, and dev/prod share one Supabase project, so
+it is a SQL backstop or an additive `driver.demo_bypass` column), the pending amendment-vs-release supersede
+gap, and mid-run cancel visibility. Plus the €0-fee hole below.
+
+---
+
+**★ SESSION-56 — THE SQL SIDE PROVEN · THE CANCEL FEE STEPS · THE WAITING MODEL COMPLETED (2026-08-09, Mac).**
+Deployed `7a37ee5`, Vercel `success`. `npm test` = **266**. Two migrations applied by the
 founder: `2026-08-09_cancel_fee_30min_steps` and `2026-08-09_waiting_settles_on_board`. Detail: SESSION_LOG S56.
 
 **What shipped, in one line each:**
@@ -566,15 +601,10 @@ founder: `2026-08-09_cancel_fee_30min_steps` and `2026-08-09_waiting_settles_on_
   left 15 rows behind when it crashed before cleanup. Always confirm the baseline (**271 missions** today) after.
 
 **★ NEXT, in the founder's stated order.**
-1. **The rest of the 17** (all in BACKLOG § H2, 3 now ✅). The remaining ones need no founder decision except
-   where noted: stale `checked_in_at` surviving a re-pool onto the next Driver (SQL) · the TS completion path not
-   clearing pending amendment/release rows · the "Change pending" card rendering where the RPC will refuse ·
-   `respond_to_amendment`'s inverted lock order (SQL) · the edit gate reading raw `status` instead of the expiry
-   boundary · two stale unions in `database.types.ts`. **Verified fix plans exist** — see the workflow output
-   referenced in SESSION_LOG rather than re-deriving them; ⚠️ 5 of 5 plan-check passes came back `sound=false`,
-   so read the corrections before applying any plan.
-2. **CI** (~30 min). The suite is fast and green and nothing runs it but memory, while Claude sessions push
-   straight to `main`.
+1. ~~**The rest of the 17.**~~ **✅ The six that needed no decision are DONE (S57)** — four shipped, two written
+   as migrations awaiting the founder. See the S57 block at the top for the six that remain and why.
+2. **CI** (~30 min) — **now the top item.** The suite is fast and green and nothing runs it but memory, while
+   Claude sessions push straight to `main`.
 3. **The €0-fee hole** — `p_fare_snapshot` is not merely forgeable but **omittable**: omit the argument and
    `coalesce(…, 0)` stores a 0,00 € fee, on both `business_cancel_mission` and `driver_cancel_mission`. Nil risk
    in beta (needs a deliberate API call, no money moves) — **fix it before real money**. There is no fare function

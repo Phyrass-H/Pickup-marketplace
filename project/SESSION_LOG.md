@@ -5,6 +5,123 @@
 
 ---
 
+## 2026-08-09 — Session 57 — the six drift-audit defects that needed no decision
+
+Local session on the Mac, clean tree at `d8da366`. The founder's stated order put "the rest of the 17" first;
+this is the six of them that need no founder ruling. Deployed `06aae27` → Vercel `success`. `npm test` = **273**.
+**Two migrations are written and NOT yet applied** — they are the founder's to run.
+
+**The plans were not re-derived.** S56 left verified fix plans in the workflow output
+(`tasks/wrw5wnrkj.output` under the S56 session dir) plus a plan-check pass that came back `sound=false` on all
+five areas. Both were read first, and the corrections changed the work in three material ways — all three are
+recorded below, because in each case the *obvious* fix was the wrong one.
+
+### Shipped in TypeScript
+
+1. **`advanceStatus` supersedes pending negotiation rows on completion.** Every SQL terminal path already did
+   (`business_cancel_mission` :102-105, `mark_no_show` and `business_declare_no_show` at
+   `2026-07-22_airport_accent_fix.sql:123-126` / :191-194 — the plan cited :122/:188, the check corrected it).
+   `advanceStatus` is the only terminal path written in TypeScript and it wrote status alone, so a normally
+   completed trip could keep a permanently `proposed` amendment or release. The write mirrors the SQL exactly
+   (`status='superseded', responded_at=now()`), through the service role — there is **no client write policy on
+   `mission_release` at all**, and none for a Driver on `mission_amendment`.
+2. **The pending cards stop promising an answer the RPC would refuse.** `trip-row.tsx:517` rendered
+   "Change pending — Waiting for <Driver> to accept" gated only on `amendment.status === 'proposed'`, with no
+   mission-status gate, while the release block at :595 had one.
+   ⚑ **The correction that changed the design.** The plan's fix was to gate the amendment card the same way.
+   The check pointed out that gating it *removes the only Withdraw affordance*, so a never-answered `proposed`
+   row can never be cleared — and because `dispatch/page.tsx:186-191` keeps only the latest non-superseded row
+   per mission, that stranded row **permanently masks an older `accepted` one**. So instead: both cards now
+   render whatever the status, and swap their framing — `The trip has moved on — this change can't be accepted
+   anymore` with a **Dismiss** button, versus the old "Waiting for … to accept" with **Withdraw**. The release
+   card's existing hide-entirely gate was removed for the same reason. `close_release` / `closeAmendment` have
+   no mission-status guard, so Dismiss genuinely works in both states (checked, not assumed).
+3. **One `canEditInfo()` for the pre-departure edit rule** (`lib/dispatch-status.ts`), which was written by hand
+   in three places and had already drifted: `edit/page.tsx:64` tested the raw `status` column, so a past-due
+   `pooled` trip stayed editable until some other page happened to sweep it — while the same page rendered
+   `missionTone()` above the form, correctly reading "Unfilled". The action keeps its own SQL half (it must —
+   the guard has to be inside the one atomic UPDATE), now with `.or('status.neq.pooled,pickup_at.gt.<iso>')`
+   added. **A blanket `pickup_at` floor would have been wrong**: a `confirmed` trip ten minutes past pickup is
+   exactly when a Dispatcher fixes a Guest's phone number. The expired branch also gets its own copy — the old
+   fallback would have read "it's already unfilled. Trip details are frozen once a Driver starts the run".
+4. **`database.types.ts` was stale in THREE places, not two.** `kind` was missing `'business_no_show'` (extracted
+   to `CancellationKind`); `StatusEventStatus` declared 4 of the 8 the CHECK allows; and `mission_cancellation`
+   was missing `waiting_minutes` / `waiting_rate` / `waiting_fee` entirely, which all three cancel RPCs write.
+   ⚑ **Widening `StatusEventStatus` alone does not compile** — `lib/mission-flow.ts:13`/:21 declare
+   `Record<StatusEventStatus, string>` with exactly four keys. Split into a new `MissionStep = Extract<…>` so
+   `advanceStatus` still refuses `"cancelled"` at compile time; the swap covers all 9 call sites (a repo-wide
+   grep returns exactly those and nothing else).
+
+### Written for the founder to run — NOT applied
+
+- **`docs/migrations/2026-08-10_repool_clears_check_in.sql`.** All six re-pool UPDATEs across
+  `driver_cancel_mission` / `reclaim_mission` / `respond_to_release` null `accepted_at` / `confirmed_at` /
+  `stops_reached` but never `checked_in_at`, so Driver B inherits Driver A's D61 check-in. Damage verified
+  against the readers, not assumed: `dispatch-status.ts:124` returns "Checked in" *and*, because that branch
+  returns first, suppresses the red "Not checked in" wash; `checkInOpen()` is false so Driver B never sees the
+  button; the My Rides badge filters `checked_in_at is null` so it never counts. Built **mechanically** — the
+  three function bodies extracted from `2026-07-19_repool_speedwin_window.sql` (their authoritative definition)
+  by line range, one token added, then diffed back: **exactly 6 of 210 lines differ**, all the intended token.
+  `business_cancel_mission` is excluded on purpose (terminal, and re-creating the 2026-07-19 copy would roll
+  back the 30-minute fee step); `accept_mission` is untouched (clearing on the way out is earlier and enough).
+  ⚑ **The correction that removed work.** The plan offered an optional `hasCheckedIn()` TS guard as pre-migration
+  scaffolding. The check showed it makes `checkInOpen` true while `check-in-card.tsx:34`, `rides/actions.ts:140`
+  and :150 still read the column raw — so the button never renders, the action returns `ok:true` without
+  writing, and the Business's row goes **permanently red with nothing able to clear it**. Dropped.
+- **`docs/migrations/2026-08-10_amendment_lock_order.sql`.** `respond_to_amendment` locks
+  amendment→mission (`2026-07-07_mission_amendment.sql:112` then :118), inverting the mission→negotiation order
+  of all six other RPCs. A textbook AB-BA cycle, reachable because `/missions/[id]` renders the amendment and
+  release cards on one screen — and it leaks, since `rides/actions.ts:42-46` passes any RPC message under 120
+  chars straight through, so the Driver would read "deadlock detected". Inverted to match the already-fixed
+  `respond_to_release`.
+  ⚑ **The correction that was blocking.** The plan justified the now-unlocked `mission_id` read with "never
+  updated by any code path". False: `p_amendment_business_update` is a USING-only policy with no WITH CHECK and
+  no column restriction, so the owning Business **can** PATCH `mission_id` via PostgREST — which would apply a
+  change to one mission and record it against another. The guard is now
+  `... or v_am.mission_id is distinct from v_mid`, a post-lock assert, and that is the real reason the unlocked
+  read is safe. Filename dated **08-10** on the check's advice: `_amendment_lock_order` sorts before
+  `_cancel_fee_30min_steps` on the same date, and same-date ties are what made `respond_to_release` ambiguous.
+  ⚑ **Parked, deliberately not bundled:** the same USING-only policy also lets a Business mutate `new_fare` on a
+  proposal the Driver has already read. Unrelated to the lock order; needs its own RLS decision.
+
+### Verification
+
+`tsc` clean · **273 tests** (7 new in `tests/dispatch-gates.test.ts`, and **proved able to fail** — dropping the
+`isExpired` call from `canEditInfo` turned one red, then reverted) · `next build` green (24 routes) in a
+**detached worktree**, because another chat held `next dev` on :3000 and building in-place corrupts `.next`.
+
+Against the **live DB**, all read-only unless stated:
+- The new PostgREST filter run as a `SELECT` over all **271 missions** and cross-checked against `canEditInfo`:
+  13 vs 13, **0 disagreements**. The 13 past-due **`confirmed`** rows stay editable — the counter-case that
+  rules out a blanket floor.
+- There are **0 `pooled` rows** in the DB (loading `/dispatch` sweeps them), so the pooled-exclusion branch
+  can't be shown directly. The `.or()` **operator string** was proven instead on a status that does exist:
+  192 rows in scope, 162 correctly excluded by the OR branch, 30 kept, 0 missing / 0 extra — which also settles
+  that the dots in `.000Z` survive PostgREST's field.operator.value split.
+- **One reversible write**, restored: the identical filter chain as an `UPDATE` — a live `confirmed` trip
+  matched 1 row, an `expired` one matched 0, the write landed, then `reference` and `info_edited_at` were
+  restored to the exact snapshot. 6/6.
+- The edit page fetched per status through a real Business session: `expired` → the new unfilled copy ·
+  completed / cancelled / on_board → the generic frozen copy · `confirmed` → the form.
+- Both card states rendered for real: a `proposed` amendment + release planted on an `on_board` trip produced
+  the "moved on" copy with **Dismiss** and zero "Waiting for … to accept"; re-pointed at a `confirmed` trip they
+  went back to "Waiting for Marc Dubois to accept" with **Withdraw**.
+- The supersede statements run verbatim against those planted rows. ⚑ **A better result than the assertion
+  written for it**: that trip also carries a real `accepted` amendment from 2026-07-07, and the statement left
+  it alone while superseding only the `proposed` one — which is precisely the masking case the check described.
+- **Nothing needed repairing.** A read-only sweep found **0** stranded `proposed` rows and **0** missions whose
+  `checked_in_at` predates a later `repooled` event. The one-shot repair in the migration is therefore a no-op
+  safety net today, kept because it is scoped and idempotent and the founder may run it any time.
+- Database restored to baseline after every probe: **271 missions**, 3 status events on the touched trip, 0
+  proposed rows, no stragglers.
+
+**Not verified, said plainly:** the trigger condition on the supersede (`requested === 'completed'` inside
+`advanceStatus`) was not driven through the real UI — the dev-login Driver `demo.driver@pickup.local` has **no
+`driver` row**, so no completable trip could be reached as that Driver. The two statements it guards were run
+against the real tables; the guard itself is one line and compile-checked.
+
+---
+
 ## 2026-08-09 — Session 56 — § H2's SQL SIDE, and the cancellation fee stops sliding
 
 Local session on the Mac. Started behind: `main` was at `1e78f84` while S55's three commits sat on `origin`

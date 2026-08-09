@@ -5,6 +5,33 @@
 
 ---
 
+## 9 August 2026 — six quiet defects closed (the list from the audit)
+
+Nothing here changes how the app looks or what anything costs. These are the six problems from the August
+audit that had a clear right answer and needed no decision from you.
+
+- **A finished trip could still be showing "waiting for the Driver to accept a change".** When a trip ended
+  any other way — cancelled, no-show — the pending request was cleared automatically. When it simply *finished
+  normally*, it wasn't, so the request sat there forever. Worse, that stale request hid the last real one
+  behind it, so the record of a change the Driver actually accepted disappeared from view. Both now clear
+  themselves when the trip completes.
+- **And when a change genuinely can't be accepted anymore, the schedule says so.** Once a Driver is on the
+  road, the app refuses to apply a change — but the schedule kept promising "Waiting for Marc to accept". It
+  now reads *"The trip has moved on — this change can't be accepted anymore"*, and the button becomes
+  **Dismiss** so you can clear it. (The tempting fix was to hide the box entirely; that would have trapped the
+  request with no way to get rid of it.)
+- **An unfilled trip could still be opened for editing.** A trip whose pickup time passed with no Driver is
+  over, but the Edit page didn't always know that yet and would show you the form. It now refuses, and
+  explains why — *"its pickup time passed with no Driver … post a new trip if the Guest still needs a car"* —
+  instead of the old line about a Driver having started the run. A **confirmed** trip a few minutes past its
+  pickup time is still fully editable, which is exactly when you need to fix a Guest's phone number.
+- **Three descriptions of the database were out of date** — harmless today, but the kind of thing that turns
+  into a wrong number later. Corrected.
+- **Two fixes are written and waiting for you to run them** (see below): a re-pooled trip carrying the
+  *previous* Driver's check-in, so you'd be told a trip was confirmed when the new Driver had never been
+  asked; and two parts of the system reaching for the same trip in opposite orders, which can make a Driver's
+  screen show the words "deadlock detected".
+
 ## 9 August 2026 — the cancellation fee stops sliding, and the database is finally checked against the app
 
 - **The cancellation fee now moves in half-hour steps instead of creeping every second.** It used to rise
