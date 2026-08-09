@@ -170,7 +170,7 @@ export function AmendmentCard({
       {declining ? (
         <div className="amc__decline">
           <div className="amc__declabel">
-            A quick reason helps {proposedBy} understand <span className="muted">optional</span>
+            A quick reason helps {proposedBy} <span className="muted">they’ll see it · optional</span>
           </div>
           <div className="amc__reasons">
             {DECLINE_REASONS.map((r) => (

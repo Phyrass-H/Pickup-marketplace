@@ -243,8 +243,11 @@ export async function reachStop(
   return { ok: true };
 }
 
-// Driver cancels a trip they hold (O7, D45). Always 100% — the trip re-pools as a SPEED
-// WIN and the Driver takes a reliability mark. Runs the atomic driver_cancel_mission RPC
+// Driver cancels a trip they hold (O7, D45). Always 100%, and the Driver takes a
+// reliability mark. The trip re-pools on the D46 window, NOT always as a SPEED WIN:
+// under 24h to pickup it re-enters as a SPEED WIN (70% of ceiling, 5-min climb); at 24h
+// or more it re-enters the normal Pool (50%, 10-min climb, SPEED WIN off). Runs the
+// atomic driver_cancel_mission RPC
 // via the USER session (SECURITY DEFINER resolves current_driver_id(), like accept). The
 // fare snapshot is computed server-side (authoritative) as the euro basis (MANUAL settle).
 export async function driverCancelMission(
@@ -283,7 +286,8 @@ export async function driverCancelMission(
 }
 
 // The Driver's answer to a proposed AGREED RELEASE (O7, D45). Accept → the trip
-// releases free and re-pools as a SPEED WIN (no fee, no reliability mark); decline →
+// releases free (no fee, no reliability mark) and re-pools on the same D46 24h window as
+// every other re-pool path — SPEED WIN under 24h, the normal Pool at or above it; decline →
 // the trip stays exactly as agreed. Runs the atomic respond_to_release RPC via the
 // USER session (SECURITY DEFINER resolves current_driver_id(), like accept_mission —
 // must NOT use the service role, D6). Declining is always free and safe for the Driver.

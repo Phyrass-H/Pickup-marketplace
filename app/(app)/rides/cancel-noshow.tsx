@@ -7,7 +7,8 @@ import { driverCancelMission, markNoShow } from "./actions";
 import { formatMoney, formatTime } from "@/lib/format";
 import { WAITING_RATE_PER_MIN } from "@/lib/cancellation";
 
-// Driver cancel (O7, D45): always 100%, re-pools the trip as a SPEED WIN. The sheet
+// Driver cancel (O7, D45): always 100%. The trip re-pools on the D46 window — SPEED WIN
+// under 24h to pickup, the normal Pool at or above it. The sheet
 // surfaces the escape valves FIRST (hand to a copilote — Phase 2; call the Business to
 // release it) before the plain "cancel and pay" path.
 export function DriverCancel({

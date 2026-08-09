@@ -348,7 +348,9 @@ export function BusinessCancel({
 }
 
 // T-60 reclaim card (O7, D45): shown when the assigned Driver accepted but never confirmed
-// and pickup is close. Re-pools the trip as a SPEED WIN, penalty-free for the Business.
+// and pickup is close. Re-pools penalty-free for the Business — and as a SPEED WIN in
+// fact, because reclaim_mission is gated to pickup within 60 minutes, which is always
+// inside the D46 24h window. The other two re-pool paths are NOT unconditional.
 export function ReclaimCard({
   missionId,
   driverName,

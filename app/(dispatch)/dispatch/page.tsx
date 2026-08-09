@@ -17,6 +17,7 @@ import {
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
 import { parseChangeItems } from "@/lib/info-changes";
 import { parseWaypoints } from "@/lib/waypoints";
+import { releaseDeclineReasonLabel } from "@/lib/releases";
 import {
   parseFromSnapshot,
   routeDiff,
@@ -49,7 +50,12 @@ function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
 
 // Reduce a stored release to the compact brief the schedule row renders.
 function buildReleaseBrief(r: MissionReleaseRow): ReleaseBrief {
-  return { id: r.id, status: r.status, at: r.responded_at ?? r.created_at };
+  return {
+    id: r.id,
+    status: r.status,
+    at: r.responded_at ?? r.created_at,
+    declineReason: releaseDeclineReasonLabel(r.decline_reason),
+  };
 }
 
 export const dynamic = "force-dynamic";

@@ -76,6 +76,7 @@ export interface ReleaseBrief {
   id: string;
   status: ReleaseStatus;
   at: string; // responded_at ?? created_at
+  declineReason: string | null; // human label, or null — why the Driver kept it
 }
 
 // The latest detail-edit change-log for this trip (D40 follow-up) — the "what
@@ -254,21 +255,29 @@ export function TripRow({
   // didn't book — D48 pays the Driver by the minute and it belongs on the face
   // of the row, not buried in the detail.
   const waitingFee = Number(mission.waiting_fee ?? 0);
+  // The amount above this note is rowCost() — fare/fee PLUS waiting — on every
+  // settled row. A completed trip said so; a cancellation and a no-show did not,
+  // so on the two endings most likely to be queried the waiting was inside the
+  // number and named nowhere. Suffix it wherever it is part of the total.
+  // Deliberately NOT on a `farePending` row: that one shows the bare agreed fare
+  // and is excluded from every total, so there is no waiting folded into it.
+  const waitingNote = waitingFee > 0 ? `incl. ${formatMoney(waitingFee)} waiting` : null;
+  const withWaiting = (base: string) => (waitingNote ? `${base} · ${waitingNote}` : base);
   const archiveNote = !archived
     ? null
     : farePending
       ? "Not settled"
       : mission.status === "cancelled"
-        ? mission.cancelled_by === "driver"
-          ? "Driver cancelled"
-          : mission.cancelled_by === "business"
-            ? "Your cancellation fee"
-            : "Cancellation fee"
+        ? withWaiting(
+            mission.cancelled_by === "driver"
+              ? "Driver cancelled"
+              : mission.cancelled_by === "business"
+                ? "Your cancellation fee"
+                : "Cancellation fee",
+          )
         : mission.no_show
-          ? "Charged in full"
-          : waitingFee > 0
-            ? `incl. ${formatMoney(waitingFee)} waiting`
-            : null;
+          ? withWaiting("Charged in full")
+          : waitingNote;
 
   // Hits that no column shows. Address/guest/driver/reference/flight all paint
   // themselves in place, so naming them again would just be noise.
@@ -647,6 +656,11 @@ export function TripRow({
               <span className="dx-amend__tag">Release declined</span>
               <span className="muted small">{driver ? driver.name : "The Driver"} kept the trip</span>
             </div>
+            {release.declineReason && (
+              <div className="dx-amend__reason">
+                <span className="muted">Reason:</span> {release.declineReason}
+              </div>
+            )}
             <p className="dx-amend__reassure">
               That’s the Driver’s call — a release is only ever their choice. The trip stays exactly as
               agreed. If you still need to end it, you can cancel (a fee may apply this close to pickup).

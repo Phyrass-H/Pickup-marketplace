@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { BellRing, Check, Banknote, Star, Undo2 } from "lucide-react";
 import { respondToRelease } from "@/app/(app)/rides/actions";
+import { RELEASE_DECLINE_REASONS } from "@/lib/releases";
 import { addressLine, formatMoney } from "@/lib/format";
 
 // The Driver's "agreed release" card (O7, D45) — shown when the Business has proposed
@@ -29,11 +30,16 @@ export function ReleaseCard({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Decline is a two-step, exactly like the amendment card: the first tap opens
+  // the reason chips rather than answering, so a Driver never gives up the
+  // chance to say why by tapping once. The reason itself stays optional.
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
 
   function respond(accept: boolean) {
     setError(null);
     startTransition(async () => {
-      const res = await respondToRelease(releaseId, accept, null);
+      const res = await respondToRelease(releaseId, accept, accept ? null : reason);
       if (res.ok) router.refresh();
       else setError(res.message);
     });
@@ -98,13 +104,49 @@ export function ReleaseCard({
 
       {error && <div className="notice error" style={{ marginTop: 12 }}>{error}</div>}
 
-      <button className="amc__btn amc__btn--accept" onClick={() => respond(true)} disabled={pending}>
-        <Check size={18} aria-hidden />
-        {pending ? "…" : "Accept the release"}
-      </button>
-      <button className="amc__btn amc__btn--ghost" onClick={() => respond(false)} disabled={pending}>
-        Decline — keep the trip
-      </button>
+      {declining ? (
+        <div className="amc__decline">
+          <div className="amc__declabel">
+            A quick reason helps {businessName} <span className="muted">they’ll see it · optional</span>
+          </div>
+          <div className="amc__reasons">
+            {RELEASE_DECLINE_REASONS.map((r) => (
+              <button
+                type="button"
+                key={r.key}
+                className={`amc__chip${reason === r.key ? " amc__chip--on" : ""}`}
+                onClick={() => setReason((cur) => (cur === r.key ? null : r.key))}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <button className="amc__btn amc__btn--decline" onClick={() => respond(false)} disabled={pending}>
+            {pending ? "…" : "Decline — keep the trip"}
+          </button>
+          <button
+            className="amc__btn amc__btn--ghost"
+            onClick={() => { setDeclining(false); setReason(null); }}
+            disabled={pending}
+          >
+            Go back
+          </button>
+        </div>
+      ) : (
+        <>
+          <button className="amc__btn amc__btn--accept" onClick={() => respond(true)} disabled={pending}>
+            <Check size={18} aria-hidden />
+            {pending ? "…" : "Accept the release"}
+          </button>
+          <button
+            className="amc__btn amc__btn--ghost"
+            onClick={() => setDeclining(true)}
+            disabled={pending}
+          >
+            Decline — keep the trip
+          </button>
+        </>
+      )}
 
       <p className="amc__foot">Your tap is what counts — Kavenue records it for both sides.</p>
     </div>
