@@ -15,6 +15,7 @@ import {
   periodView,
   searchFields,
 } from "@/lib/history-filter";
+import { rowCost } from "@/lib/spend";
 import { completed, mission, row, standardCurve } from "./fixtures";
 
 const q = (sp: Record<string, string>) => parseHistoryQuery(sp);
@@ -385,16 +386,18 @@ describe("applyHistoryQuery", () => {
     const res = applyHistoryQuery(rows, q({ q: "nonexistent" }));
     expect(res.rows).toEqual([]);
     expect(res.counts).toEqual({ all: 0, completed: 0, unfilled: 0, cancelled: 0 });
-    expect(res.spend).toBe(0);
+    expect(res.matches.size).toBe(0);
   });
 
-  it("⚑ HistoryResult.spend sums FARES only — it is not the bill", () => {
-    // Documented, not endorsed: waiting is part of what a Business owes, so this
-    // field disagrees with rowCost() by exactly the waiting. Both /dispatch/history
-    // and /dispatch/spend deliberately ignore it and re-total with rowCost; this
-    // test exists so that stays a conscious choice rather than a trap someone
-    // falls into. See the session log — it is flagged for removal.
-    const withWaiting = [row(completed({ waiting_fee: 12 }))];
-    expect(applyHistoryQuery(withWaiting, q({})).spend).toBe(60);
+  it("carries NO total — a fares-only sum has no business in here", () => {
+    // There used to be a `spend` field that summed the fare and forgot the
+    // waiting, so it disagreed with what both money screens actually show. It
+    // was never read, which is the only reason it was never wrong on screen.
+    // Removed in S55; this guards against it coming back, because summing
+    // `r.fare` is the obvious-looking thing to reach for.
+    const res = applyHistoryQuery([row(completed({ waiting_fee: 12 }))], q({}));
+    expect("spend" in res).toBe(false);
+    // The total a caller wants is rowCost, which is fare + waiting.
+    expect(rowCost(res.rows[0])).toBe(72);
   });
 });

@@ -29,6 +29,7 @@ import {
 import {
   comparisonSpan,
   currentSpan,
+  isRunningDay,
   LENS_LABEL,
   LENSES,
   parseSpendQuery,
@@ -176,6 +177,11 @@ export default async function DispatchSpend({
   // ---- the two spans -------------------------------------------------------
   const span = currentSpan(query);
   const back = comparisonSpan(query);
+  // A single day that is TODAY is the one period whose comparison is not
+  // like-for-like — there is no smaller unit to truncate the previous day to.
+  // Yesterday's total is still worth showing as a TARGET, so it stays; what
+  // goes is the scoring, because a shortfall at 09:00 is not a saving.
+  const runningDay = isRunningDay(span);
 
   const { rows: shown, matches } = applyHistoryQuery(rows, query);
   const prevRows = back ? applyHistoryQuery(rows, queryForSpan(query, back)).rows : [];
@@ -283,7 +289,7 @@ export default async function DispatchSpend({
                alarm a hotel about its own first month. */
             <span
               className={`ecmp ${
-                p.total === 0
+                p.total === 0 || runningDay
                   ? "ecmp--flat"
                   : t.total > p.total
                     ? "ecmp--down"
@@ -292,7 +298,7 @@ export default async function DispatchSpend({
                       : "ecmp--flat"
               }`}
             >
-              {p.total === 0 || t.total === p.total ? (
+              {p.total === 0 || runningDay || t.total === p.total ? (
                 <Minus size={13} aria-hidden="true" />
               ) : t.total > p.total ? (
                 <TrendingUp size={13} aria-hidden="true" />
@@ -303,9 +309,11 @@ export default async function DispatchSpend({
                 ? `Nothing spent in ${back.label} either`
                 : p.total === 0
                   ? `Nothing to compare — ${back.label} has no trips`
-                  : `${t.total >= p.total ? "+" : "−"}${formatMoney(Math.abs(t.total - p.total))} · ${
-                      t.total >= p.total ? "+" : "−"
-                    }${Math.abs(((t.total - p.total) / p.total) * 100).toFixed(1).replace(".", ",")} % vs ${back.label}`}
+                  : runningDay
+                    ? `Day still running · ${back.label} came to ${formatMoney(p.total)}`
+                    : `${t.total >= p.total ? "+" : "−"}${formatMoney(Math.abs(t.total - p.total))} · ${
+                        t.total >= p.total ? "+" : "−"
+                      }${Math.abs(((t.total - p.total) / p.total) * 100).toFixed(1).replace(".", ",")} % vs ${back.label}`}
             </span>
           )}
         </div>
@@ -315,7 +323,13 @@ export default async function DispatchSpend({
             <div className="dxs-stat__l">Trips</div>
             <div className="dxs-stat__n">{t.trips}</div>
             <div className="dxs-stat__d">
-              {back ? (p.trips === 0 ? "no previous period" : `${t.trips >= p.trips ? "+" : "−"}${Math.abs(t.trips - p.trips)} vs ${back.label}`) : "comparison off"}
+              {!back
+                ? "comparison off"
+                : p.trips === 0
+                  ? "no previous period"
+                  : runningDay
+                    ? `${p.trips} on ${back.label}`
+                    : `${t.trips >= p.trips ? "+" : "−"}${Math.abs(t.trips - p.trips)} vs ${back.label}`}
             </div>
           </div>
           <div className="dxs-stat">

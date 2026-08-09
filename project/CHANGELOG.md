@@ -23,11 +23,14 @@
 - **The safety net was tested for holes.** Two real bugs were deliberately put back into the code to make sure
   the checks actually caught them — they did, loudly — and then removed. A test that can't fail isn't protecting
   anything.
-- **Two small things were found on the way, and neither was quietly changed.** There's an unused total inside
-  the archive code that adds up fares but forgets waiting — harmless today because nothing reads it, and worth
-  deleting before someone does. And when you look at **Today** on the Spend page, it compares this morning
-  against all of yesterday, which isn't a fair fight; fixing it properly means deciding what "today so far"
-  should be compared with, which is your call, not a technical one. Both are written up rather than guessed at.
+- **Two small things were found on the way — and both are now fixed.** There was an unused total inside the
+  archive code that added up fares but forgot waiting. Nothing was reading it, so nothing on screen was ever
+  wrong — but it sat right where a future change would reach for it. It's gone.
+- **"Today" on the Spend page no longer congratulates you at 9am.** It used to compare this morning against all
+  of yesterday and paint the gap green, as though spending less by breakfast were a saving. Yesterday's total is
+  genuinely useful as a **target**, so it stays — it just isn't scored any more. On the day that's still running
+  you now see a calm grey line: *"Day still running · Thursday 7 August came to 500,00 €"*. Every other period —
+  this week, this month, this year — already compares like with like, so those keep their green and red.
 
 ## 8 August 2026 — Spend, used in anger and then pulled apart
 - **Test data, so the page could actually be judged.** Three real trips proved nothing, so the demo hotel now has

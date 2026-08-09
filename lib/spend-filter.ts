@@ -201,6 +201,25 @@ export function comparisonSpan(q: SpendQuery, now: Date = new Date()): Span | nu
 }
 
 /**
+ * A span that is ONE day, and that day is today — so it holds only the hours so
+ * far.
+ *
+ * Every other running period is compared against a previous period truncated to
+ * the same number of days, which makes the two like-for-like. A day has no
+ * smaller unit here to truncate to, so today-so-far is measured against a WHOLE
+ * previous day: at 09:00 that is three hours against twenty-four, and the page
+ * would paint the shortfall GREEN — the same "the period isn't over" trap the
+ * month comparison was fixed for.
+ *
+ * The figure is still worth showing: yesterday's total reads as a target for
+ * today. So the answer is not to hide it but to stop scoring it — the caller
+ * shows it neutral, as something to reach, rather than as a win or a loss.
+ */
+export function isRunningDay(span: Span, now: Date = new Date()): boolean {
+  return span.days === 1 && span.toDay === parisDayKey(now);
+}
+
+/**
  * The same query, re-pointed at another span. Used to run applyHistoryQuery a
  * second time for the comparison period, so every other filter (search, class,
  * Driver, outcome) applies identically on both sides of a "vs" figure.

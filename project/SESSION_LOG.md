@@ -65,23 +65,35 @@ values to exist at page-data collection, so it was run once with placeholders to
 container is the absent `.env.local` and nothing to do with the change. Nothing under `app/`, `components/` or
 `lib/` was modified — this commit adds tests and a dev dependency, and changes no product behaviour.
 
-### Two things found while writing the tests — both flagged, neither fixed
+### Two things found while writing the tests — both then FIXED, same session
 
-Both are pinned by a test that documents current behaviour with a `⚑` comment, so a change to either is a
-deliberate act rather than an accident.
+Found by reading, flagged to the founder, and fixed on their instruction (*"we need to have everything green and
+stable"*). Neither was visible on screen as a wrong number; both were traps.
 
-1. **`HistoryResult.spend` is dead and disagrees with both screens.** `applyHistoryQuery` returns a `spend` that
-   sums **fares only**, while `/dispatch/history` and `/dispatch/spend` both ignore it and re-total with
-   `rowCost` — which adds waiting. So the field is off by exactly the waiting on any period where a Driver
-   waited. Nothing reads it today (checked all four call sites), which is the only reason it has never been
-   wrong on screen. **Recommend deleting the field**; it is a trap sitting inside the one function both money
-   screens run.
-2. **The `day` period can never be "partial", so "Today vs yesterday" is unfair.** `partial` is a
-   day-granularity test (`today < toDay`), and today's own period *ends* on today — so no truncation happens and
-   today-so-far is compared against all of yesterday. At 09:00 that is three hours measured against
-   twenty-four: the same class of unfairness the month case was fixed for in S54. It **cannot** be fixed the
-   same way — a day has no smaller unit here to truncate to. An honest version compares against yesterday up to
-   the same clock time, which is a **product decision, not a refactor**, so it was left alone.
+1. **`HistoryResult.spend` was dead and disagreed with both screens — DELETED.** `applyHistoryQuery` returned a
+   `spend` that summed **fares only**, while `/dispatch/history` and `/dispatch/spend` both ignored it and
+   re-totalled with `rowCost`, which adds waiting. So it was off by exactly the waiting on any period where a
+   Driver waited, and it sat inside the one function both money screens run — the obvious-looking thing for a
+   future session to reach for. Nothing read it (all four call sites checked), which is the only reason it was
+   never wrong on screen. The interface now carries a comment saying there is deliberately no total here and
+   that `rowCost` is the answer; a test asserts `"spend" in result === false` so it cannot come back quietly.
+2. **"Today vs yesterday" was scored, and is now a target — `isRunningDay`.** `partial` is a day-granularity
+   test (`today < toDay`), and today's own period *ends* on today, so no truncation happens and today-so-far was
+   compared against all of yesterday. Because less spend is good news on a spend page, at 09:00 a hotel saw
+   **"−320,00 € · −64,0 % vs Thursday 7 August" in GREEN** — the same "the period isn't over" trap S54 fixed for
+   months, and visually identical to it.
+   - **The founder's call, and it is the right one:** the comparison itself is *useful* — yesterday's total
+     reads as a target for today. So it stays. What goes is the **scoring**.
+   - New predicate `isRunningDay(span, now)` in `lib/spend-filter.ts` — true only when the span is one day and
+     that day is today (which also catches a hand-picked range of just today). When it is true the hero chip
+     goes **neutral grey with a flat icon** and reads `Day still running · Thursday 7 August came to 500,00 €`;
+     the Trips caption reads `12 on Thursday 7 August` instead of `−9 vs …`.
+   - **Deliberately narrow.** A running *month/week/year* is already truncated to the same number of days, so
+     its green and red are earned and were left exactly as they are. Only the single day is unscoreable, because
+     a day has no smaller unit here to truncate to. The fully general answer — compare against yesterday up to
+     the same clock time, which is what GA4 and Stripe do — needs hour-level data and was not built.
+   - 5 new tests cover the predicate (today only · not a running month/week/year · a range that is today · a
+     single past day · read from the Paris calendar).
 
 ### What this does NOT cover — say it plainly
 
@@ -94,8 +106,18 @@ deliberate act rather than an accident.
 - **No CI.** The suite runs on demand (`npm test`). Wiring it to run on push is a small, separate job — worth
   doing, and worth doing where a failing check can actually block something.
 
-**Next on § H2, in order:** delete `HistoryResult.spend`; decide the Today-comparison question; then CI, so the
-suite runs without anyone remembering to run it.
+**Next on § H2, in order:**
+1. **The SQL side, on the Mac.** The fee rules exist twice — in `lib/` and inside the RPCs — and only the `lib/`
+   half is now tested. They were written to match and were checked by hand in July, but "written to match" is not
+   "proven to match". The founder's call: **a Mac session does this**, since it needs the real DB. Two levels,
+   cheapest first: (a) **read-only** — take missions the real RPCs already stamped with a
+   `cancellation_fee`/`waiting_fee` and recompute what `lib/` says they should have been, ⚠️ excluding the seeded
+   fleet, whose fees were written by a JS mirror and would only test the mirror against itself; (b) **write** —
+   a tagged throwaway mission driven through the real RPCs and compared, then undone, which is the only way to
+   prove `RPC writes fee → page reads it`.
+2. **CI**, so the suite runs on push instead of when someone remembers. ~30 min; the value is that Claude sessions
+   push to this repo.
+3. Not planned: React/component tests. Slow to write, and they break on every redesign — and this app redesigns.
 
 ---
 

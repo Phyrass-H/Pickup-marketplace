@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import {
   comparisonSpan,
   currentSpan,
+  isRunningDay,
   parseSpendQuery,
   queryForSpan,
   spendHref,
@@ -147,24 +148,55 @@ describe("comparisonSpan — the same number of days on both sides", () => {
     }
   });
 
-  it("⚑ cannot truncate TODAY, so today-so-far is compared with all of yesterday", () => {
-    // Documented, not endorsed. `partial` is a day-granularity test (`today <
-    // toDay`), and today's own period ends on today — so it is never partial and
-    // no truncation happens. The comparison is therefore the same class of
-    // unfairness the month case was fixed for: at 09:00, "Today vs yesterday"
-    // measures three hours against twenty-four.
-    //
-    // It cannot be fixed the same way — a day has no smaller unit here to
-    // truncate to; an honest version would compare against yesterday UP TO THE
-    // SAME CLOCK TIME, which is a product decision, not a refactor. Flagged in
-    // the session log; this test pins the behaviour so the change is deliberate.
+  it("compares TODAY against a whole previous day — there is nothing to truncate", () => {
+    // `partial` is a day-granularity test (`today < toDay`), and today's own
+    // period ends on today, so no truncation happens and none is possible: a day
+    // has no smaller unit here. The comparison stays — yesterday's total is a
+    // useful target — and `isRunningDay` is what tells the page to show it as
+    // one instead of scoring it.
     const query = q({ p: "day", d: "2026-08-08" });
     const here = currentSpan(query, AUG_8);
     const back = comparisonSpan(query, AUG_8)!;
-    expect(here.partial).toBe(false);
     expect(here.days).toBe(1);
     expect(back.fromDay).toBe("2026-08-07");
     expect(back.days).toBe(1);
+  });
+});
+
+describe("isRunningDay — the one comparison that must not be scored", () => {
+  it("is true for today, and only for today", () => {
+    expect(isRunningDay(currentSpan(q({ p: "day", d: "2026-08-08" }), AUG_8), AUG_8)).toBe(true);
+    expect(isRunningDay(currentSpan(q({ p: "day", d: "2026-08-07" }), AUG_8), AUG_8)).toBe(false);
+    expect(isRunningDay(currentSpan(q({ p: "day", d: "2026-08-09" }), AUG_8), AUG_8)).toBe(false);
+  });
+
+  it("is false for a running month, whose comparison IS like-for-like", () => {
+    // August-so-far is measured against the same 8 days of July, so the green
+    // and red there are earned. Only the single day is unscoreable.
+    expect(isRunningDay(currentSpan(q(), AUG_8), AUG_8)).toBe(false);
+    expect(isRunningDay(currentSpan(q({ p: "week", d: "2026-08-08" }), AUG_8), AUG_8)).toBe(false);
+    expect(isRunningDay(currentSpan(q({ p: "year", d: "2026-08-08" }), AUG_8), AUG_8)).toBe(false);
+  });
+
+  it("catches a hand-picked range that happens to be today", () => {
+    // The same hours-so-far problem arrives by another door.
+    const span = currentSpan(q({ p: "range", from: "2026-08-08", to: "2026-08-08" }), AUG_8);
+    expect(span.days).toBe(1);
+    expect(isRunningDay(span, AUG_8)).toBe(true);
+  });
+
+  it("is false for a single day in the past, which is complete", () => {
+    const span = currentSpan(q({ p: "range", from: "2026-07-15", to: "2026-07-15" }), AUG_8);
+    expect(span.days).toBe(1);
+    expect(isRunningDay(span, AUG_8)).toBe(false);
+  });
+
+  it("reads today from the Paris calendar", () => {
+    // 22:30 UTC on 8 August is already the 9th in Paris, so the 9th is the
+    // running day and the 8th has closed.
+    const late = new Date("2026-08-08T22:30:00Z");
+    expect(isRunningDay(currentSpan(q({ p: "day", d: "2026-08-09" }, late), late), late)).toBe(true);
+    expect(isRunningDay(currentSpan(q({ p: "day", d: "2026-08-08" }, late), late), late)).toBe(false);
   });
 
   it("compares against the same period last year on request", () => {

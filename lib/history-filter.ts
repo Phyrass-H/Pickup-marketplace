@@ -393,8 +393,18 @@ export interface HistoryResult {
   matches: Map<string, MatchField[]>;
   /** Bucket counts over everything the NON-outcome filters left — see below. */
   counts: Record<Outcome, number>;
-  /** Sum of `fare` across the rows on screen. */
-  spend: number;
+  /**
+   * ⚑ There is deliberately NO total here.
+   *
+   * There used to be a `spend` that summed `fare` alone — which is not the bill,
+   * because waiting is part of what a Business owes. Nothing read it: both
+   * /dispatch/history and /dispatch/spend already re-total with `rowCost()`,
+   * which is the one definition of what a trip cost. So the field was never
+   * wrong on screen; it was a fares-only total sitting inside the function both
+   * money screens run, waiting for someone to reach for the obvious thing.
+   *
+   * If a caller needs a total, it is `rows.reduce((s, r) => s + rowCost(r), 0)`.
+   */
 }
 
 /**
@@ -459,8 +469,5 @@ export function applyHistoryQuery(all: HistoryRow[], q: HistoryQuery): HistoryRe
     }
   });
 
-  let spend = 0;
-  for (const r of sorted) if (r.counted) spend += r.fare ?? 0;
-
-  return { rows: sorted, matches, counts, spend };
+  return { rows: sorted, matches, counts };
 }
