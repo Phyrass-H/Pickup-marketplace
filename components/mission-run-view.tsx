@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { settledFare } from "@/lib/pdp";
+import { missionAmount } from "@/lib/earnings";
 import { formatMoney, formatPoolWhen, missionStatusLabel } from "@/lib/format";
 import type { MissionRow, MissionStatus, PreferredGps } from "@/lib/database.types";
 import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
@@ -351,9 +352,12 @@ export function MissionRunView({
             <Building2 size={13} aria-hidden="true" />
             {businessName ?? "—"}
             {/* On a cancelled trip the trip fare is NOT what the Driver is owed —
-                the O7 compensation is (labelled, so it can't be misread as the fare). */}
+                the O7 compensation is (labelled, so it can't be misread as the fare).
+                On any other ending it is the fare PLUS any settled waiting: waiting is
+                earned money, and showing the fare alone made this card disagree with
+                Earnings on the same trip. `missionAmount` is the one definition both use. */}
             <span className="pcard__veh">
-              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(settledFare(m))}
+              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(missionAmount(m))}
             </span>
           </span>
         </div>

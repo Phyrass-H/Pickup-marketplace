@@ -3,7 +3,6 @@ import { Building2, ChevronRight, Handshake, History, MessageSquare } from "luci
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
-import { settledFare } from "@/lib/pdp";
 import {
   addressLine,
   formatMoney,
@@ -12,6 +11,7 @@ import {
   missionStatusLabel,
 } from "@/lib/format";
 import { cancelCompensation } from "@/lib/cancellation";
+import { missionAmount } from "@/lib/earnings";
 import { parisDayKey } from "@/lib/dispatch-status";
 import type { MissionRow, MissionStatus } from "@/lib/database.types";
 import { statusPill } from "@/components/mission-run-view";
@@ -144,6 +144,12 @@ export default async function RideHistoryPage({
   for (const m of missions ?? []) {
     const cancelled = m.status === "cancelled";
     const comp = cancelCompensation(m);
+    // A settled waiting fee is money the Driver EARNED, so it belongs in the archive figure.
+    // It was missing here while Earnings totalled it (both now go through missionAmount), so
+    // one trip read 60,00 € on this screen and 100,00 € on the other — and the smaller number
+    // was the one that looked like the record. Named, not just added: "+ 40,00 € waiting"
+    // under the total, so it reads as earnings rather than a fare that grew on its own.
+    const waiting = Number(m.waiting_fee ?? 0);
     items.push({
       key: `m:${m.id}`,
       mission: m,
@@ -153,8 +159,16 @@ export default async function RideHistoryPage({
       amount: cancelled
         ? comp == null
           ? { label: null, value: "—", tone: "muted" }
-          : { label: "Compensation", value: formatMoney(comp), tone: "plain" }
-        : { label: null, value: formatMoney(settledFare(m)), tone: "plain" },
+          : {
+              label: waiting > 0 ? `incl. ${formatMoney(waiting)} waiting` : "Compensation",
+              value: formatMoney(comp),
+              tone: "plain",
+            }
+        : {
+            label: waiting > 0 ? `incl. ${formatMoney(waiting)} waiting` : null,
+            value: formatMoney(missionAmount(m)),
+            tone: "plain",
+          },
       href: `/missions/${m.id}`,
       pill: null,
     });
