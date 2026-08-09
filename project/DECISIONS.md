@@ -1390,3 +1390,65 @@ response can't overwrite a newer one — and steps compute from that same ref, n
 Also fixed: `?p=day&d=2026-02-31` rolled over to 3 March (shape-only regex → earnings' own `parseDayParam`); and a
 query of just `^` or `¨` folds away to nothing and used to match **every** row with no highlight — it matches
 nothing now, which is the honest answer.
+
+### D70 — The Business cancellation fee steps every 30 minutes; it does not slide (2026-08-09, S56)
+The ramp was continuous (`pct = 50 + 10 × (5 − hours)`), recomputed from `now()` inside the RPC while the modal
+read the *client* clock and re-ticked every 30 s. Measured live against the real RPC: over a 30-second dwell the
+charge exceeded the quoted figure by **0,06 € on a 70 € trip and 0,41 € on a 480 € one** — always upward, since
+the slope only climbs. Rounding was investigated first and cleared (0 divergences in 5 000 000 random pairs).
+
+Claude proposed the small fix — tick the modal every second, ~1 cent, no policy change — and treat steps as a
+separate pricing question. **The founder went the other way and was right:** a slope cannot be explained, the
+modal's reference row had always *drawn* steps, and in their words *"we have to make rules and they'll get around
+it."* They chose **30 minutes** over hourly. Claude argued 10 min on fairness and conceded 30 is better because it
+is **sayable** — "cancel before 14:30 and it's 60%" fits on a card; 10-minute treads do not.
+
+Rounding is **in the Business's favour**: 50 % holds to T−4h30 rather than expiring at T−4h59, and the boundary
+belongs to the dearer band. Every hour landmark is unchanged (5h→50 … 0→100), so nothing that sat on an hour
+moved. The cost is a 5-point cliff per boundary (24 € on a 480 € trip), which is why the modal now shows the next
+raise and counts down to it — *a deadline you can see is not a trap*.
+
+Claude's honest position, recorded because it lost: steps are *slightly less fair* arithmetically (a slope charges
+exactly the proportional share of every second). But fairness nobody can perceive is not experienced as fairness,
+and a rule you can plan around beats one you cannot see.
+
+⚑ **The step created a money bug, caught by the § H2 harness within the hour.** Making pct a multiple of 5 made
+**exact half-cent ties routine** where the slope had made them essentially impossible: 85,50 € × 95 % = 81,225 €,
+which Postgres rounds away from zero to 81,23 and float64 rounds down to 81,22. At 95 %, one fare in twenty ties.
+`cancelFeeAmount()` now works in integer cents and is the single definition; the tests sweep all 1.1 M pairs.
+
+⚑ **Ruled NOT worth fixing:** the tread boundary race (client clock vs server clock can settle one step dearer).
+A ~2-second window every 30 minutes, one step, on a screen that visibly counts down to that exact moment. The fix
+— sending the quoted price and deciding honour-vs-refuse — is more machinery than the problem. Logged in § H2.
+
+### D71 — Waiting is owed whenever it happened, including on a trip that goes ahead (2026-08-09, S56)
+Founder: *"the driver is paid the extra time by the business, and the business will charge the guest."*
+
+Before this, only the three FAILURE doors (`mark_no_show`, `business_declare_no_show`, `business_cancel_mission`)
+ever wrote `waiting_fee`. A Guest 45 minutes late, with a meter visibly running at 1,00 €/min on **both** apps,
+cost nobody anything the moment they got in the car — so a Driver on site was **€1/min better off filing a
+no-show than driving the Guest they had waited for**, inverting the incentive D48 exists to create.
+
+Kavenue bills the Business; what the Business recovers from its own Guest is the Business's side of the
+arrangement, so the agent positioning (Doc 01) is untouched.
+
+Settlement happens at **`arrived → on_board`** via the new `board_guest` RPC: it is the moment the waiting
+provably ended, it is the Driver's own action, and `FLOW` makes the step unskippable. It is an RPC rather than an
+extension of `advanceStatus` because that path writes through the service role and computes nothing — the meter
+belongs in SQL, off the same `mission_waiting()` and the same `now()` as the other three doors. Double settlement
+is impossible: after boarding, all three other doors refuse (proved live, not reasoned).
+
+Founder's UI calls: the Driver sees **one simple amber line** at boarding (they watched the money accrue; if it
+vanished silently they would have no reason to believe it counted). The Business is **not** notified at that
+moment — they already watch the same meter live on the row. There is deliberately **no waive button**, so a
+generous Driver cannot forgive it; accepted knowingly.
+
+**NULL, not 0**, when the Guest was on time — a 0,00 € row on every completed trip would drown the ones that
+mean something.
+
+⚑ Accepted residual: settlement is timed off the Driver's own tap, so a Driver who boards an on-time Guest and
+taps twenty minutes later bills twenty minutes the Guest never caused. The Business watches the same meter and can
+call, the ceiling caps it at 40 €/60 €, and in beta every euro settles by hand.
+
+⚑ Parked for the pricing conversation: *"what if the Business doesn't want the Driver to wait past the courtesy
+wait"* — `business_declare_no_show` is already half of that lever.

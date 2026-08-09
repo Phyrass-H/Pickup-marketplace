@@ -45,7 +45,7 @@ were removed by hand within the minute; baseline restored.
 ⚑ **The probe also inlined its own copy of the euro rounding**, and went on reporting a failure after the app had
 already been fixed. It now imports `cancelFeeAmount`. A probe with its own arithmetic tests its own arithmetic.
 
-### D69 — the Business cancellation fee steps every 30 min (deployed `c41bc16`, Vercel `success`)
+### D70 — the Business cancellation fee steps every 30 min (deployed `c41bc16`, Vercel `success`)
 
 **The measurement that started it.** The ramp was continuous (`pct = 50 + 10 × (5 − hours)`) and recomputed from
 `now()` inside the RPC, while the modal read the *client* clock and re-ticked only every 30 s. Measured live —
@@ -113,6 +113,71 @@ stores a €0 fee (same shape on `driver_cancel_mission`, so a Driver can zero t
 clears `checked_in_at`; `respond_to_amendment` locks in the inverted order; `accept_mission` enforces none of the
 Pool's matching rules. `database.types.ts` is stale in two places (`kind` is missing `'business_no_show'`, which
 the DB has accepted since 2026-07-22 and which this session wrote for real; `StatusEventStatus` declares 4 of 8).
+
+### D71 — THE WAITING MODEL COMPLETED (three jobs, all live)
+
+The founder took the audit's biggest finding and ruled on it: *"the driver is paid the extra time by the
+business, and the business will charge the guest"* — **waiting is owed whenever it happened; the trip going
+ahead does not cancel it.** Kavenue bills the Business; what the Business recovers from its Guest is their side,
+so Kavenue stays the agent. Parked for later, in their words: *"what if business don't want the driver to wait
+after the courtesy wait"* — note the lever already half-exists as `business_declare_no_show`.
+
+**Job 1 — the Driver could not see waiting they had been paid** (deployed `3857de0`; no migration). The Past
+archive and the run card rendered `settledFare` alone while Earnings totalled `missionAmount` (fare + waiting),
+so one trip read **60,00 € on the archive and 100,00 € on Earnings** — and the smaller number was the one that
+looked like the record. Both now go through `missionAmount`, and the waiting is **named** rather than silently
+added: `incl. 40,00 € waiting` under the total, on cancelled rows too (where the compensation had always folded
+it in without saying so). Left alone deliberately: the two `settledFare` call sites feeding `DriverCancel` /
+`NoShowControl` — those are the fee BASIS and must never include waiting.
+
+**Job 2 — the cancel modal quoted the percentage, the RPC charged percentage + waiting** (deployed `1de76fe`;
+no migration). Measured, not inferred: **47,99 € quoted, 64,99 € charged**. The headline is now the TOTAL when a
+meter is running, with the split beneath, and the button names the same figure. Three corrections came out of
+the plan review, all folded in:
+- **"Free to cancel" now means free of EVERYTHING.** The meter runs from the Guest's *due* moment and
+  `guest_ready_at` is the tracked landing instant, so an early flight can start it while pickup is still hours
+  away and the percentage is 0 — that state used to render a green "Free to cancel" over a real charge.
+- **The line added that morning went stale within hours.** "Any waiting already run is billed on top" was right
+  while the headline showed the fee alone and became WRONG the moment the headline became the total. The
+  hold-until promise is now scoped to the *percentage*, with a second line: "the waiting keeps running at
+  1,00 €/min until you confirm."
+- The reference row is captioned "How the **percentage** grows", since its "Free" chip would otherwise sit
+  beside a real total.
+Also removed a **third** hand-typed copy of the meter arithmetic — new `waitingBetween()` is the clock-free core
+of `waitingAt`, and `dispatch-waiting.tsx` calls it instead of re-deriving `ceil((min(now,until)-from)/60000)`.
+
+**Job 3 — a trip that RUNS now settles its waiting** ([[d71]]; migration `2026-08-09_waiting_settles_on_board`
+applied; deployed `7a37ee5`). Only the three FAILURE doors ever wrote `waiting_fee`; `advanceStatus` writes
+status and nothing else, and **no TypeScript path anywhere wrote a waiting column**. So a Guest 45 minutes late,
+with a meter visibly running on both apps, cost nobody anything the moment they got in the car — and a Driver on
+site was €1/min better off filing a no-show than driving them.
+- New RPC **`board_guest`** handles `arrived → on_board` and settles the meter on the way. An RPC, not an
+  extension of `advanceStatus`: that path writes through the service role and computes nothing, so putting the
+  meter there would be a **fourth** hand-written copy on the one path with no SQL guard. It calls the same
+  `mission_waiting()` off the same `now()` as the other three doors. `on_board` is the settlement point because
+  it is when the waiting provably ENDED, it is the Driver's own action, and `FLOW` makes it unskippable
+  (`completed` is unreachable from `arrived`).
+- **NULL, not 0**, when the Guest was on time — a 0,00 € row on every completed trip would drown the ones that
+  mean something.
+- The Driver sees **one amber line** (`.dwait-kept`): `19,00 € waiting added · 19 min past the courtesy wait`.
+  Founder: keep it very simple. They watched that money accrue; if it vanished at boarding they would have no
+  reason to believe it counted. The Business is deliberately NOT notified at that moment (they already watch the
+  same meter live), and there is deliberately **no waive button** — both founder calls.
+- **The money screens needed NO change.** `spendTotals`, `totalsFor`, `rowCost` and `missionAmount` all already
+  add `waiting_fee`, and `money-invariants.test.ts` already carried a completed-with-waiting fixture. Nothing had
+  ever written the column. That was the entire bug — checked rather than assumed.
+
+**Verified (job 3):** 51 live checks via `.local/probe/board-guest-test.ts` — city and airport, under the
+courtesy wait, mid-meter, past both caps (40 € / 60 €), SQL matching `lib/` on every one. **Double settlement
+proved impossible**: after boarding, all three other doors were called and all three refused, leaving the row
+untouched; boarding twice also refused. Then the real UI path in the browser. 266 tests green, `tsc` clean,
+database restored to baseline every time.
+
+⚑ **Two process failures worth keeping.** The write probe's first run **left 15 rows in the live DB** — it
+crashed on a `@/lib` import after the RPCs had run and before cleanup; everything after creation is now inside
+`try/finally`, and plain Node is taught the `@/` alias via `module.registerHooks()`. And the probe had **inlined
+its own copy of the euro rounding**, so it kept reporting a failure after the app was already fixed. A probe with
+its own arithmetic tests its own arithmetic.
 
 **Next on § H2: CI.** The suite exists, it is fast, and nothing runs it but memory — while Claude sessions push
 straight to `main`.

@@ -285,19 +285,28 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
   area, then an adversarial refutation pass on every claim. The refuted eight are listed at the bottom so nobody
   re-files them. Nothing here is a regression from the 30-minute step; these are pre-existing.
   **Money:**
-  - 💶 **A trip that ACTUALLY happens settles no waiting at all — the commonest outcome is the cheapest door.**
+  - ✅ **FIXED 2026-08-09 (S56, [[d71]]; migration `2026-08-09_waiting_settles_on_board` applied; deployed
+    `7a37ee5`).** New RPC `board_guest` settles the meter at `arrived → on_board`, off the same
+    `mission_waiting()` / `now()` as the three failure doors. Founder's ruling: waiting is owed whenever it
+    happened. Verified live 51/51; double settlement proved impossible (all three other doors refuse a boarded
+    trip). *Original finding, kept for the trail:* **A trip that ACTUALLY happens settles no waiting at all.**
     Guest is 45 min late at an airport; both apps run a meter showing "45 min · 45,00 €"; the Guest then turns up,
     the trip runs, and **nothing is written**. Only the three failure doors (`mark_no_show`,
     `business_declare_no_show`, `business_cancel_mission`) ever write `waiting_fee` — `advanceStatus`
     (`app/(app)/rides/actions.ts:101`) writes only `status`, and **no TypeScript path writes `waiting_fee`
     anywhere** (verified by grep). So a Driver is financially better off declaring a no-show than driving a late
     Guest, which inverts the incentive D48 exists to create. **The biggest hole in the waiting model.**
-  - 💶 **The cancel modal quotes `fare × %` but the RPC also bills accrued waiting.** `components/dispatch-cancel.tsx`
+  - ✅ **FIXED 2026-08-09 (S56, deployed `1de76fe`)** — the headline is the TOTAL when a meter is running, the
+    split sits beneath it, the button names it, and "Free to cancel" now means free of everything (an early
+    landing can start the meter while the percentage is still 0). *Original finding:* **The cancel modal quotes
+    `fare × %` but the RPC also bills accrued waiting.** `components/dispatch-cancel.tsx`
     computes the fee from the fare alone, while `business_cancel_mission` settles `waiting_fee` too when the trip is
     `arrived`. Confirmed in the S56 write test: case C0 showed **47,99 €** and the DB charged **47,99 € + 17,00 €
     waiting = 64,99 €**. The button literally reads "Cancel — accept 47,99 €". *(This is the finding that made the
     0,41 € clock drift look small — fix the total before anything else in the modal.)*
-  - 💶 **A no-show's waiting fee is invisible on the Driver's side but billed to the Business.**
+  - ✅ **FIXED 2026-08-09 (S56, deployed `3857de0`)** — the archive and the run card go through `missionAmount`
+    and NAME the waiting (`incl. 40,00 € waiting`). *Original finding:* **A no-show's waiting fee is invisible on
+    the Driver's side but billed to the Business.**
     `app/(app)/rides/history/page.tsx:157` — the archive line and the trip card show the fare, never the settled
     `waiting_fee`, so a Driver paid for 30 minutes of waiting cannot see that they were.
   - 💶 **A pending amendment and a pending release can both be live, and neither supersedes the other.** Accepting

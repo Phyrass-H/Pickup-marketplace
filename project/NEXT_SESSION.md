@@ -539,7 +539,67 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-55 — MONEY TESTS SHIPPED + 2 fixes (2026-08-09, online session). START HERE NEXT TIME.**
+**★ SESSION-56 — THE SQL SIDE PROVEN · THE CANCEL FEE STEPS · THE WAITING MODEL COMPLETED (2026-08-09, Mac).
+START HERE NEXT TIME.** Deployed `7a37ee5`, Vercel `success`. `npm test` = **266**. Two migrations applied by the
+founder: `2026-08-09_cancel_fee_30min_steps` and `2026-08-09_waiting_settles_on_board`. Detail: SESSION_LOG S56.
+
+**What shipped, in one line each:**
+1. **§ H2's SQL side is no longer a guess.** 649 read-only checks (`mission_is_airport` / `mission_waiting` are
+   `immutable`, so PostgREST will *execute* them) + 170 live checks driving tagged throwaway missions through the
+   real RPCs → **0 disagreements**. ⚑ S55's plan of "recompute historical fees" was a **dead end** — excluding the
+   seeded fleet there are **zero** cancelled/no-show missions and `mission_cancellation` is an empty table.
+2. **The Business cancel fee steps every 30 min** instead of sliding ([[d70]]). Founder's call: a rule people can
+   plan around beats a slope nobody can perceive. Rounded in the Business's favour; the modal shows the next raise
+   and counts down to it. ⚑ **The step CREATED a bug the harness caught the same hour**: a multiple-of-5 pct makes
+   exact half-cent ties routine (1 fare in 20 at 95 %), and float64 rounded them the other way from Postgres. New
+   `cancelFeeAmount()` works in integer cents.
+3. **The waiting model is complete** ([[d71]]). Founder's ruling: *waiting is owed whenever it happened.* A trip
+   that RUNS now settles it (`board_guest`); the cancel modal quotes the whole bill; the Driver can see waiting
+   they were paid.
+
+**⚑ THE PROBES ARE THE ASSET — `.local/probe/` (git-ignored, re-runnable). Use them, don't rebuild them.**
+- `diff-sql-vs-lib.ts` — read-only, 649 checks. Run after ANY change to `mission_is_airport` / `mission_waiting`.
+- `write-test.ts` — 170 checks through the real Business-side RPCs, deletes by recorded id. Run after ANY change
+  to the cancel/no-show RPCs or their `lib/` mirrors.
+- `board-guest-test.ts` — 51 checks, incl. the double-settlement proof.
+- ⚠️ **They write to the LIVE DB.** Manifest first, `try/finally`, `--undo` on each. The first run of `write-test`
+  left 15 rows behind when it crashed before cleanup. Always confirm the baseline (**271 missions** today) after.
+
+**★ NEXT, in the founder's stated order.**
+1. **The rest of the 17** (all in BACKLOG § H2, 3 now ✅). The remaining ones need no founder decision except
+   where noted: stale `checked_in_at` surviving a re-pool onto the next Driver (SQL) · the TS completion path not
+   clearing pending amendment/release rows · the "Change pending" card rendering where the RPC will refuse ·
+   `respond_to_amendment`'s inverted lock order (SQL) · the edit gate reading raw `status` instead of the expiry
+   boundary · two stale unions in `database.types.ts`. **Verified fix plans exist** — see the workflow output
+   referenced in SESSION_LOG rather than re-deriving them; ⚠️ 5 of 5 plan-check passes came back `sound=false`,
+   so read the corrections before applying any plan.
+2. **CI** (~30 min). The suite is fast and green and nothing runs it but memory, while Claude sessions push
+   straight to `main`.
+3. **The €0-fee hole** — `p_fare_snapshot` is not merely forgeable but **omittable**: omit the argument and
+   `coalesce(…, 0)` stores a 0,00 € fee, on both `business_cancel_mission` and `driver_cancel_mission`. Nil risk
+   in beta (needs a deliberate API call, no money moves) — **fix it before real money**. There is no fare function
+   in SQL to recompute against, so it is `not null` + a clamp, or port the PDP into SQL.
+
+**⚑ FOUNDER DECISIONS FROM THIS SESSION — do not reopen:**
+- **Steps, not a slope**, at **30 minutes**, rounded in the Business's favour. They disagreed with Claude's
+  fairness argument and were right: *"we have to make rules and they'll get around it."*
+- **Waiting is owed whenever it happened.** Business pays the Driver; the Business charges its own Guest.
+- The Driver sees **one simple amber line** at boarding. The Business is **not** notified at that moment. There is
+  **no waive button**.
+- **The boundary race is NOT worth fixing** (a ~2-second window every 30 min, one step, with a visible countdown).
+  Logged in § H2; don't re-propose it.
+- **The seeded fleet STAYS** until the build is finished — *"we will clean the database when we finish building."*
+- **Parked for the pricing conversation:** penalty *paliers*. Claude's position, argued and recorded: bands keyed
+  to fare backfire (they make the expensive trip the cheapest to abandon, and a €399/€401 edge is gameable); the
+  cheap-trip weakness is a **floor** problem, the expensive end is already handled by *time*. Also parked:
+  *"what if the Business doesn't want the Driver to wait past the courtesy wait"* — note `business_declare_no_show`
+  is already half of that lever.
+
+**⚑ HOW THE FOUNDER WANTED TO BE TALKED TO, by the end of this session (honor it):** very short answers, plain
+words, **worked examples with real euro figures**, and **one job at a time announced before it starts**. They said
+twice that it was getting hard to keep up. Long analytical messages actively cost comprehension here.
+
+**★ SESSION-55 — MONEY TESTS SHIPPED + 2 fixes (2026-08-09, online session).**
 Merged to `main` (`d4d98e9`, fast-forward). `npm test` = **247 tests, ~1.5 s** over the money functions —
 `settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · the `currentSpan`/`comparisonSpan` pair — plus
 the cross-file invariants (Business charged == Driver paid; History == Spend == CSV; `settledFare` as the one

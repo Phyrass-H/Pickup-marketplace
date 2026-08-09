@@ -23,6 +23,19 @@
   number made a rounding clash possible that hadn't been before: a 85,50 € trip at 95% comes to exactly 81,225 €,
   and the app rounded it down while the database rounded it up. One fare in twenty was affected. Fixed within the
   hour, and now checked across all 1.1 million possible combinations.
+- **Waiting time is now paid for whenever it happened — including when the trip goes ahead.** This was the
+  biggest hole we found. A Guest turns up 45 minutes late, both apps show a meter running, the Guest gets in the
+  car — and nobody was charged a penny. Which meant a Driver earned more by reporting a no-show than by driving
+  the person they'd waited for. Your ruling: the Business pays the waiting, and charges its own Guest. It now
+  settles the moment the Driver taps "Guest on board", and the Driver sees one line confirming it —
+  *"19,00 € waiting added · 19 min past the courtesy wait"*. If the Guest was on time, nothing is recorded at all.
+- **The cancel box now shows the whole bill.** If a Driver was already waiting, the box quoted the trip fee and
+  quietly left the waiting off — it said 47,99 € on a trip that charged 64,99 €. It now leads with the real
+  total and shows how it breaks down. It also warns that the waiting keeps climbing while you decide.
+- **"Free to cancel" now means free of everything.** If a flight lands early, the waiting clock can start before
+  the booked pickup time — and the box used to say "Free to cancel" over a charge that was already running.
+- **A Driver can finally see waiting they were paid.** Their Earnings said 100,00 €, their trip history said
+  60,00 € — same trip. Both now say 100,00 €, with the waiting named rather than quietly folded in.
 - **An audit of the cancellation and waiting rules turned up 17 real problems** (and threw out 8 false alarms).
   None are new, none break anything you can see today, and they're all written down. The two worth knowing about:
   if a late Guest finally turns up and the trip goes ahead, **nobody is charged for the waiting** — so a Driver is
