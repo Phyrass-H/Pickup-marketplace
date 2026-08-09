@@ -88,6 +88,27 @@ export async function advanceStatus(
     }
   }
 
+  // Boarding the Guest is the one step in this flow that MOVES MONEY: it is the moment the
+  // waiting meter provably stops, so it settles the accrued fee (D48; founder 2026-08-09 —
+  // waiting is owed whether or not the trip then happens). That write goes through a
+  // SECURITY DEFINER RPC on the user's own session, off the server clock and the same
+  // mission_waiting() the three failure doors use — never through the service role here,
+  // which would put a fourth hand-written copy of the meter on the one path with no SQL
+  // guard. The RPC writes its own status_event, so this returns before the admin block.
+  if (requested === "on_board") {
+    const { error } = await supabase.rpc("board_guest", { p_mission_id: missionId });
+    if (error) {
+      const msg = error.message?.trim();
+      return {
+        ok: false,
+        message: msg && msg.length < 120 ? msg : "Couldn’t record the update.",
+      };
+    }
+    revalidatePath("/rides");
+    revalidatePath("/dispatch");
+    return { ok: true };
+  }
+
   const admin = createAdminClient();
 
   const { error: eventErr } = await admin

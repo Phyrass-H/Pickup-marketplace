@@ -2752,6 +2752,19 @@ textarea::placeholder {
 /* How the trip ended, in plain words, under the pill: cancelled by the Business,
    cancelled by the Driver (re-pooled), or released by agreement. */
 .dend-note { margin: 9px 0 0; font-size: 12px; color: var(--text-muted); }
+
+/* Waiting that has been SETTLED onto the trip (D48 · board_guest). Amber because it is
+   money the Driver earned that the Guest's lateness caused — not a warning, and not the
+   neutral grey of an ordinary note. One line: the fare in the footer already includes it. */
+.dwait-kept {
+  margin: 10px 0 0;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: var(--tone-warn-bg);
+  color: var(--tone-warn-fg);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 .pcard__body > .dend-note:first-child { margin-top: 0; }
 
 /* The free text from whoever ended it — the Business's reason, or the Driver's

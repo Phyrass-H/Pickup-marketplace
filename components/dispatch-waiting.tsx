@@ -191,8 +191,9 @@ export function WaitingPanel({
             </div>
 
             <p className="muted small" style={{ lineHeight: 1.5 }}>
-              Cancelling instead costs the same — the waiting is owed either way. If your Guest is
-              simply delayed, it’s usually cheaper to let the wait run.
+              Cancelling instead costs the same — the waiting is owed either way, including if
+              your Guest turns up and the trip runs. If your Guest is simply delayed, it’s
+              usually cheaper to let the wait run.
             </p>
 
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>

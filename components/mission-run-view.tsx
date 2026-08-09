@@ -133,6 +133,9 @@ export function MissionRunView({
   const phones = guestPhones;
   const comp = cancelCompensation(m);
   const destination = nextDestination(m, stops);
+  // Settled waiting, i.e. board_guest (or one of the three failure doors) has written it.
+  // Not the live meter — that is NoShowControl's job while the Driver is still on site.
+  const settledWaiting = m.status === "arrived" ? 0 : Number(m.waiting_fee ?? 0);
 
   return (
     <>
@@ -176,6 +179,17 @@ export function MissionRunView({
                 ))}
               </div>
             </div>
+          )}
+
+          {/* The meter ran, then the Guest got in the car. The Driver watched that money
+              accrue for twenty minutes; if it simply vanished at the moment of boarding
+              they would have no reason to believe it counted. One line, deliberately —
+              the fare in the footer already includes it. */}
+          {settledWaiting > 0 && (
+            <p className="dwait-kept">
+              {formatMoney(settledWaiting)} waiting added
+              {m.waiting_minutes ? ` · ${m.waiting_minutes} min past the courtesy wait` : ""}
+            </p>
           )}
 
           {m.status === "cancelled" && (

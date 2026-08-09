@@ -725,6 +725,15 @@ export interface Database {
         Args: { p_mission_id: string; p_fare_snapshot?: number | null };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
+      // arrived → on_board, settling the waiting meter on the way (D48; founder
+      // 2026-08-09). The FOURTH settlement door and the only one on a trip that
+      // actually happens — before it existed, a late Guest who then boarded cost
+      // nobody anything and a Driver was better off filing a no-show.
+      // 2026-08-09_waiting_settles_on_board.sql
+      board_guest: {
+        Args: { p_mission_id: string };
+        Returns: Database["public"]["Tables"]["mission"]["Row"];
+      };
       // Mutual-consent agreed release (O7, D45). All SECURITY DEFINER + atomic,
       // mirroring respond_to_amendment / driver_cancel_mission. propose_release
       // (Business) + close_release (Business withdraw/dismiss) return the release Row;
