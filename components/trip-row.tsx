@@ -490,6 +490,17 @@ export function TripRow({
                   fare={settledFare(mission)}
                   pickupAtIso={mission.pickup_at}
                   hasDriver={!!mission.driver_id}
+                  /* Gated on 'arrived' — the exact condition business_cancel_mission uses
+                     to settle waiting, so the quote can't include a charge the RPC won't
+                     make, or omit one it will. `.from`/`.until` are pure functions of the
+                     pickup time and the airport predicate, so passing them from the server
+                     is safe; the running total is computed client-side against the clock. */
+                  waitingFromIso={
+                    mission.status === "arrived" ? waitingAt(mission).from.toISOString() : null
+                  }
+                  waitingUntilIso={
+                    mission.status === "arrived" ? waitingAt(mission).until.toISOString() : null
+                  }
                 />
               )}
             </div>

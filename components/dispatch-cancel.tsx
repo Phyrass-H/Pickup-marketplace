@@ -4,7 +4,13 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, RefreshCw, AlertTriangle, Phone } from "lucide-react";
 import { businessCancelMission, reclaimMission } from "@/app/(dispatch)/dispatch/actions";
-import { businessCancelPct, cancelFeeAmount, nextCancelRaise } from "@/lib/cancellation";
+import {
+  businessCancelPct,
+  cancelFeeAmount,
+  nextCancelRaise,
+  waitingBetween,
+  WAITING_RATE_PER_MIN,
+} from "@/lib/cancellation";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 
@@ -55,11 +61,21 @@ export function BusinessCancel({
   fare,
   pickupAtIso,
   hasDriver,
+  waitingFromIso = null,
+  waitingUntilIso = null,
 }: {
   missionId: string;
   fare: number;
   pickupAtIso: string;
   hasDriver: boolean;
+  /**
+   * D48 — the running meter, passed only while the Driver is on site ('arrived'), which is
+   * exactly when business_cancel_mission also settles it. Without these the modal quoted the
+   * cancellation fee alone while the RPC billed fee + waiting: measured live at 47,99 €
+   * quoted against 64,99 € charged. The button has to name the whole amount it commits to.
+   */
+  waitingFromIso?: string | null;
+  waitingUntilIso?: string | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -99,6 +115,17 @@ export function BusinessCancel({
   const hours = now != null ? (new Date(pickupAtIso).getTime() - now) / 3_600_000 : 0;
   const pct = businessCancelPct(hours, hasDriver);
   const feeAmount = cancelFeeAmount(fare, pct);
+
+  // What the RPC will ACTUALLY charge: the policy fee plus whatever the meter has run.
+  const wait =
+    waitingFromIso && waitingUntilIso && now != null
+      ? waitingBetween(Date.parse(waitingFromIso), Date.parse(waitingUntilIso), now)
+      : { minutes: 0, fee: 0 };
+  const total = feeAmount + wait.fee;
+  // ⚑ "Free" has to mean free of EVERYTHING, not free of the percentage. The meter runs from
+  // the Guest's due moment, and `guest_ready_at` is the tracked landing instant — so an early
+  // flight can start the meter while pickup is still hours away and the percentage is 0.
+  const free = pct === 0 && wait.fee === 0;
   const activeIdx = !hasDriver || hours > 5 ? 0 : hours <= 0 ? 6 : Math.min(6, 6 - Math.ceil(hours));
 
   // The deadline, not just the price. A half-hour step is only safe if you can SEE the edge
@@ -151,7 +178,7 @@ export function BusinessCancel({
 
             {now == null ? (
               <p className="muted small" style={{ marginTop: 12 }}>Calculating…</p>
-            ) : pct === 0 ? (
+            ) : free ? (
               <div style={{ background: "var(--tone-success-bg)", borderRadius: 10, padding: 14, margin: "12px 0" }}>
                 <div style={{ color: "var(--tone-success-fg)", fontWeight: 600 }}>Free to cancel</div>
                 <div style={{ color: "var(--tone-success-fg)", fontSize: 13, marginTop: 4 }}>
@@ -170,26 +197,53 @@ export function BusinessCancel({
               <>
                 <div style={{ background: "var(--tone-danger-bg)", borderRadius: 10, padding: 14, margin: "12px 0" }}>
                   <div style={{ color: "var(--tone-danger-fg)", fontSize: 13 }}>Cancelling now costs</div>
+                  {/* With a meter running the headline is the TOTAL, because that is what
+                      the RPC charges. Leading with the percentage would repeat the old lie
+                      in bigger type: it quoted 47,99 € on a trip that settled 64,99 €. The
+                      split goes underneath so the total is still explainable. */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
-                    <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{Math.round(pct)}%</span>
-                    <span style={{ fontSize: 18, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(feeAmount)}</span>
-                    <span style={{ fontSize: 12, color: "var(--tone-danger-fg)" }}>of {formatMoney(fare)}</span>
+                    {wait.fee > 0 ? (
+                      <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(total)}</span>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{Math.round(pct)}%</span>
+                        <span style={{ fontSize: 18, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(feeAmount)}</span>
+                        <span style={{ fontSize: 12, color: "var(--tone-danger-fg)" }}>of {formatMoney(fare)}</span>
+                      </>
+                    )}
                   </div>
-                  {/* This price HOLDS until the moment below — that is the deal the step
-                      buys. Say when it ends, what it becomes, and how long that is. */}
+                  {wait.fee > 0 && (
+                    <div style={{ color: "var(--tone-danger-fg)", fontSize: 12.5, marginTop: 4, opacity: 0.9 }}>
+                      {Math.round(pct)}% of {formatMoney(fare)} = {formatMoney(feeAmount)} · plus{" "}
+                      {formatMoney(wait.fee)} waiting ({wait.minutes} min)
+                    </div>
+                  )}
+                  {/* The percentage HOLDS until the moment below — that is the deal the step
+                      buys. Say when it ends, what it becomes, and how long that is.
+                      ⚑ The WAITING does not hold: it is the one part of this total still
+                      moving, €1 every minute, so the promise has to be scoped to the
+                      percentage whenever a meter is running. Saying "billed on top" here
+                      was right while the headline showed the fee alone and became wrong the
+                      moment the headline became the total. */}
                   <div style={{ color: "var(--tone-danger-fg)", fontSize: 12.5, marginTop: 8, opacity: 0.9 }}>
                     {raise && raiseAtIso ? (
                       <>
-                        This price holds until{" "}
+                        {wait.fee > 0 ? "The percentage holds until " : "This price holds until "}
                         <strong style={{ fontWeight: 600 }}>{deadlineWords(raiseAtIso, now)}</strong> — then {raise.pct}% (
-                        {formatMoney(raiseFee)}), {untilWords(raiseAtIso, now)}
+                        {formatMoney(cancelFeeAmount(fare, raise.pct) + wait.fee)}), {untilWords(raiseAtIso, now)}
                       </>
                     ) : (
-                      "The percentage stops here — any waiting already run is billed on top."
+                      "The percentage stops here — it cannot go above 100%."
+                    )}
+                    {wait.fee > 0 && (
+                      <>
+                        <br />
+                        The waiting keeps running at {formatMoney(WAITING_RATE_PER_MIN)}/min until you confirm.
+                      </>
                     )}
                   </div>
                 </div>
-                <div className="muted small" style={{ marginBottom: 6 }}>How the fee grows as pickup nears</div>
+                <div className="muted small" style={{ marginBottom: 6 }}>How the percentage grows as pickup nears</div>
                 <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
                   {RAMP.map((b, i) => {
                     const on = i === activeIdx;
@@ -281,9 +335,9 @@ export function BusinessCancel({
                   ? "…"
                   : now == null
                     ? "Cancel trip"
-                    : pct === 0
+                    : free
                       ? "Cancel trip"
-                      : `Cancel — accept ${formatMoney(feeAmount)}`}
+                      : `Cancel — accept ${formatMoney(total)}`}
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
   noShowAvailableAt,
   noShowWaitMinutes,
   waitingAt,
+  waitingBetween,
   waitingCeilingMinutes,
   WAITING_RATE_PER_MIN,
 } from "@/lib/cancellation";
@@ -304,6 +305,38 @@ describe("businessCancelPct — the D45 ramp", () => {
       const pct = businessCancelPct(h, true);
       expect(pct).toBeGreaterThanOrEqual(prev);
       prev = pct;
+    }
+  });
+});
+
+describe("waitingBetween — one meter, three screens", () => {
+  // Local fixture: the `city` mission above is scoped to its own describe block.
+  const cityTrip = mission({ pickup_at: "2026-07-15T12:00:00+02:00" });
+  const FROM = Date.parse("2026-07-15T12:20:00+02:00"); // due 12:00 + 20 min courtesy
+  const UNTIL = Date.parse("2026-07-15T13:00:00+02:00"); // ceiling: due + 60 min
+
+  it("owes nothing until the courtesy wait actually lapses", () => {
+    expect(waitingBetween(FROM, UNTIL, FROM).fee).toBe(0);
+    expect(waitingBetween(FROM, UNTIL, FROM - 60_000).fee).toBe(0);
+  });
+
+  it("charges the minute the instant it starts — per minute STARTED", () => {
+    expect(waitingBetween(FROM, UNTIL, FROM + 1).minutes).toBe(1);
+  });
+
+  it("freezes at the ceiling and never grows past it", () => {
+    expect(waitingBetween(FROM, UNTIL, UNTIL).fee).toBe(40);
+    expect(waitingBetween(FROM, UNTIL, UNTIL + 3_600_000).fee).toBe(40);
+  });
+
+  it("is the same number waitingAt reports, so no screen can drift from the server", () => {
+    for (const iso of ["2026-07-15T12:19:00+02:00", "2026-07-15T12:37:30+02:00", "2026-07-15T14:00:00+02:00"]) {
+      const at = Date.parse(iso);
+      const w = waitingAt(cityTrip, at);
+      expect(waitingBetween(w.from.getTime(), w.until.getTime(), at)).toEqual({
+        minutes: w.minutes,
+        fee: w.fee,
+      });
     }
   });
 });

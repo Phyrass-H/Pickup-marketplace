@@ -13,7 +13,7 @@
 //  3. `settledFare` is the ONE basis. A fare, a cancellation fee, a no-show
 //     charge and an amendment all price off the same frozen number.
 import { describe, expect, it } from "vitest";
-import { cancelCompensation } from "@/lib/cancellation";
+import { cancelCompensation, cancelFeeAmount, waitingBetween } from "@/lib/cancellation";
 import { totalsFor } from "@/lib/earnings";
 import { applyHistoryQuery, parseHistoryQuery } from "@/lib/history-filter";
 import { settledFare } from "@/lib/pdp";
@@ -66,6 +66,35 @@ describe("what the Business is charged is what the Driver is paid", () => {
     expect(cancelCompensation(m)).toBe(55);
     expect(rowCost(row(m))).toBe(55);
     expect(spendTotals([row(m)]).total).toBe(55);
+  });
+
+  it("quotes a cancel-while-waiting as the fee PLUS the meter — the number the row settles", () => {
+    // The live 2026-08-09 case: the modal showed 47,99 € and the RPC charged 64,99 €,
+    // because the quote was the percentage alone while business_cancel_mission also
+    // settles the meter. The modal is JSX and not in this suite, so what is pinned here
+    // is the arithmetic behind it — the same two functions the modal now adds together.
+    const fee = cancelFeeAmount(50.52, 95); // 47,99 €
+    const wait = waitingBetween(0, 3_600_000, 17 * 60_000); // 17 min → 17,00 €
+    expect(fee).toBe(47.99);
+    expect(wait.fee).toBe(17);
+
+    const settled = mission({
+      status: "cancelled",
+      driver_id: "drv-1",
+      cancellation_fee: fee,
+      waiting_fee: wait.fee,
+    });
+
+    // ⚑ Asserted against each other, NOT against the literal 64.99: in float64
+    // 47.99 + 17 is 64.99000000000001, and every screen carries the same tail
+    // because every screen performs the same addition. Comparing to a decimal
+    // literal would fail while the app was perfectly consistent — and "consistent"
+    // is the property this file exists to protect. Intl rounds it to 64,99 € on
+    // the way out, which is the last assertion.
+    const modalTotal = fee + wait.fee; // exactly what the cancel modal adds up
+    expect(rowCost(row(settled))).toBe(modalTotal); // the Business's archive
+    expect(cancelCompensation(settled)).toBe(modalTotal); // and what the Driver is paid
+    expect(Math.round(modalTotal * 100)).toBe(6499); // 64,99 € to the cent
   });
 
   it("charges a no-show in full and pays the Driver in full", () => {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Clock, UserX } from "lucide-react";
 import { businessDeclareNoShow } from "@/app/(dispatch)/dispatch/actions";
 import { formatMoney, formatTime } from "@/lib/format";
-import { WAITING_RATE_PER_MIN } from "@/lib/cancellation";
+import { WAITING_RATE_PER_MIN, waitingBetween } from "@/lib/cancellation";
 
 // The Business's view of a Driver waiting on site (O7 / D48). NET-NEW: before this the
 // Dispatch row showed nothing at all while a Driver waited, so the first a Business knew
@@ -62,9 +62,9 @@ export function WaitingPanel({
 
   const from = new Date(waitingFromIso).getTime();
   const until = new Date(waitingUntilIso).getTime();
-  const stop = Math.min(now, until);
-  const minutes = Math.max(0, Math.ceil((stop - from) / 60_000));
-  const fee = minutes * WAITING_RATE_PER_MIN;
+  // One definition of the meter, shared with the cancel modal and the Driver's screen —
+  // this used to be a hand-typed copy of the same arithmetic.
+  const { minutes, fee } = waitingBetween(from, until, now);
   const maxFee = Math.round((until - from) / 60_000) * WAITING_RATE_PER_MIN;
   const capped = now >= until;
 

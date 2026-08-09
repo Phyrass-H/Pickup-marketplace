@@ -74,18 +74,36 @@ export function waitingAt(
   const from = due + noShowWaitMinutes(airport) * 60_000;
   const until = due + waitingCeilingMinutes(airport) * 60_000;
   const now = typeof at === "number" ? at : at.getTime();
-  const stop = Math.min(now, until);
-  // "Per minute STARTED" — minute 1 is owed the instant the courtesy wait lapses.
-  const minutes = Math.max(0, Math.ceil((stop - from) / 60_000));
+  const { minutes, fee } = waitingBetween(from, until, now);
   const maxMinutes = Math.round((until - from) / 60_000);
   return {
     from: new Date(from),
     until: new Date(until),
     minutes,
-    fee: minutes * WAITING_RATE_PER_MIN,
+    fee,
     capped: now >= until,
     maxFee: maxMinutes * WAITING_RATE_PER_MIN,
   };
+}
+
+/**
+ * The meter between its two endpoints — the clock-free core of `waitingAt`.
+ *
+ * A client that holds only the two instants (the Business's waiting panel, the Driver's
+ * no-show meter, and now the cancel modal) needs the running total without re-deriving the
+ * airport predicate or the courtesy wait. Before this existed each screen re-typed
+ * `ceil((min(now, until) - from) / 60000)` by hand, which is three chances to disagree with
+ * `mission_waiting()` in SQL rather than one.
+ *
+ * "Per minute STARTED": minute 1 is owed the instant the courtesy wait lapses.
+ */
+export function waitingBetween(
+  fromMs: number,
+  untilMs: number,
+  at: number,
+): { minutes: number; fee: number } {
+  const minutes = Math.max(0, Math.ceil((Math.min(at, untilMs) - fromMs) / 60_000));
+  return { minutes, fee: minutes * WAITING_RATE_PER_MIN };
 }
 
 // On-site floor: a Driver who turns up AFTER the courtesy wait already closed still has to be
