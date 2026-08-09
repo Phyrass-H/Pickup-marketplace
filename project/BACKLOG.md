@@ -165,10 +165,26 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
 > Flagged 2026-06-19. The foundations are clean (modern stack, lib/ domain separation, RLS-first
 > security, strong docs), but this is still an MVP/beta codebase. These are the standard MVP→production
 > steps a takeover dev team would expect. Founder intent: do them all eventually; not blocking beta.
-- ⚙️ **Automated tests** (none today — biggest gap). Priority targets: PDP pricing (`lib/pdp.ts`),
-  `missionTone` (`lib/dispatch-status.ts`), `accept_mission` atomic/first-wins + Lock-in, RLS policies,
-  geo radius matching. Money paths first. (Vitest/Jest unit + a Playwright e2e for the core loop.)
-- ⚙️ **CI on PRs** — GitHub Actions running `tsc` + lint + tests (+ build) on every PR. None today.
+- ✅ **Automated tests — SHIPPED S55/S56 (2026-08-08/09).** `npm test` = **261 vitest tests in ~0.5 s** over the
+  money functions (`settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · `cancelFeeAmount` ·
+  `currentSpan`/`comparisonSpan`) plus three cross-file invariants. Every money bug that ever shipped is pinned
+  as a test. **Still uncovered, deliberately:** React components, server actions and RLS (need a DB + a browser);
+  `missionTone`, `accept_mission` first-wins and geo radius matching are *not* yet tested and remain on this list.
+- ✅ **SQL ↔ `lib/` parity — PROVEN for the waiting + cancel rules (S56, 2026-08-09).** The fee rules exist twice
+  (in `lib/` and inside the RPCs) and nobody had ever proved they agree. Two probes now do, both kept in
+  `.local/probe/` (git-ignored, re-runnable):
+  - `diff-sql-vs-lib.ts` — **read-only.** `mission_is_airport()` and `mission_waiting()` are `immutable`, so
+    PostgREST will *execute* them with no writes. 649 checks (NFC/NFD accents, both Paris DST nights, every
+    boundary offset, all 34 real missions) → **0 mismatches**.
+  - `write-test.ts` — drives tagged throwaway missions through the real Business-side RPCs with a real
+    authenticated session, compares every stamped number, then deletes by recorded id. 170 checks → **0
+    disagreements**. ⚠️ Run it after ANY change to the cancel/no-show RPCs or their mirrors.
+  - ⚑ **The read-only plan in S55 had no input data:** excluding the seeded fleet there are **zero** cancelled or
+    no-show missions and `mission_cancellation` / `mission_release` are both **empty** — every cancellation ever
+    exercised was removed when the DB was restored to baseline. Recomputing historical fees is not an option;
+    the write test is the only way.
+- ⚙️ **CI on PRs** — GitHub Actions running `tsc` + lint + tests (+ build) on every PR. None today. **Now the top
+  remaining § H2 item**: the suite exists and Claude sessions push straight to `main`, so nothing runs it but memory.
 - ⚙️ **Generated DB types** — replace hand-written `lib/database.types.ts` with `supabase gen types`
   once the CLI is wired (D3); removes drift risk.
 - 🔨 **Real email auth** — flip on magic-link, remove the dev-login scaffold (see A · needs the Supabase
@@ -197,8 +213,16 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     100% and a fixed €X), a **multiplier** that scales as pickup nears, or a non-monetary cost (reliability marks that a
     Driver can actually see — itself an open founder conversation). Pairs with the reliability-marks discussion and with
     the postpone-then-cancel laundering note below.
-  - 🔒 **`p_fare_snapshot` is client-supplied / forgeable** → recompute the fare inside the RPC from the mission's pdp
-    columns (or clamp) when the pricing engine lands. Beta-mitigated (MANUAL money, no payments).
+  - 🔒 **`p_fare_snapshot` is client-supplied / forgeable — and worse than "forgeable": it is OMITTABLE.** Confirmed
+    2026-08-09 by the drift audit. The parameter is `numeric default null` and the write is
+    `round(coalesce(p_fare_snapshot, 0) * v_pct / 100, 2)`, so calling
+    `supabase.rpc('business_cancel_mission', { p_mission_id })` from the browser with the Dispatcher's own JWT —
+    **no tampering, just leaving the argument out** — stores `fee_amount = 0.00` and `fare_snapshot = NULL` on a
+    trip that owed the full fare. `driver_cancel_mission` has the identical shape, so a Driver can zero their own
+    100% penalty. There is **no fare function in SQL at all** to recompute against (grep finds none; the PDP is
+    TypeScript-only and `2026-07-13_o7_cancellation.sql:68` documents the snapshot as "(server-passed)" by design),
+    so the fix is either a SQL pricing engine or a `not null` + sanity clamp against the mission's own
+    `ceiling`/`pdp_*`. Beta-mitigated (MANUAL money, no payments) — but this is the one to fix first when money moves.
   - 👁 **Mid-run Business cancel visibility** → `MINE_STATUSES` excludes 'cancelled', so a trip cancelled while the Driver
     is en_route/arrived silently vanishes from My Rides. Surface a "trip was pulled" state — pairs with notifications.
 - **No-show clock flags (2026-07-19, from the D47 fix — deferred by the founder):**
@@ -247,6 +271,59 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
   - 🕐 **Countdown uses the device clock** → `cancel-noshow.tsx` compares against `Date.now()` while the gate runs on
     Postgres `now()`. Fails safe and self-heals (the RPC re-checks and its message is surfaced), but device skew can show a
     button state the server disagrees with. Pass a server `now` from the RSC if it ever matters.
+
+- **SQL ↔ TypeScript drift audit (2026-08-09, S56) — 17 confirmed, 8 refuted.** 30 agents: five finders by rule
+  area, then an adversarial refutation pass on every claim. The refuted eight are listed at the bottom so nobody
+  re-files them. Nothing here is a regression from the 30-minute step; these are pre-existing.
+  **Money:**
+  - 💶 **A trip that ACTUALLY happens settles no waiting at all — the commonest outcome is the cheapest door.**
+    Guest is 45 min late at an airport; both apps run a meter showing "45 min · 45,00 €"; the Guest then turns up,
+    the trip runs, and **nothing is written**. Only the three failure doors (`mark_no_show`,
+    `business_declare_no_show`, `business_cancel_mission`) ever write `waiting_fee` — `advanceStatus`
+    (`app/(app)/rides/actions.ts:101`) writes only `status`, and **no TypeScript path writes `waiting_fee`
+    anywhere** (verified by grep). So a Driver is financially better off declaring a no-show than driving a late
+    Guest, which inverts the incentive D48 exists to create. **The biggest hole in the waiting model.**
+  - 💶 **The cancel modal quotes `fare × %` but the RPC also bills accrued waiting.** `components/dispatch-cancel.tsx`
+    computes the fee from the fare alone, while `business_cancel_mission` settles `waiting_fee` too when the trip is
+    `arrived`. Confirmed in the S56 write test: case C0 showed **47,99 €** and the DB charged **47,99 € + 17,00 €
+    waiting = 64,99 €**. The button literally reads "Cancel — accept 47,99 €". *(This is the finding that made the
+    0,41 € clock drift look small — fix the total before anything else in the modal.)*
+  - 💶 **A no-show's waiting fee is invisible on the Driver's side but billed to the Business.**
+    `app/(app)/rides/history/page.tsx:157` — the archive line and the trip card show the fare, never the settled
+    `waiting_fee`, so a Driver paid for 30 minutes of waiting cannot see that they were.
+  - 💶 **A pending amendment and a pending release can both be live, and neither supersedes the other.** Accepting
+    the amendment first permanently raises the ceiling on a trip the Business is giving away free
+    (`2026-07-19_agreed_release.sql:106` vs `dispatch/[id]/amend/actions.ts:100`).
+  - 💶 **`accept_mission` enforces NONE of the Pool's matching rules** — the whole vehicle/zone/luggage match is
+    TypeScript-only in `app/(app)/pool/page.tsx:99-125`. Reproducible today via the dev `?all=1` branch: a sedan
+    Driver can accept a luggage-only Van run. The SQL only checks time, status and the slot conflict.
+  **Behaviour:**
+  - 🔁 **No re-pool path clears `checked_in_at`** (driver cancel · reclaim · agreed release), so Driver B inherits
+    Driver A's check-in and the Business sees a trip as "Checked in" that nobody has confirmed.
+  - 🔒 **`respond_to_amendment` locks amendment→mission**, inverting the mission→amendment order every other RPC
+    uses — the exact deadlock the release path was fixed for (`2026-07-07_mission_amendment.sql:112`).
+  - 👁 **The Business's "Change pending" card renders on trips where `respond_to_amendment` will refuse**
+    (`components/trip-row.tsx:517`) — the release card is status-gated, the amendment card is not.
+  - 🧹 **Every SQL terminal path clears pending negotiation rows; the TypeScript completion path clears neither.**
+    A normally-completed trip can leave a permanently `proposed` amendment/release, which is what feeds the
+    un-gated card above.
+  - ⏱ **The Business edit gate reads the raw `status` column instead of the SQL expiry boundary**
+    (`dispatch/[id]/edit/page.tsx:64`), so a past-due trip stays editable until some other page happens to sweep.
+  **Cosmetic / stale:**
+  - `lib/database.types.ts:422/437` — `mission_cancellation.kind` is missing **`'business_no_show'`**; the DB
+    constraint has allowed it since `2026-07-22_waiting_fee.sql:78` and the RPC writes it (proved live in S56).
+  - `lib/database.types.ts:69` — `StatusEventStatus` declares 4 values; the CHECK constraint allows 8, including
+    the `'expired'` the sweep writes. Latent until someone renders a timeline.
+  - A cancelled trip's archive line folds the waiting fee into "Your cancellation fee" and never names it
+    (`components/trip-row.tsx:260`).
+  - `respond_to_release`'s decline reason is dead — the RPC stores it, the only caller hardcodes `null`, no UI
+    reads it (`components/release-card.tsx:36`).
+  - Driver-cancel comments claim an unconditional SPEED WIN re-pool; the RPC branches on 24 h ([[d46]]).
+  **Refuted — do NOT re-file** (each was checked against the authoritative migration and failed): `mark_no_show`
+  storing a NULL fee_amount; three call sites branching on `cancelled_by === 'driver'`; `driver_cancel_mission`
+  discarding accrued waiting; `business_declare_no_show` lacking the on-site floor; the `guest_ready_at` ramp
+  undercut; `no_show_by` being read by nothing; `business_cancel_mission` storing NULL where the no-show doors
+  store 0; the Business keeping no record of an agreed release.
 
 ## I. Small follow-ups noted in code
 - ✅ Promote the per-booking **reference** (room/event) to a dedicated DB column. **SHIPPED S20**

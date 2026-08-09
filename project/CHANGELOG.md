@@ -5,6 +5,30 @@
 
 ---
 
+## 9 August 2026 — the cancellation fee stops sliding, and the database is finally checked against the app
+
+- **The cancellation fee now moves in half-hour steps instead of creeping every second.** It used to rise
+  continuously, which meant the price in the cancel box was never quite the price you were charged — you'd read
+  "49,00 €", hesitate thirty seconds, and be billed 49,06 €. Always a little more, never less. Now the price
+  holds still inside each half hour, so what you read is what you pay. Free until 5 hours before pickup, then
+  50%, then +5 points every half hour up to 100% at pickup. Every landmark you already knew is unchanged.
+- **The box now tells you when the price goes up, and counts down to it.** *"This price holds until 16:20 — then
+  55% (264,00 €), in 6 min."* A step means a cliff, and a cliff you can see coming is a deadline rather than a
+  trap. It also means the rule is finally something you can say out loud: "cancel before 14:30 and it's 60%".
+- **We proved, for the first time, that the database and the app agree about money.** The fee rules have always
+  been written twice — once in the app, once inside the database — and nobody had ever checked the two match.
+  They now do: 649 checks on the waiting rules without touching anything, then 170 checks driving real test trips
+  through the real cancel buttons and deleting them afterwards. No disagreements.
+- **That check immediately earned its keep — it caught a bug we'd just introduced.** Making the percentage a round
+  number made a rounding clash possible that hadn't been before: a 85,50 € trip at 95% comes to exactly 81,225 €,
+  and the app rounded it down while the database rounded it up. One fare in twenty was affected. Fixed within the
+  hour, and now checked across all 1.1 million possible combinations.
+- **An audit of the cancellation and waiting rules turned up 17 real problems** (and threw out 8 false alarms).
+  None are new, none break anything you can see today, and they're all written down. The two worth knowing about:
+  if a late Guest finally turns up and the trip goes ahead, **nobody is charged for the waiting** — so a Driver is
+  currently better off reporting a no-show than driving them. And the cancel box quotes the trip fare without the
+  waiting charge that's added on top. Both are on the list, neither is fixed yet.
+
 ## 8 August 2026 — the money now checks itself
 
 - **242 automatic checks on every number the app works out.** Until today, the only thing standing between a

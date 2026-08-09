@@ -5,6 +5,120 @@
 
 ---
 
+## 2026-08-09 — Session 56 — § H2's SQL SIDE, and the cancellation fee stops sliding
+
+Local session on the Mac. Started behind: `main` was at `1e78f84` while S55's three commits sat on `origin`
+(S55 ran online). Fast-forwarded, `npm install`, **247/247 green**. Both S55 loose ends closed: `e05d1a7`
+deployed to Production `success`, and `/dispatch/spend` → Today is grey and unscored as intended — though it
+reads *"Nothing spent in Saturday 8 August either"* rather than the "Day still running" line, because the seeded
+fleet stops on 7 August so yesterday was also zero. Branch order verified at `spend/page.tsx:308`; a finished day
+still scores (7 Aug shows `+435,45 € · +725,7 %`).
+
+### The read-only plan had no input data — so a better read-only route was found
+
+S55's level (a) was "recompute the fees the real RPCs stamped, excluding the seeded fleet". **There are none.**
+Excluding the 237 seeded missions: 34 real missions (23 expired · 6 confirmed · 3 completed · 2 on_board),
+**zero** cancelled, **zero** no-shows, and `mission_cancellation` + `mission_release` are **empty tables**. Every
+cancellation ever exercised (S39–S42, S51) was removed when the DB was restored to its 34-mission baseline. All
+55 fee-stamped missions are seeded, i.e. written by the JS mirror — testing them would test the mirror against
+itself, which S55 had already warned about.
+
+**What worked instead:** `mission_is_airport()` and `mission_waiting()` are declared `immutable`, so **PostgREST
+will execute them** with a JSON composite for the `mission` row — real SQL, zero writes. `.local/probe/diff-sql-vs-lib.ts`
+drives them against `lib/cancellation.ts`: **649 checks, 0 mismatches** — NFC/NFD accents, casing, English/Italian,
+`flight_number` `""` vs null, "Porto"/"Héliport" false-positive guards, four pickup dates including both Paris DST
+nights, city+airport, `guest_ready_at` set/null/earlier, 20 offsets straddling every boundary, plus all 34 real
+missions. Reusable; run it after any change to those two functions.
+
+### The write test (founder's go-ahead) — 170 checks, and one process failure worth recording
+
+`.local/probe/write-test.ts`: tagged throwaway missions on the demo Business, driven through the real
+Business-side RPCs with a real `signInWithPassword` session (so `current_business_id()` resolves), every stamped
+number compared against `lib/`, then deleted **by recorded id**. Manifest written before creation, `--undo` mode,
+baseline count asserted at the end.
+
+⚑ **The first run left 15 rows in the live database.** It crashed on a `@/lib` import *after* the RPCs had run and
+*before* cleanup. Two fixes, both kept: everything after creation is now inside `try/finally`, and plain Node is
+taught the `@/` alias via `module.registerHooks()` so the probe loads **exactly** the modules the app loads. Rows
+were removed by hand within the minute; baseline restored.
+
+⚑ **The probe also inlined its own copy of the euro rounding**, and went on reporting a failure after the app had
+already been fixed. It now imports `cancelFeeAmount`. A probe with its own arithmetic tests its own arithmetic.
+
+### D69 — the Business cancellation fee steps every 30 min (deployed `c41bc16`, Vercel `success`)
+
+**The measurement that started it.** The ramp was continuous (`pct = 50 + 10 × (5 − hours)`) and recomputed from
+`now()` inside the RPC, while the modal read the *client* clock and re-ticked only every 30 s. Measured live —
+quote the fee, wait 30 s like a real person reading a modal, then cancel:
+
+| fare | modal showed | DB charged | gap |
+| --- | --- | --- | --- |
+| 70 € | 49,00 € | 49,06 € | +0,06 € |
+| 480 € | 393,61 € | 394,02 € | +0,41 € |
+
+Always upward — the slope only climbs. **Rounding was investigated first and cleared:** 0 divergences in
+5 000 000 random (fare, pct) pairs, and a deliberately constructed exact tie agreed. The clock was the whole gap.
+
+**The founder's call, after arguing both sides.** Claude proposed ticking the modal every second (one line, no
+policy change, ~1 cent) and treating steps as a separate pricing question. The founder went the other way and was
+right: a slope cannot be explained, the modal's reference row had always *drawn* steps, and — their words —
+*"we have to make rules and they'll get around it"*. They picked **30 minutes** over the hourly option; Claude had
+argued 10 min on fairness and conceded 30 is better because it is **sayable** ("cancel before 14:30 and it's 60%")
+where 10-minute treads are not. Claude's honest position, recorded: steps are *slightly less fair* arithmetically
+(a slope charges exactly the proportional share of every second) but far more honest, and fairness nobody can
+perceive is not experienced as fairness. Cliff per boundary: 5 points = 24 € on a 480 € trip.
+
+**Shipped.** `treadTop()` rounds hours-to-pickup UP to its half-hour tread — **in the Business's favour**, so 50%
+holds to T−4h30 rather than expiring at T−4h59, and the boundary itself belongs to the dearer band. Every hour
+landmark is unchanged (5h→50 · 4h→60 … 0→100), so nothing that ever sat on an hour moved; only mid-tread values
+change, all downward. New `nextCancelRaise()` returns the next boundary and the pct beyond it; the modal ticks
+**every second** — but only the *countdown* moves, the price cannot — and renders
+`This price holds until 16:20 — then 55% (264,00 €), in 6 min`, plus a `Free until … then 50%` variant.
+Migration `2026-08-09_cancel_fee_30min_steps.sql` (founder applied it) replaces **only** the pct branch of
+`business_cancel_mission`; guards, waiting settlement, supersede rules and the audit insert are byte-identical.
+
+### ⚑ The bug the step CREATED, caught by the harness the same hour
+
+Making pct a multiple of 5 made **exact half-cent ties routine** where the slope had made them essentially
+impossible — which is why the 5-million-pair sweep had found nothing. **85,50 € × 95% = 81,225 €**: Postgres
+`round(numeric, 2)` goes away from zero to **81,23**; float64 stores it as 81.2249999999999943 and rounds to
+**81,22**. At 95% every fare whose cents are ≡ 10 (mod 20) ties — **one in twenty**. Caught by `write-test.ts`
+case A17 on the first post-migration run. Fixed with `cancelFeeAmount()` (integer cents), now the single
+definition the fee and the countdown both use; tests sweep **all 1.1 M** fare × pct pairs against exact decimal.
+*(First version of that sweep used 1.1 M `expect()` calls and timed out at 5 s — it now compares plainly and
+asserts once. The suite is a commit gate; a slow test is a skipped test.)*
+
+**Verified:** 261 tests (was 247) in 473 ms · `tsc` clean · **the step proved able to fail** — the slope was
+reinstated, produced 4 failures, reverted · **170 live checks post-migration, 0 disagreements**, at every tread
+and both sides of every boundary · the boundary watched crossing in the browser
+(`50% … in 5 sec` → `in 2 sec` → `55% · holds until 16:46`) · database restored to baseline every time
+(271 missions · 0 cancellation rows · 705 status events · 0 stragglers).
+
+### The drift audit — 17 confirmed, 8 refuted (all in BACKLOG § H2)
+
+30 agents, five finders by rule area then adversarial refutation of every claim. **None are regressions from the
+step; all pre-existing.** The two that matter most, both independently re-verified by hand rather than taken on
+the agents' word:
+
+1. **A trip that actually happens settles no waiting at all.** Both apps run a meter while a Guest is late; the
+   Guest turns up, the trip runs, and nothing is written — `advanceStatus` writes only `status`, and **no
+   TypeScript path writes `waiting_fee` anywhere**. So a Driver is better off declaring a no-show than driving a
+   late Guest. The biggest hole in the D48 model.
+2. **The cancel modal quotes `fare × %` and omits the accrued waiting the RPC also bills.** Confirmed by the
+   write test's own output: case C0 quoted 47,99 € and the DB charged 47,99 € + 17,00 € = **64,99 €**. This is
+   why the 0,41 € clock drift turned out to be the *small* problem in that modal.
+
+Also confirmed: `p_fare_snapshot` is not merely forgeable but **omittable** — omit the argument and `coalesce(…, 0)`
+stores a €0 fee (same shape on `driver_cancel_mission`, so a Driver can zero their own penalty); no re-pool path
+clears `checked_in_at`; `respond_to_amendment` locks in the inverted order; `accept_mission` enforces none of the
+Pool's matching rules. `database.types.ts` is stale in two places (`kind` is missing `'business_no_show'`, which
+the DB has accepted since 2026-07-22 and which this session wrote for real; `StatusEventStatus` declares 4 of 8).
+
+**Next on § H2: CI.** The suite exists, it is fast, and nothing runs it but memory — while Claude sessions push
+straight to `main`.
+
+---
+
 ## 2026-08-08 — Session 55 — AUTOMATED TESTS on the money (BACKLOG § H2, first pass)
 
 **Why this and not a feature.** S54's own close named it: an adversarial audit of code that had already been
