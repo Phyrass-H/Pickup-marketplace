@@ -116,9 +116,40 @@ Against the **live DB**, all read-only unless stated:
   proposed rows, no stragglers.
 
 **Not verified, said plainly:** the trigger condition on the supersede (`requested === 'completed'` inside
-`advanceStatus`) was not driven through the real UI — the dev-login Driver `demo.driver@pickup.local` has **no
-`driver` row**, so no completable trip could be reached as that Driver. The two statements it guards were run
-against the real tables; the guard itself is one line and compile-checked.
+`advanceStatus`) was not driven through the real UI. The two statements it guards were run against the real
+tables; the guard itself is one line and compile-checked.
+
+### Both migrations applied by the founder, then verified — 68/68
+
+⚑ **Correction to the line above as first written:** the dev-login Driver was reported as having no `driver`
+row. It does — `demo.driver@pickup.local` → Marc Dubois `c3758a83`. The lookup had selected a `name` column
+that does not exist (it is `first_name` / `last_name`), and `.single()` on the error returned null. That gave a
+real Driver session, which is what made the rest of this possible. *Match on `auth_user_id`, never on
+`driver.email` — the S50 trap still holds.*
+
+**Regression cover first**, because three RPCs were re-created: `diff-sql-vs-lib.ts` **649/0** and
+`write-test.ts` **170/0**, baseline restored.
+
+**Then the new behaviour**, via a new re-runnable probe `.local/probe/migrations-2026-08-10.ts` (manifest
+first, delete by recorded id, `try/finally`, `--undo`) — 10 tagged throwaway missions, real Business and Driver
+sessions:
+- **`checked_in_at` is cleared on all three re-pool paths** — driver cancel, T-60 reclaim, agreed release —
+  and on **both** sides of the 24h window, so all six UPDATE sites are covered. Alongside it: `status`,
+  `driver_id`, `accepted_at`, `confirmed_at`, `pooled_at`.
+- **The 24h SPEED-WIN window is intact**, which was the real risk in re-creating three whole functions: `<24h`
+  → `speed_win=true`, `pdp_start=140` (0.7 × 200), `pdp_interval=5`; `≥24h` → `false`, `100` (0.5 × 200), `10`;
+  `pdp_step=10` on both. A copy error here would have moved money silently rather than broken anything visible.
+- **`respond_to_amendment` under the inverted lock order:** accept applies the new terms and collapses the
+  curve (`ceiling=base_fare=pdp_start=175`, step 0, interval 0, no SPEED WIN); decline leaves the mission
+  untouched and keeps the reason; an `on_board` trip is refused; a second answer is refused; an unknown id is
+  refused. **The changed precedence is confirmed**: a Driver who doesn't hold the trip now reads *"Not your
+  mission"* where the old order said *"no longer pending"*.
+- Restored: **271 missions**, no tagged stragglers, and Marc's `reliability_marks` put back 3 → 0 (two driver
+  cancels bump it as a side effect — worth remembering when driving that RPC).
+
+**Still not proven, and it cannot be from outside:** the new `v_am.mission_id is distinct from v_mid` assert
+only fires in a genuine race between the unlocked read and the lock. What is proven is that it does not
+false-positive on any normal path.
 
 ---
 

@@ -283,7 +283,8 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
   a founder policy call (honour vs reject), not just code. Beta-mitigated: nothing is charged.
 - **SQL ↔ TypeScript drift audit (2026-08-09, S56) — 17 confirmed, 8 refuted. 9 now closed; 2 written and
   awaiting the founder; 6 left.** S57 took the six that needed no founder ruling — four shipped in TypeScript
-  (`06aae27`), two written as migrations. **Still open and needing a decision or a bigger job:** the pending
+  (`06aae27`), two as migrations the founder applied the same day; a new re-runnable probe
+  `.local/probe/migrations-2026-08-10.ts` proves both (68 checks). **Still open and needing a decision or a bigger job:** the pending
   amendment-vs-release supersede gap · `accept_mission` enforcing none of the Pool's matching rules (blocked on
   its own founder question — a TS-only check does not bind a direct RPC caller, and dev/prod share one Supabase
   project, so the honest options are a SQL backstop or an additive `driver.demo_bypass` column) · `p_fare_snapshot`
@@ -327,7 +328,7 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     TypeScript-only in `app/(app)/pool/page.tsx:99-125`. Reproducible today via the dev `?all=1` branch: a sedan
     Driver can accept a luggage-only Van run. The SQL only checks time, status and the slot conflict.
   **Behaviour:**
-  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-10_repool_clears_check_in.sql` (S57).** *Finding:*
+  - ✅ **FIXED 2026-08-09 (S57) — `docs/migrations/2026-08-10_repool_clears_check_in.sql`, applied by the founder and verified live (all three re-pool paths, both sides of the 24h window, plus the SPEED-WIN pricing itself).** *Finding:*
     no re-pool path clears `checked_in_at` (driver cancel · reclaim · agreed release), so Driver B inherits Driver
     A's check-in, the Business is shown "Checked in" for a trip nobody confirmed, **and the red "Not checked in"
     wash is suppressed** because that branch returns first. Driver B also never sees the button and never appears
@@ -335,7 +336,7 @@ accountant? ⚠️ Keep the **agent/intermediary** framing in the copy: Kavenue 
     RPCs + a scoped one-shot repair (0 rows to repair as of 2026-08-09). ⚑ The optional `hasCheckedIn()` TS guard
     from the fix plan was **dropped on the plan check's advice** — it would have left the Business's row
     permanently red with nothing able to clear it.
-  - ⏳ **WRITTEN, AWAITING THE FOUNDER — `docs/migrations/2026-08-10_amendment_lock_order.sql` (S57).** *Finding:*
+  - ✅ **FIXED 2026-08-09 (S57) — `docs/migrations/2026-08-10_amendment_lock_order.sql`, applied by the founder and verified live (accept · decline · wrong Driver · running trip · double answer · unknown id).** *Finding:*
     `respond_to_amendment` locks amendment→mission, inverting the order every other RPC uses
     (`2026-07-07_mission_amendment.sql:112`) — an AB-BA deadlock the Driver would read verbatim as "deadlock
     detected". ⚑ Carries a correction the plan lacked: the unlocked `mission_id` read is guarded by a **post-lock

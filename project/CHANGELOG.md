@@ -27,10 +27,12 @@ audit that had a clear right answer and needed no decision from you.
   pickup time is still fully editable, which is exactly when you need to fix a Guest's phone number.
 - **Three descriptions of the database were out of date** — harmless today, but the kind of thing that turns
   into a wrong number later. Corrected.
-- **Two fixes are written and waiting for you to run them** (see below): a re-pooled trip carrying the
-  *previous* Driver's check-in, so you'd be told a trip was confirmed when the new Driver had never been
-  asked; and two parts of the system reaching for the same trip in opposite orders, which can make a Driver's
-  screen show the words "deadlock detected".
+- **Two more went into the database itself, and are now live.** A trip that goes back to the Pool used to
+  carry the *previous* Driver's check-in with it — so you'd be told a trip was confirmed when the new Driver
+  had never even been asked, and the red "not checked in" warning stayed hidden. And two parts of the system
+  were reaching for the same trip in opposite orders, which could make a Driver's screen show the words
+  "deadlock detected". Both fixed and checked against the real database, including that the Pool pricing they
+  sit next to still moves exactly as before.
 
 ## 9 August 2026 — the cancellation fee stops sliding, and the database is finally checked against the app
 

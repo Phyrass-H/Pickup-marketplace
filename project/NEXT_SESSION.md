@@ -542,15 +542,13 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 **★ SESSION-57 — THE SIX DRIFT-AUDIT DEFECTS THAT NEEDED NO DECISION (2026-08-09, Mac). START HERE NEXT TIME.**
 Deployed `06aae27`, Vercel `success`. `npm test` = **273**. Detail: SESSION_LOG S57.
 
-**⚑ FIRST THING — TWO MIGRATIONS ARE WRITTEN AND NOT YET APPLIED.** Ask the founder to run them, in this order,
-in the Supabase SQL editor. Both are `create or replace` only — no DDL, idempotent, safe to re-run.
-1. `docs/migrations/2026-08-10_repool_clears_check_in.sql` — a re-pool leaves the previous Driver's
-   `checked_in_at` on the trip, so the Business is shown "Checked in" for a trip nobody confirmed (and the red
-   "Not checked in" wash is suppressed), while the new Driver is never asked. Built as a proven **6-of-210-line
-   diff** of the three re-pooling RPCs; carries a scoped one-shot repair that matches **0 rows today**.
-2. `docs/migrations/2026-08-10_amendment_lock_order.sql` — `respond_to_amendment` takes its locks in the
-   opposite order to every other RPC (AB-BA; the Driver would read "deadlock detected").
-**Until they run, those two defects are still live in production.** Nothing else waits on them.
+**✅ Both migrations were applied by the founder the same day and verified live — 68/68.**
+`docs/migrations/2026-08-10_repool_clears_check_in.sql` and `2026-08-10_amendment_lock_order.sql`.
+New re-runnable probe: **`.local/probe/migrations-2026-08-10.ts`** (manifest first, `--undo`, deletes by
+recorded id). Run it after any change to the three re-pooling RPCs or `respond_to_amendment` — it also asserts
+the **24h SPEED-WIN pricing** each branch writes (`<24h` → 0.7 × ceiling / 5 min; `≥24h` → 0.5 / 10 min), which
+is the thing a copy error in those functions would move silently. Regression cover ran first:
+`diff-sql-vs-lib` 649/0 and `write-test` 170/0.
 
 **What shipped in TypeScript** (all four verified live, DB restored to its 271-mission baseline): the completion
 path now supersedes pending amendment/release rows · the two pending cards stop promising an answer the RPC
@@ -593,6 +591,11 @@ founder: `2026-08-09_cancel_fee_30min_steps` and `2026-08-09_waiting_settles_on_
    they were paid.
 
 **⚑ THE PROBES ARE THE ASSET — `.local/probe/` (git-ignored, re-runnable). Use them, don't rebuild them.**
+- ⚠️ They are `.ts` with top-level await and no `"type": "module"` in package.json — run them with **`node`**,
+  not `npx tsx` (tsx compiles them as CJS and they fail to transform). New `.mts` scratch probes run either way.
+- `migrations-2026-08-10.ts` — 68 checks. Re-pool clearing `checked_in_at` on all three paths + both 24h
+  branches + the SPEED-WIN pricing, and `respond_to_amendment` end to end. Bumps `reliability_marks` as a side
+  effect of its two driver-cancels and puts it back.
 - `diff-sql-vs-lib.ts` — read-only, 649 checks. Run after ANY change to `mission_is_airport` / `mission_waiting`.
 - `write-test.ts` — 170 checks through the real Business-side RPCs, deletes by recorded id. Run after ANY change
   to the cancel/no-show RPCs or their `lib/` mirrors.
