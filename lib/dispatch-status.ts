@@ -68,6 +68,35 @@ export function isExpired(
 }
 
 /**
+ * § P — can the Business still edit the Driver-facing INFO on this trip?
+ *
+ * Pre-departure statuses only, and never on a dead one: a still-`pooled` row
+ * whose pickup has passed is expired whether or not the sweep has reached it.
+ * The schedule row and the edit page both call this. The server action keeps its
+ * own SQL half of the same rule (it has to — the guard must be part of the one
+ * atomic UPDATE), so this is two writings of it down from three, not one.
+ */
+export function canEditInfo(
+  m: Pick<MissionRow, "status" | "pickup_at">,
+  now: Date = new Date(),
+): boolean {
+  if (isExpired(m, now)) return false;
+  return m.status === "pooled" || m.status === "accepted" || m.status === "confirmed";
+}
+
+/**
+ * Can a pending amendment or agreed release still be ANSWERED on this trip?
+ *
+ * Mirrors the guard inside `respond_to_amendment` / `respond_to_release`
+ * (`status not in ('accepted','confirmed') → raise`). The Business's schedule
+ * used to promise "Waiting for <Driver> to accept" on trips where the RPC would
+ * refuse — a Driver already en route can't answer anything.
+ */
+export function negotiationAnswerable(status: MissionRow["status"]): boolean {
+  return status === "accepted" || status === "confirmed";
+}
+
+/**
  * § P — a trip nobody accepted before its pickup time. Shared by the `expired`
  * status and by a still-`pooled` row the sweep hasn't reached yet, so the two
  * can never drift apart on screen. Deliberately identical in the history archive:

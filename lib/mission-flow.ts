@@ -1,16 +1,16 @@
 // The execution phase of a mission: confirmed → en_route → arrived → on_board
 // → completed. Each tap of a status button is a status_event (Doc spine).
-import type { MissionStatus, StatusEventStatus } from "@/lib/database.types";
+import type { MissionStatus, MissionStep } from "@/lib/database.types";
 
 // The 4 execution steps, in order (each one is a status_event row).
-export const EXECUTION_STEPS: StatusEventStatus[] = [
+export const EXECUTION_STEPS: MissionStep[] = [
   "en_route",
   "arrived",
   "on_board",
   "completed",
 ];
 
-export const STEP_LABELS: Record<StatusEventStatus, string> = {
+export const STEP_LABELS: Record<MissionStep, string> = {
   en_route: "En route",
   arrived: "Arrived",
   on_board: "On board",
@@ -18,7 +18,7 @@ export const STEP_LABELS: Record<StatusEventStatus, string> = {
 };
 
 // Button text the Driver taps to ADVANCE to that step.
-export const STEP_ACTION_LABELS: Record<StatusEventStatus, string> = {
+export const STEP_ACTION_LABELS: Record<MissionStep, string> = {
   en_route: "Start — I’m en route",
   arrived: "I’ve arrived",
   on_board: "Guest on board",
@@ -35,10 +35,10 @@ const FLOW: MissionStatus[] = [
 ];
 
 /** The next step the Driver can tap, or null if none (not executable / done). */
-export function nextStep(status: MissionStatus): StatusEventStatus | null {
+export function nextStep(status: MissionStatus): MissionStep | null {
   const i = FLOW.indexOf(status);
   if (i < 0 || i >= FLOW.length - 1) return null;
-  return FLOW[i + 1] as StatusEventStatus;
+  return FLOW[i + 1] as MissionStep;
 }
 
 /** In an executable phase (confirmed..on_board) — the trip can be advanced. */
@@ -70,7 +70,7 @@ export function completedSteps(status: MissionStatus): number {
 // next thing the Driver taps is either a status advance OR "reached this stop".
 
 export type DriverAction =
-  | { kind: "status"; status: StatusEventStatus } // advance mission.status
+  | { kind: "status"; status: MissionStep } // advance mission.status
   | { kind: "stop"; stopIndex: number }; // mark waypoints[stopIndex] reached
 
 /** The one next action for the Driver, accounting for any remaining stops. */

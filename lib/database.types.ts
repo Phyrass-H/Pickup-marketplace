@@ -40,6 +40,16 @@ export type MissionStatus =
   | "cancelled"
   | "expired";
 export type CancellationParty = "driver" | "business" | "system";
+// mission_cancellation.kind is a text CHECK — docs/migrations/2026-07-22_waiting_fee.sql:78.
+// 'business_no_show' is what business_declare_no_show writes (the Business stops
+// the wait itself rather than the Driver reporting it).
+export type CancellationKind =
+  | "driver_cancel"
+  | "business_cancel"
+  | "no_show"
+  | "business_no_show"
+  | "t60_reclaim"
+  | "agreed_release";
 export type DocumentType =
   | "drivers_licence"
   | "vtc_card"
@@ -65,8 +75,28 @@ export type AmendmentStatus = "proposed" | "accepted" | "declined" | "superseded
 // proposed → accepted | declined, or superseded when replaced/pre-empted by a cancel.
 export type ReleaseStatus = "proposed" | "accepted" | "declined" | "superseded";
 
-// status_event.status is a text CHECK, not the mission_status enum.
-export type StatusEventStatus = "en_route" | "arrived" | "on_board" | "completed";
+// status_event.status is a text CHECK, not the mission_status enum. Full set per
+// docs/migrations/2026-07-31_expired_missions.sql:44 — the four steps a Driver
+// taps, plus four written only by SECURITY DEFINER RPCs and the § P sweep.
+export type StatusEventStatus =
+  | "en_route"
+  | "arrived"
+  | "on_board"
+  | "completed"
+  | "cancelled"
+  | "no_show"
+  | "repooled"
+  | "expired";
+
+/**
+ * The subset a DRIVER can advance to by tapping — the linear execution flow.
+ * Kept separate from StatusEventStatus so `advanceStatus` still refuses
+ * "cancelled" at compile time while the status_event Row can tell the truth.
+ */
+export type MissionStep = Extract<
+  StatusEventStatus,
+  "en_route" | "arrived" | "on_board" | "completed"
+>;
 export type PreferredGps = "waze" | "google" | "apple";
 
 // A single waypoint (mission.waypoints jsonb). Shape is app-defined.
@@ -419,12 +449,16 @@ export interface Database {
           business_id: string;
           party: CancellationParty;
           actor_driver_id: string | null;
-          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim" | "agreed_release";
+          kind: CancellationKind;
           reason: string | null;
           fee_pct: number | null;
           fee_amount: number | null;
           fare_snapshot: number | null;
           hours_before_pickup: number | null;
+          // D48 settlement, written by all three fee doors (2026-07-22_waiting_fee.sql:72).
+          waiting_minutes: number | null;
+          waiting_rate: number | null;
+          waiting_fee: number | null;
           resulted_in: "repooled" | "terminal";
           created_at: string;
         };
@@ -434,12 +468,15 @@ export interface Database {
           business_id: string;
           party: CancellationParty;
           actor_driver_id?: string | null;
-          kind: "driver_cancel" | "business_cancel" | "no_show" | "t60_reclaim" | "agreed_release";
+          kind: CancellationKind;
           reason?: string | null;
           fee_pct?: number | null;
           fee_amount?: number | null;
           fare_snapshot?: number | null;
           hours_before_pickup?: number | null;
+          waiting_minutes?: number | null;
+          waiting_rate?: number | null;
+          waiting_fee?: number | null;
           resulted_in: "repooled" | "terminal";
           created_at?: string;
         };

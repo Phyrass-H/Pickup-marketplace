@@ -15,7 +15,14 @@ import {
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
-import { isExpired, missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
+import {
+  canEditInfo,
+  isExpired,
+  missionTone,
+  negotiationAnswerable,
+  TONE_BG,
+  TONE_COLOR,
+} from "@/lib/dispatch-status";
 import { highlightSegments, type MatchField } from "@/lib/history-filter";
 import { isExecutable } from "@/lib/mission-flow";
 import { parseLanguages, dressCodeLabel, activeFlagLabels } from "@/lib/driver-service";
@@ -152,27 +159,21 @@ export function TripRow({
     mission.status === "completed" ||
     mission.status === "cancelled" ||
     expired;
-  // Info edits allowed only while the trip is pre-departure (matches the edit
-  // page + action guard). Hidden on history rows — and on a dead one (§ P): the
-  // status guard on the edit action still says `pooled`, so without this a
-  // past-due trip would keep offering "Edit details" for a trip nobody can run.
-  const editable =
-    !archived &&
-    !expired &&
-    (mission.status === "pooled" ||
-      mission.status === "accepted" ||
-      mission.status === "confirmed");
+  // Info edits allowed only while the trip is pre-departure and not dead (§ P).
+  // One shared predicate with the edit page — this rule was written out by hand
+  // in three places and had already drifted.
+  const editable = !archived && canEditInfo(mission);
+  // Can a proposal still be answered by the Driver? Both RPCs refuse outside
+  // accepted/confirmed, so this decides what the pending cards are allowed to
+  // promise as well as whether a new proposal can be made.
+  const answerable = negotiationAnswerable(mission.status);
   // A change can be PROPOSED (route/fare, needs Driver consent) only once a Driver
   // holds the trip but hasn't started it (D39 Phase 2).
-  const canAmend =
-    !archived && (mission.status === "accepted" || mission.status === "confirmed");
+  const canAmend = !archived && answerable;
   // An AGREED RELEASE (free, needs Driver consent) can be offered while a committed
   // Driver holds the trip pre-execution (O7, D45). Hidden while one is already pending
   // (the schedule shows that state instead).
-  const canRelease =
-    !archived &&
-    !!mission.driver_id &&
-    (mission.status === "accepted" || mission.status === "confirmed");
+  const canRelease = !archived && !!mission.driver_id && answerable;
   const releasePending = !!release && release.status === "proposed";
   // Business can cancel any live trip (O7). FREE while pooled; a fee applies once a
   // Driver holds it (the modal shows the live %). Not once on_board / completed.
@@ -529,7 +530,16 @@ export function TripRow({
           <div className="dx-amend dx-amend--pending">
             <div className="dx-amend__head">
               <span className="dx-amend__tag">Change pending</span>
-              <span className="muted small">Waiting for {driver ? driver.name : "the Driver"} to accept</span>
+              {/* Only promise an answer the RPC would actually accept: once the
+                  Driver is en route (or the trip is over) respond_to_amendment
+                  refuses, so "Waiting for X to accept" was a lie. The card still
+                  renders — clearing it is the only way to stop a stranded row
+                  masking the accepted amendment behind it on the schedule. */}
+              <span className="muted small">
+                {answerable
+                  ? `Waiting for ${driver ? driver.name : "the Driver"} to accept`
+                  : "The trip has moved on — this change can’t be accepted anymore"}
+              </span>
             </div>
             <div className="dx-amend__body">
               {amendment.summary}
@@ -540,7 +550,9 @@ export function TripRow({
               <form action={closeAmendment} className="dx-amend__actions">
                 <input type="hidden" name="amendment_id" value={amendment.id} />
                 <input type="hidden" name="mission_id" value={mission.id} />
-                <button type="submit" className="dx-amend__link">Withdraw request</button>
+                <button type="submit" className="dx-amend__link">
+                  {answerable ? "Withdraw request" : "Dismiss"}
+                </button>
               </form>
             )}
           </div>
@@ -603,20 +615,27 @@ export function TripRow({
         {/* Agreed-release state (O7, D45): a free release awaiting the Driver, a
             decline (the Driver kept the trip — their right, framed calmly), or a
             completed release (the trip is back in the Pool). */}
-        {release && release.status === "proposed" &&
-          (mission.status === "accepted" || mission.status === "confirmed") && (
+        {release && release.status === "proposed" && (
           <div className="dx-amend dx-amend--pending">
             <div className="dx-amend__head">
               <span className="dx-amend__tag">Release pending</span>
+              {/* Same rule as the amendment card above. This used to hide the
+                  whole block outside accepted/confirmed, which left a stranded
+                  'proposed' row with no way to clear it — and it masks the
+                  latest answered release on the schedule. */}
               <span className="muted small">
-                Waiting for {driver ? driver.name : "the Driver"} to accept · free
+                {answerable
+                  ? `Waiting for ${driver ? driver.name : "the Driver"} to accept · free`
+                  : "The trip has moved on — this release can’t be accepted anymore"}
               </span>
             </div>
             {!archived && (
               <form action={closeRelease} className="dx-amend__actions">
                 <input type="hidden" name="release_id" value={release.id} />
                 <input type="hidden" name="mission_id" value={mission.id} />
-                <button type="submit" className="dx-amend__link">Withdraw request</button>
+                <button type="submit" className="dx-amend__link">
+                  {answerable ? "Withdraw request" : "Dismiss"}
+                </button>
               </form>
             )}
           </div>

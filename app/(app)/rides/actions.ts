@@ -8,7 +8,7 @@ import { nextStep } from "@/lib/mission-flow";
 import { checkInOpen } from "@/lib/dispatch-status";
 import { parseWaypoints } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
-import type { StatusEventStatus } from "@/lib/database.types";
+import type { MissionStep } from "@/lib/database.types";
 
 // The PDP columns needed to compute the fare snapshot recorded on a cancel / no-show.
 const FARE_COLS =
@@ -58,7 +58,7 @@ export async function respondToAmendment(
 // Driver's and the requested step is the valid next one.
 export async function advanceStatus(
   missionId: string,
-  requested: StatusEventStatus,
+  requested: MissionStep,
 ): Promise<StatusResult> {
   const { driver } = await getDriverContext();
   if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
@@ -129,6 +129,27 @@ export async function advanceStatus(
     .eq("id", missionId)
     .eq("driver_id", driver.id);
   if (updateErr) return { ok: false, message: "Couldn’t update the mission." };
+
+  // Every SQL terminal path (business_cancel_mission, mark_no_show,
+  // business_declare_no_show) supersedes the pending negotiation rows on its way
+  // out; this is the one terminal path written in TypeScript, and it didn't — so
+  // a normally-completed trip could carry a permanently 'proposed' amendment or
+  // release. The Business's schedule then showed "Waiting for <Driver> to accept"
+  // on a finished trip, and because it keeps only the LATEST non-superseded row
+  // per mission, that stranded row also masked the accepted one behind it.
+  //
+  // Service role for the same reason the writes above use it: there is no client
+  // write policy on mission_release at all, and none for a Driver on
+  // mission_amendment. Non-transactional with the status write, so a crash
+  // between the two leaves the row 'proposed' — which is exactly today's state,
+  // so this can only improve it.
+  if (requested === "completed") {
+    const settled = { status: "superseded" as const, responded_at: new Date().toISOString() };
+    await Promise.all([
+      admin.from("mission_amendment").update(settled).eq("mission_id", missionId).eq("status", "proposed"),
+      admin.from("mission_release").update(settled).eq("mission_id", missionId).eq("status", "proposed"),
+    ]);
+  }
 
   revalidatePath("/rides");
   revalidatePath("/dispatch");

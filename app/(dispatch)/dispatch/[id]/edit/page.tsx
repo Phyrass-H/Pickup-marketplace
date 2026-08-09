@@ -13,18 +13,16 @@ import {
 import { parseLanguages, parseDriverFlags } from "@/lib/driver-service";
 import { parseWaypoints } from "@/lib/waypoints";
 import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
-import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
+import { canEditInfo, isExpired, missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
 import { addressLine, formatDateTime, formatMoney, serviceClassLabel } from "@/lib/format";
 import { EditMissionForm } from "./edit-form";
 
 export const dynamic = "force-dynamic";
 
-// Info edits allowed only pre-departure (mirrors the server action's guard).
-const EDITABLE = ["pooled", "accepted", "confirmed"];
-
 const ERROR_COPY: Record<string, string> = {
-  locked: "This trip can no longer be edited — a Driver may have started it, or it was cancelled.",
+  locked:
+    "This trip can no longer be edited — a Driver may have started it, its pickup time may have passed, or it was cancelled.",
   db: "Couldn’t save your changes. Please try again.",
   missing: "Something went wrong. Please try again.",
 };
@@ -61,7 +59,7 @@ export default async function EditMissionPage({
   const contacts = parseGuestContacts(gc?.contacts ?? []);
 
   const t = missionTone(mission);
-  const editable = EDITABLE.includes(mission.status);
+  const editable = canEditInfo(mission);
   const waypoints = parseWaypoints(mission.waypoints);
 
   // Seed passenger rows exactly as the new-mission form does on draft resume:
@@ -171,8 +169,17 @@ export default async function EditMissionPage({
         />
       ) : (
         <div className="notice info">
-          This trip can’t be edited anymore — it’s already {t.label.toLowerCase()}. Trip details are
-          frozen once a Driver starts the run or the trip is finished.
+          {isExpired(mission) ? (
+            <>
+              This trip can’t be edited anymore — its pickup time passed with no Driver, so it’s
+              unfilled. Post a new trip if the Guest still needs a car.
+            </>
+          ) : (
+            <>
+              This trip can’t be edited anymore — it’s already {t.label.toLowerCase()}. Trip details
+              are frozen once a Driver starts the run or the trip is finished.
+            </>
+          )}
         </div>
       )}
     </div>

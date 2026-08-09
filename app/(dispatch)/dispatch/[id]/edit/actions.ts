@@ -142,6 +142,12 @@ export async function updateMissionInfo(missionId: string, formData: FormData) {
     .eq("id", id)
     .eq("business_id", ctx.business.id)
     .in("status", EDITABLE_STATUSES)
+    // § P — the SQL half of canEditInfo(): NOT (pooled AND past due). A trip
+    // whose pickup passed with nobody on it is dead whether or not the sweep has
+    // reached it, and it must not stay editable through a deep link. A blanket
+    // pickup_at floor would be WRONG — a `confirmed` trip ten minutes past its
+    // pickup is exactly when a Dispatcher needs to fix a Guest's phone number.
+    .or(`status.neq.pooled,pickup_at.gt.${new Date().toISOString()}`)
     .select("id");
   if (error) redirect(backTo("db"));
   if (!updated || updated.length === 0) redirect(backTo("locked"));
