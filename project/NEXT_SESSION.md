@@ -5,9 +5,29 @@
 
 ---
 
-We're continuing Kavenue (B2B VTC booking marketplace). This is a LOCAL session on my Mac; we push to
-GitHub (`main`) and the app auto-deploys to Vercel. **Claude Code is allowed to push `main` to deploy**
-(an `autoMode.allow` rule is set in `.claude/settings.local.json`).
+We're continuing Kavenue (B2B VTC booking marketplace).
+
+**⚑ FIRST, BEFORE ANYTHING ELSE — WORK OUT WHERE YOU ARE RUNNING.** This file used to open by asserting "this is
+a local session on my Mac". That stopped being true (S55 ran online), and a session that assumes wrong will
+promise verification it cannot deliver. Check it, don't guess:
+
+| | **On the Mac** (local) | **Online** (Claude Code on the web / a cloud container) |
+| --- | --- | --- |
+| Working directory | `…/02_Cactus/Kavenue/Kavenue_project_dev` | `/home/user/Pickup-marketplace` |
+| `.env.local` | present | **absent** |
+| Platform | darwin | linux |
+| `node_modules` | there | usually absent — `npm install` first |
+
+- **On the Mac:** everything works. `npm run dev`, the browser preview, reads against the real Supabase DB, the
+  D25 preview loop. Push to `main` and Vercel auto-deploys — **Claude Code is allowed to push `main`**
+  (`autoMode.allow` in `.claude/settings.local.json`).
+- **Online:** there is **no `.env.local`, so no Supabase and no browser.** Anything needing the live DB, a real-data
+  check or a D25 browser preview is **off the table — say so in your opening message** rather than half-doing it
+  and discovering it later. `next build` needs the env vars to *exist*, so run it once with placeholder values to
+  prove the code compiles. You are on an **assigned branch, not `main`** — push there and let the founder merge
+  (they may then ask you to fast-forward `main` yourself; S55 did).
+  **What online sessions are good for:** pure logic, tests, refactors, docs — work whose proof is `npm test` +
+  `tsc` + `next build`, not a screenshot. Session 55 is the worked example.
 
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
@@ -519,7 +539,34 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-54 — DISPATCH SPEND SHIPPED (2026-08-07/08). START HERE NEXT TIME.**
+**★ SESSION-55 — MONEY TESTS SHIPPED + 2 fixes (2026-08-09, online session). START HERE NEXT TIME.**
+Merged to `main` (`d4d98e9`, fast-forward). `npm test` = **247 tests, ~1.5 s** over the money functions —
+`settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · the `currentSpan`/`comparisonSpan` pair — plus
+the cross-file invariants (Business charged == Driver paid; History == Spend == CSV; `settledFare` as the one
+basis). Vitest is a new dev dependency, so **`npm install` before `npm test`**. Every money bug that ever shipped
+is pinned as a test. Detail: **SESSION_LOG Session 55**.
+- **Two fixes shipped with it.** `HistoryResult.spend` (a fares-only total that forgot waiting, read by nobody)
+  is **deleted**; and `/dispatch/spend` no longer *scores* a day that isn't over — a new `isRunningDay()` makes
+  the "Today" chip neutral and reads `Day still running · <yesterday> came to <total>`. A running month/week/year
+  is already truncated to matching days, so its green and red are untouched.
+- **⚠️ NOT verified in a browser** (S55 was online, no DB). Worth one glance at `/dispatch/spend` → Today.
+- **⚠️ Vercel deploy of `d4d98e9` was never confirmed** — the online session had no way to check. Verify it landed.
+
+**★ NEXT ON § H2 — THE SQL SIDE. NEEDS THE MAC (founder's call).** The fee rules exist **twice**: in `lib/`
+(`cancellation.ts` · `pdp.ts`) and inside the RPCs. S55 tested the `lib/` half thoroughly; **nobody has ever
+proved the two agree.** They were written to match and were checked by hand in July — which is not the same thing.
+Two levels, cheapest first, and **stop for the founder's go-ahead before writing to the DB**:
+1. **Read-only.** Find missions the real RPCs already stamped with a `cancellation_fee`/`waiting_fee`, recompute
+   what `lib/` says they should have been, report every disagreement. ⚠️ **EXCLUDE the seeded fleet** — those 237
+   missions had their fees written by a **JS mirror** of the rules, so including them tests the mirror against
+   itself and proves nothing. Use the founder's own real missions.
+2. **Write.** One tagged throwaway mission driven through the real RPCs and compared, then undone — the only way
+   to prove `RPC writes fee → page reads it`.
+Then: **CI**, so `npm test` runs on push instead of when someone remembers (~30 min; the value is that Claude
+sessions push to this repo). **Not planned:** React/component tests — slow to write and they break on every
+redesign, and this app redesigns.
+
+**★ SESSION-54 — DISPATCH SPEND SHIPPED (2026-08-07/08).**
 `/dispatch/spend` is live: total + what makes it up + spend-over-time (paired bars vs the previous period) + a
 breakdown by Type · Class · Route · Driver · Desk + "What went wrong" + the trip list + CSV. Pass 1 of **BACKLOG § S**.
 Full brief, founder rulings, and what is deliberately deferred to passes 2–3: **`project/SPEND_BRIEF.md`**.
@@ -538,6 +585,9 @@ view that compared 8 days of one month against 31 of another and painted the gap
 harder": it is that **§ H2's automated tests are now the highest-value engineering item in the backlog**, ahead of any
 new feature. Money functions first — `settledFare` · `rowCost` · `spendTotals` · `businessCancelPct` · the
 currentSpan/comparisonSpan pair. Nothing is charged in beta, so the risk today is trust, not euros.
+> **✅ DONE in S55** — that exact list is now covered by 247 tests (`npm test`). What remains of § H2 is the **SQL
+> side** (the RPCs, which need the Mac) and **CI** — see the START HERE block above. The tests were also proved
+> able to fail: two real defects were reinstated in `lib/`, produced 28 and 4 failures, and were reverted.
 - **Not yet exercised end-to-end:** the seeded fees were written by a JS mirror of the app's rules, not by the real
   RPCs. Page arithmetic over those columns is tested; `RPC writes fee → page reads it` is not.
 
@@ -807,8 +857,11 @@ SPEED WIN — never "client"/"principal"); Kavenue is an AGENT, never principal;
 schema is ALREADY APPLIED — never re-run it (additive ALTERs only, founder-approved, in `docs/migrations/`);
 build only KEEP items (Doc 02).
 
-WORKFLOW: work on `main` (or a branch off it) for code; keep `tsc` + `next build` green; verify in the browser
-preview vs the real Supabase DB. **Don't run `next build` while the `next dev` preview is running** — it corrupts
+WORKFLOW: work on `main` (or a branch off it) for code — **online sessions work on their assigned branch, not
+`main`** (see the environment check at the top). Keep **`npm test`** + `tsc` + `next build` green; verify in the
+browser preview vs the real Supabase DB **when you're on the Mac** — an online session can't, and should say so
+rather than implying it did. ⚠️ The deployment check below (`gh api`) also needs the Mac; an online session has
+no `gh` and no API token, so it must ask the founder to confirm the Vercel deploy landed. **Don't run `next build` while the `next dev` preview is running** — it corrupts
 `.next` (ChunkLoadError); if it happens, `rm -rf .next` + restart the dev server. Push `main` to deploy (Claude
 Code may push). Append to `project/SESSION_LOG.md` when a chunk is done; keep `project/CHANGELOG.md` updated with
 a plain-language line per shipped item.
