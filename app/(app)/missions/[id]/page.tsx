@@ -60,7 +60,7 @@ export default async function MissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { driver } = await getDriverContext();
+  const { driver, vehicle: myVehicle } = await getDriverContext();
   const supabase = await createClient();
 
   const { data: mission } = await supabase
@@ -203,6 +203,17 @@ export default async function MissionDetailPage({
   // reason rather than the generic "someone else took it".
   const expired = isExpired(mission);
   const isPooled = mission.status === "pooled" && !expired;
+  // § B (2026-08-11) — accept_mission now enforces tier / required body / luggage
+  // consent in SQL, and RLS lets a Driver READ any pooled mission, so this page is
+  // reachable for a trip the Pool never listed. Same three tests as the Pool query;
+  // the radius and required_make are deliberately NOT repeated, because the DB
+  // doesn't enforce those either and repeating them here would hide a trip the
+  // Driver could legitimately take.
+  const eligible =
+    !!myVehicle &&
+    mission.category === myVehicle.category &&
+    (!mission.required_body_type || mission.required_body_type === myVehicle.body_type) &&
+    (!mission.luggage_only || !!driver?.accepts_luggage_runs);
   const isHourly = mission.mission_type === "hourly";
   const fare = currentFare(mission);
   const when = formatPoolWhen(mission.pickup_at);
@@ -366,8 +377,12 @@ export default async function MissionDetailPage({
         </p>
       )}
 
-      {isPooled ? (
+      {isPooled && eligible ? (
         <AcceptButton missionId={mission.id} />
+      ) : isPooled ? (
+        <div className="notice warn">
+          This trip doesn’t match your vehicle. If that’s wrong, update it in Settings.
+        </div>
       ) : expired ? (
         <div className="notice warn">
           Too late — this mission’s pickup time has passed and no Driver took it.

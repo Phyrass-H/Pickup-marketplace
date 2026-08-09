@@ -740,11 +740,11 @@ export interface Database {
       // O7 cancellation spine (D45). SECURITY DEFINER + atomic, resolving the caller
       // via current_driver_id()/current_business_id(); each returns the mission Row.
       driver_cancel_mission: {
-        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot?: number | null };
+        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot: number };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       business_cancel_mission: {
-        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot?: number | null };
+        Args: { p_mission_id: string; p_reason?: string | null; p_fare_snapshot: number };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       reclaim_mission: {
@@ -752,14 +752,14 @@ export interface Database {
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       mark_no_show: {
-        Args: { p_mission_id: string; p_fare_snapshot?: number | null };
+        Args: { p_mission_id: string; p_fare_snapshot: number };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       // D48: the Business's "stop waiting, the Guest isn't coming" — the same terminal
       // outcome as mark_no_show, declared from the other side. Gated to status='arrived'
       // and to the courtesy wait having elapsed, so it can't be a cheap early cancel.
       business_declare_no_show: {
-        Args: { p_mission_id: string; p_fare_snapshot?: number | null };
+        Args: { p_mission_id: string; p_fare_snapshot: number };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       // arrived → on_board, settling the waiting meter on the way (D48; founder

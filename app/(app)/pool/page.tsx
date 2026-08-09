@@ -45,6 +45,12 @@ export default async function PoolPage({
   // exercise the whole Pool (e.g. a Class-E sedan seeing luggage/van/luxury runs).
   // Gated by the same NODE_ENV/VERCEL idiom as dev-login + seed, so it can never
   // reach a real Driver in production.
+  //
+  // ⚑ (§ B, 2026-08-11) THE BYPASS IS NOW LISTING-ONLY. accept_mission enforces
+  // tier / required body / luggage consent in SQL, and SQL cannot read NODE_ENV
+  // (dev and prod share one Supabase project), so a trip shown here may still
+  // refuse the accept. To demo another tier, change the car in /settings/vehicle,
+  // or sign in as a seeded per-tier Driver via /api/dev-login?email=…
   const { all: allParam } = await searchParams;
   const hosted = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
   const seeAll = !hosted && allParam === "1";
@@ -84,8 +90,11 @@ export default async function PoolPage({
   // Pool = pooled missions matching the Driver's category. RLS lets a Driver
   // read any pooled mission; we then keep those whose pickup OR dropoff falls
   // within the Driver's service radius of their base — the single place this
-  // filter lives (IDEAS.md). (Beta scale: filter in app; add a bounding-box /
-  // PostGIS prefilter later if the Pool grows large.)
+  // filter lives for the RADIUS and the specific-car rule. Tier / body / luggage
+  // are now ALSO enforced in accept_mission (2026-08-11), deliberately as a strict
+  // superset of this filter, so drift can only ever hide a trip, never refuse one
+  // the Pool offered. (Beta scale: filter in app; add a bounding-box / PostGIS
+  // prefilter later if the Pool grows large.)
   //
   // The pickup_at floor applies even under `?all=1`: the see-all bypass drops the
   // MATCHING filters (tier / zone / body / luggage) so one demo Driver can view
@@ -130,7 +139,7 @@ export default async function PoolPage({
         live={!error && missions.length > 0}
         sub={
           seeAll ? (
-            <>Every pooled trip · filters bypassed</>
+            <>Every pooled trip · listing filters off</>
           ) : (
             <>
               {serviceClassLabel(vehicle.category, vehicle.body_type)} · within {radius} km of{" "}
@@ -145,7 +154,8 @@ export default async function PoolPage({
         <div className="notice info" style={{ margin: "0 0 14px" }}>
           {seeAll ? (
             <>
-              Dev: showing <strong>all</strong> pooled trips (tier / zone / body / luggage filters off).{" "}
+              Dev: <strong>listing</strong> every pooled trip. Accept still enforces your
+              vehicle’s tier, body and luggage opt-in.{" "}
               <Link href="/pool" style={{ textDecoration: "underline" }}>
                 Back to my matches
               </Link>
@@ -156,7 +166,8 @@ export default async function PoolPage({
               <Link href="/pool?all=1" style={{ textDecoration: "underline" }}>
                 show all pooled trips
               </Link>{" "}
-              (ignores your vehicle + zone, for testing).
+              (lists trips outside your vehicle + zone; accepting them still requires a
+              matching car).
             </>
           )}
         </div>

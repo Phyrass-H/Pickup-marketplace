@@ -29,6 +29,15 @@ export interface PdpInputs {
  * The climb is measured from `pooled_at` when set (a RE-POOLED mission, O7),
  * else from `created_at`. Clamped to the ceiling so it can never exceed the
  * Business's maximum.
+ *
+ * ⚑ TWO PROPERTIES OF THIS FUNCTION ARE NOW LOAD-BEARING IN SQL. The cancel RPCs
+ * cannot recompute a fare — this file is the only place the PDP exists — so they
+ * clamp the caller-supplied fee basis into
+ *   [ least(pdp_start ?? ceiling * 0.5, ceiling), ceiling ]
+ * (docs/migrations/2026-08-11_fee_basis_band.sql). That band is honest only
+ * because every branch below returns min(…, ceiling) and the step count can never
+ * go negative. Break either and the SQL silently starts REWRITING correct money
+ * instead of catching forged money. Pinned by tests/money-invariants.test.ts.
  */
 export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   const ceiling = Number(m.ceiling);

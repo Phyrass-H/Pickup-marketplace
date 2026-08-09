@@ -36,6 +36,11 @@ function friendlyAcceptError(raw: string): string {
     return "Sorry — this mission was just taken by another Driver.";
   if (m.includes("slot conflict"))
     return "This overlaps with another mission you’ve already accepted.";
+  // § B — the DB now enforces the Pool's tier / body / luggage rules, so an accept
+  // can fail for a reason this page's own gate didn't catch (a deep link, a stale
+  // tab, the dev ?all=1 view, or a hand-rolled call).
+  if (m.includes("not eligible"))
+    return "This mission doesn’t match your vehicle — check your vehicle and luggage settings.";
   if (m.includes("not a driver"))
     return "Your Driver profile isn’t set up yet.";
   return "Couldn’t accept this mission. Please try again.";

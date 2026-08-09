@@ -176,6 +176,10 @@ export function TripRow({
   // (the schedule shows that state instead).
   const canRelease = !archived && !!mission.driver_id && answerable;
   const releasePending = !!release && release.status === "proposed";
+  // One live ask per mission (2026-08-11_one_live_ask.sql): proposing either kind
+  // retires a pending other. Neither door is hidden — "forget the change, just give
+  // it back" is a legitimate one-step intent — so the copy states the cost instead.
+  const amendmentPending = !!amendment && amendment.status === "proposed";
   // Business can cancel any live trip (O7). FREE while pooled; a fee applies once a
   // Driver holds it (the modal shows the live %). Not once on_board / completed.
   const cancellable =
@@ -469,7 +473,10 @@ export function TripRow({
                 <span className="dx-act__t">
                   <GitPullRequestArrow size={14} aria-hidden /> Propose a change
                 </span>
-                <span className="dx-act__s">New route or fare · the Driver must agree</span>
+                <span className="dx-act__s">
+                  New route or fare · the Driver must agree
+                  {releasePending && " · replaces your pending release request"}
+                </span>
               </Link>
             )}
           </div>
@@ -492,7 +499,11 @@ export function TripRow({
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {canRelease && !releasePending && (
-                <AgreedRelease missionId={mission.id} driverName={driver?.name ?? ""} />
+                <AgreedRelease
+                  missionId={mission.id}
+                  driverName={driver?.name ?? ""}
+                  amendmentPending={amendmentPending}
+                />
               )}
               {cancellable && (
                 <BusinessCancel
@@ -518,6 +529,7 @@ export function TripRow({
               <p className="muted small" style={{ margin: "8px 0 0", lineHeight: 1.5 }}>
                 Agreed release is free but {driver ? driver.name : "the Driver"} must accept it · Cancel is
                 unilateral and may cost a fee this close to pickup.
+                {amendmentPending && " Asking for a release replaces your pending change request."}
               </p>
             )}
           </div>

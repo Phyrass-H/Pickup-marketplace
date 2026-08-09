@@ -13,9 +13,17 @@ import { proposeRelease } from "@/app/(dispatch)/dispatch/actions";
 export function AgreedRelease({
   missionId,
   driverName,
+  amendmentPending = false,
 }: {
   missionId: string;
   driverName: string;
+  /**
+   * One live ask per mission (2026-08-11_one_live_ask.sql): sending this release
+   * retires a pending change request, whatever the Driver then answers. It has to
+   * be said HERE — this modal is the last screen before the irreversible step, and
+   * it covers the warning that sits under the button.
+   */
+  amendmentPending?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -87,6 +95,8 @@ export function AgreedRelease({
             <div style={{ fontSize: 12.5, color: "var(--text-muted)", lineHeight: 1.55 }}>
               {who} must accept the release for it to take effect. If they don’t, the trip stays exactly as
               agreed — and cancelling it yourself may cost a fee this close to pickup.
+              {amendmentPending &&
+                " Sending this retires your pending change request either way — you’d have to propose it again."}
             </div>
 
             <input

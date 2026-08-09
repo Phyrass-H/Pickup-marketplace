@@ -12,6 +12,10 @@
 //     number — the 5 879,69 € that was checked by hand on all three.
 //  3. `settledFare` is the ONE basis. A fare, a cancellation fee, a no-show
 //     charge and an amendment all price off the same frozen number.
+//     (Exception, 2026-08-11: the two cancel RPCs also CLAMP the basis they are
+//     handed into [pdp_start, ceiling] — see the last describe block. On an
+//     honest call that is a no-op; on a forged or omitted one the recorded basis
+//     is the band floor, not settledFare.)
 import { describe, expect, it } from "vitest";
 import { cancelCompensation, cancelFeeAmount, waitingBetween } from "@/lib/cancellation";
 import { totalsFor } from "@/lib/earnings";
@@ -173,5 +177,64 @@ describe("settledFare is the one basis", () => {
     expect(first).toBe(60);
     expect(second).toBe(first);
     expect(first).toBeLessThan(Number(m.ceiling));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. THE FEE BASIS NEVER LEAVES THE BAND THE SQL CLAMP ASSERTS.
+//
+// The cancel RPCs cannot recompute a fare — lib/pdp.ts is the only place the PDP
+// exists — so docs/migrations/2026-08-11_fee_basis_band.sql asserts a BAND read
+// off the mission's own columns instead:
+//     floor = least(pdp_start ?? ceiling * 0.5, ceiling)
+//     basis = round(least(greatest(supplied ?? 0, floor), ceiling), 2)
+// That is only honest if settledFare() can never land outside it. If this ever
+// goes red, the SQL has stopped catching forged money and started rewriting
+// correct money — which is much worse than the hole it was built to close.
+// ---------------------------------------------------------------------------
+describe("the fee basis never leaves the band the SQL clamp asserts", () => {
+  const bandFloor = (m: MissionRow) =>
+    Math.min(m.pdp_start != null ? Number(m.pdp_start) : Number(m.ceiling) * 0.5, Number(m.ceiling));
+
+  /** The SQL clamp, transcribed. `supplied === null` models an OMITTED p_fare_snapshot. */
+  const sqlBasis = (m: MissionRow, supplied: number | null) =>
+    Math.round(Math.min(Math.max(supplied ?? 0, bandFloor(m)), Number(m.ceiling)) * 100) / 100;
+
+  const curves: Array<{ name: string; m: MissionRow }> = [
+    { name: "a standard curve", m: completed({ ceiling: 100, pdp_start: 50, pdp_step: 5, pdp_interval: 10 }) },
+    { name: "SPEED WIN", m: completed({ ceiling: 100, pdp_start: 70, pdp_step: 5, pdp_interval: 5, speed_win: true }) },
+    { name: "an amendment-collapsed curve", m: completed({ ceiling: 175, pdp_start: 175, pdp_step: 0, pdp_interval: 0 }) },
+    { name: "a null pdp_start", m: completed({ ceiling: 200, pdp_start: null }) },
+    { name: "a trip already at its Ceiling", m: completed({ ceiling: 80, pdp_start: 80, pdp_step: 5, pdp_interval: 10 }) },
+  ];
+
+  for (const { name, m } of curves) {
+    it(`${name}: settledFare sits inside [floor, ceiling]`, () => {
+      const fare = settledFare(m);
+      expect(fare).toBeGreaterThanOrEqual(bandFloor(m));
+      expect(fare).toBeLessThanOrEqual(Number(m.ceiling));
+    });
+
+    it(`${name}: the clamp is the identity on an honest call`, () => {
+      const fare = settledFare(m);
+      expect(sqlBasis(m, fare)).toBe(fare);
+    });
+
+    it(`${name}: an OMITTED basis records the floor, never 0`, () => {
+      expect(sqlBasis(m, null)).toBe(Math.round(bandFloor(m) * 100) / 100);
+      expect(sqlBasis(m, null)).toBeGreaterThan(0);
+    });
+
+    it(`${name}: an inflated basis is capped at the Ceiling`, () => {
+      expect(sqlBasis(m, 99_999)).toBe(Number(m.ceiling));
+    });
+  }
+
+  // The residual, written down so nobody reads the clamp as a fence. A forger can
+  // still understate all the way to the floor — 50% off on a standard curve.
+  it("is a floor, not a fence: understating to pdp_start still succeeds", () => {
+    const m = completed({ ceiling: 100, pdp_start: 50, pdp_step: 5, pdp_interval: 10 });
+    expect(sqlBasis(m, 50)).toBe(50);
+    expect(sqlBasis(m, 1)).toBe(50); // below the floor is lifted, not rejected
   });
 });

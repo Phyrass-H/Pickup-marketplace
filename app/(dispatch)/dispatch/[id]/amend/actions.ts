@@ -97,6 +97,14 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
 
   // Only one proposal can be live at a time: retire any still-pending one for this
   // mission (the Business is replacing it). RLS scopes the update to this Business.
+  //
+  // ONE LIVE ASK (2026-08-11_one_live_ask.sql): the INSERT below ALSO retires a
+  // pending mission_release — and, redundantly with this block, any prior pending
+  // amendment — via the trg_amendment_replaces_release BEFORE INSERT trigger. The
+  // rule lives in SQL and not here because mission_release has no client write
+  // policy at all, and because a trigger is transactional with the insert and binds
+  // a direct PostgREST insert that this block does not. This block is kept as the
+  // pre-migration safety net: redundant, not wrong.
   await supabase
     .from("mission_amendment")
     .update({ status: "superseded" })
