@@ -29,6 +29,11 @@ promise verification it cannot deliver. Check it, don't guess:
   **What online sessions are good for:** pure logic, tests, refactors, docs — work whose proof is `npm test` +
   `tsc` + `next build`, not a screenshot. Session 55 is the worked example.
 
+**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★ START HERE — THE NEXT JOB IS DECIDED" (2026-08-10).**
+Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
+"NEXT" headings are superseded and say so. The job is **CI, then § S Spend pass 2** — already chosen by the
+founder, so open by confirming it in one line, not by re-offering the menu.
+
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
@@ -472,7 +477,7 @@ wash that [[d55]] had made unreachable.
   `email` column says `s46.driver@pickup.local`. Match on `driver.auth_user_id`, never on `driver.email`.
 
 **REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, + the founder's own testing 2026-07-31).
-**★ START HERE — B is now the top item; A shipped in S51.**
+*(Historical, S51 — both A and B below shipped. **The live START HERE is the 2026-08-10 block further down**; this heading is kept only so the A/B references still resolve.)*
 
 **A. ✅ EXPIRED TRIPS — SHIPPED (S51, 2026-07-31, [[d62]]; migration `2026-07-31_expired_missions` applied; deployed
 `d7e06d4` → Vercel `success`).** A trip now expires **exactly at `pickup_at`** (founder: no grace), leaves the Pool, and
@@ -539,47 +544,90 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ SESSION-57 — ALL 17 DRIFT-AUDIT DEFECTS ARE NOW CLOSED OR WRITTEN (2026-08-09, Mac). START HERE NEXT TIME.**
-Deployed `06aae27` · `0bf3f3f` · `ed9d660`, all Vercel `success`. `npm test` = **294**. Detail: SESSION_LOG S57 and S57 part B.
+**★ START HERE — THE NEXT JOB IS DECIDED. CI, then Spend pass 2 (founder, 2026-08-10).**
+The founder took the recommendation: **CI first (~30 min, it protects everything after), then back to
+§ S Spend pass 2.** Don't re-open the menu; confirm and go (rule #4 still applies — one line, then start).
 
-**✅ All three migrations were applied by the founder the same day and verified live — 23/23.**
-`2026-08-11_fee_basis_band` · `2026-08-11_accept_mission_eligibility` · `2026-08-11_one_live_ask`.
-New re-runnable probe **`.local/probe/migrations-2026-08-11.ts`**; run it after any change to the cancel
-RPCs, `accept_mission`, `propose_release` or the `trg_amendment_replaces_release` trigger. Regression cover
-ran first and stayed green: `diff-sql-vs-lib` 649 · `write-test` 170 · `migrations-2026-08-10` 68.
-⚑ **One workflow change for the founder:** `?all=1` is now LISTING-only. To demo another tier, change the
-car in `/settings/vehicle`, or sign in as a seeded per-tier Driver (`/api/dev-login?email=…`).
+**JOB 1 — CI. Everything you need, so nothing has to be re-derived.**
+- **Why now, in the founder's terms:** the suite is 294 tests in ~0.5 s and nothing runs it but memory, while
+  Claude sessions push **straight to `main`** and `main` auto-deploys to production. One forgotten `npm test`
+  ships a broken commit.
+- **The shape:** one file, `.github/workflows/ci.yml` (GitHub Actions). On push + PR, on a fresh runner:
+  `npm ci` → `npx tsc --noEmit` → `npm test` → `npx next build`. There is **no CI of any kind today** — check
+  `ls .github/` first; as of 2026-08-10 that directory does not exist.
+- ⚠️ **`next build` needs the env vars to EXIST**, not to be valid — page-data collection reads them. Give the
+  build step placeholder values (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`) as step `env:`. **Never put a real key in the
+  workflow file.** S55 proved the placeholder trick works.
+- ⚠️ **Do NOT add any step that touches the live database.** The `.local/probe/*` scripts write to the real
+  Supabase project and are git-ignored; they are a human's tool, not a CI job.
+- **Node version:** pin it to what the Mac runs (`node -v` → v25 today) via `actions/setup-node`, or the
+  runner's default may differ from what the founder ships from.
+- **The half that turns it from information into a seatbelt:** **branch protection** on `main` — require the
+  check to pass before merge. That is a **GitHub web-UI setting the founder must click**, not something in the
+  file. Explain it in one line and let them decide; a green tick nobody enforces is decoration.
+- **Explain it to the founder in the plain-words-plus-terms register** (see the memory of that name) — they
+  asked what CI is and were given: *a robot that runs the checks on every push*, **runner**, **workflow file**,
+  **status check**, **branch protection**. Reuse that vocabulary; don't invent new words for it.
+
+**JOB 2 — § S Spend pass 2.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
+(`/dispatch/spend`) is live and untouched since S54. Owed: booking-notice (lead time × fare × fill rate) ·
+committed-spend tail · Route breakdown polish · then the service check (on-time from `status_event`) and the
+demand heatmap. "Arrived on time" stays blank until check-in data exists. **D25 preview loop applies** — this
+is a UI job, so show a mockup and get sign-off BEFORE building. Reuse `components/date-cal.tsx` and the § R
+filter vocabulary; do not build a third date control.
+- ⚑ **Context for why Spend was paused, which the founder asked about and should not have to ask twice:** it
+  wasn't a detour. S54's Spend page was the first screen to total money across everything, and auditing it
+  found 17 defects (3 wrong money). That is what produced S55 (tests) → S56 (SQL parity) → S57 (the other 17).
+  **Two different audits each found 17 things** — S54's were Spend-page defects, S56's were cancellation and
+  waiting drift. Unrelated lists, same number, and it confuses everyone who reads the logs.
+
+---
+
+**★ SESSION-57 — ALL 17 DRIFT-AUDIT DEFECTS CLOSED (2026-08-09/10, Mac).**
+Deployed `06aae27` · `0bf3f3f` · `ed9d660`, all Vercel `success`. `npm test` = **294**. Detail: SESSION_LOG
+S57 and S57 part B. **Five migrations were written and the founder applied all five the same day**, each
+verified live immediately after.
+
+**Two probes are the asset here — use them, don't rebuild them.** Both are git-ignored, re-runnable,
+manifest-first, `--undo`, delete by recorded id, and assert the **271-mission baseline** at the end:
+- `.local/probe/migrations-2026-08-10.ts` — **68 checks.** Re-pool clears `checked_in_at` on all three paths
+  and both sides of the 24h window, the SPEED-WIN pricing each branch writes (`<24h` → 0.7 × ceiling / 5 min;
+  `≥24h` → 0.5 / 10 min), and `respond_to_amendment` end to end.
+- `.local/probe/migrations-2026-08-11.ts` — **23 checks.** The fee-basis band, accept eligibility, and one
+  live ask incl. the money case. Run either after ANY change to the cancel RPCs, `accept_mission`,
+  `propose_release`, `respond_to_amendment` or the `trg_amendment_replaces_release` trigger.
+- Regression cover to run FIRST, always: `diff-sql-vs-lib` 649 · `write-test` 170.
+
+**⚑ WORKFLOW CHANGE THE FOUNDER MUST REMEMBER:** `/pool?all=1` is now **LISTING-only**. It still shows every
+pooled trip, but `accept_mission` enforces tier / body / luggage in SQL and cannot read `NODE_ENV`. To demo
+another tier: change the car in `/settings/vehicle`, or sign in as a seeded per-tier Driver
+(`/api/dev-login?email=seed.<first>@kavenue.test`).
+
+**⚑ THE THREE HONEST RESIDUALS** (all in BACKLOG § H2, none blocking beta, none a decision anyone is waiting
+on): the fee basis can still be **understated down to `pdp_start`** (~50% on a standard curve — closing it
+needs a SQL pricing engine, which would contradict `lib/pdp.ts` being the single fare authority); the **two
+no-show doors** keep the omittable-basis hole in SQL (their TypeScript signatures are tightened, which closes
+the app path only); and `accept_mission` checks the **declared** car, not a real one (`/settings/vehicle`
+re-declares it through the service role with no `verified` gate).
 
 **⚑ ONE OPTIONAL THING, deliberately NOT written as a migration** — revoking browser-role writes on
-`driver`/`vehicle`. It buys only the two states the app can't produce and costs a standing rule. Founder's call.
+`driver`/`vehicle`. It buys only the two states the app can't produce and costs a standing rule that any
+future client-side write 403s. Founder's call; nothing waits on it.
 
-**✅ Both migrations were applied by the founder the same day and verified live — 68/68.**
-`docs/migrations/2026-08-10_repool_clears_check_in.sql` and `2026-08-10_amendment_lock_order.sql`.
-New re-runnable probe: **`.local/probe/migrations-2026-08-10.ts`** (manifest first, `--undo`, deletes by
-recorded id). Run it after any change to the three re-pooling RPCs or `respond_to_amendment` — it also asserts
-the **24h SPEED-WIN pricing** each branch writes (`<24h` → 0.7 × ceiling / 5 min; `≥24h` → 0.5 / 10 min), which
-is the thing a copy error in those functions would move silently. Regression cover ran first:
-`diff-sql-vs-lib` 649/0 and `write-test` 170/0.
+**⚑ METHOD NOTE, now true three sessions running.** Fix plans were **adversarially refuted before being
+applied**, and the refutations changed the work every single time — hiding the pending card would have
+stranded it; a `hasCheckedIn` scaffold would have left the Business's row permanently red; an unlocked
+`mission_id` read needed a post-lock assert. The refuters also got things wrong (a bogus test count, a pair of
+line numbers both agreed on), so the settle pass has to overrule them, not just obey. **Keep doing this on
+anything money-adjacent.** S56's plan output: that session's `tasks/wrw5wnrkj.output`, `.result.checks`.
 
-**What shipped in TypeScript** (all four verified live, DB restored to its 271-mission baseline): the completion
-path now supersedes pending amendment/release rows · the two pending cards stop promising an answer the RPC
-would refuse (they say "The trip has moved on…" and offer **Dismiss** — deliberately NOT hidden, which would
-strand the row) · one `canEditInfo()` replaces the pre-departure edit rule that had drifted across three
-files, plus the missing expiry half on the server action's atomic UPDATE · `database.types.ts` was stale in
-**three** places, not two.
-
-**⚑ Method note worth keeping.** The S56 fix plans were used rather than re-derived, and **the plan-check
-corrections changed the work three times** — in each case the plan's obvious fix was wrong (hiding the card
-strands it; the `hasCheckedIn` scaffold would have left the row permanently red; the unlocked `mission_id` read
-needed a post-lock assert because `p_amendment_business_update` is USING-only). Read the corrections before
-applying any remaining plan. They are in the S56 session's `tasks/wrw5wnrkj.output`, under `.result.checks`.
-
-**★ WHAT'S LEFT OF THE 17: nothing outstanding as a decision.** All 17 are fixed, written as a migration, or
-recorded with an honest limit — see BACKLOG § H2, which now names what each fix does NOT close. The three
-biggest residuals, all logged there: fee-basis **understatement down to `pdp_start`** still succeeds (closing
-it means a SQL pricing engine, which contradicts `lib/pdp.ts` being the single fare authority); the two
-**no-show doors** keep the omittable-basis hole in SQL; and `accept_mission` checks the **declared** car, not
-a real one. **CI is now the top engineering item** (~30 min) — the founder deferred it once today.
+**⚑ PROBE LESSONS worth not re-learning.** (1) An insert whose `error` is never checked reports success and
+silently does nothing. (2) The tier is `luxury` in SQL and only *labelled* "First" — `'first'` is not a valid
+`vehicle_category`. (3) Run `.local/probe/*.ts` with **`node`**, not `npx tsx` (no `"type": "module"` in
+package.json, so tsx compiles them as CJS and top-level await fails). (4) A test can pass for the wrong
+reason: the first fee probe sat 6 h out where the cancel is free, so `0 × anything` was 0 and it proved
+nothing.
 
 ---
 
