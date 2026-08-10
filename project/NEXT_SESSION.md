@@ -39,14 +39,16 @@ START BY READING — **just these four**; they get you fully up to date without 
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
   `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
-- `project/SESSION_LOG.md` — skim the **newest entries (Sessions 44–46)** for recent technical detail. Older sessions
-  (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
+- `project/SESSION_LOG.md` — skim the **newest entries (Session 58 and its parts)** for recent technical detail.
+  Older sessions (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
 - `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
+- `project/SPEND_BRIEF.md` § 9 — **the next job.** · `project/NEEDS_CLOSING_BRIEF.md` — § Q, both slices, and
+  the two money traps that must not be re-introduced.
 - `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
-  **D39**) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+  **D39**; note the D-numbers referenced in recent logs run past it) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
 - `project/GUIDANCE_AUDIT.md` — the full in-app guidance inventory + gaps + roadmap (for any guidance/microcopy work).
 - `docs/` — `00`–`05` + `Kavenue_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/kavenue_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
@@ -58,7 +60,9 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-07-19_agreed_release`, `2026-07-19_repool_speedwin_window`, `2026-07-19_no_show_clock_origin`,
   `2026-07-19_no_show_airport_label`, `2026-07-19_guest_ready_at_guard`, `2026-07-22_waiting_fee`,
   `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`, `2026-07-25_accept_always_confirms`,
-  `2026-07-28_driver_account_and_documents`) —
+  `2026-07-28_driver_account_and_documents`, `2026-07-30_mission_check_in`, `2026-07-31_expired_missions`,
+  `2026-08-09_cancel_fee_30min_steps`, `2026-08-09_waiting_settles_on_board`, the three 08-10/08-11 drift
+  migrations, `2026-08-10_mission_close_answer`) —
   **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
@@ -544,8 +548,25 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ START HERE — THE NEXT JOB IS DECIDED. Spend pass 2 (founder, 2026-08-10). CI is DONE.**
-Don't re-open the menu; confirm and go (rule #4 still applies — one line, then start).
+**★ START HERE — THE NEXT JOB IS DECIDED: § S SPEND PASS 2 (founder, 2026-08-10).**
+Everything else in this block is S58's record — read the WORKFLOW warning immediately below, then skip to
+**JOB 2**. Confirm the job in one line and go (rule #4: don't re-offer the menu).
+
+**⚠️⚠️ READ THIS FIRST OR YOUR FIRST PUSH WILL BE REJECTED — `main` IS PROTECTED SINCE 2026-08-10.**
+The ruleset `main — CI must pass` (active, default branch, required check **`types · tests · build`**) refuses
+any commit that has not already passed CI somewhere. **The loop, every time, including docs-only commits:**
+```
+git checkout -b <branch> && git commit && git push -u origin <branch>
+gh run watch <id> --exit-status            # ~1 min
+git checkout main && git merge --ff-only <branch> && git push origin main
+git push origin --delete <branch> && git branch -D <branch>
+```
+The final push is accepted because that SHA already carries a green check. There is no exception and that is
+the point. S58 ran it six times.
+- ⚑ **Backticks in a `git commit -F -` heredoc get shell-expanded** — S58 lost a word to it. Quote the
+  heredoc marker (`<<'EOF'`) or use plain quotes in the message.
+- ⚑ If CI fails on something you can't reproduce locally: the runner has **no `.env.local`** and **no
+  `.local/`**. Anything quietly depending on either only breaks there.
 
 **JOB 1 — CI. ✅ SHIPPED (S58, 2026-08-10; commits `3032d8a` + `2a4e1de`, both runs green in ~1 min).**
 One file, `.github/workflows/ci.yml`: on every push (any branch) + PR, a fresh Ubuntu runner does `npm ci` →
@@ -554,18 +575,7 @@ at **v5** (v4 annotates every run about the Node 20 runtime), `concurrency: canc
 carries **placeholder** env vars — `next build` needs them to exist, not to be valid — and **no step touches the
 live DB**. Verified before pushing in a detached worktree with **`.env.local` absent**, which is the honest CI
 condition: `tsc` clean · 294/294 · build green.
-- **⚑ STILL OWED BY THE FOUNDER — the half that matters: branch protection.** Settings → Branches → ruleset on
-  `main` → *Require status checks to pass* → **`types · tests · build`**. Until that's clicked CI only *reports*;
-  a broken push still deploys and the red cross arrives afterwards. Ask once, then leave it — it's their click.
-- ⚑ If CI ever fails on something a session can't reproduce, remember the runner has **no `.env.local`** and
-  **no `.local/`** — anything that quietly depended on those will only break there.
-
-**⚑ THE WORKFLOW CHANGED, 2026-08-10 — `main` IS PROTECTED. You cannot push to it directly.**
-The ruleset `main — CI must pass` (active, default branch, required check `types · tests · build`) rejects any
-commit that has not already passed CI somewhere. The loop is now: **branch → push → wait for CI green →
-`git checkout main && git merge --ff-only <branch> && git push origin main`.** That last push is accepted
-because the SHA already carries a passing check. This applies to docs-only commits too — there is no
-exception, and that is the point. S58 ran it end to end.
+- **✅ Branch protection is ON** — the founder created the ruleset the same session. See the warning at the top.
 
 **★ SESSION-58 part B — ✅ § Q SLICE 1 SHIPPED (2026-08-10; deployed `53e433c` → Vercel `success`; NO
 migration; `npm test` 314).** A trip the Driver never closed is no longer invisible. Full brief, the founder's
@@ -588,8 +598,21 @@ parts still standing.
   `board_guest`, and `mission_waiting()` returns **the ceiling** when called days late — **660,00 €** invented
   across the 13 live `confirmed` rows — and a walk that dies partway parks the trip in `arrived`, the one
   status unlocking both no-show doors. The comment says so at the call site. Leave it alone.
-- ⚑ **The seeded data makes it look alarming:** Le Grand Hôtel's schedule opens on **23 amber rows**. That is
-  23 test trips nobody ran to the end, not a design problem — in real use it's one at a time.
+- ⚑ **The seeded data makes it look alarming:** Le Grand Hôtel's schedule opens on a wall of amber rows. Those
+  are test trips nobody ran to the end, not a design problem — in real use it's one at a time. **The founder
+  has decided the cleanup happens when the build is finished, not before** (their S56 ruling, re-confirmed
+  2026-08-10 when they offered to clean now and the answer was no: slice 2 needs unclosed trips to test
+  against, and § S needs the 237-mission seeded fleet for its charts). `.local/seed/seed-fleet.mjs --undo`
+  when the time comes.
+- ⚑ **§ U is new in BACKLOG** — location as evidence, gated on the native app: block an early *Arrived* tap on
+  a GPS mismatch, and lateness penalties. Read it before agreeing to either — the Arrived guard **must not be a
+  hard block** (`arrived` is the precondition for reporting a no-show, so a dead GPS fix would stop an honest
+  Driver claiming a fee), and lateness penalties inherit D61's rule that you may not punish someone for
+  ignoring a prompt they were never shown.
+- ⚑ **The founder tests within the hour and finds what the tests can't.** S58's automated suite was green when
+  a real defect shipped: `not_driven` writes no status, so an answered trip fell back into Upcoming. The bug
+  was in **the state after the action**, which a unit test over a pure predicate cannot see. **When a write
+  path ships, look at the screen the user lands on next — not only at the row in the database.**
 
 **JOB 2 — § S Spend pass 2 — ⇦ STILL THE JOB, now that § Q slice 1 is in.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
 (`/dispatch/spend`) is live and untouched since S54. Owed: booking-notice (lead time × fare × fill rate) ·

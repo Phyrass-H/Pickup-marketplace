@@ -5,6 +5,21 @@
 
 ---
 
+## 10 August 2026 — you tested it and found one
+
+- **A trip you'd been told never happened came back as upcoming work.** Because "it didn't happen" deliberately
+  doesn't decide who's at fault, the trip keeps its old status — and that let it slip back into the Driver's
+  Upcoming list, and into the count on the tab. It now stays where it was answered, showing a quiet
+  *"You said this trip didn't happen. The hotel has been told and will be in touch."* instead of a warning.
+  A trip closed as driven still moves to Past, which was right already.
+- **Worth noting:** across all seven trips you tested, every one closed as driven settled with **no waiting
+  charge** — the thing the whole design exists to protect.
+- **Nothing changed for a normal trip.** Checked on a real one: the Driver still gets *Start — I'm en route*
+  and *Cancel this trip*; you still get Cancel, Agreed release, Edit details and Propose a change. The new
+  behaviour only ever starts once a trip is past when it should have ended.
+- **Your two GPS ideas are written down** for when there's a native app — blocking an early "Arrived" tap, and
+  penalties for lateness — along with the traps in each.
+
 ## 10 August 2026 — and now the Driver can answer
 
 *(Needs one database change run first — see the note at the end of the session.)*

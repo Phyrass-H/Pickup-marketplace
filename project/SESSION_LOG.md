@@ -5,6 +5,45 @@
 
 ---
 
+## 2026-08-10 — Session 58 close — the founder's own test, and § U
+
+**Deployed `9f99dd8` + `d50014b`, Vercel `success`. `npm test` = 318.** Six commits this session, all through
+the new branch → CI → `main` loop.
+
+**⚑ The founder tested slice 2 within the hour and found the bug the tests didn't.** `not_driven` writes no
+status *on purpose* — nobody knows yet who is at fault — so the trip stays `confirmed`; and once
+`close_answer` was set, `needsClosing` went false and dropped it **straight back into Upcoming**, and into the
+tab count, as work they had just told us never happened. The partition now keys on the outcome being
+**unsettled** (the same gate Cancel/Release already used) rather than on the question being unanswered, and the
+card turns from an amber prompt into a quiet receipt — *"You said this trip didn't happen. The hotel has been
+told and will be in touch."* The section retitles to **Waiting on the hotel** once everything in it is
+answered. Pinned by a test.
+- **The lesson worth keeping:** every automated check passed, and the defect was in the *state after the
+  action* — the one place a unit test over a pure predicate can't look. Verifying a write path means looking
+  at the screen the user lands on afterwards, not only at the row in the database.
+- Across the founder's own seven test answers: **every `driven` closed with `waiting_fee` NULL.** The money
+  guarantee held on their data, not just the two trips I drove.
+
+**Also verified on their question — a NORMAL trip is untouched.** One real trip six hours out, both screens,
+then deleted (baseline back to 271): Driver keeps *Start — I'm en route* + *Cancel this trip* and gets no close
+card; Business keeps *Cancel trip*, *Agreed release*, *Edit details*, *Propose a change* and the Driver's phone,
+with no wash. The new behaviour begins only once a trip is past when it should have ended.
+
+**§ U added to BACKLOG — location as evidence, gated on the native app.** The founder's two asks (block
+*Arrived* when GPS doesn't match; penalise lateness using location) plus the two things that would otherwise be
+lost:
+- **The Arrived guard must not be a hard block.** `arrived` is the precondition for reporting a **no-show**, so
+  a dead GPS fix would stop an honest Driver claiming a fee they are owed. Suggest and record — stamp the tap
+  unverified and show the Business — don't refuse.
+- **A lateness penalty inherits D61's own reasoning:** you may not punish someone for ignoring a prompt they
+  were never shown. It needs the notifications phase as much as it needs GPS. Three things undecided first
+  (what "late" means · who is harmed — today lateness costs the Business nothing and the only money moving is
+  the waiting fee, which flows *to* the Driver · fee vs reliability mark, and Q4 is still parked).
+- **And the honest answer to "what proves the Driver did the trip?": nothing does.** Every signal is
+  self-reported by the person being paid, except the hotel's knowledge, which is not in the app. Slice 2 added
+  the one new piece of evidence there is — whether a trip was closed *at the time* or *by answering a prompt
+  weeks later*.
+
 ## 2026-08-10 — Session 58 part C — § Q slice 2: the Driver answers
 
 **⚠️ MIGRATION PENDING — `docs/migrations/2026-08-10_mission_close_answer.sql`, the founder runs it.** Until
