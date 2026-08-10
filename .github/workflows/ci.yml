@@ -25,11 +25,11 @@ jobs:
     name: types · tests · build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Pinned to the Node the founder builds with locally (v25), so the runner
       # can't pass on a version we never ship from.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "25"
           cache: npm
