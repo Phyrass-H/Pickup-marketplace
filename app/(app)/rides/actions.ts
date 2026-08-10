@@ -5,10 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { nextStep } from "@/lib/mission-flow";
-import { checkInOpen } from "@/lib/dispatch-status";
+import { checkInOpen, needsClosing } from "@/lib/dispatch-status";
 import { parseWaypoints } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
-import type { MissionStep } from "@/lib/database.types";
+import type { CloseAnswer, MissionStep } from "@/lib/database.types";
 
 // The PDP columns needed to compute the fare snapshot recorded on a cancel / no-show.
 const FARE_COLS =
@@ -152,6 +152,105 @@ export async function advanceStatus(
   }
 
   revalidatePath("/rides");
+  revalidatePath("/dispatch");
+  return { ok: true };
+}
+
+/**
+ * § Q slice 2 — the Driver answers "what happened to this trip?" on a trip past
+ * its expected end that is still open.
+ *
+ * ⚑ THE ONE THING THAT MUST NOT CHANGE HERE. `driven` closes the trip with a
+ * SINGLE `→ completed` write. It deliberately does NOT walk the flow through
+ * `advanceStatus`, and the reason is money: the `on_board` step of that walk runs
+ * `board_guest`, and `mission_waiting()` computes `w_to = least(now, guest_due +
+ * ceiling)` — so called days after the fact, `now` always loses and it settles
+ * the CEILING every time (40 € city / 60 € airport), for waiting nobody observed.
+ * Over the 13 unclosed `confirmed` trips live when this was written that was
+ * 660,00 € invented, billed to the Business and paid to the Driver.
+ *
+ * The same walk would also leave the trip in `arrived` if it died partway — the
+ * one status that unlocks BOTH no-show doors, on a weeks-old trip where every
+ * other guard passes trivially. `arrived` is never passed through.
+ *
+ * So: no waiting is settled by this path. A trip closed here is worth exactly the
+ * fare the Driver accepted (`settledFare` freezes at `accepted_at`), which is
+ * what the card says before they tap.
+ *
+ * `not_driven` settles NOTHING and charges nobody. It is not a cancellation:
+ * a cancellation names a party at fault and carries a fee, and nobody knows yet
+ * who is at fault — that is why we asked. It clears the Driver's flag and turns
+ * the Business's row into "the Driver says this didn't happen · call them".
+ */
+export async function answerClose(
+  missionId: string,
+  answer: CloseAnswer,
+): Promise<StatusResult> {
+  const { driver } = await getDriverContext();
+  if (!driver) return { ok: false, message: "You’re not signed in as a Driver." };
+
+  const supabase = await createClient();
+  const { data: mission } = await supabase
+    .from("mission")
+    .select(
+      "id, status, driver_id, pickup_at, duration_min, waiting_to, waypoints, stops_reached, mission_type, close_answer",
+    )
+    .eq("id", missionId)
+    .maybeSingle();
+
+  if (!mission || mission.driver_id !== driver.id) {
+    return { ok: false, message: "This isn’t one of your missions." };
+  }
+  if (mission.close_answer) return { ok: true }; // already answered — idempotent
+  // The button is the UI's business; the rule is the server's. Re-derived from the
+  // same predicate the card and the schedule use, so a stale page can't answer a
+  // question that isn't being asked.
+  if (!needsClosing(mission)) {
+    return { ok: false, message: "This trip isn’t waiting on an answer." };
+  }
+
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  if (answer === "driven") {
+    // Atomic: the status guard is part of the UPDATE, so two taps (or a tap racing
+    // a Business cancel) can only land once. Nothing touches waiting_*.
+    const { data: closed, error } = await admin
+      .from("mission")
+      .update({ status: "completed", close_answer: "driven", close_answered_at: now })
+      .eq("id", missionId)
+      .eq("driver_id", driver.id)
+      .in("status", ["confirmed", "en_route", "arrived", "on_board"])
+      .select("id");
+    if (error) return { ok: false, message: "Couldn’t close the trip — please try again." };
+    if (!closed || closed.length === 0) {
+      return { ok: false, message: "This trip has already moved on — refresh to see it." };
+    }
+    // ONE event, stamped now. Not four backdated ones: the record should read
+    // "closed on 10 Aug for a 21 Jul pickup", which is the truth, rather than
+    // manufacturing a departure and a boarding that nobody observed.
+    await admin.from("status_event").insert({ mission_id: missionId, status: "completed" });
+    // Same tidy-up the normal completion does: a finished trip must not carry a
+    // permanently 'proposed' change or release.
+    const settled = { status: "superseded" as const, responded_at: now };
+    await Promise.all([
+      admin.from("mission_amendment").update(settled).eq("mission_id", missionId).eq("status", "proposed"),
+      admin.from("mission_release").update(settled).eq("mission_id", missionId).eq("status", "proposed"),
+    ]);
+  } else {
+    // No status change at all. The trip stays where it is; what changes is that
+    // somebody has finally said something about it.
+    const { error } = await admin
+      .from("mission")
+      .update({ close_answer: "not_driven", close_answered_at: now })
+      .eq("id", missionId)
+      .eq("driver_id", driver.id)
+      .is("close_answer", null);
+    if (error) return { ok: false, message: "Couldn’t record your answer — please try again." };
+  }
+
+  revalidatePath("/rides");
+  revalidatePath("/missions", "layout");
   revalidatePath("/dispatch");
   return { ok: true };
 }

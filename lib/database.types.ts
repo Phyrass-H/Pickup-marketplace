@@ -98,6 +98,13 @@ export type MissionStep = Extract<
   "en_route" | "arrived" | "on_board" | "completed"
 >;
 export type PreferredGps = "waze" | "google" | "apple";
+/**
+ * § Q — the Driver's answer to "what happened to this trip?", asked once it is
+ * past its expected end and still open. `driven` also moves the trip to
+ * `completed`; `not_driven` settles nothing and hands the question to the
+ * Business. Mirrors the CHECK in 2026-08-10_mission_close_answer.sql.
+ */
+export type CloseAnswer = "driven" | "not_driven";
 
 // A single waypoint (mission.waypoints jsonb). Shape is app-defined.
 export interface Waypoint {
@@ -357,6 +364,8 @@ export interface Database {
           accepted_at: string | null;
           confirmed_at: string | null;
           checked_in_at: string | null; // D61: Driver confirmed they'll be there (opens T-180). 2026-07-30 migration
+          close_answer: CloseAnswer | null; // § Q: the Driver's answer to "what happened?". 2026-08-10 migration
+          close_answered_at: string | null; // § Q: when they answered — also what clears the flag
           info_edited_at: string | null; // set by updateMissionInfo on an info-only edit (2026-07-05 migration)
           cancellation_fee: number | null; // O7 (D45): euro basis at cancel — MANUAL settle
           cancellation_reason: string | null; // O7
@@ -426,6 +435,8 @@ export interface Database {
           accepted_at?: string | null;
           confirmed_at?: string | null;
           checked_in_at?: string | null;
+          close_answer?: CloseAnswer | null;
+          close_answered_at?: string | null;
           info_edited_at?: string | null;
           cancellation_fee?: number | null;
           cancellation_reason?: string | null;

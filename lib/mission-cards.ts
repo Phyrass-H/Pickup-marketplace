@@ -5,7 +5,8 @@
 import { settledFare } from "@/lib/pdp";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
-import { formatDateTime, shortPlaceLabel } from "@/lib/format";
+import { formatAgo, formatDateTime, shortPlaceLabel } from "@/lib/format";
+import { expectedArrival } from "@/lib/dispatch-status";
 import type { AmendmentLeg } from "@/components/amendment-card";
 import type {
   MissionRow,
@@ -16,6 +17,27 @@ import type {
 // Minutes of gap below which the trip's new end crowds the Driver's next pickup —
 // surfaces the amber "it's tighter" heads-up on the change card.
 export const SLOT_TIGHT_MIN = 30;
+
+/**
+ * § Q — what the Driver reads on a trip nobody closed. Two wordings, because we
+ * know two different things: a boarded trip ran and just needs closing; a trip
+ * that never started is a question. One copy of it, shared by the My Rides card
+ * and the trip page, so the list and the page can never say different things
+ * about the same trip.
+ *
+ * Relative time in the largest unit that still reads naturally — normally
+ * minutes or hours (founder, 2026-08-10), escalating to days for the rare one
+ * that lingers.
+ */
+export function closingLine(m: MissionRow, now: Date = new Date()): string {
+  const started =
+    m.status === "en_route" || m.status === "arrived" || m.status === "on_board";
+  if (started) {
+    return `Should have finished ${formatAgo(now.getTime() - expectedArrival(m))} ago.`;
+  }
+  const ago = formatAgo(now.getTime() - new Date(m.pickup_at).getTime());
+  return `Pickup was ${ago} ago and this trip never started.`;
+}
 
 export type AmendmentCardData = ReturnType<typeof buildAmendmentData>;
 export type ReleaseCardData = ReturnType<typeof buildReleaseData>;

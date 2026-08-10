@@ -14,19 +14,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { settledFare } from "@/lib/pdp";
 import {
-  formatAgo,
   formatDayGroup,
   formatMoney,
   formatPoolWhen,
   missionStatusLabel,
   addressLine,
 } from "@/lib/format";
-import {
-  checkInOpen,
-  expectedArrival,
-  needsClosing,
-  parisDayKey,
-} from "@/lib/dispatch-status";
+import { checkInOpen, needsClosing, parisDayKey } from "@/lib/dispatch-status";
+import { closingLine } from "@/lib/mission-cards";
 import type { MissionRow, MissionStatus } from "@/lib/database.types";
 import { parseWaypoints } from "@/lib/waypoints";
 import { progressDone, progressSegments } from "@/lib/mission-flow";
@@ -46,21 +41,13 @@ const ACTIVE_STATUSES: MissionStatus[] = [
 ];
 const PAST_STATUSES: MissionStatus[] = ["completed", "cancelled"];
 
-/**
- * § Q — what the Driver reads on a trip nobody closed. Two wordings, because we
- * know two different things: a boarded trip ran and just needs closing; a trip
- * that never started is a question. Relative time, in the largest unit that
- * still reads naturally — normally minutes or hours (founder, 2026-08-10).
- */
-function closingLine(m: MissionRow, now: Date): string {
+/** § Q — the card's line = the shared sentence plus what to do about it here. */
+function cardClosingLine(m: MissionRow, now: Date): string {
   const started =
     m.status === "en_route" || m.status === "arrived" || m.status === "on_board";
-  if (started) {
-    const ago = formatAgo(now.getTime() - expectedArrival(m));
-    return `Should have finished ${ago} ago. Close it when you’ve dropped the Guest.`;
-  }
-  const ago = formatAgo(now.getTime() - new Date(m.pickup_at).getTime());
-  return `Pickup was ${ago} ago and this trip never started. Tell us what happened.`;
+  return `${closingLine(m, now)} ${
+    started ? "Close it when you’ve dropped the Guest." : "Tell us what happened."
+  }`;
 }
 
 function RideCard({
@@ -281,7 +268,7 @@ export default async function RidesPage() {
               m={m}
               bizName={bizNames.get(m.business_id) ?? "—"}
               flag={pending.get(m.id)}
-              closing={closingLine(m, now)}
+              closing={cardClosingLine(m, now)}
             />
           ))}
         </section>

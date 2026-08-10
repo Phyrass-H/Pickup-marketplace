@@ -5,6 +5,46 @@
 
 ---
 
+## 2026-08-10 — Session 58 part C — § Q slice 2: the Driver answers
+
+**⚠️ MIGRATION PENDING — `docs/migrations/2026-08-10_mission_close_answer.sql`, the founder runs it.** Until
+then the cards render and every read is safe (`close_answer` comes back undefined, so `needsClosing` is
+unaffected); only the two answer writes fail. `npm test` = **317**. Brief: `project/NEEDS_CLOSING_BRIEF.md`.
+
+**Two columns, not an evidence table** — `close_answer` (`'driven' | 'not_driven'`) + `close_answered_at`. The
+append-only tables (`mission_cancellation`, `mission_release`) exist because their rows are dispute proof over
+money that moved; nothing moves here — it is one statement, from one party, that a human resolves off-platform.
+The condition is written into the migration itself: **the day the Business can contest it in-app, this wants to
+become `mission_close_answer` in the `mission_release` idiom.**
+
+**`driven` does NOT go through `advanceStatus`, and that is the entire point of the slice.** One guarded
+`→ completed` UPDATE with the status test inside the statement (a double tap, or a race with a Business cancel,
+can only land once), **one** `status_event` stamped *now* rather than four backdated ones, and the same
+amendment/release supersede the normal completion does. Nothing touches `waiting_*`. The reason is in the
+S58-part-B log: the `on_board` step of that walk runs `board_guest`, and `mission_waiting()` returns the
+ceiling when called days late — **660,00 €** invented across the 13 live `confirmed` rows. The comment on
+`answerClose` says so at the call site, because the next person to "simplify" this will reach for
+`advanceStatus`.
+
+**`not_driven` writes no status at all.** Deliberately not a cancellation: that names a party at fault and
+carries a fee (100% Driver / a ramped % Business), and nobody knows who is at fault — which is why we asked.
+It clears the Driver's flag and gives the Business a red **"Driver says it didn't happen · nothing has been
+charged — call them"**. Two taps on the Driver's side; it can't be undone from the app.
+
+**`needsClosing` returns false once `close_answer` is set** — answered is answered, whichever way; a prompt
+that survives its own answer is how people learn to ignore prompts. The Business's row deliberately does not go
+quiet. **And while the close card shows, `StatusControl` stands down** — two competing sets of buttons on one
+screen is how a Driver taps the wrong one.
+
+**Copy shipped:** *"Should have finished 54 days ago."* + *"Closing it settles 120,00 € — the fare you
+accepted. Waiting isn't included: it's only counted from an Arrived tap."* The waiting sentence is not
+boilerplate — it is the difference between a Driver understanding the number and discovering a missing 40 €
+later. `closingLine` moved into `lib/mission-cards.ts` so the list and the trip page cannot drift.
+
+**Verified:** both cards rendered against the real DB (boarded → one filled button; never-started → two
+answers, the destructive one behind a second tap). `tsc` clean, 317 tests. **The write paths are unverified
+until the migration lands** — that is the first job next session.
+
 ## 2026-08-10 — Session 58 part B — § Q slice 1: "a trip the Driver never closed"
 
 Branch `s58-needs-closing`. **No migration.** `npm test` = **314** (+20). Full brief, founder rulings and the

@@ -179,7 +179,38 @@ only mint a dead pooled row for the sweep to expire). The explainer copy naming 
 test trips were never run to the end. In real use this is one trip at a time — which is the founder's own
 premise for putting the warning on the row instead of behind a summary.
 
-## Slice 2 — the answers (money-laden, its own pass)
+## ✅ Slice 2 BUILT (S58, 2026-08-10) — ⚠️ NEEDS THE MIGRATION RUN
+
+**`docs/migrations/2026-08-10_mission_close_answer.sql` — the founder runs it in the Supabase SQL editor.**
+Until then the cards render and the reads are safe (`close_answer` simply comes back undefined), but the two
+answer buttons will fail on the write. `npm test` **317**.
+
+**Two columns, not a table** — `close_answer` (`'driven' | 'not_driven'`) + `close_answered_at`. The
+append-only tables exist because their rows are dispute proof over money that moved; nothing moves here. The
+condition is written into the migration: **if the Business is ever given a way to contest this in-app, it
+wants to become `mission_close_answer` in the `mission_release` idiom.**
+
+**`driven` — one write, never `advanceStatus`.** A single guarded `→ completed` UPDATE (the status guard is
+part of the statement, so a double tap or a race with a Business cancel can only land once), one `status_event`
+stamped *now* rather than four backdated ones, and the same amendment/release supersede the normal completion
+does. **Nothing touches `waiting_*`.** The card states the fare before the tap and says plainly that waiting
+isn't included, because it can only ever be counted from an Arrived tap.
+
+**`not_driven` — no status change at all.** It is deliberately **not** a cancellation: a cancellation names a
+party at fault and carries a fee, and nobody knows who is at fault yet — that is why we asked. It clears the
+Driver's flag and turns the Business's row into a red **"Driver says it didn't happen · nothing has been
+charged — call them"**. Two taps on the Driver's side, because it can't be undone from the app.
+
+**`needsClosing` returns false once `close_answer` is set** — answered is answered, whichever way. The
+Business's row does *not* go quiet: for them "waiting on the Driver" has become "they've told us".
+
+**While the close card is showing, the normal step buttons stand down.** Two competing sets of controls on one
+screen is how a Driver taps the wrong one.
+
+**Still not built, and still for the same reason:** the late no-show route (§ Q — `mark_no_show` assumes a
+courtesy clock running at the pickup), email/SMS, and any GPS scaffolding.
+
+## Slice 2 — the design, as specified before building
 
 - **`on_board` group needs no new action** — "Complete ride" already exists and is already right. It gets
   framing only: *"Still on board since 14:20. Close it when you've dropped the Guest."*

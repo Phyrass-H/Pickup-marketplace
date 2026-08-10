@@ -175,6 +175,43 @@ describe("missionTone — what the Business sees", () => {
   });
 });
 
+// Slice 2 — the Driver has answered. Whichever way they answered, the question
+// stops being asked: a prompt that survives its own answer is how people learn to
+// ignore prompts.
+describe("once the Driver has answered", () => {
+  const stale = { status: "on_board" as const, duration_min: 40 };
+
+  it("stops asking, both ways", () => {
+    const open = mission(stale);
+    expect(needsClosing(open, at(6 * HOUR))).toBe(true);
+    for (const close_answer of ["driven", "not_driven"] as const) {
+      expect(needsClosing(mission({ ...stale, close_answer }), at(6 * HOUR))).toBe(false);
+    }
+  });
+
+  // The Business's row does NOT go quiet: for them "we're waiting on the Driver"
+  // has become "they've told us, and it needs sorting out".
+  it("turns the Business's row into the Driver's statement", () => {
+    const t = missionTone(mission({ ...stale, close_answer: "not_driven" }), at(6 * HOUR));
+    expect(t.label).toBe("Driver says it didn’t happen");
+    expect(t.tone).toBe("danger");
+    expect(t.needsAttention).toBe(true);
+    // Nothing has moved. The copy must not imply otherwise.
+    expect(t.hint).toContain("Nothing has been charged");
+  });
+
+  // 'driven' also moves the trip to `completed`, so the tone comes from the
+  // status like any other finished trip — no lingering § Q state.
+  it("reads as a normal completed trip once it was driven", () => {
+    const t = missionTone(
+      mission({ status: "completed", close_answer: "driven", duration_min: 40 }),
+      at(6 * HOUR),
+    );
+    expect(t.label).toBe("Completed");
+    expect(t.needsAttention).toBe(false);
+  });
+});
+
 // The founder's call: an unclosed trip is normally minutes or hours old, so a
 // date would be the wrong register — but the rare one that sits for a week has
 // to read correctly too.

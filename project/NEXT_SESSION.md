@@ -579,13 +579,17 @@ parts still standing.
   floored so neither fires inside the check-in hour. Don't collapse them back into one number: live
   `duration_min` has a **median of 27 min**, so a flat arrival+30 fires at pickup+57 on **67%** of trips and
   would replace the red *"Not checked in — call them"* with an amber clerical note.
-- ⚑ **SLICE 2 IS THE NEXT PIECE OF THIS, AND IT MOVES MONEY.** The close buttons are NOT built. Two things an
-  adversarial pass caught, both of which must survive into whatever gets built: closing a never-started trip
-  through `advanceStatus` runs `board_guest`, and `mission_waiting()` returns **the ceiling** when called days
-  late — **660,00 €** invented across the 13 live `confirmed` rows; and the same walk parks trips in
-  `arrived`, the one status unlocking both no-show doors. Slice 2 also **requires** a second answer
-  ("it didn't happen"), or "Yes, I drove it" is the only control that clears the flag, with no time guard and
-  a frozen fare.
+- **⚠️ SLICE 2 IS BUILT AND WAITING ON ONE MIGRATION — THIS IS THE FIRST JOB NEXT SESSION.**
+  **`docs/migrations/2026-08-10_mission_close_answer.sql`** (two additive nullable columns). Until the founder
+  runs it in the Supabase SQL editor, the cards render and every READ is safe — `close_answer` comes back
+  undefined, so `needsClosing` is unaffected — but **the two answer buttons fail on the write, and no write
+  path has been verified.** After it lands: drive one trip through each answer against the real DB and confirm
+  `waiting_fee` stays NULL on the `driven` path.
+- ⚑ **The thing that must not be "simplified" later:** `answerClose`'s `driven` branch is ONE guarded
+  `→ completed` UPDATE and deliberately does **not** call `advanceStatus`. That walk's `on_board` step runs
+  `board_guest`, and `mission_waiting()` returns **the ceiling** when called days late — **660,00 €** invented
+  across the 13 live `confirmed` rows — and a walk that dies partway parks the trip in `arrived`, the one
+  status unlocking both no-show doors. The comment says so at the call site. Leave it alone.
 - ⚑ **The seeded data makes it look alarming:** Le Grand Hôtel's schedule opens on **23 amber rows**. That is
   23 test trips nobody ran to the end, not a design problem — in real use it's one at a time.
 

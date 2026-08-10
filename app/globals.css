@@ -2847,6 +2847,16 @@ textarea::placeholder {
   line-height: 1.5;
   color: var(--tone-warn-fg);
 }
+.dcheck__t svg { vertical-align: -3px; margin-right: 4px; }
+/* § Q — the consequence line under the prompt: what closing this settles, and
+   what it doesn't. Quieter than the prompt above it, because it's the detail you
+   read once and the prompt is the thing you scan. */
+.dcheck__s {
+  margin: -4px 0 11px;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
 .dcheck__btn {
   display: block;
   width: 100%;

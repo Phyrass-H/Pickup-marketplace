@@ -1,6 +1,6 @@
 // Status "tone" for the Dispatch schedule — the at-a-glance colour a hotel
 // scans. Derived from mission.status + time-to-pickup + the D61 check-in.
-import type { MissionRow } from "@/lib/database.types";
+import type { CloseAnswer, MissionRow } from "@/lib/database.types";
 
 export type Tone = "neutral" | "info" | "success" | "warn" | "danger";
 
@@ -164,9 +164,15 @@ export function needsClosing(
     | "waypoints"
     | "stops_reached"
     | "mission_type"
-  >,
+  > & { close_answer?: CloseAnswer | null },
   now: Date = new Date(),
 ): boolean {
+  // Slice 2 — answered is answered, whichever way. A Driver who told us the trip
+  // never happened has done the thing we asked; nagging them after that is how a
+  // prompt turns into noise people learn to ignore. The Business's row keeps the
+  // answer visible (see `missionTone`), because for them it is now a phone call,
+  // not a wait.
+  if (m.close_answer) return false;
   // `accepted` is vestigial (D55) but still in the Driver's ACTIVE_STATUSES, so
   // treat it as `confirmed` rather than let one list quietly disagree with this.
   const started =
@@ -250,7 +256,21 @@ export type ToneInputs = Pick<
   | "waypoints"
   | "stops_reached"
   | "mission_type"
-> & { no_show?: boolean | null };
+> & { no_show?: boolean | null; close_answer?: CloseAnswer | null };
+
+/**
+ * § Q slice 2 — the Driver has answered that the trip never happened. Red, not
+ * amber: "we're still waiting on them" has become "they've told us, and it needs
+ * sorting out". Nothing has been charged or settled either way — the Business
+ * phones, and in beta the founder resolves it by hand.
+ */
+const notDrivenTone: MissionTone = {
+  tone: "danger",
+  label: "Driver says it didn’t happen",
+  hint: "The Driver says this trip never took place. Nothing has been charged — call them to agree what happened.",
+  needsAttention: true,
+  wash: true,
+};
 
 export function missionTone(
   m: ToneInputs,
@@ -269,6 +289,10 @@ export function missionTone(
   const within3h = !opts.archived && pickup <= now.getTime() + HOURS_3;
   const within1h = !opts.archived && pickup <= now.getTime() + HOURS_1;
   const checkInWindow = within3h && notLongPast;
+
+  // § Q slice 2 — the Driver has told us it never happened. Outranks everything
+  // below: the trip's own `status` is now describing something that didn't occur.
+  if (m.close_answer === "not_driven") return notDrivenTone;
 
   // § Q — a trip past its expected end that nobody closed. Checked before the
   // three calm "in progress" labels below, which have no time awareness at all:

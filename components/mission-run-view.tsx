@@ -3,6 +3,7 @@ import {
   Car,
   CircleCheck,
   Clock,
+  ClockAlert,
   Lock,
   MapPin,
   MessageSquare,
@@ -29,13 +30,14 @@ import {
 } from "@/lib/cancellation";
 import { navigateUrl, nextDestination } from "@/lib/nav-links";
 import type { GuestPhone } from "@/lib/passengers";
-import type { AmendmentCardData, ReleaseCardData } from "@/lib/mission-cards";
+import { closingLine, type AmendmentCardData, type ReleaseCardData } from "@/lib/mission-cards";
 import { BoardFileLink } from "@/components/board-file-link";
 import { AmendmentCard } from "@/components/amendment-card";
 import { ReleaseCard } from "@/components/release-card";
 import { StatusControl } from "@/app/(app)/rides/status-control";
 import { CheckInCard } from "@/components/check-in-card";
-import { checkInOpen } from "@/lib/dispatch-status";
+import { CloseTripCard } from "@/components/close-trip-card";
+import { checkInOpen, needsClosing } from "@/lib/dispatch-status";
 import { DriverCancel, NoShowControl } from "@/app/(app)/rides/cancel-noshow";
 
 // The card leads with STATE, not price. Tone follows the trip's phase: blue while
@@ -127,6 +129,10 @@ export function MissionRunView({
   const when = formatPoolWhen(m.pickup_at);
   const { tone, Icon: PillIcon } = statusPill(m);
   const showProgress = isExecutable(m.status) || m.status === "completed";
+  // § Q slice 2 — past its expected end and still open. While this is true the
+  // close card owns the screen and the normal step buttons stand down: the
+  // question is "did this happen?", not "what's the next step?".
+  const unclosed = needsClosing(m);
   const segments = progressSegments(stops.length);
   const done = progressDone(m.status, stops.length, stopsReached);
   const caption = progressCaption(m.status, stops.length, stopsReached);
@@ -162,6 +168,29 @@ export function MissionRunView({
             open={checkInOpen(m)}
             checkedInAt={m.status === "confirmed" ? m.checked_in_at : null}
           />
+
+          {/* § Q slice 2 — the trip is past its expected end and still open. This
+              replaces the normal status control below (see `showStatus`): two
+              competing sets of buttons on one screen is how a Driver taps the
+              wrong one. */}
+          {unclosed && (
+            <CloseTripCard
+              missionId={m.id}
+              boarded={m.status === "on_board"}
+              fare={settledFare(m)}
+              line={closingLine(m)}
+            />
+          )}
+
+          {/* Answered "it didn't happen": the trip stops asking and says where it
+              stands. No further action here — the hotel calls, and in beta the
+              settlement is a human conversation. */}
+          {m.close_answer === "not_driven" && (
+            <p className="dcheck__done">
+              <ClockAlert size={16} strokeWidth={1.75} aria-hidden="true" />
+              You said this trip didn’t happen. The hotel has been told and will be in touch.
+            </p>
+          )}
 
           {/* Trip progress: one bar + plain words (the bar alone is colour-only). */}
           {showProgress && (
@@ -379,7 +408,7 @@ export function MissionRunView({
 
       {/* Actions live below the card: exactly one filled button, the rest quiet. */}
       <div className="dstack">
-        {isExecutable(m.status) && (
+        {isExecutable(m.status) && !unclosed && (
           <StatusControl
             missionId={m.id}
             status={m.status}

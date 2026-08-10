@@ -5,6 +5,23 @@
 
 ---
 
+## 10 August 2026 — and now the Driver can answer
+
+*(Needs one database change run first — see the note at the end of the session.)*
+
+- **The question finally has buttons.** On a trip that ran, one button: *"Yes, I dropped the Guest"*, and it
+  says what it settles — the fare they accepted — before they tap it. On a trip that never started, two:
+  *"Yes, I drove it"* or *"It didn't happen"*.
+- **"It didn't happen" charges nobody.** It isn't a cancellation — a cancellation decides who's at fault and
+  attaches a fee, and nobody knows that yet, which is the whole reason we asked. It clears the Driver's prompt
+  and turns your row red: **"Driver says it didn't happen — nothing has been charged, call them."** You and
+  they agree what happened; in beta that's a phone call.
+- **Closing late never invents money.** The fare was frozen when the Driver accepted, so closing weeks later
+  settles exactly that and not a cent more. Waiting is deliberately excluded and the card says so — waiting can
+  only ever be measured from an Arrived tap, and there wasn't one.
+- **Once answered, the app stops asking** — either way. Your side keeps showing it, because for you it's now a
+  call to make rather than a wait.
+
 ## 10 August 2026 — trips nobody closed no longer hide in plain sight
 
 - **The Driver's "Upcoming" was lying.** All eight trips in it were between three and eight weeks old, and

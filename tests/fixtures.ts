@@ -71,6 +71,8 @@ export function mission(over: Partial<MissionRow> = {}): MissionRow {
     accepted_at: null,
     confirmed_at: null,
     checked_in_at: null,
+    close_answer: null,
+    close_answered_at: null,
     info_edited_at: null,
     cancellation_fee: null,
     cancellation_reason: null,
