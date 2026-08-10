@@ -560,7 +560,36 @@ condition: `tsc` clean · 294/294 · build green.
 - ⚑ If CI ever fails on something a session can't reproduce, remember the runner has **no `.env.local`** and
   **no `.local/`** — anything that quietly depended on those will only break there.
 
-**JOB 2 — § S Spend pass 2 — ⇦ THE JOB.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
+**⚑ THE WORKFLOW CHANGED, 2026-08-10 — `main` IS PROTECTED. You cannot push to it directly.**
+The ruleset `main — CI must pass` (active, default branch, required check `types · tests · build`) rejects any
+commit that has not already passed CI somewhere. The loop is now: **branch → push → wait for CI green →
+`git checkout main && git merge --ff-only <branch> && git push origin main`.** That last push is accepted
+because the SHA already carries a passing check. This applies to docs-only commits too — there is no
+exception, and that is the point. S58 ran it end to end.
+
+**★ SESSION-58 part B — ✅ § Q SLICE 1 SHIPPED (2026-08-10; deployed `53e433c` → Vercel `success`; NO
+migration; `npm test` 314).** A trip the Driver never closed is no longer invisible. Full brief, the founder's
+rulings, the departures from § Q and everything deliberately left out:
+**`project/NEEDS_CLOSING_BRIEF.md`** — read that before touching any of it, and read § Q in BACKLOG for the
+parts still standing.
+- **The rule: 30 minutes after the Driver reached the destination.** The anchor is **arrival** — estimated
+  today from the booked route, **observed by a geofence once there's a native app. One term changes and
+  nothing else does**, which is why the founder green-lit building it on the clock.
+- **A trip that never started keeps § Q's 3h** — "30 minutes after arrival" needs an arrival. Both are
+  floored so neither fires inside the check-in hour. Don't collapse them back into one number: live
+  `duration_min` has a **median of 27 min**, so a flat arrival+30 fires at pickup+57 on **67%** of trips and
+  would replace the red *"Not checked in — call them"* with an amber clerical note.
+- ⚑ **SLICE 2 IS THE NEXT PIECE OF THIS, AND IT MOVES MONEY.** The close buttons are NOT built. Two things an
+  adversarial pass caught, both of which must survive into whatever gets built: closing a never-started trip
+  through `advanceStatus` runs `board_guest`, and `mission_waiting()` returns **the ceiling** when called days
+  late — **660,00 €** invented across the 13 live `confirmed` rows; and the same walk parks trips in
+  `arrived`, the one status unlocking both no-show doors. Slice 2 also **requires** a second answer
+  ("it didn't happen"), or "Yes, I drove it" is the only control that clears the flag, with no time guard and
+  a frozen fare.
+- ⚑ **The seeded data makes it look alarming:** Le Grand Hôtel's schedule opens on **23 amber rows**. That is
+  23 test trips nobody ran to the end, not a design problem — in real use it's one at a time.
+
+**JOB 2 — § S Spend pass 2 — ⇦ STILL THE JOB, now that § Q slice 1 is in.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
 (`/dispatch/spend`) is live and untouched since S54. Owed: booking-notice (lead time × fare × fill rate) ·
 committed-spend tail · Route breakdown polish · then the service check (on-time from `status_event`) and the
 demand heatmap. "Arrived on time" stays blank until check-in data exists. **D25 preview loop applies** — this
