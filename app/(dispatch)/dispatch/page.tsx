@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { formatDate } from "@/lib/format";
-import { parisDayKey } from "@/lib/dispatch-status";
+import { needsClosing, parisDayKey } from "@/lib/dispatch-status";
 import { sweepExpiredMissions } from "@/lib/expiry";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
@@ -82,6 +82,7 @@ function DayGroup({
   amendments,
   releases,
   infoChanges,
+  liftedIds,
   today,
 }: {
   dayKey: string;
@@ -91,15 +92,22 @@ function DayGroup({
   amendments: Map<string, AmendmentBrief>;
   releases: Map<string, ReleaseBrief>;
   infoChanges: Map<string, InfoChangeBrief>;
+  /** § Q — rows shown outside their own day, so they print their date. */
+  liftedIds?: Set<string>;
   today?: boolean;
 }) {
+  const lifted = liftedIds ? missions.filter((m) => liftedIds.has(m.id)).length : 0;
+  const own = missions.length - lifted;
   return (
     // The id lets the calendar's "Open day in Schedule" land on this band.
     <section id={`day-${dayKey}`}>
       <div className={`dx-day${today ? " dx-day--today" : ""}`}>
         <h2>{today ? "Today · " : ""}{formatDate(`${dayKey}T12:00:00`)}</h2>
+        {/* Lifted rows belong to other days — counting them here would say
+            "23 trips" on a day with nine. They're shown, not counted. */}
         <span className="dx-count">
-          {missions.length} trip{missions.length === 1 ? "" : "s"}
+          {own} trip{own === 1 ? "" : "s"}
+          {lifted > 0 && <> · {lifted} to close</>}
         </span>
       </div>
       {missions.map((m) => (
@@ -111,6 +119,7 @@ function DayGroup({
           amendment={amendments.get(m.id) ?? null}
           release={releases.get(m.id) ?? null}
           infoChange={infoChanges.get(m.id) ?? null}
+          showDate={liftedIds?.has(m.id) ?? false}
         />
       ))}
     </section>
@@ -246,7 +255,20 @@ export default async function DispatchSchedule({
   const keys = [...groups.keys()];
   const futureKeys = keys.filter((k) => k > todayKey).sort();
   const pastKeys = keys.filter((k) => k < todayKey).sort().reverse();
-  const todayMissions = groups.get(todayKey) ?? [];
+
+  // § Q — a trip nobody closed is work for TODAY, not archive material. Every past
+  // day sits inside the collapsed "Earlier trips" fold, so a tone on the row alone
+  // would be invisible: the desk would never see it without going looking. Lift
+  // those rows into today's band (each carrying its own date, via showDate) and
+  // take them out of the fold, so the one thing needing a phone call is on screen.
+  const now = new Date();
+  const lifted = pastKeys
+    .flatMap((k) => groups.get(k)!.filter((m) => needsClosing(m, now)))
+    .sort((a, b) => (a.pickup_at < b.pickup_at ? 1 : -1));
+  const liftedIds = new Set(lifted.map((m) => m.id));
+  const pastOf = (k: string) => groups.get(k)!.filter((m) => !liftedIds.has(m.id));
+  const pastKeysLeft = pastKeys.filter((k) => pastOf(k).length > 0);
+  const todayMissions = [...lifted, ...(groups.get(todayKey) ?? [])];
 
   const isEmpty = !error && (!missions || missions.length === 0);
 
@@ -283,6 +305,7 @@ export default async function DispatchSchedule({
               amendments={amendments}
               releases={releases}
               infoChanges={infoChanges}
+              liftedIds={liftedIds}
               today
             />
             {todayMissions.length === 0 && (
@@ -305,18 +328,18 @@ export default async function DispatchSchedule({
             ))}
           </div>
 
-          {pastKeys.length > 0 && (
+          {pastKeysLeft.length > 0 && (
             <details>
               <summary className="dx-fold" style={{ cursor: "pointer", listStyle: "none" }}>
-                Earlier trips ({pastKeys.reduce((n, k) => n + groups.get(k)!.length, 0)})
+                Earlier trips ({pastKeysLeft.reduce((n, k) => n + pastOf(k).length, 0)})
               </summary>
               <div className="dx-sched" style={{ marginTop: 8 }}>
                 <ColumnHead />
-                {pastKeys.map((k) => (
+                {pastKeysLeft.map((k) => (
                   <DayGroup
                     key={k}
                     dayKey={k}
-                    missions={groups.get(k)!}
+                    missions={pastOf(k)}
                     contacts={contacts}
                     guestContacts={guestContacts}
                     amendments={amendments}

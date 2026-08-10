@@ -127,7 +127,13 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
 
     if (!r.counted) {
       // § Q — agreed, not settled. Its own line; out of every total.
-      t.unsettled += settledFare(m);
+      //
+      // ⚑ Waiting counts here too. It settles at BOARDING (`board_guest`), so an
+      // unclosed trip can carry a real, already-owed waiting fee — and summing
+      // only the fare dropped it out of every figure on the page INCLUDING this
+      // one, so the money existed nowhere. No live row carries one today, which
+      // is exactly why it was worth fixing before one does.
+      t.unsettled += settledFare(m) + num(m.waiting_fee);
       t.unsettledCount += 1;
       continue;
     }

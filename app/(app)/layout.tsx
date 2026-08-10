@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { DriverTabbar } from "@/components/driver-tabbar";
 import { getAppContext, routeFor } from "@/lib/app-context";
 import { createClient } from "@/lib/supabase/server";
-import { CHECK_IN_GRACE_MS, CHECK_IN_OPENS_MS } from "@/lib/dispatch-status";
+import { CHECK_IN_GRACE_MS, CHECK_IN_OPENS_MS, needsClosing } from "@/lib/dispatch-status";
 import { urlForRole, isProdDomain, roleSubOf, homePathForSub, PROD_BASE } from "@/lib/hosts";
 
 export default async function AppLayout({
@@ -43,10 +43,24 @@ export default async function AppLayout({
     // Both bounds, or a trip left `confirmed` since last month counts forever.
     .gte("pickup_at", new Date(Date.now() - CHECK_IN_GRACE_MS).toISOString());
 
+  // § Q — how many trips are waiting to be closed. Can't be a `head: true` count
+  // like the one above: `needsClosing` compares pickup_at against a per-row
+  // duration, and PostgREST has no column-to-column filter. So we take the cheap
+  // upper bound in SQL (active, pickup already past — the predicate needs at
+  // least pickup + 1h) and apply the real rule in TS, against the one function
+  // the rest of the app uses. A Driver has a handful of live trips, not a page.
+  const { data: openRows } = await supabase
+    .from("mission")
+    .select("status, pickup_at, duration_min, waiting_to, waypoints, stops_reached, mission_type")
+    .eq("driver_id", ctx.driver.id)
+    .in("status", ["accepted", "confirmed", "en_route", "arrived", "on_board"])
+    .lt("pickup_at", new Date().toISOString());
+  const closingCount = (openRows ?? []).filter((m) => needsClosing(m)).length;
+
   return (
     <>
       <main className="dapp-main">{children}</main>
-      <DriverTabbar checkInCount={checkInCount ?? 0} />
+      <DriverTabbar checkInCount={checkInCount ?? 0} closingCount={closingCount} />
     </>
   );
 }

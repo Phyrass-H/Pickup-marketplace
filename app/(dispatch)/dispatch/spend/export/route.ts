@@ -176,8 +176,13 @@ export async function GET(req: NextRequest) {
         // counted rows with a null fare; writing 0,00 asserts the trip cost
         // nothing, where the screen honestly shows "—".
         r.counted && (r.fare != null || waiting > 0) ? euro(cost) : "",
-        waiting > 0 && r.counted ? euro(waiting) : "",
-        r.counted ? "" : euro(r.fare),
+        // ⚑ The waiting column is honest on an unclosed row too. Waiting settles
+        // at boarding, so it is real money whether or not the trip was ever
+        // closed — and the "not settled" column beside it now carries the same
+        // fare+waiting the page's own unsettled tile shows, so the CSV and the
+        // screen can't report two different numbers for one filter.
+        waiting > 0 ? euro(waiting) : "",
+        r.counted ? "" : euro(Number(r.fare ?? 0) + waiting),
         euro(Number(m.ceiling)),
         took == null ? "" : String(Math.round(took)),
         note,

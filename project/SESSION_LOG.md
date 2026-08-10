@@ -5,6 +5,71 @@
 
 ---
 
+## 2026-08-10 — Session 58 part B — § Q slice 1: "a trip the Driver never closed"
+
+Branch `s58-needs-closing`. **No migration.** `npm test` = **314** (+20). Full brief, founder rulings and the
+departures from § Q: **`project/NEEDS_CLOSING_BRIEF.md`**.
+
+**How this started.** The founder asked what was wrong with the Driver's My Rides. Every one of the 8 trips in
+**Upcoming** was 23–54 days old — and because the list sorts soonest-first, the *oldest dead trip was the first
+thing on the screen*. Live count: **24 unclosed missions, 11 `on_board` + 13 `confirmed`** (`en_route` and
+`arrived` have zero rows in the whole DB — Drivers never tap the middle steps).
+
+**The founder's rule, and the departures from § Q.** Ask **30 minutes after the Driver reached the
+destination** — their own worked examples: a 15-minute Nice run picked up at 14:00 reminds at 14:45; airport →
+Saint-Tropez at 14:00 with a 15:45 ETA reminds at 16:15. **The anchor is arrival, and that is the GPS seam:**
+today it's estimated from the booked route, later it's observed by a geofence — *one term changes and nothing
+else does*, which is why building it on the clock now throws nothing away. § Q's 48h flip to the Business is
+dropped (founder: "not 48H but almost instantly"); § Q's *nudge, never close* is kept.
+
+**Where the founder's number could not apply, and why that is not a disagreement.** "30 minutes after arrival"
+needs an arrival. A `confirmed` trip has none — so § Q's 3h stands for that group, floored so it can never fire
+inside the check-in hour. The concrete failure otherwise: live `duration_min` has a **median of 27 minutes**, so
+a flat arrival+30 fires at pickup+57 on **67%** of trips — replacing the schedule's red *"Not checked in — call
+them"* with an amber clerical note while the Guest is still standing in the lobby.
+
+**Adversarially refuted before a line was written, and it changed the work twice.**
+- **The plan closed a never-started trip by walking `confirmed → en_route → arrived → on_board → completed`,
+  "reusing every existing guard". The guard for the `on_board` step IS `board_guest`** — and `mission_waiting()`
+  computes `w_to = least(now, guest_due + ceiling)`, so run days later `now` always loses and it returns **the
+  ceiling every time**. Over the 13 live `confirmed` rows that is **660,00 €** of waiting nobody waited, billed
+  to the Business and paid to the Driver. (Real waiting fees in this DB run 10–34 €.)
+- **The same walk parks trips in `arrived`** — the one status that unlocks *both* no-show doors — and would
+  write the `arrived` status_event `mark_no_show` looks for. § Q's reason the late-no-show branch was safe to
+  omit is that it *can't* pass those guards; after the walk it can.
+- Both are why the close action is **not in this slice at all**. Slice 1 ships no new money path whatsoever.
+
+**Shipped.** A read-time predicate (`needsClosing`/`expectedArrival` in `lib/dispatch-status.ts`, mirroring
+`isExpired`/`checkInOpen` — no column, no sweep, so the Driver's list, schedule, calendar and History can't
+disagree), guarded against every false positive the refutation found: stops still being ticked off, at-disposal
+hires, the check-in hour. Driver: a **Needs closing** section of full cards each carrying an amber line in
+relative time that escalates minutes → hours → days (founder's call — full cards, not a summary: *"a trip that
+wasn't closed is quite rare"*). Dispatch: a `Not closed` tone with the hint *"The Driver should have arrived at
+11:05 and hasn't closed the trip — call them to confirm it happened"*, and the rows **lifted out of the
+collapsed "Earlier trips" fold into today's band** — without that the tone was invisible, two clicks deep.
+
+**⚑ The origin came from `waiting_to`, which removed the migration.** The refutation was right that reading the
+boarding instant on some surfaces and not others reintroduces drift. The answer wasn't "join `status_event`
+everywhere" (no index on `mission_id`, and only 2 of 11 live rows even have the event): `board_guest` stamps
+**`waiting_to` on the mission row** at boarding, and it is NULL exactly when the Guest was on time. The one case
+that matters is covered by a column every caller already selects.
+
+**Three defects only a real screen caught** — a five-week-old `Checked in` still reading as current, Today's
+count counting lifted rows (`23 trips` on an empty day), and the archive date overrunning the schedule's time
+column into the route. All fixed, the first pinned by a test.
+
+**Two controls removed from an unclosed row:** Cancel (`businessCancelPct` returns **100** on any past pickup —
+a Dispatcher told to chase the row, unable to reach the Driver, would reach for the only button on it) and
+Agreed release (re-pools a trip that already happened; `accept_mission` refuses a past pickup, so it would only
+mint a dead pooled row). **Money-honesty fix in the same pass:** waiting settles at boarding, so an unclosed
+trip can carry a real `waiting_fee` — `spendTotals` dropped it before the waiting block *and* `t.unsettled`
+summed the fare only, so it appeared in no figure at all, including the line that exists so nothing is hidden.
+Fixed in `lib/spend.ts` and the CSV together. **0 live rows carry one today**, which is why it was cheap now.
+
+**Not in this slice, deliberately:** the close buttons themselves, the "it didn't happen" answer (Slice 2 needs
+it — otherwise "Yes, I drove it" is the only control that clears the flag, with no time guard and a frozen
+fare), email/SMS, and any GPS scaffolding.
+
 ## 2026-08-10 — Session 58 — CI: the checks now run on every push
 
 Pushed `3032d8a` + `2a4e1de` (the action bump), both runs green in ~1 min. **One file: `.github/workflows/ci.yml`.**

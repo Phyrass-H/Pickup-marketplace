@@ -941,7 +941,7 @@ textarea::placeholder {
 .dx-colhead, .dx-trip > summary {
   display: grid;
   grid-template-columns:
-    minmax(44px,  0.5fr)    /* time   */
+    minmax(58px,  0.5fr)    /* time   — floor fits a lifted row's "30 Jul" (§ Q) */
     minmax(86px,  4fr)      /* route  — widest at rest, shrinks with the rest */
     minmax(56px,  0.95fr)   /* flight */
     minmax(56px,  1.15fr)   /* guest  */
@@ -1166,6 +1166,11 @@ textarea::placeholder {
 .dx-trip > summary::-webkit-details-marker { display: none; }
 .dx-trip > summary > .status-pill { justify-self: end; } /* hug the right edge */
 .dx-trip__time { font-weight: 600; }
+/* § Q — a row lifted out of its own past day carries the date above the time.
+   Quieter and smaller than the archive's version: on the Schedule the date is
+   context for a row that is out of place, not the thing being scanned. */
+.dx-trip__when b { font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
+.dx-trip__when > span { font-size: 13px; font-weight: 600; color: var(--text); }
 /* Stacked route rail (summary line): pickup → via-stops → drop-off. */
 .dx-trip__route { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dx-route__node { display: flex; align-items: flex-start; gap: 9px; min-width: 0; position: relative; }
@@ -2804,6 +2809,25 @@ textarea::placeholder {
   color: var(--tone-warn-fg);
 }
 .ridecard__flag svg { width: 14px; height: 14px; flex: none; }
+/* § Q — the unclosed-trip line. A tinted block rather than the bare amber text
+   the other flags use: this one is a full sentence with an instruction in it, so
+   it has to hold together as a paragraph and not read as a caption. Regular
+   weight — the tint already carries the emphasis (founder's taste: hierarchy
+   from restraint, never bold). */
+.ridecard__flag--warn {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--tone-warn-bg);
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+}
+.ridecard__flag--warn svg { margin-top: 1px; }
+/* The Needs-closing separator. Same shape as a day band so the list keeps one
+   rhythm; only the label colour says it's different. */
+.dday--closing .dday__l { color: var(--tone-warn-fg); }
 
 /* ---- D61 CHECK-IN (Driver, on the trip's own page) ------------------------
    Amber, not red: three hours out this is a prompt, not an emergency, and a red

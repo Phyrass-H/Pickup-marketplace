@@ -106,6 +106,27 @@ describe("spendTotals — the hero number", () => {
     expect(t.ordered).toBe(2);
   });
 
+  // § Q — waiting settles at BOARDING (board_guest), so an unclosed trip can
+  // carry a real, already-owed waiting fee. Summing only the fare dropped that
+  // money out of every figure on the page — including the "not settled" line
+  // that exists precisely so nothing is hidden. Pinned while it is still 0 rows
+  // live: the first late Guest whose Driver forgets to close makes it visible.
+  it("keeps a settled waiting fee visible on an unclosed trip", () => {
+    const unclosed = mission({
+      status: "on_board",
+      ...standardCurve(),
+      accepted_at: "2026-07-15T10:20:00+02:00",
+      waiting_fee: 25,
+      waiting_minutes: 25,
+    });
+    const t = spendTotals([row(unclosed)]);
+    expect(t.unsettled).toBe(85); // 60 agreed + 25 already owed for waiting
+    expect(t.unsettledCount).toBe(1);
+    // Still out of every settled total — it is surfaced, not counted.
+    expect(t.total).toBe(0);
+    expect(t.waiting).toBe(0);
+  });
+
   it("counts an unfilled mission as ordered, costing nothing, with its Ceiling noted", () => {
     const t = spendTotals([row(mission({ status: "expired", ceiling: 120 }))]);
     expect(t.unfilledCount).toBe(1);

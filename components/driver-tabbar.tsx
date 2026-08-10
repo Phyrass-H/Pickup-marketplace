@@ -16,7 +16,14 @@ const TABS = [
   { href: "/settings", label: "Account", Icon: Settings, match: (p: string) => p.startsWith("/settings") },
 ];
 
-export function DriverTabbar({ checkInCount = 0 }: { checkInCount?: number }) {
+export function DriverTabbar({
+  checkInCount = 0,
+  closingCount = 0,
+}: {
+  checkInCount?: number;
+  /** § Q — trips past their expected end that nobody closed. */
+  closingCount?: number;
+}) {
   const pathname = usePathname();
 
   return (
@@ -26,7 +33,10 @@ export function DriverTabbar({ checkInCount = 0 }: { checkInCount?: number }) {
           const active = match(pathname);
           // D61 — a count, not a dot (founder): two trips waiting on a check-in
           // is a different morning from one. Only My Rides carries it.
-          const badge = href === "/rides" ? checkInCount : 0;
+          // § Q adds a second reason to look; one badge counts both, and the
+          // screen-reader text says which is which rather than letting one
+          // number quietly mean two things.
+          const badge = href === "/rides" ? checkInCount + closingCount : 0;
           return (
             <Link
               key={href}
@@ -42,8 +52,15 @@ export function DriverTabbar({ checkInCount = 0 }: { checkInCount?: number }) {
                 {label}
                 {badge > 0 && (
                   <span className="sr-only">
-                    {" "}
-                    — {badge} trip{badge === 1 ? "" : "s"} to check in
+                    {" — "}
+                    {[
+                      checkInCount > 0 &&
+                        `${checkInCount} trip${checkInCount === 1 ? "" : "s"} to check in`,
+                      closingCount > 0 &&
+                        `${closingCount} trip${closingCount === 1 ? "" : "s"} to close`,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </span>
                 )}
               </span>

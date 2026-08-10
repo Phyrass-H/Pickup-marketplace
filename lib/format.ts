@@ -264,6 +264,50 @@ export function formatArchiveDay(iso: string | null | undefined): string {
   return (sameYear ? archiveDay : archiveDayYear).format(d);
 }
 
+/**
+ * § Q — the date for a row shown outside its own day band on the Schedule.
+ * No weekday: the schedule's time column is sized for "19:45", and "Thu 30 Jul"
+ * overruns it into the route. "30 Jul" fits, and the weekday buys nothing on a
+ * trip the reader already knows isn't today.
+ */
+const shortDay = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Paris",
+});
+const shortDayYear = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "2-digit",
+  timeZone: "Europe/Paris",
+});
+
+export function formatShortDay(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const sameYear =
+    parisCalDate.format(d).slice(0, 4) === parisCalDate.format(new Date()).slice(0, 4);
+  return (sameYear ? shortDay : shortDayYear).format(d);
+}
+
+/**
+ * § Q — how long ago, in the largest unit that still reads naturally: minutes,
+ * then hours, then days. The founder's call (2026-08-10): an unclosed trip is
+ * normally minutes or hours old, so a date would be the wrong register — but it
+ * has to survive the rare one that sits for a week.
+ *
+ * Days are counted in whole 24h steps rather than calendar days on purpose: this
+ * measures elapsed time since a moment, not which date it fell on.
+ */
+export function formatAgo(ms: number): string {
+  const mins = Math.max(1, Math.round(ms / 60_000));
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"}`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
 const CATEGORY_LABELS: Record<VehicleCategory, string> = {
   eco: "Eco",
   business: "Business",

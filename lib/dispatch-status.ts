@@ -96,6 +96,129 @@ export function negotiationAnswerable(status: MissionRow["status"]): boolean {
   return status === "accepted" || status === "confirmed";
 }
 
+// ---------------------------------------------------------------------------
+// § Q — a trip the Driver never closed. Founder's rule (2026-08-10): ask
+// 30 minutes after the Driver reached the destination.
+//
+// The anchor is ARRIVAL AT THE DESTINATION. Today that arrival is estimated
+// from the booked route; with a native app it becomes observed (a geofence at
+// the drop-off). One term changes and nothing else does — which is the whole
+// reason this is safe to build now. See project/NEEDS_CLOSING_BRIEF.md.
+// ---------------------------------------------------------------------------
+
+/** Founder, 2026-08-10 — 30 minutes after arrival. */
+export const CLOSE_BUFFER_MS = 30 * 60_000;
+/**
+ * A trip that never started has no arrival to be 30 minutes after, so it can't
+ * use the rule above. § Q's original 3h applies instead — and it has to, because
+ * a single 30-minute buffer would fire at pickup+57min on a median trip, i.e.
+ * INSIDE the check-in window, replacing the schedule's red "Not checked in —
+ * call them" with an amber clerical note at the only moment it's still fixable.
+ */
+export const NEVER_STARTED_MS = 3 * 3_600_000;
+/**
+ * `duration_min` is a best-effort Mapbox estimate taken at booking and is NULL
+ * on seeded rows and whenever routing failed. Deliberately generous — the live
+ * p90 is 55 minutes — because firing late costs a reminder and firing early
+ * nags a Driver who still has the Guest in the car.
+ */
+export const ASSUMED_TRIP_MS = 60 * 60_000;
+/** Per waypoint: the route time covers the detour, not the time spent AT a stop. */
+export const STOP_DWELL_MS = 12 * 60_000;
+
+/**
+ * When the Driver should have reached the destination.
+ *
+ * Origin: the boarding instant where we have it, else the booked pickup. We
+ * don't join `status_event` for it — `waiting_to` is written by `board_guest`
+ * at the moment the Guest boards, and is NULL precisely when the Guest was on
+ * time (so the booked pickup is already the right answer). That covers the case
+ * that matters — a late Guest means the trip genuinely ends later — with a
+ * column every caller already selects, and no second query to drift out of sync.
+ */
+export function expectedArrival(
+  m: Pick<MissionRow, "pickup_at" | "duration_min" | "waiting_to" | "waypoints">,
+  waypointCount?: number,
+): number {
+  const boarded = m.waiting_to ? new Date(m.waiting_to).getTime() : null;
+  const origin = boarded ?? new Date(m.pickup_at).getTime();
+  const stops = waypointCount ?? (Array.isArray(m.waypoints) ? m.waypoints.length : 0);
+  const trip = m.duration_min != null ? m.duration_min * 60_000 : ASSUMED_TRIP_MS;
+  return origin + trip + stops * STOP_DWELL_MS;
+}
+
+/**
+ * § Q — the trip is past its expected end and nobody has closed it. Someone has
+ * to say what happened; nothing here changes a status by itself.
+ *
+ * Read-time derived, like `isExpired`/`checkInOpen`: no column, no sweep, so the
+ * Driver's list, the schedule, the calendar and History cannot disagree.
+ */
+export function needsClosing(
+  m: Pick<
+    MissionRow,
+    | "status"
+    | "pickup_at"
+    | "duration_min"
+    | "waiting_to"
+    | "waypoints"
+    | "stops_reached"
+    | "mission_type"
+  >,
+  now: Date = new Date(),
+): boolean {
+  // `accepted` is vestigial (D55) but still in the Driver's ACTIVE_STATUSES, so
+  // treat it as `confirmed` rather than let one list quietly disagree with this.
+  const started =
+    m.status === "en_route" || m.status === "arrived" || m.status === "on_board";
+  const waiting = m.status === "confirmed" || m.status === "accepted";
+  if (!started && !waiting) return false;
+
+  // At disposal has no drop-off, so there is no arrival to estimate. Nothing
+  // writes `hourly` today; the guard is here so a V2 booking can't be nagged
+  // through its own hire.
+  if (m.mission_type && m.mission_type !== "transfer") return false;
+
+  // Stops being ticked off is free proof the trip is being run RIGHT NOW.
+  const stops = Array.isArray(m.waypoints) ? m.waypoints.length : 0;
+  const reached = m.stops_reached ?? 0;
+  if (stops > 0 && reached > 0 && reached < stops) return false;
+
+  const t = now.getTime();
+  const pickup = new Date(m.pickup_at).getTime();
+  const due = started
+    ? expectedArrival(m, stops) + CLOSE_BUFFER_MS
+    : pickup + NEVER_STARTED_MS;
+
+  // Never inside the check-in window: that hour belongs to "the Driver hasn't
+  // confirmed they'll be there", which is a rescue, not a clerical note.
+  return t >= Math.max(due, pickup + CHECK_IN_GRACE_MS);
+}
+
+/**
+ * § Q — the Business's side of an unclosed trip. Fact, then the verb, matching
+ * the check-in hint it sits beside. It says *call them*, never offers a close:
+ * a Business marking a Driver's work done is a Business deciding a Driver gets
+ * paid.
+ */
+export function needsClosingTone(
+  m: Pick<MissionRow, "pickup_at" | "duration_min" | "waiting_to" | "waypoints">,
+): MissionTone {
+  const arrival = new Date(expectedArrival(m));
+  const at = arrival.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
+  });
+  return {
+    tone: "warn",
+    label: "Not closed",
+    hint: `The Driver should have arrived at ${at} and hasn’t closed the trip — call them to confirm it happened.`,
+    needsAttention: true,
+    wash: true,
+  };
+}
+
 /**
  * § P — a trip nobody accepted before its pickup time. Shared by the `expired`
  * status and by a still-`pooled` row the sweep hasn't reached yet, so the two
@@ -110,10 +233,27 @@ const expiredTone: MissionTone = {
   wash: true,
 };
 
+/**
+ * The columns a tone is derived from. Deliberately a REQUIRED Pick rather than
+ * optional fields: a caller whose query forgets `duration_min` would silently
+ * never flag an unclosed trip, and this codebase has already paid for that once
+ * (`settledFare` needed `accepted_at`, the query omitted it, and the fix did
+ * nothing until a live probe caught it). Missing a column is a compile error.
+ */
+export type ToneInputs = Pick<
+  MissionRow,
+  | "status"
+  | "pickup_at"
+  | "checked_in_at"
+  | "duration_min"
+  | "waiting_to"
+  | "waypoints"
+  | "stops_reached"
+  | "mission_type"
+> & { no_show?: boolean | null };
+
 export function missionTone(
-  m: Pick<MissionRow, "status" | "pickup_at" | "checked_in_at"> & {
-    no_show?: boolean | null;
-  },
+  m: ToneInputs,
   now: Date = new Date(),
   opts: { archived?: boolean } = {},
 ): MissionTone {
@@ -129,6 +269,16 @@ export function missionTone(
   const within3h = !opts.archived && pickup <= now.getTime() + HOURS_3;
   const within1h = !opts.archived && pickup <= now.getTime() + HOURS_1;
   const checkInWindow = within3h && notLongPast;
+
+  // § Q — a trip past its expected end that nobody closed. Checked before the
+  // three calm "in progress" labels below, which have no time awareness at all:
+  // a trip boarded 54 days ago rendered an untroubled green "On board".
+  // NOT checked before the `confirmed` branch — that one is guarded by the
+  // check-in window, and this must never outrank a live rescue signal.
+  const stale = needsClosing(m, now);
+  if (stale && (m.status === "en_route" || m.status === "arrived" || m.status === "on_board")) {
+    return needsClosingTone(m);
+  }
 
   switch (m.status) {
     case "en_route":
@@ -150,6 +300,12 @@ export function missionTone(
     // progress (En route → …) takes over above. Beyond 3h nothing is shown: a
     // Driver who hasn't checked in for tomorrow's trip is not news.
     case "confirmed":
+      // § Q first: "Checked in" is not time-bounded, so a trip checked in for a
+      // pickup five weeks ago kept reading as a calm, current "Checked in" — the
+      // Driver said they'd be there and then nothing ever happened. It cannot
+      // collide with the check-in states below: `needsClosing` can't be true
+      // until pickup + 1h, which is exactly where that window closes.
+      if (stale) return needsClosingTone(m);
       if (m.checked_in_at) return { tone: "info", label: "Checked in", needsAttention: false };
       if (within1h && notLongPast)
         return {

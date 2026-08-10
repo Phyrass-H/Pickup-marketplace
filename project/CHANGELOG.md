@@ -5,6 +5,28 @@
 
 ---
 
+## 10 August 2026 — trips nobody closed no longer hide in plain sight
+
+- **The Driver's "Upcoming" was lying.** All eight trips in it were between three and eight weeks old, and
+  because the list puts the soonest first, the *oldest dead trip was the first thing on the screen*. They now
+  sit in their own **Needs closing** group, and Upcoming means upcoming again.
+- **Each one says what's wrong, in plain time.** *"Should have finished 35 minutes ago — close it when you've
+  dropped the Guest"* for a trip that ran, or *"Pickup was 5 hours ago and this trip never started — tell us
+  what happened"*. Minutes become hours, hours become days, so a trip that lingers still reads correctly.
+- **Your Schedule shows them too, and calls them out.** Before, a trip boarded 54 days ago sat there as a calm
+  green "On board", and a Driver who confirmed five weeks ago still read as "Checked in". Now the row turns
+  amber, says **Not closed**, and tells you the Driver should have arrived at 11:05 and hasn't closed it — call
+  them. And because every past day is folded away by default, these rows are **lifted up into today**, where
+  you'll actually see them.
+- **Two buttons removed from those rows, on purpose.** Cancelling a trip whose pickup has passed charges
+  **100%** of the fare — and it was the only button on a row we now tell you to chase. Releasing it hands a
+  weeks-old trip back to the Pool, where nobody can take it. Neither answers the real question, which is what
+  happened.
+- **A money hole closed before it opened.** Waiting charges are settled the moment the Guest gets in the car,
+  so an unclosed trip can already owe real money — and it was appearing in no total anywhere, not even the
+  "not settled" line that exists so nothing is hidden. No trip has one today; it's fixed before one does.
+- **Still to come:** the buttons the Driver taps to answer. That part moves money, so it gets its own pass.
+
 ## 10 August 2026 — a robot now checks every change before you see it
 
 - **Every push is now checked automatically.** Until today, the 294 tests only ran when someone remembered to

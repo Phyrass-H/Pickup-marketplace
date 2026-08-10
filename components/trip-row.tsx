@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatTime,
   formatArchiveDay,
+  formatShortDay,
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
@@ -19,6 +20,7 @@ import {
   canEditInfo,
   isExpired,
   missionTone,
+  needsClosing,
   negotiationAnswerable,
   TONE_BG,
   TONE_COLOR,
@@ -117,6 +119,7 @@ export function TripRow({
   release,
   infoChange,
   archived = false,
+  showDate = false,
   fare = null,
   farePending = false,
   query = "",
@@ -129,6 +132,13 @@ export function TripRow({
   release?: ReleaseBrief | null;
   infoChange?: InfoChangeBrief | null;
   archived?: boolean;
+  /**
+   * Schedule only: this row was lifted out of its own past day into today's band
+   * (§ Q — an unclosed trip the desk has to chase), so it must carry its date.
+   * A time alone would make 3 July and 19 July identical, which is the exact bug
+   * § R found in the archive.
+   */
+  showDate?: boolean;
   /** History only: what this trip cost, already settled (see historyFare). */
   fare?: number | null;
   /** History only: the fare is agreed but nothing settled (a § Q unclosed trip). */
@@ -168,13 +178,20 @@ export function TripRow({
   // accepted/confirmed, so this decides what the pending cards are allowed to
   // promise as well as whether a new proposal can be made.
   const answerable = negotiationAnswerable(mission.status);
+  // § Q — a trip past its expected end that nobody closed.
+  const unclosed = !archived && needsClosing(mission);
   // A change can be PROPOSED (route/fare, needs Driver consent) only once a Driver
   // holds the trip but hasn't started it (D39 Phase 2).
   const canAmend = !archived && answerable;
   // An AGREED RELEASE (free, needs Driver consent) can be offered while a committed
   // Driver holds the trip pre-execution (O7, D45). Hidden while one is already pending
   // (the schedule shows that state instead).
-  const canRelease = !archived && !!mission.driver_id && answerable;
+  // ⚑ …and not on an unclosed trip either. A release re-pools the trip for
+  // another Driver to take — meaningless on one whose pickup was three weeks ago
+  // (and `accept_mission` refuses a past pickup since § P, so it would only
+  // create a dead pooled row for the sweep to expire). It also needs the answer
+  // of the one Driver who isn't answering.
+  const canRelease = !archived && !unclosed && !!mission.driver_id && answerable;
   const releasePending = !!release && release.status === "proposed";
   // One live ask per mission (2026-08-11_one_live_ask.sql): proposing either kind
   // retires a pending other. Neither door is hidden — "forget the change, just give
@@ -182,8 +199,16 @@ export function TripRow({
   const amendmentPending = !!amendment && amendment.status === "proposed";
   // Business can cancel any live trip (O7). FREE while pooled; a fee applies once a
   // Driver holds it (the modal shows the live %). Not once on_board / completed.
+  //
+  // ⚑ And never on an unclosed trip. `businessCancelPct` returns 100 for any pickup
+  // already in the past, so Cancel was the only control on a row we now actively
+  // tell the desk to chase: a Dispatcher who can't reach the Driver would reach for
+  // it and be charged the full fare for a trip that most likely already happened.
+  // There is nothing left to cancel here — the question is what happened, not whether
+  // to call it off.
   const cancellable =
     !archived &&
+    !unclosed &&
     (mission.status === "pooled" ||
       mission.status === "accepted" ||
       mission.status === "confirmed" ||
@@ -312,6 +337,11 @@ export function TripRow({
         {archived ? (
           <span className="dxh-when">
             <b>{formatArchiveDay(mission.pickup_at)}</b>
+            <span className="mono">{formatTime(mission.pickup_at)}</span>
+          </span>
+        ) : showDate ? (
+          <span className="dxh-when dx-trip__when">
+            <b>{formatShortDay(mission.pickup_at)}</b>
             <span className="mono">{formatTime(mission.pickup_at)}</span>
           </span>
         ) : (
