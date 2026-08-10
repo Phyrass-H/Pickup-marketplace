@@ -961,3 +961,60 @@ there looking final while it is stale**. 350 ms of a visibly-loading number read
 wrong number reads as lag. This is probably worth more than any query trimming.
 
 **Applies to § S too** — the Dispatch spend view will have the same shape and should be built with this known.
+
+---
+
+## U. Location as evidence — what the native app unlocks 🔨❓ (founder, 2026-08-10)
+
+**Gated on the native app. Nothing here is buildable on the PWA** — a browser only gets location while the app
+is open on screen, so there is no background arrival detection, which is the whole premise. Recorded now
+because § Q slice 2 (S58) built the seam these plug into: the close prompt already fires off **arrival**,
+estimated today from the booked route and *observed* later. One term changes.
+
+**⚑ The rule that governs all of it, and it is already recorded (§ Q, D-level):** *location may **suggest**,
+never **decide***. Location closing a trip is location *paying* someone. Everything below has to survive that.
+
+### U.1 A Driver can't tap "Arrived" unless they are actually there
+**Founder's reason, and it is a real hole:** a Driver running late taps *Arrived* early so the Business's
+screen never shows them as late. Today nothing stops it — `advanceStatus` has no time guard and no place
+guard, which is documented in S41 (the same absence that made the no-show clock exploitable before D47).
+
+⚠️ **Do not ship this as a hard block without a fallback, and here is why.** `arrived` is the precondition for
+reporting a **no-show** (`mark_no_show` requires it). A Driver standing at the pickup with a broken GPS fix,
+an urban canyon, or location permission denied would be unable to tap *Arrived*, therefore unable to report a
+Guest who never came, therefore unable to claim a fee they are owed. The guard must degrade: **suggest and
+record, don't refuse.** Something like — tap accepted, but stamped `arrived_verified: false`, and the
+Business's row says so. That keeps the honest Driver whole and still makes the dishonest tap visible, which
+is all the evidence needs to do.
+
+### U.2 Lateness, measured and penalised
+**Founder: penalties for late Drivers, using location.** Needs three things decided before any of it:
+1. **What "late" means.** Arrival after `pickup_at`, by how much, and with what grace. A Guest is rarely
+   ready at the second.
+2. **Who is harmed.** Today lateness costs the Business nothing in the model — the Guest waits, and the only
+   money that moves is the *waiting fee*, which runs the other way (the Business pays the DRIVER for waiting,
+   D48). A lateness penalty is therefore net-new money in a direction nothing currently flows.
+3. **Where it lands.** A fee, a reliability mark, or both. **Q4 is still parked** — the founder has not
+   decided whether a Driver sees their own reliability marks — and this can't ship ahead of that.
+
+⚑ **The existing tension to resolve first.** D61 shipped **check-in** ("will you be there?") and deliberately
+hung *nothing punishing* off missing it, on the stated grounds that you may not punish someone for ignoring a
+prompt they were never actually shown — no push, no reminder. That reasoning applies unchanged here: **a
+lateness penalty needs the notification phase as much as it needs GPS.**
+
+### U.3 What this is really for — the dispute question (founder, 2026-08-10)
+*"What proves the Driver actually did the trip?"* Today: **nothing does.** Every signal is self-reported by
+the person being paid — the four status taps (no time guard, no place guard) — except the hotel's own
+knowledge, which lives outside the app. § Q slice 2 added one genuinely new piece of evidence: whether a trip
+was closed **at the time** or **by answering a prompt weeks later** (`close_answer` + `close_answered_at`).
+That is a real distinction in a dispute and it did not exist before.
+
+**Adequate for beta** (nothing is charged automatically; the founder settles by hand and the hotel always
+knows). **Not adequate once money moves on its own.** Two conditions to watch:
+- **The Business cannot contest a close in-app.** The day they get that button, `close_answer` must stop
+  being a mutable column and become `mission_close_answer` in the `mission_release` idiom — read-only RLS,
+  writes via SECURITY DEFINER. The condition is written into `2026-08-10_mission_close_answer.sql` itself.
+- **Corroboration, not proof.** Even with GPS the Driver still confirms; what changes is that *"the app saw
+  you at the drop-off at 15:47"* turns a claim into a corroborated one. That is the whole ambition — U.1's
+  fallback exists because the alternative is a system that calls an honest Driver a liar when a satellite
+  fix drops out.
