@@ -2825,6 +2825,13 @@ textarea::placeholder {
   text-align: left;
 }
 .ridecard__flag--warn svg { margin-top: 1px; }
+/* Answered: the Driver has done their part, so the line stops being a prompt and
+   becomes a receipt. Neutral, not amber — nagging someone about a question they
+   already answered is how a warning stops meaning anything. */
+.ridecard__flag--done {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
 /* The Needs-closing separator. Same shape as a day band so the list keeps one
    rhythm; only the label colour says it's different. */
 .dday--closing .dday__l { color: var(--tone-warn-fg); }

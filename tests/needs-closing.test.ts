@@ -200,6 +200,22 @@ describe("once the Driver has answered", () => {
     expect(t.hint).toContain("Nothing has been charged");
   });
 
+  // ⚑ Founder-reported, the same day it shipped. `not_driven` writes no status,
+  // so the trip stays `confirmed` — and `needsClosing` going false dropped it
+  // straight back into the Driver's Upcoming list, and into the tab count, as
+  // work they had just told us never happened. Whatever partitions that list has
+  // to key on the OUTCOME being unsettled, not on the question being unanswered.
+  it("is still not upcoming work after 'it didn't happen'", () => {
+    const answered = mission({ ...stale, close_answer: "not_driven" });
+    const unsettled = needsClosing(answered, at(6 * HOUR)) || answered.close_answer === "not_driven";
+    expect(unsettled).toBe(true);
+    // …while a genuinely upcoming trip is untouched by any of this.
+    const upcoming = mission({ status: "confirmed", duration_min: 40 });
+    const stillOpen =
+      needsClosing(upcoming, at(-2 * HOUR)) || upcoming.close_answer === "not_driven";
+    expect(stillOpen).toBe(false);
+  });
+
   // 'driven' also moves the trip to `completed`, so the tone comes from the
   // status like any other finished trip — no lingering § Q state.
   it("reads as a normal completed trip once it was driven", () => {

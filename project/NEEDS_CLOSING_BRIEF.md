@@ -219,6 +219,14 @@ courtesy clock running at the pickup), email/SMS, and any GPS scaffolding.
 - Both missions restored to their pre-test state, the one `status_event` deleted by recorded id, baseline back
   at **271**.
 
+**⚑ Founder-reported the same day: an answered "it didn't happen" reappeared as UPCOMING work.** It writes
+no status by design, so the trip stays `confirmed` — and `needsClosing` going false dropped it straight back
+into the Driver's day groups and the Upcoming tab count, as work they had just told us never happened. The
+partition now keys on the outcome being **unsettled**, not on the question being unanswered, and the card
+switches from an amber prompt to a quiet receipt: *"You said this trip didn't happen. The hotel has been told
+and will be in touch."* The section retitles itself to **Waiting on the hotel** when everything in it is
+answered. Pinned by a test.
+
 **⚑ Two more controls suppressed, found by running it.** Once a trip is answered `not_driven`, `needsClosing`
 goes false — which silently handed **Cancel** and **Agreed release** back to the Business on a trip the Driver
 had just said never happened. The suppression is now keyed on the outcome being *unsettled*

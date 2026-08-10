@@ -41,13 +41,26 @@ const ACTIVE_STATUSES: MissionStatus[] = [
 ];
 const PAST_STATUSES: MissionStatus[] = ["completed", "cancelled"];
 
-/** § Q — the card's line = the shared sentence plus what to do about it here. */
-function cardClosingLine(m: MissionRow, now: Date): string {
+/**
+ * § Q — the card's line. Three states, not two: still asking (amber, with what to
+ * do), or already answered "it didn't happen" (quiet — the Driver has done their
+ * part and the ball is with the hotel; nagging them again would be wrong).
+ */
+function cardClosingState(m: MissionRow, now: Date): { text: string; answered: boolean } {
+  if (m.close_answer === "not_driven") {
+    return {
+      text: "You said this trip didn’t happen. The hotel has been told and will be in touch.",
+      answered: true,
+    };
+  }
   const started =
     m.status === "en_route" || m.status === "arrived" || m.status === "on_board";
-  return `${closingLine(m, now)} ${
-    started ? "Close it when you’ve dropped the Guest." : "Tell us what happened."
-  }`;
+  return {
+    text: `${closingLine(m, now)} ${
+      started ? "Close it when you’ve dropped the Guest." : "Tell us what happened."
+    }`,
+    answered: false,
+  };
 }
 
 function RideCard({
@@ -59,8 +72,8 @@ function RideCard({
   m: MissionRow;
   bizName: string;
   flag?: "amendment" | "release";
-  /** § Q — the amber line, present only on a trip waiting to be closed. */
-  closing?: string;
+  /** § Q — present only on a trip whose outcome is unsettled. */
+  closing?: { text: string; answered: boolean };
 }) {
   const stops = parseWaypoints(m.waypoints);
   const stopsReached = m.stops_reached ?? 0;
@@ -98,9 +111,15 @@ function RideCard({
         </div>
 
         {closing && (
-          <div className="ridecard__flag ridecard__flag--warn">
-            <ClockAlert aria-hidden="true" />
-            {closing}
+          <div
+            className={
+              closing.answered
+                ? "ridecard__flag ridecard__flag--warn ridecard__flag--done"
+                : "ridecard__flag ridecard__flag--warn"
+            }
+          >
+            {closing.answered ? <CircleCheck aria-hidden="true" /> : <ClockAlert aria-hidden="true" />}
+            {closing.text}
           </div>
         )}
 
@@ -223,9 +242,16 @@ export default async function RidesPage() {
   // sorted soonest-first it sat at the TOP of the list: the oldest dead trip was
   // the first thing a Driver saw, with their real next job buried under it. Split
   // it out. The query is unchanged — these rows were always in ACTIVE_STATUSES.
+  //
+  // ⚑ An answered "it didn't happen" belongs here too. It writes no status — on
+  // purpose, since nobody knows yet who is at fault — so the trip stays
+  // `confirmed` and would otherwise fall straight back into the day groups as
+  // upcoming work the Driver has already told us never happened. It is not
+  // upcoming and it is not finished; it is waiting on the hotel, and it says so.
   const now = new Date();
-  const open = (missions ?? []).filter((m) => !needsClosing(m, now));
-  const stale = (missions ?? []).filter((m) => needsClosing(m, now));
+  const unsettled = (m: MissionRow) => needsClosing(m, now) || m.close_answer === "not_driven";
+  const open = (missions ?? []).filter((m) => !unsettled(m));
+  const stale = (missions ?? []).filter(unsettled);
 
   // Day separators: consecutive runs of the same Paris calendar day. The query is
   // already ordered by pickup_at, so a single pass keeps the groups in order.
@@ -257,7 +283,9 @@ export default async function RidesPage() {
       {stale.length > 0 && (
         <section>
           <div className="dday dday--first dday--closing">
-            <h2 className="dday__l">Needs closing</h2>
+            <h2 className="dday__l">
+              {stale.every((m) => m.close_answer) ? "Waiting on the hotel" : "Needs closing"}
+            </h2>
             <span className="dday__n">
               {stale.length} ride{stale.length === 1 ? "" : "s"}
             </span>
@@ -268,7 +296,7 @@ export default async function RidesPage() {
               m={m}
               bizName={bizNames.get(m.business_id) ?? "—"}
               flag={pending.get(m.id)}
-              closing={cardClosingLine(m, now)}
+              closing={cardClosingState(m, now)}
             />
           ))}
         </section>
