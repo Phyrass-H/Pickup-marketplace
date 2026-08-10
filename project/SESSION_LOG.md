@@ -41,9 +41,19 @@ accepted. Waiting isn't included: it's only counted from an Arrived tap."* The w
 boilerplate — it is the difference between a Driver understanding the number and discovering a missing 40 €
 later. `closingLine` moved into `lib/mission-cards.ts` so the list and the trip page cannot drift.
 
-**Verified:** both cards rendered against the real DB (boarded → one filled button; never-started → two
-answers, the destructive one behind a second tap). `tsc` clean, 317 tests. **The write paths are unverified
-until the migration lands** — that is the first job next session.
+**✅ VERIFIED LIVE — the founder applied the migration the same session.** Both answers driven through the
+real UI on real missions: `driven` → `completed` + `close_answer=driven` + `close_answered_at` set and
+**`waiting_fee` still NULL** (the assertion the whole design exists to protect); `not_driven` → status
+**unchanged**, answer recorded, no money touched. The Business's row went red with *"Driver says it didn't
+happen · Nothing has been charged — call them"*. Both missions restored to their pre-test state, the single
+`status_event` deleted by recorded id, baseline back at **271 missions**.
+
+**⚑ Two more controls suppressed, found only by running it.** Answering `not_driven` makes `needsClosing`
+false — which quietly handed **Cancel** and **Agreed release** back to the Business on a trip the Driver had
+just said never happened. The gate is now keyed on the outcome being *unsettled*
+(`needsClosing || close_answer === 'not_driven'`), not on it being unanswered. The same hole existed on the
+Driver's own screen: **"Cancel this trip"** was still offered on a 51-day-old trip — a 100% penalty plus a
+re-pool of a trip that already came and went. An unclosed trip now shows the Driver exactly **one** button.
 
 ## 2026-08-10 — Session 58 part B — § Q slice 1: "a trip the Driver never closed"
 

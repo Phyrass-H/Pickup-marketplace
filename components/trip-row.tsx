@@ -178,8 +178,13 @@ export function TripRow({
   // accepted/confirmed, so this decides what the pending cards are allowed to
   // promise as well as whether a new proposal can be made.
   const answerable = negotiationAnswerable(mission.status);
-  // § Q — a trip past its expected end that nobody closed.
-  const unclosed = !archived && needsClosing(mission);
+  // § Q — the trip is past its expected end and its outcome is still unsettled:
+  // either nobody has answered, or the Driver answered that it never happened.
+  // Both are the same thing for the controls below — there is nothing left to
+  // negotiate, and the answer is a phone call. (Once it is answered `driven` the
+  // trip is `completed` and none of this applies anyway.)
+  const unclosed =
+    !archived && (needsClosing(mission) || mission.close_answer === "not_driven");
   // A change can be PROPOSED (route/fare, needs Driver consent) only once a Driver
   // holds the trip but hasn't started it (D39 Phase 2).
   const canAmend = !archived && answerable;

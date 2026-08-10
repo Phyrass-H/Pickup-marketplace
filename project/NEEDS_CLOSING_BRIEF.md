@@ -210,6 +210,22 @@ screen is how a Driver taps the wrong one.
 **Still not built, and still for the same reason:** the late no-show route (§ Q — `mark_no_show` assumes a
 courtesy clock running at the pickup), email/SMS, and any GPS scaffolding.
 
+### ✅ Verified live (migration applied 2026-08-10, both paths driven through the real UI)
+
+- **`driven`** → `status=completed`, `close_answer=driven`, `close_answered_at` set, and **`waiting_fee`
+  stayed NULL** — the assertion the whole design exists to protect.
+- **`not_driven`** → status **unchanged** at `confirmed`, answer recorded, no money touched anywhere.
+- Business row → red wash, **"Driver says it didn't happen"**, *"Nothing has been charged — call them"*.
+- Both missions restored to their pre-test state, the one `status_event` deleted by recorded id, baseline back
+  at **271**.
+
+**⚑ Two more controls suppressed, found by running it.** Once a trip is answered `not_driven`, `needsClosing`
+goes false — which silently handed **Cancel** and **Agreed release** back to the Business on a trip the Driver
+had just said never happened. The suppression is now keyed on the outcome being *unsettled*
+(`needsClosing || close_answer === 'not_driven'`), not merely unanswered. Same fix on the Driver's side, where
+**Cancel this trip** was still offered on a 51-day-old trip — a 100% penalty plus a re-pool, on a trip that
+already came and went. An unclosed trip now shows the Driver exactly **one** button: the answer.
+
 ## Slice 2 — the design, as specified before building
 
 - **`on_board` group needs no new action** — "Complete ride" already exists and is already right. It gets

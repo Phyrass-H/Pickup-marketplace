@@ -129,10 +129,15 @@ export function MissionRunView({
   const when = formatPoolWhen(m.pickup_at);
   const { tone, Icon: PillIcon } = statusPill(m);
   const showProgress = isExecutable(m.status) || m.status === "completed";
-  // § Q slice 2 — past its expected end and still open. While this is true the
+  // § Q slice 2 — the question is being asked right now. While this is true the
   // close card owns the screen and the normal step buttons stand down: the
   // question is "did this happen?", not "what's the next step?".
-  const unclosed = needsClosing(m);
+  const asking = needsClosing(m);
+  // …and the outcome stays unsettled after a `not_driven` answer, which is why
+  // Cancel has to stay away too: a Driver cancel is a 100% penalty plus a re-pool,
+  // and re-pooling a trip whose pickup was seven weeks ago is meaningless (§ P
+  // refuses a past pickup). Whatever happened here, it is not a cancellation.
+  const unsettled = asking || m.close_answer === "not_driven";
   const segments = progressSegments(stops.length);
   const done = progressDone(m.status, stops.length, stopsReached);
   const caption = progressCaption(m.status, stops.length, stopsReached);
@@ -173,7 +178,7 @@ export function MissionRunView({
               replaces the normal status control below (see `showStatus`): two
               competing sets of buttons on one screen is how a Driver taps the
               wrong one. */}
-          {unclosed && (
+          {asking && (
             <CloseTripCard
               missionId={m.id}
               boarded={m.status === "on_board"}
@@ -408,7 +413,7 @@ export function MissionRunView({
 
       {/* Actions live below the card: exactly one filled button, the rest quiet. */}
       <div className="dstack">
-        {isExecutable(m.status) && !unclosed && (
+        {isExecutable(m.status) && !unsettled && (
           <StatusControl
             missionId={m.id}
             status={m.status}
@@ -435,11 +440,15 @@ export function MissionRunView({
           />
         )}
 
-        {/* Cancel (O7): available while the Driver holds the trip, before boarding. */}
-        {(m.status === "accepted" ||
-          m.status === "confirmed" ||
-          m.status === "en_route" ||
-          m.status === "arrived") && (
+        {/* Cancel (O7): available while the Driver holds the trip, before boarding —
+            but never once the trip is past its expected end (§ Q). A Driver cancel
+            is a 100% penalty plus a re-pool, and neither means anything on a trip
+            that already came and went; the close card above is the honest answer. */}
+        {!unsettled &&
+          (m.status === "accepted" ||
+            m.status === "confirmed" ||
+            m.status === "en_route" ||
+            m.status === "arrived") && (
           <DriverCancel
             missionId={m.id}
             fare={settledFare(m)}

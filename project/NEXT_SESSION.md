@@ -579,12 +579,10 @@ parts still standing.
   floored so neither fires inside the check-in hour. Don't collapse them back into one number: live
   `duration_min` has a **median of 27 min**, so a flat arrival+30 fires at pickup+57 on **67%** of trips and
   would replace the red *"Not checked in — call them"* with an amber clerical note.
-- **⚠️ SLICE 2 IS BUILT AND WAITING ON ONE MIGRATION — THIS IS THE FIRST JOB NEXT SESSION.**
-  **`docs/migrations/2026-08-10_mission_close_answer.sql`** (two additive nullable columns). Until the founder
-  runs it in the Supabase SQL editor, the cards render and every READ is safe — `close_answer` comes back
-  undefined, so `needsClosing` is unaffected — but **the two answer buttons fail on the write, and no write
-  path has been verified.** After it lands: drive one trip through each answer against the real DB and confirm
-  `waiting_fee` stays NULL on the `driven` path.
+- **✅ SLICE 2 SHIPPED AND VERIFIED LIVE.** `2026-08-10_mission_close_answer.sql` applied by the founder the
+  same session. Both answers driven through the real UI: `driven` → `completed` with **`waiting_fee` NULL**;
+  `not_driven` → status unchanged, nothing charged, the Business's row red with *"Driver says it didn't
+  happen"*. Missions restored, baseline **271**.
 - ⚑ **The thing that must not be "simplified" later:** `answerClose`'s `driven` branch is ONE guarded
   `→ completed` UPDATE and deliberately does **not** call `advanceStatus`. That walk's `on_board` step runs
   `board_guest`, and `mission_waiting()` returns **the ceiling** when called days late — **660,00 €** invented
