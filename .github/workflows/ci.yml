@@ -1,0 +1,56 @@
+# Kavenue CI — the robot that runs the checks on every push.
+#
+# Why this exists: sessions push straight to `main`, and `main` auto-deploys to
+# production on Vercel. One forgotten `npm test` ships a broken commit. This
+# runs the same three checks a session runs by hand, on a clean machine, every
+# time — so "it worked on my Mac" stops being the only proof.
+#
+# It NEVER touches the live database. The .local/probe/* scripts write to the
+# real Supabase project; they are git-ignored and stay a human's tool.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A new push to the same branch cancels the run still going for the old one —
+# only the newest commit is worth a runner.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: types · tests · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the Node the founder builds with locally (v25), so the runner
+      # can't pass on a version we never ship from.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "25"
+          cache: npm
+
+      # `npm ci` (not `install`) — installs exactly the lockfile, nothing newer.
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Tests
+        run: npm test
+
+      # `next build` reads the env vars while collecting page data, so they have
+      # to EXIST — they do not have to be valid. These are placeholders and the
+      # build never calls out to anything.
+      # ⚠️ NEVER put a real key in this file. It is public.
+      - name: Build
+        run: npx next build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_MAPBOX_TOKEN: pk.placeholder
