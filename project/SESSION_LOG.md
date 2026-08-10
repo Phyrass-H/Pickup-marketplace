@@ -5,6 +5,35 @@
 
 ---
 
+## 2026-08-10 — Session 58 — CI: the checks now run on every push
+
+Pushed `3032d8a` + `2a4e1de` (the action bump), both runs green in ~1 min. **One file: `.github/workflows/ci.yml`.**
+There was no CI of any kind before this.
+
+**What it does.** On every push (any branch) and every PR, a fresh Ubuntu runner does `npm ci` →
+`npx tsc --noEmit` → `npm test` → `npx next build`. Node pinned to **25**, matching the Mac, so the runner can't
+pass on a version we never ship from. `concurrency: cancel-in-progress` kills the superseded run when you push
+twice to the same branch.
+
+- **The build step gets placeholder env vars** (`https://placeholder.supabase.co` etc.) as step `env:`, because
+  `next build` needs them to *exist* for page-data collection, not to be valid. **No real key is in the file** —
+  it's public. This is the S55 trick, now permanent.
+- **Nothing in CI touches the live DB.** The `.local/probe/*` scripts stay a human's tool; they're git-ignored so
+  they aren't even on the runner.
+- `actions/checkout` and `actions/setup-node` went straight to **v5** — v4 still targets the Node 20 runtime and
+  GitHub annotates every single run about it. Second run is annotation-free.
+
+**Verified before pushing, under real CI conditions.** A dev server was holding `:3000`, so the checks ran in a
+**detached git worktree** (`node_modules` symlinked, **`.env.local` deliberately absent**) rather than against the
+running server's `.next` — the S41 trick, and the right one here because it also proves the build works with no
+local env file. `tsc` clean · **294/294 tests in 0.43 s** · build green (24 routes). Then confirmed live on the
+runner twice with `gh run watch`.
+
+**⚑ FOUNDER ACTION, and it is the half that matters: branch protection.** A green tick nobody enforces is
+decoration. GitHub → the repo → **Settings → Branches → Add branch ruleset** on `main` → *Require status checks to
+pass* → pick **`types · tests · build`**. Until that's clicked, CI tells you a push was broken *after* it deployed.
+It is a web-UI setting; it cannot live in the workflow file.
+
 ## 2026-08-09 — Session 57 part B — THE LAST SIX OF THE 17
 
 Founder: *"do the 6 left"*. Deployed `0bf3f3f` (the three cosmetics) and `ed9d660` (the three judgement

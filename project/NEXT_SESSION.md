@@ -544,33 +544,23 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ START HERE — THE NEXT JOB IS DECIDED. CI, then Spend pass 2 (founder, 2026-08-10).**
-The founder took the recommendation: **CI first (~30 min, it protects everything after), then back to
-§ S Spend pass 2.** Don't re-open the menu; confirm and go (rule #4 still applies — one line, then start).
+**★ START HERE — THE NEXT JOB IS DECIDED. Spend pass 2 (founder, 2026-08-10). CI is DONE.**
+Don't re-open the menu; confirm and go (rule #4 still applies — one line, then start).
 
-**JOB 1 — CI. Everything you need, so nothing has to be re-derived.**
-- **Why now, in the founder's terms:** the suite is 294 tests in ~0.5 s and nothing runs it but memory, while
-  Claude sessions push **straight to `main`** and `main` auto-deploys to production. One forgotten `npm test`
-  ships a broken commit.
-- **The shape:** one file, `.github/workflows/ci.yml` (GitHub Actions). On push + PR, on a fresh runner:
-  `npm ci` → `npx tsc --noEmit` → `npm test` → `npx next build`. There is **no CI of any kind today** — check
-  `ls .github/` first; as of 2026-08-10 that directory does not exist.
-- ⚠️ **`next build` needs the env vars to EXIST**, not to be valid — page-data collection reads them. Give the
-  build step placeholder values (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`) as step `env:`. **Never put a real key in the
-  workflow file.** S55 proved the placeholder trick works.
-- ⚠️ **Do NOT add any step that touches the live database.** The `.local/probe/*` scripts write to the real
-  Supabase project and are git-ignored; they are a human's tool, not a CI job.
-- **Node version:** pin it to what the Mac runs (`node -v` → v25 today) via `actions/setup-node`, or the
-  runner's default may differ from what the founder ships from.
-- **The half that turns it from information into a seatbelt:** **branch protection** on `main` — require the
-  check to pass before merge. That is a **GitHub web-UI setting the founder must click**, not something in the
-  file. Explain it in one line and let them decide; a green tick nobody enforces is decoration.
-- **Explain it to the founder in the plain-words-plus-terms register** (see the memory of that name) — they
-  asked what CI is and were given: *a robot that runs the checks on every push*, **runner**, **workflow file**,
-  **status check**, **branch protection**. Reuse that vocabulary; don't invent new words for it.
+**JOB 1 — CI. ✅ SHIPPED (S58, 2026-08-10; commits `3032d8a` + `2a4e1de`, both runs green in ~1 min).**
+One file, `.github/workflows/ci.yml`: on every push (any branch) + PR, a fresh Ubuntu runner does `npm ci` →
+`npx tsc --noEmit` → `npm test` → `npx next build`. Node pinned to **25** (the Mac's), `checkout`/`setup-node`
+at **v5** (v4 annotates every run about the Node 20 runtime), `concurrency: cancel-in-progress`. The build step
+carries **placeholder** env vars — `next build` needs them to exist, not to be valid — and **no step touches the
+live DB**. Verified before pushing in a detached worktree with **`.env.local` absent**, which is the honest CI
+condition: `tsc` clean · 294/294 · build green.
+- **⚑ STILL OWED BY THE FOUNDER — the half that matters: branch protection.** Settings → Branches → ruleset on
+  `main` → *Require status checks to pass* → **`types · tests · build`**. Until that's clicked CI only *reports*;
+  a broken push still deploys and the red cross arrives afterwards. Ask once, then leave it — it's their click.
+- ⚑ If CI ever fails on something a session can't reproduce, remember the runner has **no `.env.local`** and
+  **no `.local/`** — anything that quietly depended on those will only break there.
 
-**JOB 2 — § S Spend pass 2.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
+**JOB 2 — § S Spend pass 2 — ⇦ THE JOB.** Full brief and the founder's rulings: **`project/SPEND_BRIEF.md` § 9**. Pass 1
 (`/dispatch/spend`) is live and untouched since S54. Owed: booking-notice (lead time × fare × fill rate) ·
 committed-spend tail · Route breakdown polish · then the service check (on-time from `status_event`) and the
 demand heatmap. "Arrived on time" stays blank until check-in data exists. **D25 preview loop applies** — this

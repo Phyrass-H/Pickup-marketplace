@@ -5,6 +5,21 @@
 
 ---
 
+## 10 August 2026 — a robot now checks every change before you see it
+
+- **Every push is now checked automatically.** Until today, the 294 tests only ran when someone remembered to
+  run them — on a machine where everything already works. Now GitHub does it on a clean computer, every time:
+  it installs the project from scratch, checks the types, runs all the tests, and builds the whole app. It
+  takes about a minute, and you get a green tick or a red cross on the change itself.
+- **Why it matters here specifically:** work on this project goes straight to `main`, and `main` goes straight
+  to the live site. One forgotten check could put a broken version in front of a real hotel. Now something
+  independent looks first.
+- **It never touches your database.** The checks build the app against fake placeholder settings. Nothing in
+  them can read or change a real trip, and no real key is anywhere near the file.
+- **⚑ One thing for you to click, and it's the important half.** Right now the robot *reports*; it doesn't
+  *stop* anything. Turning on **branch protection** in the GitHub settings makes a red cross actually block
+  the change from landing. Until then, a broken push still ships and the cross arrives afterwards.
+
 ## 9 August 2026 — the last six from the audit, and the list is done
 
 The August audit found 17 problems. All 17 are now either fixed or written up. Six went in today; three
