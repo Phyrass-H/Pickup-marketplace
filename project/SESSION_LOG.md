@@ -5,6 +5,83 @@
 
 ---
 
+## 2026-08-14/15 — Session 59 — THE PRICING MODEL, LOCKED (no code; `docs/06` created)
+
+**Nothing was built. Everything was decided.** Full model: **`docs/06_Pricing_Commission_Payments.md`**,
+which is now the source of truth for anything touching price or commission. Decision entry: **[[d72]]**.
+The session opened on § S Spend pass 2 and pivoted within the first hour — Spend totals money across
+everything, and the commission shape (§4.1 of `PRICING_BRIEF`) decides *how many numbers a trip has*, so
+building the analytics first would have meant rewriting them.
+
+**⚑ `docs/06` never existed.** Two outside briefs cited it as their source of truth; git history has no trace
+of it, in any branch, ever. What the founder had were two *extracts* (an implementation brief and a MAD
+chapter). The V1 core was reconstructed in this session from those plus the repo, and written to the repo so
+the next outside conversation starts current.
+
+**The 27% mystery, solved.** The outside brief's `business_fee_pct 0.15 / driver_fee_pct 0.12` is not a
+different proposal from `docs/04`'s 12.5/10 — it is the same pair with the 20% VAT folded in
+(`12.5 × 1.2 = 15`, `10 × 1.2 = 12`). Both documents were right and neither said which basis it used.
+
+**Two audits ran as workflows.** (1) A 5-lens audit of the outside brief against the live code — 86 agents,
+4.3M tokens — which found the waiting-clock origin regression (§9 of the brief re-introduced the `arrived_at`
+anchor fixed in S41), confirmed G2's "zones" gap was closed by base+radius in June, and flagged that removing
+`pdp_start` is not free because `2026-08-11_fee_basis_band.sql:120` clamps every fee basis with
+`least(coalesce(pdp_start, ceiling*0.5), ceiling)`. Its `verify:rulings` lens lost all 14 verifiers to a DNS
+failure, so that one section is single-sourced. (2) A 6-source market benchmark — **192 real published
+prices**, 9 operators plus the regulated taxi tariff — which rebuilt the rate card.
+
+**⚑ The founder overruled the research, and was right to.** A mechanism-design workflow returned three named
+alternatives (Convoy/Amazon-Relay pre-committed carrier prices, Uber Reserve's fixed fare + eligibility
+gating, freight waterfall tendering) on the finding that *an ascending price rewards waiting, and only rival
+risk ends it*. All three rejected: *"the fomo is going to do the work, I experience it everyday on Sixt,
+drivers take trips cheaper by fear of missing it."* The research's thin-supply premise was wrong for a market
+that already has many Drivers. The two "dangerous" flags (deadline-proximity surge, teaching the Pool to wait)
+were rejected on the same grounds — Blacklane, Uber, Bolt and Sixt all run it.
+
+**The curve, after one failed attempt.** The first proposal spread ~40 steps evenly across the window; the
+founder's test — *"what happened in the last 12 hours with your mechanic for a trip posted two weeks ago"* —
+killed it: **one step, €4.79 of movement**, price already at 96% of ceiling with 18h to go. The auction was
+over before the trip was urgent. Replaced by **equal movement per halving of the remaining time** (€36 across
+~25 steps in the same window), which is self-similar and therefore alive at every lead time. Steps log-spaced
+then jittered; **one source of randomness** (jitter the times, uneven sizes fall out for free), **seeded from
+the mission id** so the curve is unguessable outside but every read agrees and any past price replays.
+
+**⚑ Two founder corrections that changed the model.** (1) The floor is an **opening bid, not a valuation** — I
+had flagged the Eco floor as "too low to be viable" and it is *supposed* to be. (2) **Every trip opens at the
+floor whatever the lead time.** I had argued time-to-pickup pricing (a 2-day posting entering mid-curve);
+overruled because the Business saving money is what keeps the system alive, and the discipline against posting
+late is the **risk of not filling**, not a higher opening price. SPEED WIN is the Business's answer to that,
+and it is already a checkbox — verified in `mission-form.tsx:827`, a nudge at ≤5h with a one-tap enable, never
+automatic. The ceiling point moved 6h → **T−5h** to match that nudge.
+
+**⚑ The learned-price layer, and the trap the founder caught.** I proposed learning route prices from the
+**accepted fare**; rejected — *"the accepted price is based on fomo in auction, nothing to do with price
+market"* — and he is right: it would ratchet the card down forever (accepted fares set the anchor → lower
+ceiling → lower accepted fares). Learn from **edited ceilings** + **fill rate** instead. He then pushed to
+include *untouched* ceilings as weak votes; refuted with arithmetic — 90 hotels leaving €112 and 10 raising to
+€140 averages €114.80, which measures the *edit rate*, not the route. Conceded one exception: a hotel that
+normally edits and this time doesn't. He explicitly asked to be argued with even when he insists.
+
+**The 30-second hold** came from the founder's own notebook and reversed my advice. I had said don't build it
+(an exclusive option that blocks the Pool); his reason is **regret protection**, not price protection — an
+impulsive FOMO accept becomes a Driver cancellation, i.e. a 100% penalty and a hotel with no car. Ships
+**after** the pricing engine, since both touch `accept_mission`, and enforced **inside the same gate** or a
+Driver pressing Accept in the same tenth of a second writes past a live hold.
+
+**Rate card rebuilt.** Ceilings: Eco 20+1.85 · Business 48+2.00 · Business-van 45+2.25 · Luxury 115+1.90.
+Floors: 12+0.65 · 13+0.75 · 17+0.90 · 20+1.10. Old Eco priced Nice → Saint-Tropez at **64%** of retail, now
+79%. Uber excluded above the entry tier (*"they destroy the market"*). **Fixed class ratios dropped** —
+observed retail ratios move with distance in opposite directions (Eco converges up on Business, Luxury
+collapses toward it), which a single multiplier cannot express. Van at ×1.29 was contradicted outright: the
+market prices vans at 0.97–1.09× a sedan.
+
+**Three visuals generated from the real algorithm** (scratchpad + `~/Downloads`): the curve across four
+posting scenarios, six real Riviera routes × four classes with the full money, and the SPEED WIN rule set.
+⚑ Raw HTML opened from disk needs `<meta charset="utf-8">` or every `€` renders as mojibake.
+
+**⚑ Carried into the build:** the Pool loads the whole archive and filters in memory (already flagged as the
+first thing to break at 5 000) — fix it with the curve, since both land on the same read path.
+
 ## 2026-08-10 — Session 58 close — the founder's own test, and § U
 
 **Deployed `9f99dd8` + `d50014b`, Vercel `success`. `npm test` = 318.** Six commits this session, all through

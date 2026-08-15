@@ -1452,3 +1452,47 @@ call, the ceiling caps it at 40 €/60 €, and in beta every euro settles by ha
 
 ⚑ Parked for the pricing conversation: *"what if the Business doesn't want the Driver to wait past the courtesy
 wait"* — `business_declare_no_show` is already half of that lever.
+
+### D72
+**2026-08-14/15 — THE PRICING MODEL, LOCKED END TO END. Source of truth is now
+`docs/06_Pricing_Commission_Payments.md`** — a file that did not exist before this session, despite two
+outside briefs citing it. Everything below is recorded there in full; this entry is the pointer.
+
+**Commission.** 12.5% Business / 10% Driver **before VAT** = **15% / 12% TTC**. The "15/12" in the outside
+brief and the "12.5/10" in `docs/04` were never two proposals — they are the same rates with and without the
+20% VAT on Kavenue's fee. On a 100 € fare: hotel invoiced 115 €, Driver receives 88 €, Kavenue banks **22.50 €**
+and hands 4.50 € to the state. **Never quote 27%** — it counts VAT as income. The rule that replaced the case
+list: **money moving Business → Driver carries commission, always**; an agreed release moves none, and the
+Driver's own penalty runs the other way so it is an indemnity. This settles the cancellation-fee question — a
+90 € fee becomes 103.50 € paid / 79.20 € received.
+
+**The auction.** Founder rejected all three researched alternatives (pre-committed driver prices, fixed fare +
+access gating, waterfall tendering) and the two "dangers" the research flagged, from operator experience:
+*"the fomo is going to do the work, I experience it everyday on Sixt."* Kept the ascending auction and built a
+proper curve: **equal movement per halving of the remaining time**, opening at the floor, ceiling at **T−5h**,
+steps log-spaced then **jittered from a seed derived from the mission id** (unguessable outside, perfectly
+replayable in a dispute). Posted inside 5h → the climb runs to the **midpoint**. The curve never starts earlier
+than 2 weeks, so two identical trips are worth the same whoever typed theirs in first. **SPEED WIN is the same
+curve opening at 70% of ceiling** — not a separate mechanic.
+
+**Two founder corrections that changed the design.** (1) *The floor is an opening bid, not a valuation* — a
+guard rail against an absurd posting, which is why it being "too cheap" is the auction working. (2) *Every trip
+opens at the floor whatever the lead time*, because the Business saving money is what keeps the whole system
+alive; pricing a late posting higher would have punished them for their own urgency.
+
+**The rate card was rebuilt from 192 real market prices** (9 operators + the regulated taxi tariff), positioned
+at ~77% of retail. Uber excluded above the entry tier — *"they destroy the market"*. The old Eco card priced
+Nice → Saint-Tropez at 64% of retail; it is now 79%. **Fixed class ratios were dropped** — observed ratios move
+with distance in opposite directions.
+
+**Learned route prices, designed not built.** ⛔ **Never learn from the accepted fare** — the founder caught
+this: accepted fares are FOMO under auction pressure, so learning from them ratchets the card down forever.
+Learn from **edited ceilings** (outcome referees the motive) and **fill rate**. ⛔ **Untouched ceilings do not
+move the price** — they are Kavenue's own number handed back, and pooling them measures the edit rate, not the
+route. They validate through the outcome instead.
+
+**The 30-second hold ([[d72]] part 2), from the founder's own notebook.** A Driver holds a trip for 30 s to
+think, price frozen. Not a price protection — a **regret protection**: an impulsive accept becomes a Driver
+cancellation, which is a 100% penalty plus a hotel with no car. One hold at a time, one per trip, **enforced
+inside the same gate as Accept** or a Driver pressing Accept in the same tenth of a second writes past it. The
+card stays readable to everyone with a visible countdown.

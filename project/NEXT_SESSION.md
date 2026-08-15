@@ -548,9 +548,35 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★ START HERE — THE NEXT JOB IS DECIDED: § S SPEND PASS 2 (founder, 2026-08-10).**
-Everything else in this block is S58's record — read the WORKFLOW warning immediately below, then skip to
-**JOB 2**. Confirm the job in one line and go (rule #4: don't re-offer the menu).
+**★★ START HERE — THE NEXT JOB IS DECIDED: BUILD THE PRICING ENGINE (founder, 2026-08-15).**
+
+**Read `docs/06_Pricing_Commission_Payments.md` FIRST — all of it, before anything else.** It is new (S59),
+it is the source of truth for anything touching price or commission, and it ends with the build order. It
+did not exist before S59 even though two outside briefs cited it; do not go looking for another copy.
+
+**The job, in order (§13 of that doc):**
+1. **`rate_card` table + seed rows + the §4 formula** — Kavenue computes and pre-fills the Ceiling on
+   `/dispatch/new`, and the floor is enforced. **Needs a migration the founder runs** — write the SQL to
+   `docs/migrations/`, hand them the one-liner, then build on top.
+2. **Commission** — the two displays, the three invoice lines (`Course` / `Frais de service` / `TVA sur
+   frais de service`, never collapsed), and the snapshot columns on `mission`.
+3. **The §6 curve**, replacing the current `pdp_start`/`pdp_step`/`pdp_interval` climb. ⚠️ **Money-critical:**
+   `pdp_start` is used by `docs/migrations/2026-08-11_fee_basis_band.sql:120` to clamp every cancellation and
+   no-show fee basis (`least(coalesce(pdp_start, ceiling*0.5), ceiling)`), so this ships with the money tests
+   updated and **both `.local/probe/` probes re-run**.
+4. **The §7 30-second hold** — after the engine, since both touch `accept_mission`.
+5. **§8 learned routes** — later, once there is volume.
+
+⚑ **Fix on the way:** the Pool loads the whole archive and filters in memory (the § R volume ceiling). It's
+the same read path the curve lands on, so do it in the same pass.
+
+⚑ **D25 preview loop applies** to every screen this touches — mockup, sign-off, then build to match.
+
+⚑ **§ S Spend pass 2 is NOT the next job any more.** It was, until S59 established that the commission shape
+decides how many numbers a trip carries — so Spend would have had to be rewritten. It comes after the engine.
+
+*(Everything below this line is S58's record, kept for its decision trail. The workflow warning immediately
+following still applies to every push.)*
 
 **⚠️⚠️ READ THIS FIRST OR YOUR FIRST PUSH WILL BE REJECTED — `main` IS PROTECTED SINCE 2026-08-10.**
 The ruleset `main — CI must pass` (active, default branch, required check **`types · tests · build`**) refuses

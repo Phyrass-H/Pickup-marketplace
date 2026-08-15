@@ -5,6 +5,42 @@
 
 ---
 
+## 14–15 August 2026 — the price is decided, from end to end
+
+*(Nothing was built this time. Everything was decided, and it's all written down in one place —
+`docs/06_Pricing_Commission_Payments.md`.)*
+
+- **Your commission numbers were never wrong, and neither were Claude's.** 12.5% and 15% are the same
+  rate — one before the VAT on your fee, one after. Same for 10% and 12%. On a €100 trip: the hotel is
+  invoiced **€115**, the Driver receives **€88**, and you bank **€22.50** after handing €4.50 to the state.
+  One number to never use in public: **27%**, because it counts the taxman's share as your income.
+- **One rule replaced a whole table of cases:** *money moving from the hotel to the Driver carries your
+  commission — always.* An agreed release moves no money, so it carries none; a Driver's own penalty runs
+  the other way, so it's compensation to the hotel, not a payment. That also settled cancellation fees: a
+  €90 fee becomes €103.50 paid and €79.20 received.
+- **Kavenue now works out the price, instead of a hotel guessing it.** We went and read **192 real prices**
+  from nine operators plus the official taxi tariff, and rebuilt the whole rate card from them. Your
+  instinct was right on the old one — Nice → Saint-Tropez in Eco was priced at 64% of what the route
+  actually sells for. It's now 79%, which leaves the hotel a real margin.
+- **The auction has a proper rhythm at last.** The price rises **every time the remaining time halves** —
+  so a trip posted a fortnight out creeps up daily, and one posted this morning moves every few minutes.
+  The same rule at every distance from the pickup. The steps are deliberately uneven and unguessable, so
+  no Driver can work out when the next rise lands or how big it is — but any past price can still be
+  proved, to the cent, if it's ever disputed.
+- **The first version of that curve was wrong and you caught it** by asking what happens in the last twelve
+  hours of a two-week-old trip. Answer: one price rise, €4.79. Dead exactly where it matters. The version
+  that shipped into the doc moves **€36 across 25 steps** in that same window.
+- **A hotel now knows its maximum cost the moment it books**, so it can quote its Guest straight away —
+  and everything the auction saves below that is the hotel's margin. Their screen will show what they
+  saved on every trip.
+- **A Driver will get 30 seconds to think** before committing, with the price frozen. Your idea, and the
+  reason is the right one: an attractive number grabbed on impulse turns into a cancellation, which costs
+  a 100% penalty and leaves a hotel with no car.
+- **Two things we decided *not* to do**, both because they'd quietly poison the prices: never learn what a
+  route is worth from what Drivers accepted (that's fear of missing out, not the market), and never count
+  a hotel that left our suggested price untouched as if it were their opinion.
+- **Coming next:** building it. The rate card first, then the commission, then the new price curve.
+
 ## 10 August 2026 — you tested it and found one
 
 - **A trip you'd been told never happened came back as upcoming work.** Because "it didn't happen" deliberately
