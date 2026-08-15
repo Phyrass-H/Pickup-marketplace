@@ -572,6 +572,17 @@ the same read path the curve lands on, so do it in the same pass.
 
 ⚑ **D25 preview loop applies** to every screen this touches — mockup, sign-off, then build to match.
 
+**⚑⚑ THREE THINGS WAITING ON THE FOUNDER — RAISE THESE IN YOUR OPENING MESSAGE, don't wait to be asked.**
+None blocks the build; all three are table values that get better with their input, and they explicitly
+asked to be reminded.
+1. **The Luxury rate card is provisional** — fitted from 11 data points with *nothing below 28 km*, so its
+   €115 base is extrapolated, not observed. Needs a second benchmark pass, or their own numbers.
+2. **Business and Van read slightly low** against what the founder knows of the market (their example:
+   Nice → Monaco Van at 117,67 €). The Van/Business *ratio* is right — 4.5% apart, matching both the data
+   and their experience — so if Van is low, Business is low. Tune the Business row and Van follows.
+3. **Step 1 needs a migration they run** (`rate_card` + the snapshot columns). Write the SQL, hand them the
+   one-liner for the Supabase SQL editor, then build on it.
+
 ⚑ **§ S Spend pass 2 is NOT the next job any more.** It was, until S59 established that the commission shape
 decides how many numbers a trip carries — so Spend would have had to be rewritten. It comes after the engine.
 
