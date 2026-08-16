@@ -5,6 +5,38 @@
 
 ---
 
+## 16 August 2026 — the prices, checked against the real market and fixed
+
+*(Still no code — this was a day of pricing homework. The numbers are now settled and written into
+`docs/06_Pricing_Commission_Payments.md`.)*
+
+- **You priced eleven real routes on four different websites**, from a 6 km airport hop to a 619 km
+  run to Geneva, and every quote got compared against what Kavenue would have charged. Where the two
+  disagreed, we found out why.
+- **The First tier was wrong, and you spotted it first.** It was charging a big fixed amount and then
+  almost nothing per kilometre — so a 2 km trip cost roughly the same as a 5 km one, and a long trip
+  came out far too cheap. It's now built the proper way round: a smaller fixed part, and a per-kilometre
+  rate that is **1.8× the Business rate**, which is what the market actually does.
+- **Long trips were being overcharged.** Everyone in this business charges less per kilometre the
+  further you go — Blacklane drops from €4.36/km on a short run to €1.82/km on a 595 km one. Our price
+  was a straight line, so past about 200 km we were asking **more than the websites charge their own
+  customers**. There's now a second, cheaper rate beyond 150 km. Nice → Geneva in Eco comes out at
+  **907 €**, right where you said it should be.
+- **The V-Class moves up to First**, the Vito stays Business — your call, and every site we checked
+  draws the same line. That also means Kavenue now has a **First — van** price, which it never had.
+- **The van was cheaper than the sedan on short trips.** A quirk nobody had noticed. Fixed.
+- **Uber turned out to be the best argument for Drivers we have.** A 6 km airport run pays a Driver
+  **27,20 €** through Kavenue. The same ride on UberX leaves them about **12,70 €**. More than double,
+  on our cheapest class.
+- **Two of your questions are saved for later, not forgotten:** raising prices when demand is high
+  (like the "high demand" banner you saw), and letting a Driver with a bigger car choose to accept
+  cheaper trips in quiet season — you liked that one, and it's scheduled.
+- **One thing to double-check when you have a moment:** two different websites quoted *exactly*
+  1 082,07 € for the same Courchevel trip. Probably one resells the other, but worth re-opening one
+  of them.
+
+---
+
 ## 14–15 August 2026 — the price is decided, from end to end
 
 *(Nothing was built this time. Everything was decided, and it's all written down in one place —

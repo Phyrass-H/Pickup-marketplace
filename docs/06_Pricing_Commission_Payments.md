@@ -1,6 +1,8 @@
 # Doc 06 — Pricing, Commission & Payments
 
-> **Status:** the V1 transfer pricing model. Written and locked with the founder 2026-08-14/15.
+> **Status:** the V1 transfer pricing model. Written and locked with the founder 2026-08-14/15;
+> **§4 rate card re-calibrated and re-locked 2026-08-16 (S60)** — two distance bands, First rebuilt,
+> a First — van row added, Business van base raised.
 > **Scope: V1 transfers only.** *Mise à disposition* (MAD, hourly/daily hire) and long multi-week
 > missions are **V2 — do not build them.** `mission_type` stays `transfer` for every V1 mission.
 > **Source of truth.** Where this doc and any other document disagree about price or commission,
@@ -122,33 +124,68 @@ The Business no longer invents a price. Kavenue computes and **pre-fills** it; t
 still edit the Ceiling (§0).
 
 ```
-ceiling = ceiling_base + ceiling_per_km × km
-floor   = floor_base   + floor_per_km   × km
+ceiling = ceiling_base
+        + ceiling_per_km      × min(km, long_threshold_km)
+        + ceiling_per_km_long × max(0, km − long_threshold_km)
+floor   = floor_base + floor_per_km × km
 ```
 
 **Distance only — no duration term.** The price must be final when the trip enters the Pool, so it
 cannot depend on a traffic estimate that moves between posting and acceptance. Accepted
 consequence: the same route prices identically at 07:00 and 18:00. This matches the premium
-segment — a sales line, not a compromise. `km` is frozen on the mission at creation.
+segment — a sales line, not a compromise. `km` is frozen on the mission at creation. The two
+distance bands are still distance-only — one more coefficient, not a duration term.
 
 ### Rate card — market `riviera`
 
-Calibrated 2026-08-14 against **192 real published prices** from 9 operators plus the regulated
-taxi tariff, positioned at **~77% of retail** so a Business reselling to its Guest keeps a margin.
-Uber was excluded from the fit above the entry tier — it distorts the market on premium classes —
-leaving Blacklane, local private-driver grids and the transfer aggregators as the anchors.
+First calibrated 2026-08-14 against **192 published prices** from 9 operators plus the regulated taxi
+tariff. **Re-calibrated 2026-08-16 (S60)** against four independent sources — **Blacklane**, two
+transfer aggregators and **Uber** — across **eleven routes from 5.9 km to 619 km**, including Paris
+and three cross-border runs. The card now sits at **70–94% of retail everywhere it was checked**, so
+a Business reselling to its Guest keeps a margin. Uber anchors **Eco only**; above the entry tier it
+distorts the premium classes.
 
-| Class / body | `floor_base` | `floor_per_km` | `ceiling_base` | `ceiling_per_km` |
-|---|---|---|---|---|
-| Eco | 12 | 0.65 | 20 | 1.85 |
-| **Business — sedan** | **13** | **0.75** | **48** | **2.00** |
-| Business — van | 17 | 0.90 | 45 | 2.25 |
-| Luxury (First) | 20 | 1.10 | 115 | 1.90 |
+| Class / body | `floor_base` | `floor_per_km` | `ceiling_base` | `ceiling_per_km` | `ceiling_per_km_long` |
+|---|---|---|---|---|---|
+| Eco | 12 | 0.65 | 20 | 1.85 | 1.30 |
+| **Business — sedan** | **13** | **0.75** | **48** | **2.00** | **1.40** |
+| Business — van | 17 | 0.90 | 52 | 2.25 | 1.58 |
+| **First — sedan** | 20 | 1.10 | **86** | **3.60** | **2.52** |
+| **First — van** | 20 | 1.10 | **82** | **3.42** | **2.39** |
 
-⚑ **Luxury is provisional** — 11 data points, nothing below 28 km, so its base is extrapolated.
-⚑ **Fixed class ratios do not hold.** Observed retail ratios move with distance in opposite
-directions — Eco converges upward on Business, Luxury collapses toward it. Do not reintroduce a
-single multiplier per class.
+**The two bands.** `ceiling_per_km` covers the first **150 km** (`long_threshold_km`);
+`ceiling_per_km_long` — about **70%** of it — covers everything beyond. **The taper is real and was
+measured twice, independently:** Blacklane charges 4.36 €/km for a Business sedan at 32 km and
+**1.82 €/km at 595 km**; the aggregator reaches the same **1.82** at the same distance. A single
+straight line put the card **above retail** past ~200 km. The **floor does not taper** — it stays
+linear, and never approaches the ceiling (the tightest pair is 0.65 against 1.30).
+
+⚑ **The threshold is the one unmeasured number** — nobody publishes where their own band turns. The
+evidence brackets it (107 km · 193 km · 327 km all land inside the target band). Moving it to 200 km
+changes a fare by **3–6%**, shrinking with distance — less than the spread between sources. Tune it
+with an `UPDATE` once real trips cross it; do not treat it as load-bearing.
+
+⚑ **First is 1.80× Business per km — measured, not assumed.** The old card had First *below*
+Business per km (1.90 against 2.00), leaning on a €115 base fitted from 11 points with **nothing
+under 28 km**, which made a 2 km trip cost 5% less than a 5 km one. Two sources put the true ratio
+at 1.80. The base fell 115 → 86 and the slope nearly doubled: the line **pivoted around ~17 km**,
+cheaper below, dearer above.
+
+⚑ **First — van is 5% under First — sedan** (six paired observations average −5.2%). The S-Class is
+the prestige object; the V-Class is a people-mover. Note this **inverts the Business tier**, where
+the van is *dearer* than the sedan — a van is an upgrade at Business level and a downgrade at First.
+
+⚑ **The Business van base rose 45 → 52 (2026-08-16)**: below 12 km the van was pricing *cheaper*
+than the sedan. Three sources say a van costs more — Uber 1.14–1.37×, the aggregators 1.03–1.12×.
+The card now holds **1.09–1.13×** at every distance.
+
+⚑ **Which row a vehicle uses: the V-Class is First, the Vito is Business.** Founder's call
+2026-08-16; the market draws the same line. Set in `lib/vehicle-catalog.ts`, and the reason a
+**First — van** row exists at all. The Pool consequence is BACKLOG **§ V**.
+
+⚑ **Do not reintroduce a single multiplier per class.** Every row was fitted on its own. The note
+that used to sit here claimed First "collapses toward Business" with distance — that came from the
+11 bad points and is **wrong**; First runs at 1.80× Business in both bands.
 
 ### Night pricing
 
@@ -175,6 +212,13 @@ A trip cannot be posted below the floor. If a Business edits the Ceiling below i
 only job is to stop a Business posting something absurd. It is cost-anchored, which is also the
 defensible position under §0: arithmetic on a Driver's cost base, not a fraction of the Business's
 commercial decision.
+
+⚑ **Flagged twice, ruled on twice — do not raise it a third time.** S59 flagged the Eco floor as
+"too low to be viable". S60 measured it: the floors sit at **25–33% of the lowest price anyone in
+the booked market will take** (Nice Airport → Monaco — our Eco floor 33.12 € against a cheapest
+booked price of 90 €). Both times the founder's answer was the same, and it is the rule above:
+**that is what an opening bid is.** The floors were left untouched in the 2026-08-16 re-calibration;
+only ceilings moved.
 
 ⚑ **At scale this changes.** With enough Drivers, trips clear early and near the floor — so the
 floor quietly becomes the effective price and deserves more care than a guard rail normally gets.
@@ -371,6 +415,9 @@ reappear, they are stale, not new:
 - The Business **does** keep its live waiting meter (§10).
 - The Pool has no "zone list" — it filters on the **Driver's base + service radius**.
 - Commission is **not** 15%/12% before VAT. Those are the TTC forms of 12.5%/10% (§1).
+- The rate card is **not** a single straight line, and First is **not** `115 + 1.90`. Both were
+  superseded 2026-08-16 (§4). Anything quoting a **four-row** card, a row called **"Luxury"**, no
+  long-distance band, or First priced *below* Business per km is the pre-S60 version.
 - `docs/06` is this file. Any other numbering for it is a document that never existed here.
 
 ---
@@ -379,9 +426,12 @@ reappear, they are stale, not new:
 
 | | Question | Status |
 |---|---|---|
-| 1 | Luxury card is provisional — no market data below 28 km | Needs a second benchmark pass |
+| 1 | ~~First card is provisional — no market data below 28 km~~ | ✅ **Closed 2026-08-16** — re-fitted on four sources; First is 1.80× Business per km |
 | 2 | Is 100% a strong enough Driver-cancellation penalty on a cheap trip? | Parked, not blocking |
-| 3 | Business and Van read slightly low against the founder's own market knowledge | Tunable, table values |
+| 3 | ~~Business and Van read slightly low against the founder's market knowledge~~ | ✅ **Closed 2026-08-16** — Business confirmed at 80–90% of Blacklane; van base 45 → 52 |
+| 4 | The 150 km band threshold has no direct evidence | Tunable; worth 3–6%. Revisit once real long-distance trips run |
+| 5 | Eco has no premium-source check above 110 km | Blacklane sells no entry tier; aggregators + the founder's own Geneva figure cover it |
+| 6 | Should prices rise with demand, as aggregators do? | Parked by the founder → BACKLOG **§ W** |
 
 **Payments (Stripe) are deliberately deferred.** When they land: collection-on-behalf wording, a
 self-billing vs Driver-issued-invoice decision, and the invoice of §3. Driver bank details are not

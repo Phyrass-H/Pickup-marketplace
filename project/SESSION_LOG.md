@@ -5,6 +5,76 @@
 
 ---
 
+## 2026-08-16 — Session 60 — THE RATE CARD, RE-CALIBRATED AND RE-LOCKED (docs only so far)
+
+**Step 0 of the pricing-engine build order.** No code yet: `docs/06` §4 held numbers that a day of
+market benchmarking showed were wrong at both ends. Founder ran the quotes; Claude took the real road
+distances from Mapbox and did the fitting. Four independent sources, **eleven routes, 5.9 km → 619 km**:
+Transfeero, Blacklane, a bid marketplace ("de €…" = *from*), and Uber. Working data:
+session scratchpad `transfeero-benchmark.md`.
+
+**What changed in the card**
+
+| Class / body | before | after |
+|---|---|---|
+| Eco | 20 + 1.85 | unchanged, + long band 1.30 |
+| Business — sedan | 48 + 2.00 | unchanged, + long band 1.40 |
+| Business — van | 45 + 2.25 | **52** + 2.25, + long band 1.58 |
+| Luxury (First) | 115 + 1.90 | **First — sedan 86 + 3.60**, + long band 2.52 |
+| — | *did not exist* | **First — van 82 + 3.42**, + long band 2.39 |
+
+**Floors untouched.** Claude flagged them as "too low to be viable" — the same flag S59 raised and the
+founder overruled. Re-flagging it was the error; the ruling stands (§5 now records it so it cannot be
+raised a third time). Claude had also proposed *raising* the First floor to 24 + 1.35 as part of the
+re-fit and withdrew it, since it cut against that ruling.
+
+**The four findings that drove it**
+1. **First was the broken row.** Per-km 1.90, *below* Business's 2.00, propped up by a €115 base fitted
+   from 11 points with nothing under 28 km — so a 2 km trip cost 5% less than a 5 km one. Two sources put
+   the real ratio at **1.80× Business**. Base 115 → 86, slope nearly doubled; the line **pivots at ~17 km**.
+2. **The market tapers; a straight line does not.** Blacklane: 4.36 €/km for a Business sedan at 32 km,
+   **1.82 at 595 km**. Transfeero independently reaches **1.82** at the same distance. Linear pricing put
+   the card **above retail** past ~200 km (130% of Transfeero's Eco at Courchevel). Fixed with a second
+   band at **150 km**, long rate ≈ **70%** of the first. Chosen over a smooth curve deliberately: two bands
+   rebuild by hand in a dispute and recalibrate with an `UPDATE`; an exponent does neither (§9).
+   The **threshold itself is the one unmeasured number** — worth only 3–6%, evidence brackets it at
+   107 / 193 / 327 km.
+3. **The van scare was a class-mapping artefact — and it validated the V-Class call.** Blacklane's
+   "Business Van" looked like it made our Business van 52–60% of market. It is a **V-Class**. Against the
+   new **First — van** it is 80–99%. Our Business van (a Vito) matches the aggregator's Vito ratio exactly.
+4. **Uber settled Eco, and made the Driver case.** We sit at 116–182% of UberX — correct, because UberX is
+   a hail and Eco is a booked transfer. Against the *booked* market at Monaco we are 89% (Eco) and 99%
+   (Business). And a 5.9 km airport run pays the Driver **27.20 €** here against roughly **12.70 €** on
+   UberX — more than double, on the cheapest class.
+
+**⚑ Discarded as noise, on the founder's call:** the aggregator charges a uniform **~3× premium into
+Monaco** (identical multiple on all five classes) and ~17% extra into Switzerland. Destination pricing,
+not distance. We stay distance-only; §8 learned routes is the designed answer if it ever matters.
+
+**⚑ Data-integrity flag, still open:** Transfeero's Courchevel *Standard* and Blacklane's Courchevel
+*Business Class* are **both 1 082,07 €**, identical to the cent, from two different companies. Founder to
+re-open one quote. It does not change the conclusion — each source tapers within its own quotes — but the
+"two independent sources agree at 595 km" line rests on it.
+
+**Also decided and written down**
+- **BACKLOG § V** — a Driver may **opt in** to lower-class trips (founder: *"Uber does that… good in case of
+  low seasons"*). Locked: opt-in only · paid the **mission's** rate, not the car's · one-way (a Business car
+  never takes First work). **Timed to ride with build step 3 (the §6 curve)**, which already reopens the Pool
+  read path. Also records the V-Class → First / Vito → Business change and its Pool consequence
+  (`pool/page.tsx:108` matches the tier exactly).
+- **BACKLOG § W** — demand-based pricing, parked by the founder. Reasoning recorded: the auction already is
+  demand pricing; a surge multiplier is Kavenue controlling the fare, which is the §0 principal risk; §8's
+  fill-rate signal is the principled version.
+
+**Files:** `docs/06_Pricing_Commission_Payments.md` (§4 rewritten, §5 floor ruling recorded, §11 stale-card
+warning, §12 rebuilt), `project/BACKLOG.md` (§ V, § W).
+
+**Next:** step 1 — `docs/migrations/2026-08-16_rate_card.sql` (`rate_card` table + 5 seed rows + §9 snapshot
+columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
+preview loop applies).
+
+---
+
 ## 2026-08-14/15 — Session 59 — THE PRICING MODEL, LOCKED (no code; `docs/06` created)
 
 **Nothing was built. Everything was decided.** Full model: **`docs/06_Pricing_Commission_Payments.md`**,

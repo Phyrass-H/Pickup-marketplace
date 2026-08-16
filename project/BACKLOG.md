@@ -1018,3 +1018,69 @@ knows). **Not adequate once money moves on its own.** Two conditions to watch:
   you at the drop-off at 15:47"* turns a claim into a corroborated one. That is the whole ambition — U.1's
   fallback exists because the alternative is a system that calls an honest Driver a liar when a satellite
   fix drops out.
+
+---
+
+## V. A Driver may opt in to lower-class trips 🔨 (founder, 2026-08-15 — DECIDED IN PRINCIPLE, timing set)
+
+**The rule.** A Driver whose car classifies above the mission's tier may choose to see and accept
+lower-class work. **Opt-in, never automatic** — a First Driver who only wants First work keeps a
+First-only Pool. Founder's reasoning: *"Uber does that, it gives the opportunity to accept trips on
+lower class if they wish, it's good in case of low seasons."*
+
+**Why it surfaced.** The V-Class is being re-classified `business` → `luxury` (below), and the Pool
+matches the tier **exactly** (`query.eq("category", vehicle.category)`, `app/(app)/pool/page.tsx:108`).
+Without this opt-in, every V-Class Driver would stop seeing Business-van work — and Business-van is
+where most van volume will be. The re-classification is right; this is what makes it survivable.
+
+**Locked at the moment of the decision:**
+- **The fare is the mission's, not the car's.** A First car taking a Business job is paid the
+  Business rate. The Driver is choosing to fill an empty slot, not to be upgraded.
+- **The Business is never charged more** and never has to know a bigger car turned up. It is strictly
+  better than what they booked, so there is nothing to disclose and nothing to refund.
+- **One-way only.** A Business car may never take First work — that is a downgrade the Guest paid to
+  avoid.
+
+**⚑ WHEN — ride it along with build step 3 (the §6 curve).** It changes the Pool read path, which
+step 3 already reopens for the curve *and* for the § R volume-ceiling fix. Doing it then touches that
+money-critical query once instead of three times. Not before: a Driver needs to see the *lower class's*
+price on the card, which is the rate card (step 1) plus the curve (step 3).
+
+**Scope when it comes:** a `driver.accepts_lower_tiers bool default false` column (additive migration,
+mirrors `accepts_luggage_runs` from S32) · the Pool query relaxed from `=` to "tier ≤ mine" behind that
+flag · a toggle in Driver Account → *Where you work* · the Pool card must **name the class** so nobody
+accepts a Business fare thinking it is First. D25 preview loop applies to the toggle and the card.
+
+### The V-Class re-classification (part of the pricing engine, step 1)
+`Classe V` moves `tier: "business"` → `"luxury"`, body stays `van`
+(`lib/vehicle-catalog.ts:65`). **Vito stays Business** — confirmed by the founder, and it is already
+correct in the catalog, so no edit. Matches how the market draws the line (Transfeero: Vito =
+Standard Van, V-Class = First Class Van). Needs the new **First — van** rate-card row; the
+combination already exists via the Lexus LM (`lib/vehicle-catalog.ts:122`) and is unpriced today.
+
+---
+
+## W. Demand-based pricing — PARKED (founder asked to save it, 2026-08-16)
+
+**The founder's question.** Transfeero shows *"High demand for your dates! Prices may rise further."*
+on busy dates. Should Kavenue raise its prices the same way? Raised explicitly **"for later once we
+lock prices"** — not a request to build.
+
+**Claude's advice at the time, for whoever picks this up:**
+1. **We already have demand pricing — it's the auction.** A trip nobody takes climbs toward the
+   ceiling (§6). That is demand responding to what actually happened on *this* trip, not a guess
+   about a date. Transfeero's banner prices a *date*; our curve prices a *trip*.
+2. **A surge multiplier is the one thing §0 forbids.** Kavenue moving the fare on its own initiative
+   is Kavenue controlling the price — the behaviour that pushes a platform from **agent** toward
+   **principal**. The Business sets its own Ceiling; Kavenue only recommends. Any demand feature has
+   to keep that true.
+3. **§8 is the principled version of the same instinct.** Fill rate and time-to-fill already tell us
+   when the card is low on a route or a period, learned from outcomes rather than a hand-maintained
+   event calendar. The Riviera's spikes (Cannes, the Grand Prix, the yacht show) are known better by
+   the hotel than by us — and the hotel already sets the ceiling.
+
+**If it is ever built,** the safe shape is a *recommendation* that moves (a higher pre-filled ceiling
+on a date the data says fills badly), never an imposed multiplier, and never applied after posting.
+
+**⚑ Do not confuse with SPEED WIN**, which is the Business's own checkbox at any lead time (§6) and
+is already the answer to "I'm worried this won't fill".
