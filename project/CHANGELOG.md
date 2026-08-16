@@ -5,6 +5,26 @@
 
 ---
 
+## 16 August 2026 — Kavenue now works out the price for you
+
+- **You don't type a price any more.** Pick the trip and the class, and the ceiling fills itself in
+  with what the market charges — Cannes → Monaco in a Business sedan comes up as **159,40 €**. Change
+  it whenever you like; it's a recommendation, never a rule.
+- **It follows you.** Switch from Business to First and the number becomes 286,52 € on its own. The
+  moment you type your own figure it stops following and the number is yours.
+- **There's now a price too low to post.** Below the minimum the form turns red and says what the
+  lowest is, and the server refuses it as well — so nobody can slip one past by other means. A
+  slightly-low price is allowed, with a warning that it will take longer to find a Driver.
+- **Late-night trips price themselves.** A pickup between 22:00 and 06:00 carries the 20% night rate
+  automatically. The old "you might want to raise your price for a night trip" note is gone — it was
+  asking you to do something the app now does.
+- **One field disappeared.** The old "Estimated base fare" existed only to warn you when your two
+  numbers disagreed with each other. Kavenue knows the real price now, so it had nothing left to do.
+- Checked end to end against your live database, including trying to post a trip below the minimum
+  by going around the screen — refused, nothing saved.
+
+---
+
 ## 16 August 2026 — the prices, checked against the real market and fixed
 
 *(Still no code — this was a day of pricing homework. The numbers are now settled and written into

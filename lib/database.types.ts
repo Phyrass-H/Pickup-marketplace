@@ -358,6 +358,11 @@ export interface Database {
           driver_message: string | null;
           distance_km: number | null;
           duration_min: number | null;
+          // docs/06 §9 snapshot: which rate_card generation produced the pre-filled
+          // ceiling, and whether the 22:00-06:00 x1.20 applied. Never re-resolve a
+          // past price through the live card. (2026-08-16 migration.)
+          rate_card_id: string | null;
+          night_applied: boolean;
           cancelled_by: CancellationParty | null;
           cancelled_at: string | null;
           created_at: string;
@@ -429,6 +434,8 @@ export interface Database {
           driver_message?: string | null;
           distance_km?: number | null;
           duration_min?: number | null;
+          rate_card_id?: string | null;
+          night_applied?: boolean;
           cancelled_by?: CancellationParty | null;
           cancelled_at?: string | null;
           created_at?: string;
@@ -508,6 +515,32 @@ export interface Database {
         Update: Partial<
           Database["public"]["Tables"]["mission_guest_contact"]["Insert"]
         >;
+        Relationships: [];
+      };
+      // Kavenue's recommended price per class (docs/06 §4). Read-only to the app:
+      // RLS grants select to `authenticated` and there is NO write policy, so a
+      // re-tune is an INSERT in the SQL editor with a later effective_from — never
+      // an UPDATE, so a priced mission keeps pointing at the row that priced it.
+      // (2026-08-16 migration.)
+      rate_card: {
+        Row: {
+          id: string;
+          market: string;
+          tier: VehicleCategory;
+          body: BodyType | null; // null = covers any body
+          effective_from: string;
+          floor_base: number;
+          floor_per_km: number;
+          ceiling_base: number;
+          ceiling_per_km: number;
+          ceiling_per_km_long: number;
+          long_threshold_km: number;
+          night_multiplier: number;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: never; // deny-by-default: no client write policy exists
+        Update: never;
         Relationships: [];
       };
       // Phase-2 mission edit (D39): a proposed change to an ACCEPTED mission's
@@ -735,6 +768,20 @@ export interface Database {
     };
     Views: { [_ in never]: never };
     Functions: {
+      // Kavenue's price for a trip (docs/06 §4), from the rate_card table. The
+      // authority: the server calls this with its OWN road distance so a browser
+      // can never post a price it invented. lib/rate-card.ts is the mirror copy
+      // the form uses to pre-fill; tests/rate-card.test.ts pins them together.
+      mission_price: {
+        Args: {
+          p_tier: VehicleCategory;
+          p_body?: BodyType | null;
+          p_km?: number;
+          p_night?: boolean;
+          p_market?: string;
+        };
+        Returns: { rate_card_id: string; floor_price: number; ceiling_price: number }[];
+      };
       // Atomic accept + slot-conflict + Lock-in, server-side (Doc spine).
       // The Driver PWA calls: rpc('accept_mission', { p_mission_id }).
       accept_mission: {

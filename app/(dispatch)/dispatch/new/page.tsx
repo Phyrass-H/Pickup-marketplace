@@ -2,6 +2,7 @@ import { MissionForm } from "./mission-form";
 import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
+import { RATE_CARD_COLS, type RateCardRow } from "@/lib/rate-card";
 import type { MissionRow } from "@/lib/database.types";
 import type { Place } from "@/components/address-autocomplete";
 
@@ -30,6 +31,16 @@ export default async function NewMissionPage({
         }
       : null;
 
+  // The rate card (docs/06 §4) — five small rows, read once here and handed to
+  // the form so it can re-price on every keystroke without a round trip. The
+  // server re-derives the price from its OWN road distance when the form is
+  // submitted; this copy only pre-fills and guides.
+  const rateCard: RateCardRow[] = await (async () => {
+    const supabase = await createClient();
+    const { data } = await supabase.from("rate_card").select(RATE_CARD_COLS);
+    return (data ?? []) as RateCardRow[];
+  })();
+
   // Resume a saved draft (gated to this Business by RLS). Only draft rows.
   let draftMission: MissionRow | null = null;
   let draftContacts: GuestContact[] = [];
@@ -56,8 +67,8 @@ export default async function NewMissionPage({
   return (
     <div>
       <p className="muted" style={{ marginTop: 0, marginBottom: 16, maxWidth: 620 }}>
-        Review it before it goes live. Posts into the matching Driver Pool — you
-        set the ceiling; Kavenue prices up to that maximum.
+        Review it before it goes live. Posts into the matching Driver Pool —
+        Kavenue prices the trip and you can change the ceiling.
       </p>
       <MissionForm
         error={error}
@@ -65,6 +76,7 @@ export default async function NewMissionPage({
         draft={draftMission}
         draftContacts={draftContacts}
         pickupPrefill={pickupPrefill}
+        rateCard={rateCard}
       />
     </div>
   );

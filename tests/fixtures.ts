@@ -65,6 +65,8 @@ export function mission(over: Partial<MissionRow> = {}): MissionRow {
     driver_message: null,
     distance_km: 12,
     duration_min: 25,
+    rate_card_id: null,
+    night_applied: false,
     cancelled_by: null,
     cancelled_at: null,
     created_at: "2026-07-15T10:00:00+02:00",

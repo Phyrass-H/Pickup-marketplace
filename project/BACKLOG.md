@@ -1084,3 +1084,40 @@ on a date the data says fills badly), never an imposed multiplier, and never app
 
 **⚑ Do not confuse with SPEED WIN**, which is the Business's own checkbox at any lead time (§6) and
 is already the answer to "I'm worried this won't fill".
+
+---
+
+## X. Taxonomy cleanup — rename `luxury` → `first`, retire the vestigial `van` 🔨 (founder, 2026-08-16)
+
+**The ask.** The frontend says **Eco · Business · First**; the code and the DB say `eco` ·
+`business` · `luxury`. The founder asked whether the code side can match. Answer: yes, and it is not
+technically hard — **but not during the pricing build**. Deliberately deferred.
+
+**What it actually costs**
+- **DB: one line.** `alter type vehicle_category rename value 'luxury' to 'first';` — metadata only,
+  no row rewrite, instant, and every stored row follows automatically (enum values are stored as
+  OIDs, not text). Verified there is **no SQL function, RLS policy or CHECK that embeds the literal**
+  — `rate_card_for` / `mission_price` take the enum as a parameter, and `rate_card`'s CHECK is
+  `tier <> 'van'`. The only SQL occurrences are the enum definition and the `rate_card` seed rows.
+- **Code: 58 references across 14 files** (`lib/vehicle-catalog.ts`, `lib/format.ts`,
+  `lib/driver-service.ts`, `lib/database.types.ts`, `app/(app)/pool/page.tsx`,
+  `app/(dispatch)/dispatch/new/actions.ts`, both settings files, `app/api/seed/route.ts`,
+  `components/service-class-fields.tsx`, `components/dispatch-calendar.tsx`, three test files).
+  Mechanical, but it includes the Pool query and the new-mission action.
+- **⚑ It cannot be gradual.** The instant the enum renames, any running code sending `'luxury'` to
+  PostgREST fails. Options: (a) rename + deploy in one short window — fine in beta, nobody is on it;
+  or (b) `ADD VALUE 'first'` → deploy → backfill, which never breaks but leaves `'luxury'` behind
+  **forever**, because Postgres cannot drop an enum value without recreating the type.
+
+**Why not now**
+1. **Zero user benefit** — every screen already reads "First" (`lib/format.ts` `TIER_LABEL`).
+2. It touches the exact files steps 3–5 of the pricing engine are rewriting. Tangling a rename into
+   those diffs means a breakage can't be attributed to either change.
+3. **S44 is the precedent:** the PickUp → Kavenue rename was run as its own isolated session with
+   partitioned edit agents and four adversarial verify lenses, precisely because a rename is wide,
+   shallow, and easy to get 95% right.
+
+**Do it as one isolated job after the pricing engine ships**, and bundle the second half:
+**`'van'` is vestigial in `vehicle_category`** (a mission's category is the *tier*; body has been its
+own axis since `2026-06-19_vehicle_taxonomy_and_eta`). Both want the same surgery — recreating the
+type to drop a value — so doing them together costs barely more than doing one.

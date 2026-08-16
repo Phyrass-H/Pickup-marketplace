@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isNightPickup } from "@/lib/rate-card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
@@ -99,7 +100,6 @@ export async function createMission(formData: FormData) {
   };
   const pickupLocal = String(formData.get("pickup_at") ?? "").trim();
   const ceiling = num(formData.get("ceiling"));
-  const baseFare = num(formData.get("base_fare"));
   const speedWin = formData.get("speed_win") === "on";
 
   // Named Guests (first + surname). The list IS the headcount (rows = pax_count);
@@ -192,6 +192,31 @@ export async function createMission(formData: FormData) {
     ? { distance_km: metrics.distanceKm, duration_min: metrics.durationMin }
     : {};
 
+  // ── Kavenue's price (docs/06 §4) ──────────────────────────────────────────
+  // Computed in SQL, from the SERVER's own road distance — never from a number
+  // the browser sent. lib/rate-card.ts pre-fills and guides the form; this is
+  // the copy that decides, and `mission_price` is the same function the
+  // migration installed, so the two halves cannot drift without a test failing.
+  const supabase = await createClient();
+  const nightApplied = isNightPickup(pickupLocal);
+  const { data: quote } = await (metrics?.distanceKm != null
+    ? supabase
+        .rpc("mission_price", {
+          p_tier: (luggageOnly ? "business" : category!) as VehicleCategory,
+          p_body: (luggageOnly ? "van" : requiredBody) as BodyType | null,
+          p_km: metrics.distanceKm,
+          p_night: nightApplied,
+        })
+        .maybeSingle()
+    : Promise.resolve({ data: null }));
+
+  // §5 — a trip cannot be POSTED below the floor: "The lowest this trip can be
+  // offered at is …". A DRAFT stays lenient, the same way it may be parked
+  // without a drop-off (S27) — it gets priced properly on the way out.
+  if (!asDraft && quote && round2(ceiling!) < round2(quote.floor_price)) {
+    redirect(backTo("belowfloor"));
+  }
+
   // PDP curve (D21): a standard mission starts at 50% of the ceiling and climbs
   // +5% every 10 min; SPEED WIN starts hotter (70%) and climbs every 5 min. It
   // no longer starts flat at the ceiling. Tunable later.
@@ -253,8 +278,12 @@ export async function createMission(formData: FormData) {
     luggage_only: luggageOnly,
     flight_number: flightNumber || null,
     reference: reference || null,
-    base_fare: baseFare,
     ceiling: ceiling!,
+    // docs/06 §9 snapshot — which generation of the card priced this trip, and
+    // whether the night rate applied. Settlement and history read these, never
+    // the live card.
+    rate_card_id: quote?.rate_card_id ?? null,
+    night_applied: nightApplied,
     pdp_start: pdpStart,
     pdp_step: pdpStep,
     pdp_interval: pdpInterval,
@@ -269,7 +298,6 @@ export async function createMission(formData: FormData) {
     driver_message: driverMessage || null,
   };
 
-  const supabase = await createClient();
   let effectiveId: string | null = missionId;
   if (missionId) {
     // Resume an existing DRAFT of this Business. When POSTING it live, reset the

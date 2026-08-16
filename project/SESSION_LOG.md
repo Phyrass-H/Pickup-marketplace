@@ -102,7 +102,45 @@ here is a quiet change to what a Business pays. `tsc` clean, **325/325**.
   category — so that Driver keeps seeing Business-van work until the row is updated, and the moment
   it is, they see almost nothing until BACKLOG § V ships. Raised with the founder; not touched.
 
-**Next:** step 3 — pre-fill the Ceiling on `/dispatch/new` and enforce the floor (D25 preview first) (`rate_card` table + 5 seed rows + §9 snapshot
+**Step 3 — ✅ THE CEILING IS PRE-FILLED AND THE FLOOR IS ENFORCED.** D25 loop ran first: mockup →
+three copy rounds with the founder → built to the approved version.
+- **`lib/rate-card.ts`** — the TS half of the §4 formula (two bands, night ×1.20, row selection). It
+  **mirrors SQL on purpose**: the form must re-price on every keystroke, and a round trip per
+  keystroke is not an option, while the server must never trust a browser's number.
+  `tests/rate-card.test.ts` (31 tests) pins **both copies to the same figures** — the S56 discipline,
+  applied before the drift can happen rather than after.
+- **`/dispatch/new`** reads the five rows server-side and hands them to the form. The Ceiling
+  pre-fills and keeps following the route and class until the first keystroke, after which the number
+  is the Business's and is never overwritten (§0). Chip **Market rate** · helper
+  `55,7 km · Business — raise it to find a Driver faster.` · amber below market · red below the floor.
+- **The "Estimated base fare" field is GONE.** Its only job was a "below recommended" warning by
+  comparing the Business's own two numbers; the card now knows the recommended price. Column left
+  in place, no longer written.
+- **The old amber night nudge is gone too** — it advised raising the ceiling for a late pickup, which
+  the ×1.20 night rate now does by itself. The helper line says `· night rate` instead.
+- **Server is the authority:** `createMission` calls the SQL `mission_price` with **its own** road
+  distance and refuses a below-floor POST (`?error=belowfloor`). Drafts stay lenient (the S27 idiom).
+  Snapshots `rate_card_id` + `night_applied` (§9).
+
+**Verified live against the real Supabase DB** (Cannes Croisette → Hôtel de Paris Monaco, 55.7 km):
+- pre-fill **159,40 €** = 48 + 2.00×55.7 · switch to First **286,52 €** · First van **272,49 €** —
+  each exactly the formula.
+- typed 400 → class changed afterwards → **stayed 400** (touched sticks); the "raise it" nudge
+  disappears above market.
+- below market → amber naming 159,40 € · below floor → red naming **54,78 €** (13 + 0.75×55.7).
+- **Server guard proven by bypassing the browser:** a hand-submitted post at 40 € redirected to
+  `?error=belowfloor` and **wrote nothing** (mission count unchanged at 271).
+- One real post at a **23:30** pickup wrote `rate_card_id` = the business/sedan row (body was "Any",
+  correctly resolved to sedan) and `night_applied` **true** — the server detected night from the
+  submitted field, independently of the client. Probe mission deleted; **baseline restored to 271**.
+- `tsc` clean · **356/356** · `next build` green.
+- ⚑ Two things adjusted after seeing it live and not in the mockup: the helper used
+  `formatDistance()`, the *straight-line* helper, which rounded a 55.7 km trip to "56 km" beside a
+  price computed on 55.7; and the below-floor state blocked only on the server, so the founder would
+  have gone through Review before being bounced — Review now stops too, with a short message that
+  does **not** repeat the number the card is already showing.
+
+**Next:** step 4 — commission (the two displays, the three invoice lines, the snapshot columns) (`rate_card` table + 5 seed rows + §9 snapshot
 columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
 preview loop applies).
 

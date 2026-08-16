@@ -13,6 +13,13 @@ import { PassengerList } from "@/components/passenger-list";
 import { ReferenceField } from "@/components/reference-field";
 import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
 import {
+  priceFor,
+  isNightPickup,
+  isMarketRate,
+  isBelowFloor,
+  type RateCardRow,
+} from "@/lib/rate-card";
+import {
   parseLanguages,
   parseDriverFlags,
   activeFlagLabels,
@@ -143,8 +150,6 @@ interface PreviewData {
 // that only appear when the Dispatcher's own input triggers them. Tunable.
 const LUGGAGE_SEDAN_HINT = 4; // bags with a sedan / "Any" body → suggest a Van
 const LUGGAGE_VAN_HINT = 8; // bags with a van → suggest a dedicated luggage vehicle
-const NIGHT_START_HOUR = 22; // pickup at/after 22:00 …
-const NIGHT_END_HOUR = 6; //  … or before 06:00 (Paris wall-clock) → night pickup
 
 // Client form (Direction B). The fields live in a two-pane layout: section cards
 // on the left, a sticky live Summary rail on the right (mini-route, ETA, ceiling,
@@ -159,12 +164,14 @@ export function MissionForm({
   draft,
   draftContacts,
   pickupPrefill,
+  rateCard = [],
 }: {
   error?: string;
   prefillDate?: string;
   draft?: MissionRow | null;
   draftContacts?: GuestContact[];
   pickupPrefill?: Place | null;
+  rateCard?: RateCardRow[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -174,7 +181,11 @@ export function MissionForm({
   const [confirmPost, setConfirmPost] = useState(false);
 
   const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
-  const [baseFare, setBaseFare] = useState(draft?.base_fare != null ? String(draft.base_fare) : "");
+  // Is the Ceiling still Kavenue's number, or has the Business made it theirs?
+  // Only an untouched field re-prices when the route or the class changes — the
+  // moment they type, the number is theirs and we never overwrite it (§0: we
+  // recommend, we don't impose). A resumed draft counts as already theirs.
+  const [ceilingAuto, setCeilingAuto] = useState(draft?.ceiling == null);
   const [speedWin, setSpeedWin] = useState(draft?.speed_win ?? false);
   // Controlled so the luggage-vs-vehicle nudge (S31) reacts live; still submits via name.
   const [luggage, setLuggage] = useState(
@@ -244,13 +255,6 @@ export function MissionForm({
     !draft && calendarValue ? prettyParisLocal(calendarValue) : null;
 
   const ceilingNum = Number(ceiling);
-  const baseNum = Number(baseFare);
-  const tooLow =
-    baseFare !== "" &&
-    ceiling !== "" &&
-    Number.isFinite(ceilingNum) &&
-    Number.isFinite(baseNum) &&
-    ceilingNum < baseNum;
 
   // Input-driven guidance nudges (S31) — calm, only-when-relevant hints in the
   // existing soft-warn style. Display-only; they never gate posting.
@@ -268,13 +272,11 @@ export function MissionForm({
           : null
       : null;
 
-  // pickupAt is Paris wall-clock ("YYYY-MM-DDTHH:mm"), so the hour is already local.
-  const pickupHour = /^\d{4}-\d{2}-\d{2}T(\d{2}):/.exec(pickupAt)?.[1];
-  const nightHint =
-    pickupHour != null &&
-    (Number(pickupHour) >= NIGHT_START_HOUR || Number(pickupHour) < NIGHT_END_HOUR)
-      ? `Night pickup (${pickupAt.slice(11, 16)}) — late trips can be harder to fill. A higher ceiling or SPEED WIN helps a Driver grab it.`
-      : null;
+  // Night pickup — 22:00 to 06:00 on the Paris wall-clock (docs/06 §4). It used
+  // to raise an amber "consider a higher ceiling" nudge; the card now applies
+  // the ×1.20 night rate itself, so that nudge would be asking the Business to
+  // do something already done. The helper line under the Ceiling names it instead.
+  const night = isNightPickup(pickupAt);
 
   // Prefill addresses: a resumed draft keeps its own pickup; a NEW mission starts
   // with the Business's saved address (when "pre-fill as pickup" is on) so a
@@ -316,6 +318,37 @@ export function MissionForm({
     stops: stopsDefault.map((s) => s.label),
   }));
 
+  // ── Kavenue's price for this trip (docs/06 §4) ────────────────────────────
+  // Live off the ROAD distance the route card reports — not the straight line,
+  // which runs ~25% short and would under-price every trip. Null until there is
+  // a located drop-off: with no route there is no price, and inventing one is
+  // worse than leaving the field alone.
+  // A luggage-only run is forced to Business + Van server-side, so it prices as
+  // one here too rather than on whatever tier the tiles happen to show.
+  const priceTier: ServiceTier = luggageOnly ? "business" : tier;
+  const priceBody: BodyType | null = luggageOnly ? "van" : ((body || null) as BodyType | null);
+  const quote = priceFor(rateCard, priceTier, priceBody, routeSummary.eta?.distanceKm, { night });
+
+  // Pre-fill, and keep it current while the Business hasn't made the number
+  // theirs — change the class or the drop-off and the price follows. The first
+  // keystroke in the field ends that for good (§0: we recommend, never impose).
+  const quoteCeiling = quote?.ceiling ?? null;
+  useEffect(() => {
+    if (!ceilingAuto || quoteCeiling == null) return;
+    const next = quoteCeiling.toFixed(2);
+    setCeiling((prev) => (prev === next ? prev : next));
+  }, [ceilingAuto, quoteCeiling]);
+
+  const hasCeiling = ceiling !== "" && Number.isFinite(ceilingNum) && ceilingNum > 0;
+  const atMarket = hasCeiling && isMarketRate(ceilingNum, quote);
+  const belowFloor = hasCeiling && isBelowFloor(ceilingNum, quote);
+  const belowMarket =
+    hasCeiling && !belowFloor && quote != null && !isMarketRate(ceilingNum, quote)
+      ? Math.round(ceilingNum * 100) < Math.round(quote.ceiling * 100)
+      : false;
+  const aboveMarket =
+    hasCeiling && quote != null && Math.round(ceilingNum * 100) > Math.round(quote.ceiling * 100);
+
   function review() {
     const form = formRef.current;
     if (!form) return;
@@ -349,6 +382,15 @@ export function MissionForm({
 
     if (missing.length > 0) {
       setClientError(`Before posting, add ${joinAnd(missing)}.`);
+      return;
+    }
+    // §5 — the floor is a refusal, not advice, so it stops the review too. The
+    // server checks again against its own road distance and is the real guard;
+    // this only saves the Business a round trip through the preview.
+    if (belowFloor) {
+      // Deliberately does NOT repeat the floor — the Pricing card is already
+      // showing it in red, in context. Saying the number twice is noise.
+      setClientError("Raise the ceiling before posting — see Pricing.");
       return;
     }
     const rMake = String(fd.get("required_make") ?? "").trim();
@@ -433,6 +475,12 @@ export function MissionForm({
         <div className="notice error">
           Add a drop-off and pick it from the address suggestions before posting.
           (You can still save it as a draft without one.)
+        </div>
+      )}
+      {error === "belowfloor" && (
+        <div className="notice error">
+          That ceiling is below the lowest this trip can be offered at. Raise it, or
+          save it as a draft.
         </div>
       )}
       {error === "past" && (
@@ -653,39 +701,55 @@ export function MissionForm({
                     : serviceClassLabel(tier as VehicleCategory, (body || null) as BodyType | null)}
                 </span>
               </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <label className="field" style={{ flex: 1, marginBottom: 0 }}>
-                  <span>Estimated base fare € (optional)</span>
-                  <input
-                    type="text"
-                    name="base_fare"
-                    inputMode="decimal"
-                    value={baseFare}
-                    onChange={(e) => setBaseFare(decimalOnly(e.target.value))}
-                  />
-                </label>
-                <label className="field" style={{ flex: 1, marginBottom: 0 }}>
-                  <span>Ceiling € (your maximum)</span>
-                  <input
-                    type="text"
-                    name="ceiling"
-                    required
-                    inputMode="decimal"
-                    value={ceiling}
-                    onChange={(e) => setCeiling(decimalOnly(e.target.value))}
-                  />
-                </label>
-              </div>
-              {tooLow && (
-                <div className="notice warn" style={{ margin: "12px 0 0" }}>
-                  Trips below the recommended fare are rarely accepted and may go
-                  unfulfilled. You can still post it.
+              <label className="field" style={{ marginBottom: 0 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  Ceiling € — your maximum
+                  {atMarket && (
+                    <span className="mx-vehiclechip" style={{ marginLeft: "auto" }}>
+                      Market rate
+                    </span>
+                  )}
+                </span>
+                <input
+                  type="text"
+                  name="ceiling"
+                  required
+                  inputMode="decimal"
+                  value={ceiling}
+                  aria-invalid={belowFloor || undefined}
+                  onChange={(e) => {
+                    // The moment they type, the number is theirs — stop re-pricing.
+                    setCeilingAuto(false);
+                    setCeiling(decimalOnly(e.target.value));
+                  }}
+                />
+              </label>
+              {quote && (
+                <p className="muted small" style={{ margin: "8px 0 0" }}>
+                  {/* Road km, one decimal — formatDistance() is the straight-line
+                      helper and rounds to whole km above 10, which would print a
+                      55.7 km trip as "56 km" next to a price computed on 55.7. */}
+                  {(routeSummary.eta?.distanceKm ?? 0).toFixed(1).replace(".", ",")} km ·{" "}
+                  {serviceClassLabel(priceTier as VehicleCategory, priceBody)}
+                  {night && " · night rate"}
+                  {/* The nudge to go higher is pointless once they already have —
+                      above the market rate it would be asking for nothing. */}
+                  {!aboveMarket && " — raise it to find a Driver faster."}
+                </p>
+              )}
+              {belowFloor && quote && (
+                <div className="notice error" style={{ margin: "12px 0 0" }}>
+                  The lowest this trip can be offered at is{" "}
+                  <strong>{formatMoney(round2(quote.floor))}</strong>. Almost no Driver
+                  will take it at that price.
                 </div>
               )}
-              <p className="muted small" style={{ margin: "10px 0 0" }}>
-                The base fare drives a soft “below recommended” warning only. The
-                ceiling is the most a Driver can climb to.
-              </p>
+              {belowMarket && quote && (
+                <div className="notice warn" style={{ margin: "12px 0 0" }}>
+                  Below the market rate of {formatMoney(round2(quote.ceiling))}. It will
+                  take longer to find a Driver.
+                </div>
+              )}
               <div className="mx-sumdiv" />
               <label className="mx-speed">
                 <input
@@ -699,11 +763,6 @@ export function MissionForm({
                   fast for near-instant pickup
                 </span>
               </label>
-              {nightHint && (
-                <div className="notice warn" style={{ margin: "12px 0 0" }}>
-                  {nightHint}
-                </div>
-              )}
             </div>
           </div>
 
@@ -932,12 +991,12 @@ export function MissionForm({
                     <span className="muted small">Standard climb</span>
                   )}
                 </div>
-                {tooLow && mode === "preview" && (
+                {belowMarket && mode === "preview" && (
                   <div
                     className="notice warn"
                     style={{ margin: "12px 0 0", padding: "9px 12px", fontSize: 13 }}
                   >
-                    Below the recommended base fare — may go unfulfilled.
+                    Below the market rate — longer to find a Driver.
                   </div>
                 )}
               </>
