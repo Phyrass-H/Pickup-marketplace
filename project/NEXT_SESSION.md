@@ -29,10 +29,10 @@ promise verification it cannot deliver. Check it, don't guess:
   **What online sessions are good for:** pure logic, tests, refactors, docs — work whose proof is `npm test` +
   `tsc` + `next build`, not a screenshot. Session 55 is the worked example.
 
-**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★ START HERE — THE NEXT JOB IS DECIDED" (2026-08-10).**
+**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-16, S60).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
-"NEXT" headings are superseded and say so. The job is **CI, then § S Spend pass 2** — already chosen by the
-founder, so open by confirming it in one line, not by re-offering the menu.
+"NEXT" headings are superseded and say so. The job is **the pricing engine, step 4 (commission)** — steps
+0–3 are shipped and live. Open by confirming that in one line, not by re-offering a menu.
 
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
@@ -548,43 +548,108 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★★ START HERE — THE NEXT JOB IS DECIDED: BUILD THE PRICING ENGINE (founder, 2026-08-15).**
+**★★ START HERE — THE PRICING ENGINE IS HALF BUILT. NEXT IS STEP 4: COMMISSION (S60, 2026-08-16).**
 
-**Read `docs/06_Pricing_Commission_Payments.md` FIRST — all of it, before anything else.** It is new (S59),
-it is the source of truth for anything touching price or commission, and it ends with the build order. It
-did not exist before S59 even though two outside briefs cited it; do not go looking for another copy.
+**Read `docs/06_Pricing_Commission_Payments.md` first — all of it.** It is the source of truth for
+anything touching price or commission, §4 was **re-calibrated and re-locked in S60**, and §13 is the
+build order. Do not price anything from memory or from an older brief.
 
-**The job, in order (§13 of that doc):**
-1. **`rate_card` table + seed rows + the §4 formula** — Kavenue computes and pre-fills the Ceiling on
-   `/dispatch/new`, and the floor is enforced. **Needs a migration the founder runs** — write the SQL to
-   `docs/migrations/`, hand them the one-liner, then build on top.
-2. **Commission** — the two displays, the three invoice lines (`Course` / `Frais de service` / `TVA sur
-   frais de service`, never collapsed), and the snapshot columns on `mission`.
-3. **The §6 curve**, replacing the current `pdp_start`/`pdp_step`/`pdp_interval` climb. ⚠️ **Money-critical:**
-   `pdp_start` is used by `docs/migrations/2026-08-11_fee_basis_band.sql:120` to clamp every cancellation and
-   no-show fee basis (`least(coalesce(pdp_start, ceiling*0.5), ceiling)`), so this ships with the money tests
-   updated and **both `.local/probe/` probes re-run**.
-4. **The §7 30-second hold** — after the engine, since both touch `accept_mission`.
-5. **§8 learned routes** — later, once there is volume.
+**SHIPPED AND LIVE (steps 0–3). All verified against the real Supabase DB, DB baseline restored to 271.**
 
-⚑ **Fix on the way:** the Pool loads the whole archive and filters in memory (the § R volume ceiling). It's
-the same read path the curve lands on, so do it in the same pass.
+| | | commit |
+|---|---|---|
+| 0 | `docs/06` §4 rewritten — two distance bands, First rebuilt, First—van added, Business-van base raised | `69dcf55` |
+| 1 | `rate_card` table + 5 seed rows + `mission_price()` / `rate_card_for()` — **the founder applied the migration** | `f137fff` |
+| 2 | The V-Class is First, the Vito is Business (`lib/vehicle-catalog.ts`) + `tests/vehicle-catalog.test.ts` | `441b50f` |
+| 3 | `/dispatch/new` pre-fills the Ceiling and refuses a post below the floor | `8173782` |
+| 3b | Re-price rule reversed on the founder's call (below) | `19c04ea` |
 
-⚑ **D25 preview loop applies** to every screen this touches — mockup, sign-off, then build to match.
+**The card as it stands, so you needn't open the doc to sanity-check a number:**
 
-**⚑⚑ THREE THINGS WAITING ON THE FOUNDER — RAISE THESE IN YOUR OPENING MESSAGE, don't wait to be asked.**
-None blocks the build; all three are table values that get better with their input, and they explicitly
-asked to be reminded.
-1. **The Luxury rate card is provisional** — fitted from 11 data points with *nothing below 28 km*, so its
-   €115 base is extrapolated, not observed. Needs a second benchmark pass, or their own numbers.
-2. **Business and Van read slightly low** against what the founder knows of the market (their example:
-   Nice → Monaco Van at 117,67 €). The Van/Business *ratio* is right — 4.5% apart, matching both the data
-   and their experience — so if Van is low, Business is low. Tune the Business row and Van follows.
-3. **Step 1 needs a migration they run** (`rate_card` + the snapshot columns). Write the SQL, hand them the
-   one-liner for the Supabase SQL editor, then build on it.
+| Class / body | floor | ceiling base | first 150 km | beyond 150 km |
+|---|---|---|---|---|
+| Eco | 12 + 0.65 | 20 | 1.85 | 1.30 |
+| Business — sedan | 13 + 0.75 | 48 | 2.00 | 1.40 |
+| Business — van | 17 + 0.90 | 52 | 2.25 | 1.58 |
+| First — sedan | 20 + 1.10 | 86 | 3.60 | 2.52 |
+| First — van | 20 + 1.10 | 82 | 3.42 | 2.39 |
 
-⚑ **§ S Spend pass 2 is NOT the next job any more.** It was, until S59 established that the commission shape
-decides how many numbers a trip carries — so Spend would have had to be rewritten. It comes after the engine.
+Night = ×1.20 on floor and ceiling, 22:00–06:00 Paris. Cannes → Monaco (55.7 km) Business sedan =
+**159,40 €** ceiling / **54,78 €** floor; First = 286,52 €. Use those to check you haven't broken it.
+
+**⚑ THE RULE THAT WAS ARGUED OVER AND SETTLED — do not quietly revert it.** The Ceiling shows Kavenue's
+price for the trip **as it stands**; an edit lasts only until the trip changes (class · body · route ·
+pickup hour), and then it re-prices over the top. The founder overruled the opposite behaviour, correctly:
+a number typed for an Eco trip surviving onto a First one is above First's floor, wrong by 3×, and
+**silent**. Re-pricing fails visibly instead. One exception: **reopening a saved draft never overwrites a
+ceiling the Business edited before saving.**
+
+---
+
+## NEXT: STEP 4 — COMMISSION (docs/06 §1, §3, §9)
+
+Build the two displays (**15%** to a Business, **12%** to a Driver — never say 27%), the **three invoice
+lines** (`Course` / `Frais de service` / `TVA sur frais de service`, **never collapsed into one**, because
+the Business reclaims the 20% VAT on Kavenue's fee but not the 10% on the transport), and the commission
+snapshot columns on `mission`.
+
+**⚑ It needs a second migration the founder runs.** The S60 migration deliberately shipped only
+`rate_card_id` + `night_applied` — the commission snapshot's *shape* is decided by this step, and columns
+nothing writes to are debt. Write the SQL to `docs/migrations/`, hand over the one-liner, then build.
+
+**⚑ Read §3's note before writing the transport line:** it must show the VAT that **actually applies** —
+10% if the Driver is VAT-registered, **0% if not**. Read it from `driver.vat_number`; never assume.
+
+### THEN STEP 5 — the §6 curve. It carries three riders; do them together.
+1. **The curve itself**, replacing `pdp_start`/`pdp_step`/`pdp_interval`. ⚠️ **Money-critical:**
+   `pdp_start` clamps every cancellation and no-show fee basis
+   (`docs/migrations/2026-08-11_fee_basis_band.sql:120`), so this ships with the money tests updated and
+   **both `.local/probe/` probes re-run**.
+2. **The § R volume ceiling** — the Pool loads the whole archive and filters in memory. Same read path.
+3. **BACKLOG § V** — a Driver may opt in to lower-class trips. Timed to here on purpose: it changes the
+   same Pool query, and a Driver must see the *lower class's* price, which needs 1 + 5 both in place.
+
+Step 6 is the §7 30-second hold, last, because it shares the accept gate.
+
+---
+
+## THREE THINGS SAVED, NOT FORGOTTEN — all in `project/BACKLOG.md`
+
+- **§ V** — Driver opts in to lower-class trips. Locked: opt-in only · paid the **mission's** rate, not the
+  car's · one-way (a Business car never takes First work). Ships with step 5.
+- **§ W** — demand-based pricing (the founder's question, after seeing an aggregator's "high demand"
+  banner). Parked *with the reasoning*: the auction already is demand pricing, a surge multiplier is
+  Kavenue controlling the fare (the §0 principal risk), and §8's fill-rate signal is the principled version.
+- **§ X** — rename the `luxury` enum value to `first`, and retire the vestigial `van`. The DB half is one
+  line; the code half is 58 references across 14 files and cannot be gradual. **Deliberately deferred until
+  after the pricing engine** — it touches the exact files steps 4–5 are rewriting, and S44 is the precedent
+  for running a rename as its own isolated session.
+
+**⚑ One open check for the founder:** an aggregator's Courchevel *Standard* and Blacklane's Courchevel
+*Business Class* both quoted **1 082,07 €**, identical to the cent, from two different companies. It does
+not change any conclusion (each source tapers within its own quotes) but it is worth re-opening one quote
+before that pairing is cited as two independent sources.
+
+---
+
+## TRAPS LEARNED IN S60 — they will cost you an hour each
+
+- **A browser error naming a symbol that is not in the file any more means the DEV SERVER is stale, not the
+  code.** Two mid-edit HMR failures left Next serving a broken bundle: the console threw
+  `ceilingAuto is not defined` against a line that no longer existed, and Mapbox autocomplete silently
+  returned zero suggestions — while `tsc` was clean throughout. Fix: stop the preview,
+  `rm -rf .next/cache/webpack`, restart. Do not debug the source.
+- **The pricing formula exists TWICE on purpose** — `lib/rate-card.ts` and SQL `mission_price()`. The form
+  must re-price on every keystroke (no round trip) and the server must never trust the browser.
+  `tests/rate-card.test.ts` pins **both** to the same figures. If you change one, change the other.
+- **`formatDistance()` is the STRAIGHT-LINE helper** and rounds to whole km above 10. It printed "56 km"
+  next to a price computed on 55.7. Don't use it for anything the price depends on.
+- **Driving this form from JS:** the address field is a combobox; a synthetic click on a suggestion does
+  nothing. Set the value with the native setter, fire `input`, wait ~2.5s, then dispatch `ArrowDown` +
+  `Enter` keydowns. The mission page's a11y tree does not load in the preview pane, and screenshots only
+  capture at scroll 0 — to shoot a card lower down, hide its preceding siblings with `display:none`.
+- **Verifying a write path costs a row.** Post, inspect, delete by id, then re-assert the **271** baseline.
+  Both S60 probes (`S60PROBE`, `S60DRAFT`) were removed and the count re-checked.
 
 *(Everything below this line is S58's record, kept for its decision trail. The workflow warning immediately
 following still applies to every push.)*

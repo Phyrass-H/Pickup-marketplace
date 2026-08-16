@@ -161,7 +161,14 @@ already the signal that the figure is Kavenue's again, so no new UI was needed.
   error naming a symbol that isn't in the file any more means the server is stale, not the code** —
   stop the preview, `rm -rf .next/cache/webpack`, restart.
 
-**Next:** step 4 — commission (the two displays, the three invoice lines, the snapshot columns) (`rate_card` table + 5 seed rows + §9 snapshot
+**SESSION CLOSED 2026-08-16.** `main` = `19c04ea`, CI green, Vercel deployed, working tree clean, DB
+baseline **271**, all eight stale local branches pruned (`git branch -d`, all fully merged). Five commits:
+`69dcf55` doc · `f137fff` migration · `441b50f` V-Class · `8173782` pre-fill+floor · `19c04ea` re-price rule.
+
+**Next:** step 4 — commission (the two displays, the three invoice lines, the snapshot columns). It needs a
+**second migration the founder runs**; the S60 one deliberately shipped only `rate_card_id` +
+`night_applied` because the commission snapshot's shape is decided by step 4. Full handoff, traps and the
+locked card: `project/NEXT_SESSION.md`, the block headed **★★ START HERE**. (`rate_card` table + 5 seed rows + §9 snapshot
 columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
 preview loop applies).
 
