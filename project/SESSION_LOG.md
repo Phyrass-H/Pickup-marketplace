@@ -69,7 +69,24 @@ re-open one quote. It does not change the conclusion — each source tapers with
 **Files:** `docs/06_Pricing_Commission_Payments.md` (§4 rewritten, §5 floor ruling recorded, §11 stale-card
 warning, §12 rebuilt), `project/BACKLOG.md` (§ V, § W).
 
-**Next:** step 1 — `docs/migrations/2026-08-16_rate_card.sql` (`rate_card` table + 5 seed rows + §9 snapshot
+**Step 1 — the migration is written and syntax-proven, awaiting the founder.**
+`docs/migrations/2026-08-16_rate_card.sql`: the `rate_card` table (keyed market + tier + body +
+`effective_from`, so a re-tune is an INSERT and priced missions keep pointing at the row that priced
+them), the five seed rows, `mission.rate_card_id` + `mission.night_applied`, and two SQL functions
+(`rate_card_for` / `mission_price`) so the formula starts life with **one** definition instead of
+drifting between SQL and `lib/` the way the fee rules did before S56. CHECKs enforce the invariants
+the calibration relies on: the taper may flatten a rate but never invert it, and `floor_per_km` stays
+below `ceiling_per_km_long` so the floor can never catch the ceiling at any distance.
+Commission snapshot columns deliberately **excluded** — their shape is decided by step 2, and columns
+nothing writes to are debt.
+- **Verified against a throwaway Postgres 17 cluster** (scratchpad, deleted after) built with stub
+  `vehicle_category` / `body_type` / `mission`: migration applies clean, and all eight price checks
+  match the figures signed off in chat to the decimal — Monaco 32.5 km 80.125 / 113.00 / 125.125 /
+  203.00 / 193.15, Courchevel 595.4 km 971.56 and 1748.408, night x1.20 44.85 / 135.60, "any body"
+  resolving to sedan, Eco ignoring body, and the van dearer than the sedan at **every** distance
+  including 2 km (52.00 vs 56.50) — the bug this base change existed to kill.
+
+**Next:** step 1 (cont.) — the founder runs `docs/migrations/2026-08-16_rate_card.sql` (`rate_card` table + 5 seed rows + §9 snapshot
 columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
 preview loop applies).
 
