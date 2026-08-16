@@ -140,6 +140,27 @@ three copy rounds with the founder → built to the approved version.
   have gone through Review before being bounced — Review now stops too, with a short message that
   does **not** repeat the number the card is already showing.
 
+**⚑ Step 3 follow-up — the re-price rule REVERSED, founder's call.** Shipped behaviour was "once the
+Business types a ceiling, never overwrite it". The founder pushed back: *"if a user change class the
+price should be updated to that class"* — and they are right, because the two failure modes are not
+symmetrical. A typed number surviving a class change leaves e.g. 100 € (typed for Eco) sitting on a
+First trip: **above First's floor so nothing blocks it**, wrong by a factor of three, and completely
+silent. Re-pricing fails *visibly* — the number moves and the "Market rate" chip returns, which is
+already the signal that the figure is Kavenue's again, so no new UI was needed.
+- **The rule now:** the Ceiling shows Kavenue's price for the trip as it stands; an edit lasts until
+  the trip changes (class · body · route · pickup hour). The `ceilingAuto` flag is gone — the effect
+  keys on the quote, so a keystroke in the field changes neither route nor class and typing is safe.
+- **One exception, kept:** reopening a saved draft is not a change to the trip, so the first quote
+  must not wipe a ceiling the Business deliberately edited before saving (`keepDraftCeiling` ref).
+- **Verified live, all exact:** prefill 159,40 → typed 400 → kept typing 4005 (not clobbered
+  mid-edit) → First **286,52** + chip returns → First van **272,49** → Eco **123,05**. Draft saved at
+  a hand-typed **333** and resumed: still 333, no chip. Probe draft deleted, baseline **271**.
+- ⚑ **Dev-server trap that cost time:** two HMR runtime errors from mid-edit states left Next serving
+  a stale bundle — the browser threw `ceilingAuto is not defined` against a line the file no longer
+  had, and Mapbox autocomplete silently returned nothing. `tsc` was clean throughout. **A browser
+  error naming a symbol that isn't in the file any more means the server is stale, not the code** —
+  stop the preview, `rm -rf .next/cache/webpack`, restart.
+
 **Next:** step 4 — commission (the two displays, the three invoice lines, the snapshot columns) (`rate_card` table + 5 seed rows + §9 snapshot
 columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
 preview loop applies).

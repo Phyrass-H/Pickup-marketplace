@@ -181,11 +181,6 @@ export function MissionForm({
   const [confirmPost, setConfirmPost] = useState(false);
 
   const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
-  // Is the Ceiling still Kavenue's number, or has the Business made it theirs?
-  // Only an untouched field re-prices when the route or the class changes — the
-  // moment they type, the number is theirs and we never overwrite it (§0: we
-  // recommend, we don't impose). A resumed draft counts as already theirs.
-  const [ceilingAuto, setCeilingAuto] = useState(draft?.ceiling == null);
   const [speedWin, setSpeedWin] = useState(draft?.speed_win ?? false);
   // Controlled so the luggage-vs-vehicle nudge (S31) reacts live; still submits via name.
   const [luggage, setLuggage] = useState(
@@ -329,15 +324,32 @@ export function MissionForm({
   const priceBody: BodyType | null = luggageOnly ? "van" : ((body || null) as BodyType | null);
   const quote = priceFor(rateCard, priceTier, priceBody, routeSummary.eta?.distanceKm, { night });
 
-  // Pre-fill, and keep it current while the Business hasn't made the number
-  // theirs — change the class or the drop-off and the price follows. The first
-  // keystroke in the field ends that for good (§0: we recommend, never impose).
+  // The Ceiling shows Kavenue's price for the trip AS IT STANDS. An edit lasts
+  // until the trip changes — change the class, the body, the route or the pickup
+  // hour and the price re-derives over the top of it.
+  //
+  // ⚑ Founder's call, and it is the safer failure. Letting a typed number outlive
+  // a class change leaves, say, 100 € typed for an Eco trip sitting on a First
+  // one: above First's floor, so nothing blocks it, wrong by a factor of three,
+  // and completely silent. Re-pricing fails visibly instead — the number moves
+  // and the "Market rate" chip comes back, which is already the signal that this
+  // is Kavenue's figure again.
+  //
+  // Typing is safe while you type: the deps only move when the PRICE moves, and
+  // a keystroke in this field changes neither the route nor the class.
   const quoteCeiling = quote?.ceiling ?? null;
+  // Reopening a saved draft is not a change to the trip, so the first quote must
+  // not overwrite a ceiling the Business deliberately edited before saving.
+  const keepDraftCeiling = useRef(draft?.ceiling != null);
   useEffect(() => {
-    if (!ceilingAuto || quoteCeiling == null) return;
+    if (quoteCeiling == null) return;
+    if (keepDraftCeiling.current) {
+      keepDraftCeiling.current = false;
+      return;
+    }
     const next = quoteCeiling.toFixed(2);
     setCeiling((prev) => (prev === next ? prev : next));
-  }, [ceilingAuto, quoteCeiling]);
+  }, [quoteCeiling]);
 
   const hasCeiling = ceiling !== "" && Number.isFinite(ceilingNum) && ceilingNum > 0;
   const atMarket = hasCeiling && isMarketRate(ceilingNum, quote);
@@ -717,11 +729,7 @@ export function MissionForm({
                   inputMode="decimal"
                   value={ceiling}
                   aria-invalid={belowFloor || undefined}
-                  onChange={(e) => {
-                    // The moment they type, the number is theirs — stop re-pricing.
-                    setCeilingAuto(false);
-                    setCeiling(decimalOnly(e.target.value));
-                  }}
+                  onChange={(e) => setCeiling(decimalOnly(e.target.value))}
                 />
               </label>
               {quote && (

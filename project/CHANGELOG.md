@@ -18,6 +18,10 @@
 - **Late-night trips price themselves.** A pickup between 22:00 and 06:00 carries the 20% night rate
   automatically. The old "you might want to raise your price for a night trip" note is gone — it was
   asking you to do something the app now does.
+- **Change the class, and the price follows.** Switch a trip from Business to First and the ceiling
+  re-does itself for the new car — even if you had typed your own number. Your figure was for a
+  different vehicle, and a stale price hides quietly instead of failing loudly. Type it again if you
+  want it. (One exception: reopening a saved draft never touches the price you saved.)
 - **One field disappeared.** The old "Estimated base fare" existed only to warn you when your two
   numbers disagreed with each other. Kavenue knows the real price now, so it had nothing left to do.
 - Checked end to end against your live database, including trying to post a trip below the minimum
