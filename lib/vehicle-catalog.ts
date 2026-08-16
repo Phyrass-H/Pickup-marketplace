@@ -62,7 +62,14 @@ export const MODEL_EXCEPTIONS: {
   { brand: "Mercedes-Benz", model: "GLE", aliases: ["GLE 300d", "GLE 350", "GLE Coupé", "GLE 450"], tier: "business", body: "sedan" },
   { brand: "Mercedes-Benz", model: "GLS", aliases: ["GLS 450", "GLS 580", "Maybach GLS", "GLS 400d"], tier: "luxury", body: "sedan" },
   { brand: "Mercedes-Benz", model: "Classe G", aliases: ["G-Class", "G-Klasse", "G 400", "G 500", "G 63", "G 63 AMG", "G-Wagen"], tier: "luxury", body: "sedan" },
-  { brand: "Mercedes-Benz", model: "Classe V", aliases: ["V-Class", "V-Klasse", "Vclass", "V 250", "V 300", "EQV", "V 220", "VLE"], tier: "business", body: "van" },
+  // First, not Business (founder, 2026-08-16). The V-Class is the chauffeured van
+  // the premium market sells as its top van tier — Blacklane bills it as a "Business
+  // Van" at 1.4-1.9x a sedan, and the aggregators list it as "First Class Van" while
+  // the Vito below sits in Standard. It is why docs/06 §4 has a First — van row.
+  // ⚑ The Pool matches the tier EXACTLY (app/(app)/pool/page.tsx), so a V-Class
+  //   Driver no longer sees Business-van work. BACKLOG § V (opt in to lower-class
+  //   trips) is the answer and is timed to ship with the §6 curve.
+  { brand: "Mercedes-Benz", model: "Classe V", aliases: ["V-Class", "V-Klasse", "Vclass", "V 250", "V 300", "EQV", "V 220", "VLE"], tier: "luxury", body: "van" },
   { brand: "Mercedes-Benz", model: "Vito", aliases: ["Vito Tourer", "eVito", "eVito Tourer", "Vito 119", "Vito 116"], tier: "business", body: "van" },
   { brand: "Mercedes-Benz", model: "Sprinter", aliases: ["Sprinter Tourer", "eSprinter", "Sprinter 519", "Sprinter VIP"], tier: "business", body: "van" },
 

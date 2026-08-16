@@ -86,7 +86,23 @@ nothing writes to are debt.
   resolving to sedan, Eco ignoring body, and the van dearer than the sedan at **every** distance
   including 2 km (52.00 vs 56.50) — the bug this base change existed to kill.
 
-**Next:** step 1 (cont.) — the founder runs `docs/migrations/2026-08-16_rate_card.sql` (`rate_card` table + 5 seed rows + §9 snapshot
+**⚑ Migration APPLIED by the founder and verified live** against the real Supabase DB: five rows
+seeded correctly; `mission_price` returns the signed-off figures through PostgREST at 32.5 km and
+595.4 km (both bands), night x1.20 (44.85 / 135.60), "any body" resolving to the sedan row and Eco
+ignoring body; `mission.rate_card_id` / `mission.night_applied` present. RLS behaves — the anon key
+gets `[]` on a read (so the table GRANT is there and the *policy* is doing the blocking, not a missing
+grant, which is what would have silently broken `authenticated`) and **401 on a write**.
+
+**Step 2 — the V-Class re-classified.** `lib/vehicle-catalog.ts:65` `tier: "business"` -> `"luxury"`,
+body unchanged. New `tests/vehicle-catalog.test.ts` (7 tests) pins it and the rest of the taxonomy —
+there were **no catalog tests at all** before, and the tier picks the rate-card row, so a quiet edit
+here is a quiet change to what a Business pays. `tsc` clean, **325/325**.
+- ⚑ **One live vehicle needs a decision:** a Mercedes Classe V, active, still stored
+  `category='business'`. The catalog only classifies on save, and the Pool reads the **stored**
+  category — so that Driver keeps seeing Business-van work until the row is updated, and the moment
+  it is, they see almost nothing until BACKLOG § V ships. Raised with the founder; not touched.
+
+**Next:** step 3 — pre-fill the Ceiling on `/dispatch/new` and enforce the floor (D25 preview first) (`rate_card` table + 5 seed rows + §9 snapshot
 columns) for the founder to run, then the V-Class one-liner, then the pre-fill on `/dispatch/new` (D25
 preview loop applies).
 
