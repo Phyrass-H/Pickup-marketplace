@@ -785,7 +785,7 @@ export function TripRow({
               {mission.accepted_at ? "Accepted at" : "Price now"}
             </div>
             <div className="dx-scan__v dx-scan__v--big">{formatMoney(fareSplit.businessTotal)}</div>
-            <div className="dx-scan__s">max {formatMoney(ceilingSplit.businessTotal)}</div>
+            <div className="dx-scan__s">Ceiling {formatMoney(ceilingSplit.businessTotal)}</div>
           </div>
         </div>
 

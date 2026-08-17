@@ -746,7 +746,7 @@ export function MissionForm({
               </div>
               <label className="field" style={{ marginBottom: 0 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  Ceiling € — your maximum, everything in
+                  Ceiling € — everything in
                   {atMarket && (
                     <span className="mx-vehiclechip" style={{ marginLeft: "auto" }}>
                       Market rate
@@ -791,7 +791,7 @@ export function MissionForm({
               )}
               {hasCeiling && split.charged && (
                 <div className="mx-fee">
-                  <div className="mx-fee__head">What&rsquo;s inside that maximum</div>
+                  <div className="mx-fee__head">What&rsquo;s inside your Ceiling</div>
                   <dl className="mx-fee__lines">
                     <dt>Transport</dt>
                     <dd>{formatMoney(split.course)}</dd>
@@ -799,14 +799,14 @@ export function MissionForm({
                     <dd>{formatMoney(split.businessFeeHt)}</dd>
                     <dt>VAT on service fee</dt>
                     <dd>{formatMoney(split.businessFeeVat)}</dd>
-                    <dt className="mx-fee__tot">Your maximum</dt>
+                    <dt className="mx-fee__tot">Your Ceiling</dt>
                     <dd className="mx-fee__tot">{formatMoney(ceilingAllIn)}</dd>
                   </dl>
                   <p className="muted small" style={{ margin: "8px 0 0" }}>
                     {snapped
                       ? `Rounded down from ${formatMoney(ceilingNum)} so the three lines bill exactly. `
                       : ""}
-                    You pay this only if it fills at your maximum — it usually fills
+                    You pay this only if it fills at your Ceiling — it usually fills
                     lower, and the fee follows the fare down.
                   </p>
                 </div>
@@ -847,7 +847,7 @@ export function MissionForm({
                   </span>
                 </div>
                 <div className="muted small" style={{ marginTop: 4 }}>
-                  starting price · climbs up to {formatMoney(ceilingAllIn)} (your maximum)
+                  starting price · climbs up to your Ceiling, {formatMoney(ceilingAllIn)}
                 </div>
 
                 <div className="muted small" style={{ marginTop: 8 }}>
@@ -1018,7 +1018,7 @@ export function MissionForm({
                     gap: 12,
                   }}
                 >
-                  <span className="muted small">Your maximum, all in</span>
+                  <span className="muted small">Your Ceiling, all in</span>
                   <span style={{ fontSize: 16, fontWeight: 600 }}>
                     {formatMoney(ceilingNum)}
                   </span>
