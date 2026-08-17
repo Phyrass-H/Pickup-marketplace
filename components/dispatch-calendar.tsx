@@ -113,7 +113,7 @@ function TonePill({ tone, label }: { tone: Tone; label: string }) {
 
 const LEGEND: { tone: Tone; label: string }[] = [
   { tone: "neutral", label: "In the Pool / Completed" },
-  { tone: "info", label: "Confirmed / Accepted" },
+  { tone: "info", label: "Driver accepted" },
   { tone: "success", label: "In progress" },
   { tone: "warn", label: "Unfilled — pickup < 3 h" },
   { tone: "danger", label: "Needs action / Cancelled" },
@@ -364,7 +364,7 @@ export function DispatchCalendar({ data }: { data: CalendarData }) {
           >
             <option value="all">All statuses</option>
             <option value="neutral">Pooled</option>
-            <option value="info">Confirmed</option>
+            <option value="info">Driver accepted</option>
             <option value="success">In progress</option>
             <option value="needs">Needs action</option>
           </select>

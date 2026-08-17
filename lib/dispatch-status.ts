@@ -284,7 +284,7 @@ export function missionTone(
   // pickup in the past also satisfies `<= now + 1h`, which turned every stale
   // still-confirmed trip on the schedule red. One hour of grace past the pickup
   // keeps a genuinely late trip flagged (a Driver 5 minutes late still hasn't
-  // checked in) and then lets it fall back to the calm "Confirmed".
+  // checked in) and then lets it fall back to the calm "Driver accepted".
   const notLongPast = pickup >= now.getTime() - HOURS_1;
   const within3h = !opts.archived && pickup <= now.getTime() + HOURS_3;
   const within1h = !opts.archived && pickup <= now.getTime() + HOURS_1;
@@ -320,7 +320,7 @@ export function missionTone(
           needsAttention: false,
         };
       return { tone: "neutral", label: "Completed", needsAttention: false };
-    // D61 — check-in replaces "Confirmed" once it opens, then the Driver's own
+    // D61 — check-in replaces "Driver accepted" once it opens, then the Driver's own
     // progress (En route → …) takes over above. Beyond 3h nothing is shown: a
     // Driver who hasn't checked in for tomorrow's trip is not news.
     case "confirmed":
@@ -347,7 +347,7 @@ export function missionTone(
           needsAttention: false,
           wash: true,
         };
-      return { tone: "info", label: "Confirmed", needsAttention: false };
+      return { tone: "info", label: "Driver accepted", needsAttention: false };
     // Vestigial since D55 — `accept_mission` confirms immediately and every old
     // row was backfilled, so nothing reaches this. Kept so an unexpected row
     // renders as something rather than falling through to the raw enum.
@@ -382,7 +382,7 @@ export function missionTone(
 }
 
 // Mirrors --tone-* in app/globals.css — keep the two in sync. The "info"
-// (Confirmed/Accepted) tone is a desaturated steel, kept distinct from the navy
+// (Driver accepted) tone is a desaturated steel, kept distinct from the navy
 // action accent so a status pill never reads as a clickable button.
 export const TONE_COLOR: Record<Tone, string> = {
   neutral: "#667085",
