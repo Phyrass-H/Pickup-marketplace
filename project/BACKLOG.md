@@ -1121,3 +1121,39 @@ technically hard — **but not during the pricing build**. Deliberately deferred
 **`'van'` is vestigial in `vehicle_category`** (a mission's category is the *tier*; body has been its
 own axis since `2026-06-19_vehicle_taxonomy_and_eta`). Both want the same surgery — recreating the
 type to drop a value — so doing them together costs barely more than doing one.
+
+---
+
+## Y. The cancellation penalty is too weak on a cheap trip 🔨❓ (founder, raised repeatedly; parked with intent 2026-08-17)
+
+**The founder's case, in their words and said more than once:** *"a €50 trip … a driver would be tempted to
+cancel."* A 100% penalty sounds absolute, but on a Nice → Nice run it is fifty euros — cheap enough to buy your
+way out of a bad afternoon. The penalty is meant to protect a Business that has a Guest waiting, and its
+deterrent value does not scale with the fare the way the damage does: a hotel left without a car at 30 minutes'
+notice has the same problem whether the trip was 50 € or 300 €.
+
+**Status: 100% stays for now** (founder, 2026-08-17). This is a rule change to money, not a display choice, so
+it waits for a decision rather than being slipped into another step.
+
+**The shapes worth pricing out when it comes up** — none decided:
+1. **A floor.** "100% of the fare, minimum X" — the founder floated **€150** *as an illustration, not a
+   proposal*. Simple to explain and to enforce. The question is what X is: too high and a Driver who genuinely
+   breaks down owes three times the job; too low and it changes nothing.
+2. **A multiplier near pickup.** The damage is about *notice*, not price — a cancellation two weeks out costs
+   the Business almost nothing, one at T−1h costs them a Guest. The Business side already ramps this way
+   ([[d45]]: free while pooled, 50% at −5h, +10%/h). The Driver side is flat, which is the asymmetry.
+3. **Visible reliability marks.** Non-monetary, and the thing professionals actually respond to. Needs the
+   review/reputation layer, which is gated on the community work.
+
+**⚑ Two things already settled that constrain the answer.**
+- **A penalty must be predictable** (`docs/06` §6): people plan around it, unlike the auction, which must not
+  be. Whatever shape wins has to be stateable in one sentence a Driver can repeat.
+- **The basis question is open too, and pairs with this one.** After S61 the penalty is the ONE figure a Driver
+  sees gross — `docs/06` §1 makes it an indemnity Driver → Business, so no commission comes off, and a Driver
+  who has seen 87,00 € all week is told they owe 98,86 €. Charging 100% of what they were going to be *paid*
+  would keep the deterrent story clean ("you lose exactly what you would have earned") at the cost of a
+  slightly smaller penalty. Decide both together — they are the same conversation.
+
+**Where it lives when it happens:** `driver_cancel_mission` (the amount), `lib/cancellation.ts` (the shared
+ramp), `app/(app)/rides/cancel-noshow.tsx` (the copy). Money-critical: it ships with
+`.local/probe/migrations-2026-08-11.ts` re-run and the money-invariants tests updated.
