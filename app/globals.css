@@ -1270,12 +1270,11 @@ textarea::placeholder {
 .dx-fee .dx-fee__tot {
   border-top: 1px solid var(--border); padding-top: 7px; margin-top: 1px; font-weight: 600;
 }
+/* A quiet line, not a green panel (founder, 2026-08-17): a filled panel made a
+   one-line fact shout on every settled row. The green stays on the number
+   itself, which is the part that is good news. */
 .dx-fee__saved {
-  margin: 10px 0 0; font-size: 12.5px; line-height: 1.5;
-  /* The app has no green surface token; #e6f6ec is the one already used by
-     .route-ic--to, so the saving reads in the same green as a completed leg. */
-  color: var(--success); background: #e6f6ec; border: 1px solid #c7e9d3;
-  border-radius: var(--radius-md); padding: 8px 11px;
+  margin: 9px 0 0; font-size: 12.5px; font-weight: 500; color: var(--success);
 }
 
 /* Route rail (detail): full addresses + a dot-to-dot connector that stops cleanly

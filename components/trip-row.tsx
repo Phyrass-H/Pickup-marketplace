@@ -782,7 +782,7 @@ export function TripRow({
             {/* "now" is only true while the fare is still climbing in the Pool. Once
                 a Driver holds it, the price is settled and the label has to say so. */}
             <div className="dx-scan__cap">
-              {mission.accepted_at ? "Agreed price" : "Price now"}
+              {mission.accepted_at ? "Accepted at" : "Price now"}
             </div>
             <div className="dx-scan__v dx-scan__v--big">{formatMoney(fareSplit.businessTotal)}</div>
             <div className="dx-scan__s">max {formatMoney(ceilingSplit.businessTotal)}</div>
@@ -810,14 +810,15 @@ export function TripRow({
             </dl>
             {/* docs/06 §6: "the row shows what they saved against that maximum —
                 the argument for the whole auction, made visible on every
-                booking." It saves twice, because the fee is a share of the fare. */}
+                booking."
+                ⚑ ONE NUMBER, deliberately (founder, 2026-08-17). This line used
+                to carry four — the saving, the maximum, and the fee before and
+                after — which buried the only fact that matters. The maximum is
+                already in the tile above, and the fee is in the table above
+                that; repeating them here made a simple, good piece of news read
+                like an accounting note. */}
             {savedAgainstMax > 0 && (
-              <p className="dx-fee__saved">
-                Filled {formatMoney(savedAgainstMax)} under your maximum of{" "}
-                {formatMoney(ceilingSplit.businessTotal)} — and the service fee fell with
-                it, {formatMoney(ceilingSplit.businessFeeHt)} down to{" "}
-                {formatMoney(fareSplit.businessFeeHt)}.
-              </p>
+              <p className="dx-fee__saved">You saved {formatMoney(savedAgainstMax)}</p>
             )}
           </div>
         )}
