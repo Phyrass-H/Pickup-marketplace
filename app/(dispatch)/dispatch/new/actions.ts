@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isNightPickup } from "@/lib/rate-card";
+import { COMMISSION_RATE_COLS, courseFromBusinessTotal, ratesFromRow } from "@/lib/commission";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
@@ -213,15 +214,42 @@ export async function createMission(formData: FormData) {
   // §5 — a trip cannot be POSTED below the floor: "The lowest this trip can be
   // offered at is …". A DRAFT stays lenient, the same way it may be parked
   // without a drop-off (S27) — it gets priced properly on the way out.
+  //
+  // Both sides of this comparison are ALL-IN: the rate card's floor is what the
+  // Business would pay, and so is the number they typed. The conversion to the
+  // stored Course happens below, after the guard.
   if (!asDraft && quote && round2(ceiling!) < round2(quote.floor_price)) {
     redirect(backTo("belowfloor"));
   }
 
+  // ── Commission (docs/06 §1, §9) ───────────────────────────────────────────
+  // The rates come from the table, never from constants here — and they are
+  // snapshot onto the row, so re-rating later can never rewrite this trip's
+  // invoice. `transport_vat_rate` stays NULL: it is the assigned Driver's
+  // status, and nobody has accepted yet.
+  const { data: rateRow } = await supabase
+    .from("commission_rate")
+    .select(COMMISSION_RATE_COLS)
+    .lte("effective_from", new Date().toISOString())
+    .order("effective_from", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const rates = ratesFromRow(rateRow);
+
+  // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE. The Business types (and
+  // Kavenue pre-fills) what they will pay, fee inside; `mission.ceiling` goes on
+  // storing the fare the PDP climbs and the Driver is paid from, exactly as it
+  // did before commission existed. Every fee, every band and every cancellation
+  // basis downstream therefore keeps its meaning — this is the one line that
+  // makes the all-in display safe.
+  const course = courseFromBusinessTotal(ceiling!, rates);
+
   // PDP curve (D21): a standard mission starts at 50% of the ceiling and climbs
   // +5% every 10 min; SPEED WIN starts hotter (70%) and climbs every 5 min. It
-  // no longer starts flat at the ceiling. Tunable later.
-  const pdpStart = speedWin ? round2(ceiling! * 0.7) : round2(ceiling! * 0.5);
-  const pdpStep = round2(Math.max(1, ceiling! * 0.05));
+  // no longer starts flat at the ceiling. Tunable later. All of it in Course
+  // space — the curve is the Driver's fare, not the Business's bill.
+  const pdpStart = speedWin ? round2(course * 0.7) : round2(course * 0.5);
+  const pdpStep = round2(Math.max(1, course * 0.05));
   const pdpInterval = speedWin ? 5 : 10;
 
   const status: MissionStatus = asDraft ? "draft" : "pooled";
@@ -278,12 +306,15 @@ export async function createMission(formData: FormData) {
     luggage_only: luggageOnly,
     flight_number: flightNumber || null,
     reference: reference || null,
-    ceiling: ceiling!,
-    // docs/06 §9 snapshot — which generation of the card priced this trip, and
-    // whether the night rate applied. Settlement and history read these, never
-    // the live card.
+    ceiling: course,
+    // docs/06 §9 snapshot — which generation of the card priced this trip,
+    // whether the night rate applied, and the commission rates in force.
+    // Settlement, invoicing and history read these, never the live tables.
     rate_card_id: quote?.rate_card_id ?? null,
     night_applied: nightApplied,
+    commission_business_rate: rates?.businessHt ?? null,
+    commission_driver_rate: rates?.driverHt ?? null,
+    commission_vat_rate: rates?.feeVat ?? null,
     pdp_start: pdpStart,
     pdp_step: pdpStep,
     pdp_interval: pdpInterval,

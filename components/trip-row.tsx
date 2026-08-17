@@ -6,10 +6,12 @@ import { closeRelease } from "@/app/(dispatch)/dispatch/actions";
 import { settledFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
+import { ratesOf, splitFor } from "@/lib/commission";
 import {
   addressLine,
   formatDateTime,
   formatMoney,
+  formatRate,
   formatTime,
   formatArchiveDay,
   formatShortDay,
@@ -296,6 +298,19 @@ export function TripRow({
   // Deliberately NOT on a `farePending` row: that one shows the bare agreed fare
   // and is excluded from every total, so there is no waiting folded into it.
   const waitingNote = waitingFee > 0 ? `incl. ${formatMoney(waitingFee)} waiting` : null;
+
+  // ── What the Business pays (docs/06 §1, §3) ───────────────────────────────
+  // `settledFare` and `mission.ceiling` are the COURSE — the Driver's side of
+  // the trip. A Business is only ever shown the all-in figure, so every amount
+  // on this row goes through the snapshot rates first. A mission with no
+  // snapshot renders exactly as it did before commission shipped.
+  const fareSplit = splitFor(mission, settledFare(mission));
+  const ceilingSplit = splitFor(mission, Number(mission.ceiling));
+  // Only once a Driver holds it: while the price is still climbing, "saved" is
+  // a claim about a number that is still moving.
+  const savedAgainstMax = mission.accepted_at
+    ? Math.round((ceilingSplit.businessTotal - fareSplit.businessTotal) * 100) / 100
+    : 0;
   const withWaiting = (base: string) => (waitingNote ? `${base} · ${waitingNote}` : base);
   const archiveNote = !archived
     ? null
@@ -524,6 +539,7 @@ export function TripRow({
             missionId={mission.id}
             driverName={driver?.name ?? ""}
             fare={settledFare(mission)}
+            rates={ratesOf(mission)}
             waitingFromIso={waitingAt(mission).from.toISOString()}
             waitingUntilIso={waitingAt(mission).until.toISOString()}
             courtesyMinutes={noShowWaitMinutes(isAirportPickup(mission))}
@@ -766,12 +782,45 @@ export function TripRow({
             {/* "now" is only true while the fare is still climbing in the Pool. Once
                 a Driver holds it, the price is settled and the label has to say so. */}
             <div className="dx-scan__cap">
-              {mission.accepted_at ? "Agreed fare" : "Fare now"}
+              {mission.accepted_at ? "Agreed price" : "Price now"}
             </div>
-            <div className="dx-scan__v dx-scan__v--big">{formatMoney(settledFare(mission))}</div>
-            <div className="dx-scan__s">ceiling {formatMoney(mission.ceiling)}</div>
+            <div className="dx-scan__v dx-scan__v--big">{formatMoney(fareSplit.businessTotal)}</div>
+            <div className="dx-scan__s">max {formatMoney(ceilingSplit.businessTotal)}</div>
           </div>
         </div>
+
+        {/* What the price is made of — docs/06 §3's three lines, never collapsed
+            into one "service fee": the Business reclaims the 20% VAT on
+            Kavenue's fee but not the VAT on the transport, so the two have to
+            stay separable. Absent on a mission priced before commission
+            existed — it was billed no fee, and inventing lines for it would be
+            a lie about what was charged. */}
+        {fareSplit.charged && (
+          <div className="dx-panel">
+            <div className="dx-panel__h">What you pay</div>
+            <dl className="dx-fee">
+              <dt>Transport</dt>
+              <dd>{formatMoney(fareSplit.course)}</dd>
+              <dt>Service fee ({formatRate(mission.commission_business_rate)})</dt>
+              <dd>{formatMoney(fareSplit.businessFeeHt)}</dd>
+              <dt>VAT on service fee</dt>
+              <dd>{formatMoney(fareSplit.businessFeeVat)}</dd>
+              <dt className="dx-fee__tot">Total</dt>
+              <dd className="dx-fee__tot">{formatMoney(fareSplit.businessTotal)}</dd>
+            </dl>
+            {/* docs/06 §6: "the row shows what they saved against that maximum —
+                the argument for the whole auction, made visible on every
+                booking." It saves twice, because the fee is a share of the fare. */}
+            {savedAgainstMax > 0 && (
+              <p className="dx-fee__saved">
+                Filled {formatMoney(savedAgainstMax)} under your maximum of{" "}
+                {formatMoney(ceilingSplit.businessTotal)} — and the service fee fell with
+                it, {formatMoney(ceilingSplit.businessFeeHt)} down to{" "}
+                {formatMoney(fareSplit.businessFeeHt)}.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Route — full addresses + trip distance/duration; the rail checks off live
             as the Driver reaches each stop mid-trip. */}

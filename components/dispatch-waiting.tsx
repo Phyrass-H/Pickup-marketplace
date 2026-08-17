@@ -6,6 +6,7 @@ import { Clock, UserX } from "lucide-react";
 import { businessDeclareNoShow } from "@/app/(dispatch)/dispatch/actions";
 import { formatMoney, formatTime } from "@/lib/format";
 import { WAITING_RATE_PER_MIN, waitingBetween } from "@/lib/cancellation";
+import { commissionSplit, type Rates } from "@/lib/commission";
 
 // The Business's view of a Driver waiting on site (O7 / D48). NET-NEW: before this the
 // Dispatch row showed nothing at all while a Driver waited, so the first a Business knew
@@ -21,13 +22,17 @@ export function WaitingPanel({
   missionId,
   driverName,
   fare,
+  rates,
   waitingFromIso,
   waitingUntilIso,
   courtesyMinutes,
 }: {
   missionId: string;
   driverName: string;
+  /** Gross — the Course. Shown ALL IN here, like every Business figure. */
   fare: number;
+  /** The mission's snapshot rates, or null on a trip priced before commission. */
+  rates: Rates | null;
   waitingFromIso: string;
   waitingUntilIso: string;
   courtesyMinutes: number;
@@ -64,8 +69,14 @@ export function WaitingPanel({
   const until = new Date(waitingUntilIso).getTime();
   // One definition of the meter, shared with the cancel modal and the Driver's screen —
   // this used to be a hand-typed copy of the same arithmetic.
-  const { minutes, fee } = waitingBetween(from, until, now);
-  const maxFee = Math.round((until - from) / 60_000) * WAITING_RATE_PER_MIN;
+  const { minutes, fee: grossFee } = waitingBetween(from, until, now);
+  // ALL IN. The meter accrues 1 €/min between the parties (docs/06 §10); what
+  // the Business pays is that plus the service fee and its VAT, and a Business
+  // is only ever shown its own side. One helper so the running figure, the
+  // ceiling and the per-minute rate cannot disagree.
+  const allIn = (gross: number) => commissionSplit(gross, rates).businessTotal;
+  const fee = allIn(grossFee);
+  const maxFee = allIn(Math.round((until - from) / 60_000) * WAITING_RATE_PER_MIN);
   const capped = now >= until;
 
   // Before the courtesy wait lapses there is nothing to charge and nothing to declare.
@@ -130,7 +141,7 @@ export function WaitingPanel({
       >
         {capped
           ? `Stopped at the ${formatMoney(maxFee)} ceiling — it no longer grows. ${driverName || "The Driver"} may still be waiting.`
-          : `${formatMoney(WAITING_RATE_PER_MIN)} per minute started, paid to ${driverName || "the Driver"}. Stops at ${formatMoney(maxFee)} (${formatTime(waitingUntilIso)}).`}
+          : `${formatMoney(allIn(WAITING_RATE_PER_MIN))} per minute started, paid to ${driverName || "the Driver"}. Stops at ${formatMoney(maxFee)} (${formatTime(waitingUntilIso)}).`}
       </div>
 
       {error && <div className="notice error" style={{ marginTop: 10 }}>{error}</div>}
@@ -182,10 +193,10 @@ export function WaitingPanel({
               <div style={{ color: "var(--tone-warn-fg)", fontSize: 13 }}>You’ll be charged</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 24, fontWeight: 600, color: "var(--tone-warn-fg)" }}>
-                  {formatMoney(fare + fee)}
+                  {formatMoney(allIn(fare) + fee)}
                 </span>
                 <span style={{ fontSize: 12.5, color: "var(--tone-warn-fg)" }}>
-                  {formatMoney(fare)} fare + {formatMoney(fee)} waiting ({minutes} min)
+                  {formatMoney(allIn(fare))} trip + {formatMoney(fee)} waiting ({minutes} min)
                 </span>
               </div>
             </div>

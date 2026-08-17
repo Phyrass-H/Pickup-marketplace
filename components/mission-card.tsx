@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { MissionRow } from "@/lib/database.types";
 import { currentFare } from "@/lib/pdp";
+import { driverNet } from "@/lib/commission";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
@@ -35,7 +36,10 @@ import { parseDriverFlags, parseLanguages } from "@/lib/driver-service";
 // (highest-priority first) with a "+N"; the drop-off is absent for an at-disposal
 // (hourly) mission, which shows a duration instead of a route on the facts line.
 export function MissionCard({ mission }: { mission: MissionRow }) {
-  const fare = currentFare(mission);
+  // ⚑ NET. The number on this card is what the Driver banks — docs/06 §1 and
+  // the founder's ruling that the Pool price IS the Driver's price. The
+  // commission comes off here, once, and no Driver screen ever shows the gross.
+  const fare = driverNet(mission, currentFare(mission));
   const when = formatPoolWhen(mission.pickup_at);
   const isHourly = mission.mission_type === "hourly";
 

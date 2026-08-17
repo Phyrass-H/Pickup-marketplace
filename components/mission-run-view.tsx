@@ -14,8 +14,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { settledFare } from "@/lib/pdp";
-import { missionAmount } from "@/lib/earnings";
-import { formatMoney, formatPoolWhen, missionStatusLabel } from "@/lib/format";
+import { grossToDriver, missionAmount } from "@/lib/earnings";
+import { formatMoney, formatPoolWhen, formatRate, missionStatusLabel } from "@/lib/format";
+import {
+  driverKeeps,
+  driverNet,
+  ratesOf,
+  splitFor,
+  transportVat,
+} from "@/lib/commission";
 import type { MissionRow, MissionStatus, PreferredGps } from "@/lib/database.types";
 import { isExecutable, progressDone, progressSegments } from "@/lib/mission-flow";
 import { parseWaypoints } from "@/lib/waypoints";
@@ -146,7 +153,15 @@ export function MissionRunView({
   const destination = nextDestination(m, stops);
   // Settled waiting, i.e. board_guest (or one of the three failure doors) has written it.
   // Not the live meter — that is NoShowControl's job while the Driver is still on site.
-  const settledWaiting = m.status === "arrived" ? 0 : Number(m.waiting_fee ?? 0);
+  // NET, like every other figure a Driver reads: the meter accrues 1 €/min
+  // between the parties, and this is the Driver's share of it (docs/06 §1).
+  const settledWaiting =
+    m.status === "arrived" ? 0 : driverNet(m, Number(m.waiting_fee ?? 0));
+
+  // The Driver's own money detail (docs/06 §1, §3) — over the same gross figure
+  // the footer shows, so the breakdown and the total can never disagree.
+  const payment = splitFor(m, grossToDriver(m));
+  const vatCollected = transportVat(payment.course, m.transport_vat_rate);
 
   return (
     <>
@@ -384,6 +399,40 @@ export function MissionRunView({
             </div>
           )}
 
+          {/* What you're paid — docs/06 §1, §3.
+              The one place a Driver sees the commission at all. Everywhere else
+              the figure IS the payment (the founder's ruling), but a Driver has
+              to invoice and file: they need the fee to reclaim its VAT, and the
+              VAT inside the fare to declare it. Two Drivers can bank the same
+              87,00 € and keep different amounts, which no single number can say.
+              Absent on a trip priced before commission — nothing was deducted. */}
+          {payment.charged && (
+            <div className="dnote">
+              <div className="dnote__h">What you’re paid for this trip</div>
+              <dl className="dfee">
+                <dt>Fare</dt>
+                <dd>{formatMoney(payment.course)}</dd>
+                <dt>Kavenue commission ({formatRate(m.commission_driver_rate)})</dt>
+                <dd>−{formatMoney(payment.driverFeeHt)}</dd>
+                <dt>VAT on commission</dt>
+                <dd>−{formatMoney(payment.driverFeeVat)}</dd>
+                <dt className="dfee__tot">Paid to you</dt>
+                <dd className="dfee__tot">{formatMoney(payment.driverNet)}</dd>
+              </dl>
+              <p className="dfee__note">
+                {vatCollected > 0 ? (
+                  <>
+                    The fare carries {formatMoney(vatCollected)} of VAT you collect and
+                    declare, and you reclaim the {formatMoney(payment.driverFeeVat)} above.
+                    After settling both you keep {formatMoney(driverKeeps(payment, m.transport_vat_rate))}.
+                  </>
+                ) : (
+                  <>You charge no VAT, so there is none to declare and none to reclaim.</>
+                )}
+              </p>
+            </div>
+          )}
+
           {/* Why the Guest is missing from a finished trip — said once, plainly,
               so it reads as a rule rather than as data that failed to load. */}
           {archived && (
@@ -405,7 +454,9 @@ export function MissionRunView({
                 earned money, and showing the fare alone made this card disagree with
                 Earnings on the same trip. `missionAmount` is the one definition both use. */}
             <span className="pcard__veh">
-              {comp != null ? `Compensation ${formatMoney(comp)}` : formatMoney(missionAmount(m))}
+              {comp != null
+                ? `Compensation ${formatMoney(driverNet(m, comp))}`
+                : formatMoney(missionAmount(m))}
             </span>
           </span>
         </div>
@@ -429,6 +480,7 @@ export function MissionRunView({
           <NoShowControl
             missionId={m.id}
             fare={settledFare(m)}
+            rates={ratesOf(m)}
             guestDueIso={guestDueAt(m).toISOString()}
             availableAtIso={noShowAvailableAt(m, arrivedAtIso).toISOString()}
             waitMinutes={noShowWaitMinutes(isAirportPickup(m))}

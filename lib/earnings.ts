@@ -7,6 +7,7 @@
 //     the night the Driver worked, and a week starts on Monday.
 import { settledFare } from "@/lib/pdp";
 import { cancelCompensation } from "@/lib/cancellation";
+import { driverNet } from "@/lib/commission";
 import type { MissionRow } from "@/lib/database.types";
 
 // The four calendar granularities step forwards and backwards from an anchor day.
@@ -299,9 +300,13 @@ function num(v: number | string | null | undefined): number {
 export function totalsFor(missions: MissionRow[], cancels: DriverCancelRow[]): Totals {
   const t = { ...EMPTY };
 
+  // ⚑ Every bucket below is NET — what the Driver banks (docs/06 §1). The
+  // commission is applied per contribution rather than to the sum, so the
+  // buckets on screen still add up to the total exactly. Penalties are the one
+  // exception, further down.
   for (const m of missions) {
     if (m.status === "completed") {
-      const fare = settledFare(m);
+      const fare = driverNet(m, settledFare(m));
       if (m.no_show) {
         t.noShow += fare;
         t.noShowCount += 1;
@@ -311,17 +316,20 @@ export function totalsFor(missions: MissionRow[], cancels: DriverCancelRow[]): T
       }
       // Waiting is settled onto the mission row by both exits; a cancelled trip's
       // waiting is already inside cancelCompensation, so only count it here.
-      t.waiting += num(m.waiting_fee);
+      t.waiting += driverNet(m, num(m.waiting_fee));
       t.waitingMinutes += m.waiting_minutes ?? 0;
     } else if (m.status === "cancelled") {
       const comp = cancelCompensation(m);
       if (comp != null) {
-        t.cancelledOnYou += comp;
+        t.cancelledOnYou += driverNet(m, comp);
         t.cancelledOnYouCount += 1;
       }
     }
   }
 
+  // ⚑ NOT netted. A Driver's own cancellation penalty runs Driver → Business,
+  // so docs/06 §1 calls it an indemnity rather than payment for transport and it
+  // carries no commission. The Driver owes the whole figure.
   for (const c of cancels) {
     t.penalties += num(c.fee_amount);
     t.penaltyCount += 1;
@@ -331,8 +339,22 @@ export function totalsFor(missions: MissionRow[], cancels: DriverCancelRow[]): T
   return t;
 }
 
-/** What one mission contributed, for the trip-by-trip list. */
+/**
+ * What one mission contributed, for the trip-by-trip list — and the ONLY money
+ * figure a Driver screen may render for a mission.
+ *
+ * ⚑ NET, since 2026-08-17. docs/06 §1 and the founder's ruling: the number in
+ * the Pool is the number they bank, so the commission comes off before anything
+ * is displayed and there is no gross/net language anywhere in the app. The
+ * gross figures stay in `settledFare` / `cancelCompensation`, which is what the
+ * money paths and the Business's side settle against — this is the display.
+ */
 export function missionAmount(m: MissionRow): number {
+  return driverNet(m, grossToDriver(m));
+}
+
+/** The same amount before commission — what actually moves between the parties. */
+export function grossToDriver(m: MissionRow): number {
   if (m.status === "cancelled") return cancelCompensation(m) ?? 0;
   return settledFare(m) + num(m.waiting_fee);
 }

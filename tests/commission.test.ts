@@ -1,0 +1,260 @@
+// docs/06 §1, §3 — what Kavenue takes, and how it renders.
+//
+// The same arithmetic exists in SQL (`commission_split()` / `transport_vat()`),
+// so the expected figures here are the ones the live database returns for
+// 2026-08-17_commission.sql. If TypeScript and SQL ever disagree, this file is
+// where it shows up.
+//
+// The invariants at the bottom are the ones that matter more than any single
+// figure: an invoice must reconcile, and a mission with no rates must not be
+// charged a fee that was never billed.
+
+import { describe, it, expect } from "vitest";
+import {
+  commissionSplit,
+  commissionFor,
+  courseFromBusinessTotal,
+  driverKeeps,
+  driverNet,
+  businessTotal,
+  ratesOf,
+  splitFor,
+  transportVat,
+  type CommissionRateRow,
+  type Rates,
+} from "@/lib/commission";
+
+const RATES: Rates = { businessHt: 0.125, driverHt: 0.1, feeVat: 0.2 };
+
+const snapshot = {
+  commission_business_rate: 0.125,
+  commission_driver_rate: 0.1,
+  commission_vat_rate: 0.2,
+  transport_vat_rate: 0.1,
+};
+
+describe("the rates themselves — docs/06 §1", () => {
+  it("is 15 % TTC to the Business and 12 % TTC to the Driver", () => {
+    // The two forms of the same rates: 12,5 × 1,2 = 15 and 10 × 1,2 = 12.
+    const s = commissionSplit(100, RATES);
+    expect(s.businessTotal).toBe(115);
+    expect(s.driverNet).toBe(88);
+  });
+
+  it("banks 22,5 % of the course and hands 4,5 % to the state", () => {
+    const s = commissionSplit(100, RATES);
+    expect(s.businessFeeHt + s.driverFeeHt).toBe(22.5);
+    expect(s.businessFeeVat + s.driverFeeVat).toBe(4.5);
+    // And never 27 % — the collected total, VAT included, is what moves.
+    expect(s.businessTotal - s.driverNet).toBe(27);
+  });
+});
+
+describe("the figures the founder signed off, 2026-08-17", () => {
+  it("prices Cannes → Monaco at the pre-filled ceiling", () => {
+    // Course 138,61 is the rate card's all-in 159,40 divided back out.
+    const s = commissionSplit(138.61, RATES);
+    expect(s.businessTotal).toBe(159.4);
+    expect(s.businessFeeHt).toBe(17.33);
+    expect(s.businessFeeVat).toBe(3.46);
+    expect(s.driverNet).toBe(121.98);
+    expect(s.driverFeeHt).toBe(13.86);
+    expect(s.driverFeeVat).toBe(2.77);
+  });
+
+  it("prices the same trip taken at 87,00", () => {
+    const s = commissionSplit(98.86, RATES);
+    expect(s.businessTotal).toBe(113.69);
+    expect(s.businessFeeHt).toBe(12.36);
+    expect(s.businessFeeVat).toBe(2.47);
+    expect(s.driverNet).toBe(87);
+    expect(s.driverFeeHt).toBe(9.89);
+    expect(s.driverFeeVat).toBe(1.97);
+  });
+});
+
+describe("an invoice always reconciles — the rounding convention", () => {
+  // The VAT line is a remainder precisely so these two never fail. A cent of
+  // drift here is a wrong invoice, not a rounding nicety.
+  const courses = [
+    0.01, 0.03, 1, 7.77, 12.01, 33.13, 47.63, 54.78, 87, 98.86, 100, 111, 138.61, 159.4, 250.55,
+    459.55, 674.94, 971.56, 1748.41,
+  ];
+
+  it.each(courses)("course %s: the Business's three lines add to the total", (course) => {
+    const s = commissionSplit(course, RATES);
+    expect(s.course + s.businessFeeHt + s.businessFeeVat).toBeCloseTo(s.businessTotal, 10);
+  });
+
+  it.each(courses)("course %s: the Driver's deductions add back to the fare", (course) => {
+    const s = commissionSplit(course, RATES);
+    expect(s.driverNet + s.driverFeeHt + s.driverFeeVat).toBeCloseTo(s.course, 10);
+  });
+
+  it("reconciles across a thousand consecutive cents", () => {
+    for (let cents = 1; cents <= 1000; cents++) {
+      const s = commissionSplit(cents / 100, RATES);
+      expect(s.course + s.businessFeeHt + s.businessFeeVat).toBeCloseTo(s.businessTotal, 10);
+      expect(s.driverNet + s.driverFeeHt + s.driverFeeVat).toBeCloseTo(s.course, 10);
+    }
+  });
+
+  it("never lets the VAT line drift more than a cent from 20 % of the fee", () => {
+    // Rounded before comparing: the drift is exactly one cent at its worst, and
+    // in float the subtraction alone reads 0.010000000000000002.
+    const cents2 = (n: number) => Math.round(n * 100) / 100;
+    for (let cents = 1; cents <= 5000; cents++) {
+      const s = commissionSplit(cents / 100, RATES);
+      expect(cents2(Math.abs(s.businessFeeVat - s.businessFeeHt * 0.2))).toBeLessThanOrEqual(0.01);
+      expect(cents2(Math.abs(s.driverFeeVat - s.driverFeeHt * 0.2))).toBeLessThanOrEqual(0.01);
+    }
+  });
+});
+
+describe("money only ever moves one way", () => {
+  it("charges the Business more than the course and pays the Driver less", () => {
+    for (const course of [0.01, 5, 87, 138.61, 971.56]) {
+      const s = commissionSplit(course, RATES);
+      expect(s.businessTotal).toBeGreaterThanOrEqual(s.course);
+      expect(s.driverNet).toBeLessThanOrEqual(s.course);
+      expect(s.driverNet).toBeGreaterThan(0);
+    }
+  });
+
+  it("treats a missing or negative course as nothing, never as a credit", () => {
+    expect(commissionSplit(0, RATES).businessTotal).toBe(0);
+    expect(commissionSplit(-50, RATES).businessTotal).toBe(0);
+    expect(commissionSplit(Number.NaN, RATES).driverNet).toBe(0);
+  });
+});
+
+describe("a mission priced before commission existed", () => {
+  // 271 live rows are in this state. Reading NULL as 0,125 would invent 15 %
+  // of charges that were never billed.
+  const legacy = {
+    commission_business_rate: null,
+    commission_driver_rate: null,
+    commission_vat_rate: null,
+    transport_vat_rate: null,
+  };
+
+  it("has no rates", () => {
+    expect(ratesOf(legacy)).toBeNull();
+    expect(ratesOf(null)).toBeNull();
+    expect(ratesOf(undefined)).toBeNull();
+  });
+
+  it("shows both parties the same single amount, with nothing charged", () => {
+    const s = splitFor(legacy, 120);
+    expect(s.charged).toBe(false);
+    expect(s.businessTotal).toBe(120);
+    expect(s.driverNet).toBe(120);
+    expect(s.businessFeeHt + s.businessFeeVat + s.driverFeeHt + s.driverFeeVat).toBe(0);
+  });
+
+  it("treats a half-written snapshot as no commission, never as half a fee", () => {
+    expect(ratesOf({ ...snapshot, commission_vat_rate: null })).toBeNull();
+    expect(splitFor({ ...snapshot, commission_driver_rate: null }, 100).charged).toBe(false);
+  });
+});
+
+describe("reading the snapshot as PostgREST returns it", () => {
+  it("copes with numerics arriving as strings", () => {
+    const asText = {
+      commission_business_rate: "0.12500",
+      commission_driver_rate: "0.10000",
+      commission_vat_rate: "0.20000",
+      transport_vat_rate: "0.10000",
+    };
+    expect(businessTotal(asText, 138.61)).toBe(159.4);
+    expect(driverNet(asText, 138.61)).toBe(121.98);
+  });
+});
+
+describe("the Ceiling round-trips", () => {
+  it("turns the all-in number a Business sees back into the stored course", () => {
+    expect(courseFromBusinessTotal(159.4, RATES)).toBe(138.61);
+    expect(businessTotal(snapshot, 138.61)).toBe(159.4);
+  });
+
+  it("never sets a maximum ABOVE what the Business typed", () => {
+    // A ceiling is a promise not to go above a number. Roughly one cent value in
+    // eight is unreachable (the stored Course is held to the cent, and a cent
+    // times 1,15 skips cents), so the snap must always fall short, never over.
+    let short = 0;
+    for (let cents = 1000; cents <= 200000; cents += 7) {
+      const typed = cents / 100;
+      const shown = commissionSplit(courseFromBusinessTotal(typed, RATES), RATES).businessTotal;
+      expect(shown).toBeLessThanOrEqual(typed);
+      // And never further short than the gap between two reachable all-ins.
+      expect(typed - shown).toBeLessThan(0.02);
+      if (shown !== typed) short++;
+    }
+    // Most values land exactly; the rest are a cent under and the form shows it.
+    expect(short / 28572).toBeLessThan(0.2);
+  });
+
+  it("is exact on the numbers Kavenue itself pre-fills", () => {
+    for (const total of [159.4, 113.69, 115, 88, 80.13]) {
+      const course = courseFromBusinessTotal(total, RATES);
+      expect(commissionSplit(course, RATES).businessTotal).toBeLessThanOrEqual(total);
+    }
+    expect(courseFromBusinessTotal(159.4, RATES)).toBe(138.61);
+  });
+
+  it("passes a total straight through when there is no commission", () => {
+    expect(courseFromBusinessTotal(159.4, null)).toBe(159.4);
+  });
+});
+
+describe("the VAT inside the fare — docs/06 §3", () => {
+  it("finds the 10 % a registered Driver collects", () => {
+    expect(transportVat(98.86, 0.1)).toBe(8.99);
+    expect(transportVat(138.61, 0.1)).toBe(12.6);
+  });
+
+  it("is nothing for a Driver under franchise en base", () => {
+    expect(transportVat(98.86, 0)).toBe(0);
+    expect(transportVat(98.86, null)).toBe(0);
+    expect(transportVat(98.86, undefined)).toBe(0);
+  });
+
+  it("leaves the registered Driver keeping less than the unregistered one", () => {
+    // The same 87,00 € on screen, two different amounts kept — the reason the
+    // Driver's side breaks VAT out and the Business's side does not.
+    const s = commissionSplit(98.86, RATES);
+    expect(driverKeeps(s, 0.1)).toBe(79.98);
+    expect(driverKeeps(s, 0)).toBe(87);
+  });
+});
+
+describe("choosing a generation — docs/06 §9", () => {
+  const rows: CommissionRateRow[] = [
+    {
+      id: "old",
+      effective_from: "2026-08-17T00:00:00.000Z",
+      business_rate_ht: 0.125,
+      driver_rate_ht: 0.1,
+      fee_vat_rate: 0.2,
+      transport_vat_rate: 0.1,
+    },
+    {
+      id: "new",
+      effective_from: "2027-01-01T00:00:00.000Z",
+      business_rate_ht: 0.11,
+      driver_rate_ht: 0.09,
+      fee_vat_rate: 0.2,
+      transport_vat_rate: 0.1,
+    },
+  ];
+
+  it("takes the newest generation already in force", () => {
+    expect(commissionFor(rows, new Date("2026-09-01"))?.id).toBe("old");
+    expect(commissionFor(rows, new Date("2027-06-01"))?.id).toBe("new");
+  });
+
+  it("has nothing before the first generation starts", () => {
+    expect(commissionFor(rows, new Date("2026-01-01"))).toBeNull();
+    expect(commissionFor([], new Date())).toBeNull();
+  });
+});

@@ -1262,6 +1262,22 @@ textarea::placeholder {
 .dx-panel__meta { font-size: 12.5px; font-weight: 600; color: var(--text); white-space: nowrap; }
 .dx-pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin-top: 10px; }
 
+/* The three invoice lines on an expanded trip (docs/06 §3). Same shape as the
+   Pricing card's .mx-fee, in the expanded row's own vocabulary. */
+.dx-fee { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 13px; }
+.dx-fee dt { color: var(--text); }
+.dx-fee dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.dx-fee .dx-fee__tot {
+  border-top: 1px solid var(--border); padding-top: 7px; margin-top: 1px; font-weight: 600;
+}
+.dx-fee__saved {
+  margin: 10px 0 0; font-size: 12.5px; line-height: 1.5;
+  /* The app has no green surface token; #e6f6ec is the one already used by
+     .route-ic--to, so the saving reads in the same green as a completed leg. */
+  color: var(--success); background: #e6f6ec; border: 1px solid #c7e9d3;
+  border-radius: var(--radius-md); padding: 8px 11px;
+}
+
 /* Route rail (detail): full addresses + a dot-to-dot connector that stops cleanly
    at the drop-off dot (the last leg has no connector). Checks off live mid-trip. */
 .dx-rte { position: relative; padding: 2px 0; }
@@ -2243,6 +2259,24 @@ textarea::placeholder {
 .mx-eta--loading { color: var(--text-muted); background: var(--surface-2); font-weight: 500; }
 .mx-fare { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--accent); }
 .mx-fare-sub { font-size: 12px; color: var(--text-muted); }
+/* What's inside the Ceiling — docs/06 §3's three lines, never collapsed into
+   one "service fee": the Business reclaims the 20% VAT on Kavenue's fee but not
+   the VAT on the transport, so the two have to stay separable. Quiet inset, not
+   a second card — it explains the field above it. */
+.mx-fee {
+  margin-top: 14px; padding: 12px 14px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+}
+.mx-fee__head { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+.mx-fee__lines {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 12px;
+  margin: 0; font-size: 13px;
+}
+.mx-fee__lines dt { color: var(--text); }
+.mx-fee__lines dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.mx-fee__lines .mx-fee__tot {
+  border-top: 1px solid var(--border); padding-top: 7px; margin-top: 1px; font-weight: 600;
+}
 .mx-speed { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 1.4; cursor: pointer; }
 .mx-speed input { margin-top: 2px; flex: none; }
 .mx-actions { display: flex; flex-direction: column; gap: 8px; }
@@ -3549,3 +3583,17 @@ a.dxs-w.is-on .dxs-w__l { color: var(--accent); }
 .dxs-sk--serv { height: 14px; width: 100%; max-width: 560px; }
 .dxs-sk--chart { height: 220px; border-radius: 8px; }
 .dxs-sk--row { height: 14px; margin: 15px 0; }
+
+/* The Driver's money detail (docs/06 §1, §3) — the ONE place a Driver sees the
+   commission. Everywhere else the figure is the payment itself; here they need
+   the fee to reclaim its VAT and the VAT inside the fare to declare it. */
+.dfee { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin: 0; font-size: 13px; }
+.dfee dt { color: var(--text); }
+.dfee dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.dfee .dfee__tot {
+  border-top: 1px solid var(--border); padding-top: 7px; margin-top: 1px; font-weight: 600;
+}
+.dfee__note {
+  margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--border);
+  font-size: 12px; line-height: 1.55; color: var(--text-muted);
+}

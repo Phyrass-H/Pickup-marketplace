@@ -67,6 +67,13 @@ export function mission(over: Partial<MissionRow> = {}): MissionRow {
     duration_min: 25,
     rate_card_id: null,
     night_applied: false,
+    // Priced before commission existed, like the 271 rows live today: both
+    // parties see the fare itself and no fee is charged. A test about commission
+    // sets the rates it needs.
+    commission_business_rate: null,
+    commission_driver_rate: null,
+    commission_vat_rate: null,
+    transport_vat_rate: null,
     cancelled_by: null,
     cancelled_at: null,
     created_at: "2026-07-15T10:00:00+02:00",

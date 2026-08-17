@@ -46,6 +46,17 @@ export function formatMoney(n: number | null | undefined): string {
   return money.format(Number(n));
 }
 
+/**
+ * A stored rate as the percentage a person reads: 0,125 → "12,5 %". French
+ * decimal comma and the space before the sign, to match formatMoney.
+ */
+export function formatRate(rate: number | string | null | undefined): string {
+  const n = Number(rate);
+  if (rate == null || !Number.isFinite(n)) return "—";
+  const pct = Math.round(n * 10000) / 100;
+  return `${String(pct).replace(".", ",")} %`;
+}
+
 // Straight-line distance, flagged approximate with "~" (it's not road distance).
 // Under 10 km we keep one decimal; above, round to the nearest km.
 export function formatDistance(km: number | null | undefined): string {

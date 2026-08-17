@@ -246,6 +246,13 @@ export default async function DispatchSpend({
     { key: "waiting", label: "Waiting charges", n: t.waitingCount > 0 ? `${t.waitingCount} trip${t.waitingCount === 1 ? "" : "s"} · ${Math.round(t.waitingMinutes)} min` : "none", v: t.waiting, lens: "waiting" as Lens },
     { key: "cancelled", label: "Cancellation fees", n: t.cancelCount > 0 ? `${t.cancelCount} cancellation${t.cancelCount === 1 ? "" : "s"}` : "none", v: t.cancelFees, lens: "cancelled" as Lens },
     { key: "noshow", label: "No-shows", n: t.noShowCount > 0 ? `${t.noShowCount} no-show${t.noShowCount === 1 ? "" : "s"}` : "none", v: t.noShow, lens: "noshow" as Lens },
+    // docs/06 §3 — the two fee lines, never folded into the four above. The
+    // Business reclaims the 20 % VAT on Kavenue's fee and nothing on the
+    // transport, so a total that hides the split can't tell them what they can
+    // claim back. The four transport components plus these two are the total,
+    // exactly: each row's triple reconciles before it is summed.
+    { key: "fee", label: "Service fee", n: "Kavenue", v: t.serviceFee, lens: null },
+    { key: "feevat", label: "VAT on service fee", n: "you reclaim this", v: t.serviceFeeVat, lens: null },
   ];
 
   return (

@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
 import { RATE_CARD_COLS, type RateCardRow } from "@/lib/rate-card";
+import {
+  COMMISSION_RATE_COLS,
+  ratesFromRow,
+  type CommissionRateRow,
+  type Rates,
+} from "@/lib/commission";
 import type { MissionRow } from "@/lib/database.types";
 import type { Place } from "@/components/address-autocomplete";
 
@@ -41,6 +47,22 @@ export default async function NewMissionPage({
     return (data ?? []) as RateCardRow[];
   })();
 
+  // The commission rates in force (docs/06 §1), handed down for the same reason:
+  // the Ceiling field is the Business's ALL-IN maximum, so the form needs them to
+  // show what is inside it while they type. The server reads them again when the
+  // mission is written and snapshots them onto the row — this copy only displays.
+  const commissionRates: Rates | null = await (async () => {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("commission_rate")
+      .select(COMMISSION_RATE_COLS)
+      .lte("effective_from", new Date().toISOString())
+      .order("effective_from", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return ratesFromRow(data as CommissionRateRow | null);
+  })();
+
   // Resume a saved draft (gated to this Business by RLS). Only draft rows.
   let draftMission: MissionRow | null = null;
   let draftContacts: GuestContact[] = [];
@@ -77,6 +99,7 @@ export default async function NewMissionPage({
         draftContacts={draftContacts}
         pickupPrefill={pickupPrefill}
         rateCard={rateCard}
+        commissionRates={commissionRates}
       />
     </div>
   );

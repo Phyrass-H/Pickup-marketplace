@@ -20,6 +20,11 @@ import {
   type RateCardRow,
 } from "@/lib/rate-card";
 import {
+  commissionSplit,
+  courseFromBusinessTotal,
+  type Rates,
+} from "@/lib/commission";
+import {
   parseLanguages,
   parseDriverFlags,
   activeFlagLabels,
@@ -43,6 +48,7 @@ import {
 import { tripDistanceKm, isValidLatLng } from "@/lib/geo";
 import {
   formatMoney,
+  formatRate,
   formatTripMeta,
   serviceClassLabel,
 } from "@/lib/format";
@@ -165,6 +171,7 @@ export function MissionForm({
   draftContacts,
   pickupPrefill,
   rateCard = [],
+  commissionRates = null,
 }: {
   error?: string;
   prefillDate?: string;
@@ -172,6 +179,7 @@ export function MissionForm({
   draftContacts?: GuestContact[];
   pickupPrefill?: Place | null;
   rateCard?: RateCardRow[];
+  commissionRates?: Rates | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -180,7 +188,14 @@ export function MissionForm({
   // The "This is final" confirm popup, opened by Post to the Pool (S21).
   const [confirmPost, setConfirmPost] = useState(false);
 
-  const [ceiling, setCeiling] = useState(draft?.ceiling != null ? String(draft.ceiling) : "");
+  // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE (docs/06 §1, founder 2026-08-17).
+  // A saved draft stores the fare; the Business set — and must see again — what
+  // they will pay, fee inside. createMission converts it back on the way out.
+  const [ceiling, setCeiling] = useState(
+    draft?.ceiling != null
+      ? commissionSplit(Number(draft.ceiling), commissionRates).businessTotal.toFixed(2)
+      : "",
+  );
   const [speedWin, setSpeedWin] = useState(draft?.speed_win ?? false);
   // Controlled so the luggage-vs-vehicle nudge (S31) reacts live; still submits via name.
   const [luggage, setLuggage] = useState(
@@ -360,6 +375,22 @@ export function MissionForm({
       : false;
   const aboveMarket =
     hasCeiling && quote != null && Math.round(ceilingNum * 100) > Math.round(quote.ceiling * 100);
+
+  // ── What is inside that maximum (docs/06 §1, §3) ──────────────────────────
+  // The field is the all-in figure; the Course behind it is what the curve
+  // climbs and the Driver is paid from. Shown as the three invoice lines,
+  // because the Business reclaims the 20 % on Kavenue's fee but not the VAT on
+  // the transport, so the two can never be collapsed into one "service fee".
+  const course = hasCeiling ? courseFromBusinessTotal(ceilingNum, commissionRates) : 0;
+  const split = commissionSplit(course, commissionRates);
+  // The all-in figure the stored Course actually reproduces. Equal to what they
+  // typed except on the ~1 value in 8 that a cent of Course cannot reach, where
+  // it lands a cent under — never over, because a maximum is a promise.
+  const ceilingAllIn = split.businessTotal;
+  const snapped = hasCeiling && Math.round(ceilingAllIn * 100) !== Math.round(ceilingNum * 100);
+  // Where the auction opens, in the Business's own terms.
+  const startAllIn = commissionSplit(round2(course * (speedWin ? 0.7 : 0.5)), commissionRates)
+    .businessTotal;
 
   function review() {
     const form = formRef.current;
@@ -715,7 +746,7 @@ export function MissionForm({
               </div>
               <label className="field" style={{ marginBottom: 0 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  Ceiling € — your maximum
+                  Ceiling € — your maximum, everything in
                   {atMarket && (
                     <span className="mx-vehiclechip" style={{ marginLeft: "auto" }}>
                       Market rate
@@ -758,6 +789,28 @@ export function MissionForm({
                   take longer to find a Driver.
                 </div>
               )}
+              {hasCeiling && split.charged && (
+                <div className="mx-fee">
+                  <div className="mx-fee__head">What&rsquo;s inside that maximum</div>
+                  <dl className="mx-fee__lines">
+                    <dt>Transport</dt>
+                    <dd>{formatMoney(split.course)}</dd>
+                    <dt>Service fee ({formatRate(commissionRates?.businessHt)})</dt>
+                    <dd>{formatMoney(split.businessFeeHt)}</dd>
+                    <dt>VAT on service fee</dt>
+                    <dd>{formatMoney(split.businessFeeVat)}</dd>
+                    <dt className="mx-fee__tot">Your maximum</dt>
+                    <dd className="mx-fee__tot">{formatMoney(ceilingAllIn)}</dd>
+                  </dl>
+                  <p className="muted small" style={{ margin: "8px 0 0" }}>
+                    {snapped
+                      ? `Rounded down from ${formatMoney(ceilingNum)} so the three lines bill exactly. `
+                      : ""}
+                    You pay this only if it fills at your maximum — it usually fills
+                    lower, and the fee follows the fare down.
+                  </p>
+                </div>
+              )}
               <div className="mx-sumdiv" />
               <label className="mx-speed">
                 <input
@@ -784,7 +837,7 @@ export function MissionForm({
               <div className="card" style={{ background: "var(--surface-2, #f8fafc)" }}>
                 <div className="card-row">
                   <span className="fare">
-                    {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+                    {formatMoney(startAllIn)}
                   </span>
                   <span style={{ display: "flex", gap: 6 }}>
                     {speedWin && <span className="badge speed">SPEED WIN</span>}
@@ -794,7 +847,7 @@ export function MissionForm({
                   </span>
                 </div>
                 <div className="muted small" style={{ marginTop: 4 }}>
-                  starting fare · climbs up to {formatMoney(ceilingNum)} (your ceiling)
+                  starting price · climbs up to {formatMoney(ceilingAllIn)} (your maximum)
                 </div>
 
                 <div className="muted small" style={{ marginTop: 8 }}>
@@ -965,7 +1018,7 @@ export function MissionForm({
                     gap: 12,
                   }}
                 >
-                  <span className="muted small">Ceiling (your maximum)</span>
+                  <span className="muted small">Your maximum, all in</span>
                   <span style={{ fontSize: 16, fontWeight: 600 }}>
                     {formatMoney(ceilingNum)}
                   </span>
@@ -977,10 +1030,10 @@ export function MissionForm({
                   aria-label="Starting fare"
                 >
                   <div className="mx-fare">
-                    {formatMoney(round2(ceilingNum * (speedWin ? 0.7 : 0.5)))}
+                    {formatMoney(startAllIn)}
                   </div>
                   <div className="mx-fare-sub">
-                    starting fare · climbs up to {formatMoney(ceilingNum)}
+                    starting price · climbs up to {formatMoney(ceilingAllIn)}
                   </div>
                 </div>
                 <div

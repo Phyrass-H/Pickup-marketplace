@@ -16,6 +16,7 @@
 //     helper, so the two screens can never disagree about the same filter.
 import { isExpired } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
+import { businessCost, carriesCommission, commissionSplit, splitFor } from "@/lib/commission";
 import { formatMoney, serviceClassLabel, shortPlaceLabel } from "@/lib/format";
 import type { HistoryRow } from "@/lib/history-filter";
 import type { MissionRow } from "@/lib/database.types";
@@ -33,13 +34,31 @@ function num(v: number | string | null | undefined): number {
  */
 export function rowCost(r: HistoryRow): number {
   if (!r.counted) return 0;
-  return (r.fare ?? 0) + num(r.mission.waiting_fee);
+  // ⚑ ALL IN, since 2026-08-17. What leaves a Business's account is the fare
+  // plus Kavenue's service fee and its VAT (docs/06 §1, §3) — so every total on
+  // Spend and History moved by ~15% the day commission shipped, deliberately.
+  // Missions priced before it carry no rates and pass straight through, which
+  // is why the archive did not retroactively grow a fee it never billed.
+  return businessCost(r.mission, (r.fare ?? 0) + num(r.mission.waiting_fee));
 }
 
 // ------------------------------------------------------------------ the totals
 export interface SpendTotals {
-  /** Everything settled: fares + no-shows + waiting + cancellation fees. */
+  /** Everything settled, ALL IN — transport + service fee + its VAT. */
   total: number;
+  /**
+   * The same money as the three invoice lines (docs/06 §3). They add to `total`
+   * exactly, because each row's triple reconciles before it is summed.
+   *
+   * `transport` is the transport line — and is itself `fares + noShow + waiting
+   * + cancelFees`, which is why those four keep their old meaning. Only the fee
+   * lines are new. The split matters because a Business reclaims the 20% VAT on
+   * Kavenue's fee and nothing on the transport, so a single total cannot tell
+   * them what they can claim back.
+   */
+  transport: number;
+  serviceFee: number;
+  serviceFeeVat: number;
   /** Missions in the period, whatever became of them. */
   ordered: number;
 
@@ -75,6 +94,9 @@ export interface SpendTotals {
 
 const EMPTY: SpendTotals = {
   total: 0,
+  transport: 0,
+  serviceFee: 0,
+  serviceFeeVat: 0,
   ordered: 0,
   fares: 0,
   fareCount: 0,
@@ -145,6 +167,14 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
       t.waitingCount += 1;
     }
 
+    // The invoice lines, accumulated per row so each triple reconciles before
+    // it is summed — docs/06 §3. `rowCost` is the same money, one number.
+    const costBase = (r.fare ?? 0) + waiting;
+    const split = carriesCommission(m) ? splitFor(m, costBase) : commissionSplit(costBase, null);
+    t.transport += split.course;
+    t.serviceFee += split.businessFeeHt;
+    t.serviceFeeVat += split.businessFeeVat;
+
     if (m.status === "cancelled") {
       const fee = num(m.cancellation_fee);
       if (fee > 0 || m.cancellation_fee != null) {
@@ -171,7 +201,10 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
     }
   }
 
-  t.total = t.fares + t.noShow + t.waiting + t.cancelFees;
+  // ⚑ ALL IN since 2026-08-17 — what actually left the account. The four
+  // buckets above still decompose the TRANSPORT line only, and
+  // `transport === fares + noShow + waiting + cancelFees` holds.
+  t.total = t.transport + t.serviceFee + t.serviceFeeVat;
   t.trips = t.fareCount + t.noShowCount;
   t.costPerTrip = t.trips > 0 ? (t.fares + t.noShow + t.tripWaiting) / t.trips : null;
   t.fillRate = t.ordered > 0 ? (t.filledCount / t.ordered) * 100 : null;

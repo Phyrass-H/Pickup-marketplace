@@ -11,6 +11,7 @@ import {
   missionStatusLabel,
 } from "@/lib/format";
 import { cancelCompensation } from "@/lib/cancellation";
+import { driverNet } from "@/lib/commission";
 import { missionAmount } from "@/lib/earnings";
 import { parisDayKey } from "@/lib/dispatch-status";
 import type { MissionRow, MissionStatus } from "@/lib/database.types";
@@ -149,7 +150,9 @@ export default async function RideHistoryPage({
     // one trip read 60,00 € on this screen and 100,00 € on the other — and the smaller number
     // was the one that looked like the record. Named, not just added: "+ 40,00 € waiting"
     // under the total, so it reads as earnings rather than a fare that grew on its own.
-    const waiting = Number(m.waiting_fee ?? 0);
+    // NET, like every figure a Driver reads (docs/06 §1): the meter runs at
+    // 1 €/min between the parties and this is the Driver's share of it.
+    const waiting = driverNet(m, Number(m.waiting_fee ?? 0));
     items.push({
       key: `m:${m.id}`,
       mission: m,
@@ -161,7 +164,7 @@ export default async function RideHistoryPage({
           ? { label: null, value: "—", tone: "muted" }
           : {
               label: waiting > 0 ? `incl. ${formatMoney(waiting)} waiting` : "Compensation",
-              value: formatMoney(comp),
+              value: formatMoney(driverNet(m, comp)),
               tone: "plain",
             }
         : {

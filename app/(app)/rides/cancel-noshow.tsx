@@ -6,6 +6,7 @@ import { Users, Phone, AlertTriangle, UserX, Clock, Handshake } from "lucide-rea
 import { driverCancelMission, markNoShow } from "./actions";
 import { formatMoney, formatTime } from "@/lib/format";
 import { WAITING_RATE_PER_MIN } from "@/lib/cancellation";
+import { commissionSplit, type Rates } from "@/lib/commission";
 
 // Driver cancel (O7, D45): always 100%. The trip re-pools on the D46 window — SPEED WIN
 // under 24h to pickup, the normal Pool at or above it. The sheet
@@ -18,6 +19,13 @@ export function DriverCancel({
   businessName,
 }: {
   missionId: string;
+  /**
+   * ⚑ GROSS, and the only Driver-facing figure that is. docs/06 §1: a Driver's
+   * own cancellation penalty runs Driver → Business, so it is an indemnity
+   * rather than payment for transport and carries no commission — the whole
+   * fare is owed. Every other number a Driver sees is net, so the sheet says
+   * why this one is larger rather than letting them read it as a bug.
+   */
   fare: number;
   businessPhone: string | null;
   businessName: string | null;
@@ -92,7 +100,9 @@ export function DriverCancel({
           <AlertTriangle size={14} aria-hidden /> Cancelling costs 100%
         </div>
         <div style={{ color: "var(--tone-danger-fg)", fontSize: 12, marginTop: 4 }}>
-          You’ll owe the full fare — {formatMoney(fare)}. This keeps Kavenue reliable for Businesses. The trip goes
+          You’ll owe the full fare — {formatMoney(fare)}, which is more than the trip
+          pays you: a penalty isn’t earnings, so no commission comes off it. This keeps
+          Kavenue reliable for Businesses. The trip goes
           back to the Pool for another Driver.
         </div>
       </div>
@@ -139,6 +149,7 @@ export function DriverCancel({
 export function NoShowControl({
   missionId,
   fare,
+  rates,
   guestDueIso,
   availableAtIso,
   waitMinutes,
@@ -147,7 +158,10 @@ export function NoShowControl({
   waitingUntilIso,
 }: {
   missionId: string;
+  /** Gross — the Course. Netted here, so the sheet shows what lands in the bank. */
   fare: number;
+  /** The mission's snapshot rates, or null on a trip priced before commission. */
+  rates: Rates | null;
   guestDueIso: string; // when the Guest was due — the courtesy wait starts here
   availableAtIso: string; // when reporting unlocks (wait elapsed + on-site floor)
   waitMinutes: number;
@@ -156,6 +170,11 @@ export function NoShowControl({
   waitingUntilIso: string; // D48: when it stops paying (the ceiling)
 }) {
   const router = useRouter();
+  // What the Driver banks. The meter accrues 1 €/min between the parties
+  // (docs/06 §10); this is their share, and it is the only form any of these
+  // figures is shown in — the founder's ruling: the number IS the payment.
+  const net = (gross: number) => commissionSplit(gross, rates).driverNet;
+  const netFare = net(fare);
   const [now, setNow] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -242,7 +261,7 @@ export function NoShowControl({
               <Clock size={14} strokeWidth={1.75} aria-hidden="true" />
               {waiting.capped ? "Waiting closed" : "Paid waiting"} · {waiting.minutes} min
             </span>
-            <span className="dmeter__fee">{formatMoney(waiting.fee)}</span>
+            <span className="dmeter__fee">{formatMoney(net(waiting.fee))}</span>
           </div>
           <div className="dmeter__bar">
             <div
@@ -252,8 +271,8 @@ export function NoShowControl({
           </div>
           <p className="dmeter__note">
             {waiting.capped
-              ? `Stopped at the ${formatMoney(waiting.maxFee)} ceiling. You can still wait, but it no longer adds up — report when you're ready.`
-              : `${formatMoney(1)} per minute started · stops at ${formatMoney(waiting.maxFee)} (${formatTime(waiting.until.toISOString())})`}
+              ? `Stopped at the ${formatMoney(net(waiting.maxFee))} ceiling. You can still wait, but it no longer adds up — report when you're ready.`
+              : `${formatMoney(net(WAITING_RATE_PER_MIN))} per minute started · stops at ${formatMoney(net(waiting.maxFee))} (${formatTime(waiting.until.toISOString())})`}
           </p>
         </div>
       )}
@@ -299,8 +318,8 @@ export function NoShowControl({
             {pending
               ? "…"
               : waiting.fee > 0
-                ? `Report the no-show — ${formatMoney(fare)} + ${formatMoney(waiting.fee)} waiting`
-                : `Report the no-show — ${formatMoney(fare)}`}
+                ? `Report the no-show — ${formatMoney(netFare)} + ${formatMoney(net(waiting.fee))} waiting`
+                : `Report the no-show — ${formatMoney(netFare)}`}
           </button>
           <button
             type="button"

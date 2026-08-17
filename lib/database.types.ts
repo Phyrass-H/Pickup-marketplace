@@ -363,6 +363,15 @@ export interface Database {
           // past price through the live card. (2026-08-16 migration.)
           rate_card_id: string | null;
           night_applied: boolean;
+          // docs/06 §9 snapshot: the commission rates as they stood when this
+          // mission was created, and the VAT the assigned Driver actually
+          // charges. NULL rates mean created BEFORE commission shipped — no fee
+          // was ever billed, so render one amount and no breakdown. NULL
+          // transport rate means no Driver has taken it yet. (2026-08-17.)
+          commission_business_rate: number | null;
+          commission_driver_rate: number | null;
+          commission_vat_rate: number | null;
+          transport_vat_rate: number | null;
           cancelled_by: CancellationParty | null;
           cancelled_at: string | null;
           created_at: string;
@@ -436,6 +445,10 @@ export interface Database {
           duration_min?: number | null;
           rate_card_id?: string | null;
           night_applied?: boolean;
+          commission_business_rate?: number | null;
+          commission_driver_rate?: number | null;
+          commission_vat_rate?: number | null;
+          transport_vat_rate?: number | null;
           cancelled_by?: CancellationParty | null;
           cancelled_at?: string | null;
           created_at?: string;
@@ -536,6 +549,26 @@ export interface Database {
           ceiling_per_km_long: number;
           long_threshold_km: number;
           night_multiplier: number;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: never; // deny-by-default: no client write policy exists
+        Update: never;
+        Relationships: [];
+      };
+      // What Kavenue takes (docs/06 §1). ONE row: the rates never vary by
+      // Business, event, time or zone (§0). Read-only to the app for the same
+      // reason as rate_card — re-rating is an INSERT with a later
+      // effective_from, and every mission keeps the rates snapshot onto it.
+      // (2026-08-17 migration.)
+      commission_rate: {
+        Row: {
+          id: string;
+          effective_from: string;
+          business_rate_ht: number; // 0.125 — on top of the Course
+          driver_rate_ht: number; // 0.10 — deducted from it
+          fee_vat_rate: number; // 0.20 — VAT on Kavenue's fee
+          transport_vat_rate: number; // 0.10 — what a VAT-registered Driver charges
           note: string | null;
           created_at: string;
         };
@@ -781,6 +814,31 @@ export interface Database {
           p_market?: string;
         };
         Returns: { rate_card_id: string; floor_price: number; ceiling_price: number }[];
+      };
+      // Both sides of one Course (docs/06 §1, §3). The VAT lines are remainders
+      // so a rendered invoice always adds up. lib/commission.ts is the mirror,
+      // and .local/probe/commission-parity.ts holds the pair to the cent.
+      commission_split: {
+        Args: {
+          p_course: number;
+          p_business_rate_ht: number;
+          p_driver_rate_ht: number;
+          p_fee_vat_rate: number;
+        };
+        Returns: {
+          business_total: number;
+          business_fee_ht: number;
+          business_fee_vat: number;
+          driver_net: number;
+          driver_fee_ht: number;
+          driver_fee_vat: number;
+        }[];
+      };
+      // The VAT inside a TTC Course, at the Driver's own rate — 0 under
+      // franchise en base (docs/06 §3).
+      transport_vat: {
+        Args: { p_course: number; p_rate: number };
+        Returns: number;
       };
       // Atomic accept + slot-conflict + Lock-in, server-side (Doc spine).
       // The Driver PWA calls: rpc('accept_mission', { p_mission_id }).

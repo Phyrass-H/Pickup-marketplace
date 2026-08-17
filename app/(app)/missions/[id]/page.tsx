@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
 import { currentFare } from "@/lib/pdp";
+import { driverNet } from "@/lib/commission";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
@@ -215,7 +216,8 @@ export default async function MissionDetailPage({
     (!mission.required_body_type || mission.required_body_type === myVehicle.body_type) &&
     (!mission.luggage_only || !!driver?.accepts_luggage_runs);
   const isHourly = mission.mission_type === "hourly";
-  const fare = currentFare(mission);
+  // NET, like the Pool card it opens from — what the Driver banks (docs/06 §1).
+  const fare = driverNet(mission, currentFare(mission));
   const when = formatPoolWhen(mission.pickup_at);
   const waypoints = parseWaypoints(mission.waypoints);
   const distanceKm = tripDistanceKm(

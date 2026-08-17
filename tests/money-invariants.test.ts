@@ -89,16 +89,19 @@ describe("what the Business is charged is what the Driver is paid", () => {
       waiting_fee: wait.fee,
     });
 
-    // ⚑ Asserted against each other, NOT against the literal 64.99: in float64
-    // 47.99 + 17 is 64.99000000000001, and every screen carries the same tail
-    // because every screen performs the same addition. Comparing to a decimal
-    // literal would fail while the app was perfectly consistent — and "consistent"
-    // is the property this file exists to protect. Intl rounds it to 64,99 € on
-    // the way out, which is the last assertion.
+    // ⚑ Asserted in CENTS, not against a float sum. In float64 47.99 + 17 is
+    // 64.99000000000001, and until commission shipped every screen carried the
+    // same tail because every screen performed the same addition. `rowCost` now
+    // goes through the commission split, which is integer arithmetic end to end
+    // (it has to be — Postgres rounds exact decimals and JavaScript cannot), so
+    // it returns a clean 64.99 while `cancelCompensation` still carries the
+    // tail. Same money; one of them has stopped lying about its precision.
+    // Consistency is what this file protects, and cents are the unit money has.
+    const cents = (n: number) => Math.round(n * 100);
     const modalTotal = fee + wait.fee; // exactly what the cancel modal adds up
-    expect(rowCost(row(settled))).toBe(modalTotal); // the Business's archive
-    expect(cancelCompensation(settled)).toBe(modalTotal); // and what the Driver is paid
-    expect(Math.round(modalTotal * 100)).toBe(6499); // 64,99 € to the cent
+    expect(cents(rowCost(row(settled)))).toBe(cents(modalTotal)); // the Business's archive
+    expect(cents(cancelCompensation(settled)!)).toBe(cents(modalTotal)); // what the Driver is paid
+    expect(cents(modalTotal)).toBe(6499); // 64,99 € to the cent
   });
 
   it("charges a no-show in full and pays the Driver in full", () => {
