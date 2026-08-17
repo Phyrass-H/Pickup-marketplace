@@ -789,40 +789,6 @@ export function TripRow({
           </div>
         </div>
 
-        {/* What the price is made of — docs/06 §3's three lines, never collapsed
-            into one "service fee": the Business reclaims the 20% VAT on
-            Kavenue's fee but not the VAT on the transport, so the two have to
-            stay separable. Absent on a mission priced before commission
-            existed — it was billed no fee, and inventing lines for it would be
-            a lie about what was charged. */}
-        {fareSplit.charged && (
-          <div className="dx-panel">
-            <div className="dx-panel__h">What you pay</div>
-            <dl className="dx-fee">
-              <dt>Transport</dt>
-              <dd>{formatMoney(fareSplit.course)}</dd>
-              <dt>Service fee ({formatRate(mission.commission_business_rate)})</dt>
-              <dd>{formatMoney(fareSplit.businessFeeHt)}</dd>
-              <dt>VAT on service fee</dt>
-              <dd>{formatMoney(fareSplit.businessFeeVat)}</dd>
-              <dt className="dx-fee__tot">Total</dt>
-              <dd className="dx-fee__tot">{formatMoney(fareSplit.businessTotal)}</dd>
-            </dl>
-            {/* docs/06 §6: "the row shows what they saved against that maximum —
-                the argument for the whole auction, made visible on every
-                booking."
-                ⚑ ONE NUMBER, deliberately (founder, 2026-08-17). This line used
-                to carry four — the saving, the maximum, and the fee before and
-                after — which buried the only fact that matters. The maximum is
-                already in the tile above, and the fee is in the table above
-                that; repeating them here made a simple, good piece of news read
-                like an accounting note. */}
-            {savedAgainstMax > 0 && (
-              <p className="dx-fee__saved">You saved {formatMoney(savedAgainstMax)}</p>
-            )}
-          </div>
-        )}
-
         {/* Route — full addresses + trip distance/duration; the rail checks off live
             as the Driver reaches each stop mid-trip. */}
         <div className="dx-panel dx-panel--route">
@@ -867,6 +833,40 @@ export function TripRow({
             />
           )}
         </div>
+
+        {/* What the price is made of — docs/06 §3's three lines, never collapsed
+            into one "service fee": the Business reclaims the 20% VAT on
+            Kavenue's fee but not the VAT on the transport, so the two have to
+            stay separable. Absent on a mission priced before commission
+            existed — it was billed no fee, and inventing lines for it would be
+            a lie about what was charged. */}
+        {fareSplit.charged && (
+          <div className="dx-panel">
+            <div className="dx-panel__h">What you pay</div>
+            <dl className="dx-fee">
+              <dt>Transport</dt>
+              <dd>{formatMoney(fareSplit.course)}</dd>
+              <dt>Service fee ({formatRate(mission.commission_business_rate)})</dt>
+              <dd>{formatMoney(fareSplit.businessFeeHt)}</dd>
+              <dt>VAT on service fee</dt>
+              <dd>{formatMoney(fareSplit.businessFeeVat)}</dd>
+              <dt className="dx-fee__tot">Total</dt>
+              <dd className="dx-fee__tot">{formatMoney(fareSplit.businessTotal)}</dd>
+            </dl>
+            {/* docs/06 §6: "the row shows what they saved against that maximum —
+                the argument for the whole auction, made visible on every
+                booking."
+                ⚑ ONE NUMBER, deliberately (founder, 2026-08-17). This line used
+                to carry four — the saving, the maximum, and the fee before and
+                after — which buried the only fact that matters. The maximum is
+                already in the tile above, and the fee is in the table above
+                that; repeating them here made a simple, good piece of news read
+                like an accounting note. */}
+            {savedAgainstMax > 0 && (
+              <p className="dx-fee__saved">You saved {formatMoney(savedAgainstMax)}</p>
+            )}
+          </div>
+        )}
 
         {/* Driver — a slim bar (name · phone · car), or a quiet placeholder when the
             trip is still in the Pool. */}
