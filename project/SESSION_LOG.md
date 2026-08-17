@@ -2716,3 +2716,22 @@ stored `ceiling` **138,61** against a **159,40** maximum, `pdp_start` 69,31 in C
 snapshotted, `transport_vat_rate` NULL with no Driver. At the same instant the Business row read **79,71 €**
 (69,31 + 8,66 + 1,74) and the Driver's Pool card read **60,99 €**. Probe deleted, **baseline restored to 271**.
 `tsc` clean · **415 tests** · `next build` green · parity **1900/1900** · CI green before the fast-forward.
+
+**⚑ SIX PRICED DEMO TRIPS, so the work is visible at all.** Every mission that existed before today predates
+commission, so the app looked *unchanged* after shipping — no breakdown appears anywhere until something priced
+lands. `.local/seed/s61-priced.ts` posts six carrying reference **S61DEMO** (three pooled incl. a SPEED WIN and
+an Eco short-hop, one confirmed, one completed with 17 min of waiting, one Business cancellation), all priced
+off the real `mission_price()` RPC and the live `commission_rate` row — nothing hand-typed. `--undo` removes
+them; they are the founder's to keep until the whole-DB cleanup after step 5.
+- ⚑ **Two seeding traps worth remembering.** (1) Inserting a row with `driver_id` already set produces a
+  mission **no VAT status was ever frozen onto** — the trigger is `before update of driver_id`, deliberately,
+  because a real trip is posted first and accepted second. The seeder now attaches the Driver in a second
+  statement, the way `accept_mission` does. (2) The climb reaches the ceiling in about two hours at 10-minute
+  5% steps, so a trip "accepted" three hours after posting settles at its maximum and the *"what the auction
+  saved"* line has nothing to say — which is the one thing these rows exist to show. Accept early.
+- **Verified on screen:** Business confirmed trip reads *"Filled 33,81 € under your maximum of 96,60 € — and
+  the service fee fell with it, 10,50 € down to 6,83 €"*; the Driver's money detail on the completed trip reads
+  Fare 86,18 → commission 8,62 → VAT 1,72 → **Paid to you 75,84 €**, matching the card footer exactly, with
+  *"carries 7,83 € of VAT you collect… after settling both you keep 69,73 €"*. **Baseline is now 277**, not 271
+  — deliberately, and `.local/probe/transport-vat-2026-08-17.ts` still asserts 271, so re-base it or run
+  `--undo` first.
