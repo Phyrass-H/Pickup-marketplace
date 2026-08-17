@@ -2681,9 +2681,13 @@ lines bill exactly"). A maximum is a promise not to go above a number, so down i
 
 **Two migrations, both written for the founder to run.** `2026-08-17_commission.sql` (applied same session):
 one-row `commission_rate` table + four nullable snapshot columns + `commission_split()` / `transport_vat()` /
-`commission_for()`. `2026-08-17_transport_vat_snapshot.sql` (**handed over, not yet applied at time of
-writing**): a `before update of driver_id` trigger that freezes the accepting Driver's VAT status onto the
-mission and clears it on re-pool. Deliberately a trigger, not four edits to `accept_mission` and the three
+`commission_for()`. `2026-08-17_transport_vat_snapshot.sql` (**applied same session**): a
+`before update of driver_id` trigger that freezes the accepting Driver's VAT status onto the mission and clears
+it on re-pool. **Verified 10/10 live** via `.local/probe/transport-vat-2026-08-17.ts` — all three branches (a
+registered Driver stamps 0,10 · re-pool clears it back to NULL · a Driver under franchise en base stamps **0,
+not NULL**, which is the distinction the display depends on). The probe creates its own throwaway `S61VAT`
+mission rather than borrowing a real one — the Pool is legitimately empty since § P — and deletes it, baseline
+re-asserted at 271. Deliberately a trigger, not four edits to `accept_mission` and the three
 re-pool RPCs — smaller blast radius on money-critical code, covers every path including future ones, and it
 cannot affect who wins an accept race. **Not `security definer`** — that is the S41/S42 guard saga's lesson.
 
