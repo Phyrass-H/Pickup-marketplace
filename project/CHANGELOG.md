@@ -903,3 +903,25 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   were left as they were — they're a record of what happened, not a description of today.
 - **One thing still has the old name: the GitHub project** (`Pickup-marketplace`). It's yours to rename when you
   want to; nothing depends on it and nothing breaks if it stays.
+
+## 2026-08-17 — Kavenue's commission is live
+
+- **The price you're shown is now the price you pay, everything included.** When Kavenue fills in the Ceiling
+  on a new trip, that number already contains our service fee and its VAT — nothing gets added later. Under it,
+  three lines say exactly what it's made of: the transport, the fee, and the VAT on the fee.
+- **The three lines are never rolled into one**, because you can claim back the VAT on our fee but not the VAT
+  on transport. Keeping them apart is what lets your accountant tell them apart.
+- **The same breakdown appears on an expanded trip and on Spend**, so it reads the same everywhere.
+- **A cheap fill now visibly saves you twice.** The expanded trip says how far under your maximum it went — and
+  our fee is a share of the fare, so it falls with it. A trip that filled at 87 € instead of your 159,40 €
+  maximum cost 45,71 € less in fare and 4,97 € less in fee.
+- **Spend and History totals are about 15% higher than yesterday.** Nothing got more expensive — they now show
+  what actually leaves your account rather than the fare alone.
+- **Trips from before today are untouched.** They were never charged a fee, so they still show one plain amount
+  with no breakdown. Nothing was rewritten backwards.
+- **For Drivers, the number in the Pool is the number they're paid.** No "before commission" figure exists
+  anywhere in their app. One screen on a trip they're holding shows the commission and the VAT, because they
+  need it to invoice — and because a Driver registered for VAT and one who isn't keep different amounts from
+  the very same fare.
+- **One thing still needs you:** the second migration, so the app knows whether the Driver who took a trip
+  charges VAT. Until it runs, a Driver's money screen leaves the VAT line out rather than guessing.

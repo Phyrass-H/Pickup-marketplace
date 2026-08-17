@@ -2632,3 +2632,83 @@ build i18n routing yet), **D-L2** (*no geography at all* — no "French Riviera"
 everyone) and **D-L3** (no Driver count, in any wording). Those supersede what the brief originally said about
 the beta being Riviera-specific — the facts are still true internally, they just don't go on the page. **If a
 future product session needs to know what the public site claims, read that file, not this one.**
+
+---
+
+## Session 61 — 2026-08-17 (Mac) — PRICING STEP 4: COMMISSION. Shipped `f85715f`.
+
+**The decision that shaped everything: the Ceiling is ALL IN.** `docs/06` §4 calibrated the rate card against
+*retail* — published prices a customer pays — and concluded the card sits at 70–94% of it, "so a Business
+reselling to its Guest keeps a margin". §1 says the Business pays 12,5% HT / 15% TTC **on top of the fare**.
+Those two cannot both describe the same number: read the card as the fare and a Business's real cost is
+80–108% of retail, which breaks §4's own claim on the cheaper-quoting routes. Put to the founder with both
+readings priced out; they chose **all-in** — the pre-filled Ceiling is what the Business pays, fee inside.
+
+⚑ **`mission.ceiling` DID NOT CHANGE MEANING, and must not.** It still stores the **Course** — the fare the PDP
+curve climbs, the Driver is paid from, and every fee/band/cancellation basis is computed against. The all-in
+figure is derived for display only, and converted back to a Course exactly once, in `createMission`. This is
+what made a display-wide change safe without touching a single money RPC or re-running the S57 probes.
+
+**The Driver ruling is now permanent** (it was provisional from S48): the number in the Pool **is** what the
+Driver banks. No gross/net language anywhere. The commission appears in exactly one place — the money detail on
+a trip they hold — because a Driver has to invoice and file: they need the fee to reclaim its VAT, and the VAT
+inside the fare to declare it. The same 87,00 € leaves a VAT-registered Driver keeping 79,98 € and one under
+*franchise en base* keeping all 87,00 €, which no single number can say.
+
+**Where VAT is broken out, and where it isn't.** Driver: yes, for the reason above. Business: no — they cannot
+reclaim VAT on passenger transport (§3), so it is not actionable; what they *can* reclaim is the 20% on the
+service fee, and that is its own line. The transport VAT rate + amount still belong on the **invoice document**
+when invoicing lands, which stays French even though the app copy is English (founder asked for English on
+screen; `docs/06` §3's French labels are the invoice's, left alone).
+
+**⚑ THE BUG THE PARITY PROBE CAUGHT — read this before touching `lib/commission.ts`.** The first run of
+`.local/probe/commission-parity.ts` found **14 divergences in 1 900 checks** between SQL and TypeScript. Every
+one was an exact `.5` tie: Postgres computes `556.9 × 1.15` in exact decimal as `640.435` and rounds half away
+from zero to **640,44**; JavaScript computes `640.4349999999999` and rounds to **640,43**. `Number.EPSILON`
+nudging is two orders of magnitude too small to help. The whole split is therefore **integer arithmetic** —
+cents and hundred-thousandths of a rate, in BigInt — and the probe is now 1900/1900. *A cent between the screen
+and the invoice is a bug, not a rounding nicety.*
+
+**The invoice always reconciles.** Each side's total and HT fee are computed independently and the **VAT line
+is taken as the remainder**. It can sit a cent off 20% of the fee; it can never fail to add up. Same convention
+in SQL. Pinned by `tests/commission.test.ts` over a thousand consecutive cents.
+
+**⚑ The Ceiling snaps, and why it has to.** `mission.ceiling` is `numeric(10,2)`, so the Course is held to the
+cent — and a cent times 1,15 skips cents. About **one all-in value in eight is unreachable**: type 170,00 and
+the neighbouring Courses give 169,99 or 170,02. `courseFromBusinessTotal` therefore returns the largest Course
+whose all-in does **not exceed** what was typed, and the form says so ("Rounded down from 170,00 € so the three
+lines bill exactly"). A maximum is a promise not to go above a number, so down is the only honest direction.
+
+**Two migrations, both written for the founder to run.** `2026-08-17_commission.sql` (applied same session):
+one-row `commission_rate` table + four nullable snapshot columns + `commission_split()` / `transport_vat()` /
+`commission_for()`. `2026-08-17_transport_vat_snapshot.sql` (**handed over, not yet applied at time of
+writing**): a `before update of driver_id` trigger that freezes the accepting Driver's VAT status onto the
+mission and clears it on re-pool. Deliberately a trigger, not four edits to `accept_mission` and the three
+re-pool RPCs — smaller blast radius on money-critical code, covers every path including future ones, and it
+cannot affect who wins an accept race. **Not `security definer`** — that is the S41/S42 guard saga's lesson.
+
+**⚑ NULL rates are not zero rates.** All 271 live missions predate commission and were billed no fee. They
+carry NULL rates, `charged: false`, and render as a single amount with no breakdown. Defaulting the columns to
+0,125 would have retroactively invented 15% of charges on the whole archive.
+
+**What moved on screen.** Business: the Pricing card carries the three lines under the Ceiling; the expanded
+trip row shows them plus what the auction saved ("Filled 45,71 € under your maximum — and the service fee fell
+with it"), which is §6's argument made visible; Spend and History totals are **all-in and therefore ~15% higher
+than the day before**, with `Service fee` and `VAT on service fee` as their own components. Driver: Pool card,
+My Rides, the run view, the waiting meter, the no-show report and Earnings are all net.
+
+**⚑ The one gross figure left, and the open question it raises.** A Driver's own cancellation penalty carries
+no commission — §1 makes it an indemnity running Driver → Business, not payment for transport — so the sheet
+shows the whole fare, larger than anything else that Driver has seen. The copy now says why. **But the basis is
+worth the founder's ruling:** charging 100% of the *Course* means the number was never on their screen, while
+100% of what they were going to be paid would keep the deterrent story clean ("cancel and you lose exactly what
+you would have earned"). Left alone deliberately — it is a money rule in a tested RPC, not a display choice.
+
+**Also flagged, not fixed:** a driver-cancellation fee still counts as Business *spend* in `historyFare`, which
+predates this session; it is money the Business receives.
+
+**Verified live** against the real DB: posted one probe trip (Cannes → Beausoleil, 55,7 km, Business sedan) —
+stored `ceiling` **138,61** against a **159,40** maximum, `pdp_start` 69,31 in Course space, all three rates
+snapshotted, `transport_vat_rate` NULL with no Driver. At the same instant the Business row read **79,71 €**
+(69,31 + 8,66 + 1,74) and the Driver's Pool card read **60,99 €**. Probe deleted, **baseline restored to 271**.
+`tsc` clean · **415 tests** · `next build` green · parity **1900/1900** · CI green before the fast-forward.
