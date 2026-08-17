@@ -2735,3 +2735,32 @@ them; they are the founder's to keep until the whole-DB cleanup after step 5.
   *"carries 7,83 € of VAT you collect… after settling both you keep 69,73 €"*. **Baseline is now 277**, not 271
   — deliberately, and `.local/probe/transport-vat-2026-08-17.ts` still asserts 271, so re-base it or run
   `--undo` first.
+
+**S61 part B — the founder's review pass, four fixes (2026-08-17).** All copy/layout, no money logic touched;
+`tsc` clean and 415 tests green throughout. Deployed `fdc24df` · `c959e61` · `0419dc3` · `eb09357`.
+1. **"Agreed price" → "Accepted at".** "Agreed" read as though the two parties had negotiated and met in the
+   middle. They don't: the Business sets a Ceiling and a Driver takes it at whatever the curve had reached.
+   ("Agreed release" is untouched — that one genuinely is both sides agreeing.)
+2. **The saving line lost three of its four numbers.** It read *"Filled 33,81 € under your maximum of 96,60 €
+   — and the service fee fell with it, 10,50 € down to 6,83 €"*; the founder's objection was simply that a
+   simple, good piece of news had four figures in one sentence. Now **"You saved 33,81 €"**, a quiet green line
+   rather than a filled panel. The Ceiling is already in the tile above and the fee in the table above that.
+3. **⚑ "max" → "Ceiling", and this one was a real lapse.** Ceiling is a glossary term (CLAUDE.md hard rule 1)
+   and it had been glossed away as "max" / "your maximum" on the two screens where a Business meets it most —
+   by me, while writing the very features that made it matter. **A gloss that replaces the term stops the
+   vocabulary being learned by the people using it, which is the whole point of having one.**
+4. **"Confirmed" → "Driver accepted"** (Business side only). A new Dispatcher reads "Confirmed" as *my mission
+   was created properly*, not *a Driver has committed*. "Accepted" alone fails the same way — it can still be
+   read as the system accepting the booking — so the label names the actor. The sequence is now a sentence:
+   **Driver accepted → Not checked in → Checked in**. The Driver's own pill still says "Confirmed" (on their
+   screen it means "this is yours"), and the `confirmed` STATUS is untouched — label only.
+5. **Route back above the money.** The commission panel had been inserted between the scan strip and the route,
+   pushing the one section that shows where the trip actually *is* (the rail checks off live as the Driver
+   reaches each stop) below an accounting table. Order is now scan strip → Route → What you pay → Guests.
+- ⚑ **The stale dev server bit again, exactly as S60 documented** — the browser threw a syntax error quoting
+  lines that had already been fixed, while `tsc` was clean. Stop the preview, `rm -rf .next/cache/webpack`,
+  restart. Do not debug the source.
+- **Asked and answered, no change:** the Dispatch breakdown recomputes live as the curve climbs. The founder
+  asked whether it should instead appear only at creation and after acceptance. Argued both ways and settled on
+  leaving it: **it lives behind an expand**, so nobody meets it by accident, and when a Dispatcher opens a row
+  more detail is what they came for.

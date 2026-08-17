@@ -925,3 +925,15 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   the very same fare.
 - **One thing still needs you:** the second migration, so the app knows whether the Driver who took a trip
   charges VAT. Until it runs, a Driver's money screen leaves the VAT line out rather than guessing.
+
+## 2026-08-17 — wording, after your read-through
+
+- **"Accepted at 62,79 €"** replaces "Agreed price". Nobody negotiated — you set a Ceiling and a Driver took
+  the trip at the price the auction had reached.
+- **"You saved 33,81 €"** replaces a sentence with four numbers in it. The Ceiling is already right above it.
+- **"Ceiling" is used everywhere again** instead of "max" — it's your word for it, and the app had quietly
+  stopped using it on the two screens where it matters most.
+- **"Driver accepted"** replaces "Confirmed" on the schedule. "Confirmed" sounded like your booking had gone
+  through; what it actually means is that a Driver has committed to the trip.
+- **The route is back above the money** on an expanded trip. It's where you see how far along the trip is, so
+  it shouldn't sit under an invoice.
