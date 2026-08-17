@@ -3,6 +3,9 @@
 > **Status:** the V1 transfer pricing model. Written and locked with the founder 2026-08-14/15;
 > **§4 rate card re-calibrated and re-locked 2026-08-16 (S60)** — two distance bands, First rebuilt,
 > a First — van row added, Business van base raised.
+> **§1 extended and commission SHIPPED 2026-08-17 (S61):** the pre-filled Ceiling is the Business's
+> **all-in** maximum, the Pool price is the Driver's **payment**, and both are now built. Read §1's
+> three new subsections before touching anything that displays money.
 > **Scope: V1 transfers only.** *Mise à disposition* (MAD, hourly/daily hire) and long multi-week
 > missions are **V2 — do not build them.** `mission_type` stays `transfer` for every V1 mission.
 > **Source of truth.** Where this doc and any other document disagree about price or commission,
@@ -88,6 +91,54 @@ A Driver with a real company reclaims VAT, so 12% costs them 10%. A very small D
 status makes them bear. Kavenue does not adjust its rate for a counterparty's tax status.
 
 ---
+
+### Which end of the invoice the Ceiling sits at — LOCKED 2026-08-17 (S61)
+
+**The Ceiling Kavenue pre-fills is the Business's ALL-IN maximum: the service fee and its VAT are already
+inside it.** A Business is never shown a number that later grows.
+
+This was genuinely open until S61, and §4 and §1 pulled in opposite directions. §4 calibrated the card against
+**retail** — published prices a *customer* pays — and concluded it sits at 70–94% of retail "so a Business
+reselling to its Guest keeps a margin". §1 says the Business pays 12,5% HT **on top of the fare**. Read the
+card as the fare and a Business's real cost is 80–108% of retail, which breaks §4's own claim on the
+cheaper-quoting routes. Read it as all-in and the calibration stays true as written. The founder chose all-in.
+
+⚑ **`mission.ceiling` DID NOT CHANGE MEANING, AND MUST NOT.** It stores the **Course** — the fare the §6 curve
+climbs, the Driver is paid from, and every fee, band and cancellation basis is computed against. The all-in
+figure is *derived* for display and converted back exactly once, in `createMission`. This is what let a
+display-wide change ship without touching a single money RPC.
+
+⚑ **Nobody is shown the Course.** The Business sees `course × 1,15`; the Driver sees `course × 0,88`. The
+number in between belongs to neither of them.
+
+⚑ **The Ceiling snaps down when a Business types.** `mission.ceiling` is `numeric(10,2)`, so the Course is held
+to the cent — and a cent times 1,15 skips cents, making about one all-in value in eight unreachable (type
+170,00 and the neighbouring Courses give 169,99 or 170,02). The form takes the largest Course whose all-in does
+not exceed what was typed, and says so. A maximum is a promise not to go above a number.
+
+### The Driver's number is the Driver's payment — LOCKED 2026-08-17 (S61)
+
+Provisional since S48, now permanent: **the price in the Pool is what the Driver banks.** Commission is taken
+before anything is displayed, and there is no gross/net language anywhere in either app.
+
+The commission appears in exactly **one** place — the money detail on a trip they hold — because a Driver has
+to invoice and file: they need the fee to reclaim its VAT, and the VAT inside the fare to declare it. The same
+87,00 € leaves a VAT-registered Driver keeping 79,98 € and one under *franchise en base* keeping all 87,00 €,
+which no single number can say.
+
+⚑ **One figure stays gross, deliberately: a Driver's own cancellation penalty.** §1 makes it an indemnity
+running Driver → Business, so no commission comes off it — meaning a Driver who has seen 87,00 € all week is
+told they owe 98,86 €. The sheet says why. **Whether the BASIS should change** (100% of what they were going to
+be *paid*, rather than of the Course) is open and pairs with the "is 100% enough on a cheap trip" question —
+both in BACKLOG **§ Y**.
+
+### Where VAT is broken out, and where it is not — LOCKED 2026-08-17 (S61)
+
+**Driver: yes**, for the reason above. **Business: no** — they cannot reclaim VAT on passenger transport, so
+the amount is not actionable on screen; what they *can* reclaim is the 20% on the service fee, and that is
+already its own line. The transport VAT rate and amount still belong on the **invoice document** when invoicing
+lands. **That document stays in French** (`Course` / `Frais de service` / `TVA sur frais de service`) even
+though the app's own copy is English — founder's call, S61.
 
 ## 2. Every price shown is TTC — LOCKED
 
@@ -362,6 +413,12 @@ adjusts routes relative to that; it never sets the level on its own.
 - **The snapshot rule.** At creation, the computed values and both commission rates are **copied
   onto the mission row**. Settlement, invoicing and history read the snapshot and must **never**
   join back to the live rate card.
+  ⚑ **NULL rates are not zero rates.** A mission with no snapshot was priced *before commission existed* and
+  was billed no fee — it renders as one plain amount with no breakdown. Defaulting the columns would
+  retroactively invent 15% of charges on every historical row.
+  ⚑ **The transport VAT is snapshot LATER, at acceptance**, because it is the assigned Driver's status and
+  does not exist while a trip is pooled. A `before update of driver_id` trigger writes it and clears it on
+  re-pool — not `accept_mission`, which would have meant editing four money-critical RPCs to copy one column.
 - **Changing a rate never rewrites history.** Add a row with a later `effective_from`.
 - **Numbers live in tables, not in code.** Recalibration is an `INSERT`/`UPDATE` — never a redeploy.
 - **The fare freezes at acceptance.** That frozen figure is the contract price and the basis for
@@ -444,7 +501,10 @@ hard-wire Stripe into mission logic.
 
 1. **`rate_card` table + seed rows + the §4 formula.** Pre-fill the ceiling on `/dispatch/new`,
    enforce the floor.
-2. **Commission, the two displays, the three invoice lines, snapshot columns.**
+2. ~~**Commission, the two displays, the three invoice lines, snapshot columns.**~~ ✅ **SHIPPED 2026-08-17
+   (S61)** — `commission_rate` + snapshot columns + `commission_split()`, mirrored by `lib/commission.ts` in
+   integer cents (float loses the exact `.5` ties Postgres rounds). All-in for the Business, net for the
+   Driver; see §1.
 3. **The §6 curve**, replacing the current `pdp_start`/`pdp_step`/`pdp_interval` climb. Money-critical
    — `pdp_start` is used by the SQL fee-basis band, so this ships with the money tests updated and
    both existing probes re-run.

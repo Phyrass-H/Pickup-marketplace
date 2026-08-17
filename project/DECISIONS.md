@@ -1496,3 +1496,41 @@ think, price frozen. Not a price protection — a **regret protection**: an impu
 cancellation, which is a 100% penalty plus a hotel with no car. One hold at a time, one per trip, **enforced
 inside the same gate as Accept** or a Driver pressing Accept in the same tenth of a second writes past it. The
 card stays readable to everyone with a visible countdown.
+
+---
+
+### D73 — The Ceiling is the Business's all-in maximum; the Pool price is the Driver's payment (2026-08-17, S61)
+
+**The question, which `docs/06` could not answer on its own.** §4 calibrated the rate card against *retail* —
+published prices a customer pays — and concluded it sits at **70–94% of retail**, "so a Business reselling to
+its Guest keeps a margin". §1 says the Business pays 12,5% HT / 15% TTC **on top of the fare**. Both are
+LOCKED, and they cannot both describe the same number: read the card as the fare and a Business's real cost is
+**80–108% of retail**, which breaks §4's own margin claim on the routes where the market quotes cheapest.
+
+**Decided: ALL-IN.** The Ceiling Kavenue pre-fills is what the Business pays, service fee and VAT inside. It is
+the only reading that keeps the calibration true as written, and it matches §2's one-convention rule — a
+Business is never shown a number that later grows. Founder's call after both readings were priced out on the
+same trip (Cannes → Monaco: 159,40 € all-in with the Driver banking 121,98 €, against 183,31 € with the Driver
+banking 140,27 €).
+
+⚑ **What made it cheap to ship: `mission.ceiling` did not change meaning.** It still stores the **Course**. The
+all-in figure is derived for display and converted back exactly once, on write — so every fee, band and
+cancellation basis downstream kept its meaning, no money RPC was touched, and the S57 probes did not need
+re-running for this step.
+
+**And the Driver ruling, provisional since S48, is now permanent:** the number in the Pool **is** what they
+bank. No gross/net language anywhere. Nobody is shown the Course — the Business sees `× 1,15`, the Driver sees
+`× 0,88`, and the number in between belongs to neither.
+
+**The commission appears once on the Driver's side**, in the money detail of a trip they hold, because they
+have to invoice and file. The same 87,00 € leaves a VAT-registered Driver keeping 79,98 € and one under
+*franchise en base* keeping all 87,00 € — a difference no single number can express. The Business does **not**
+get the transport VAT broken out on screen: they cannot reclaim it, so it is not actionable; the 20% on
+Kavenue's fee, which they can reclaim, already has its own line.
+
+**Two consequences accepted with it.** (1) Spend and History totals rose ~15% overnight — they now show what
+leaves the account rather than the fare alone. (2) A Driver's own cancellation penalty stays **gross**, since
+§1 makes it an indemnity; whether its *basis* should become "100% of what you'd have been paid" is open in
+BACKLOG **§ Y**, alongside whether 100% is enough on a cheap trip at all.
+
+**Superseded nothing.** [[d59]]'s "no gross/net language" instinct is now the implemented rule.
