@@ -2889,3 +2889,18 @@ Probe: `.local/probe/amend-check.ts`.
 a Course, so a typed fare can come back a cent under. The mission form says *"Rounded down from…"*; the
 amend form does not. Left as is — same direction as the Ceiling (never above what was typed) — but if a
 Business ever queries the cent, that is why.
+
+### Session 62 part C — the waste panel stops mixing bases (2026-08-18)
+
+The one thing part A flagged and deliberately did not fix. `wasteLines()` reused `cancelFees` / `noShow` /
+`waiting` — Course-basis on purpose, because with the two fee lines they decompose the invoice exactly
+(§3) — and then `avoidable()` divided their sum by `total`, which is all-in. Two bases in one ratio.
+
+Fixed by **adding all-in twins rather than converting the originals**: `cancelFeesAllIn`, `noShowAllIn`,
+`waitingAllIn`, accumulated per row through `businessCost` so a Driver-cancelled trip (which carries no
+commission) is still handled correctly. The four transport components are untouched and still reconcile.
+
+*Verified live:* the panel reads **345,33 € · 19,3 % of what you spent** (was 319,66 € · 17,8 %).
+Cancellation fees 154,11 → 177,23 · Waiting 94,00 → 96,55 · No-shows unchanged at 71,55, correctly — that
+trip predates commission.
+

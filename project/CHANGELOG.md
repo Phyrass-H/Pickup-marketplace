@@ -966,3 +966,10 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   stored as the fare alone, so the trip would have cost you about 15% more than the number on your screen.
 - **Your Driver sees what they'll be paid, not the gross.** Their card showed a figure that was never
   theirs to keep. It now shows the same kind of number as everywhere else in their app.
+
+## 2026-08-18 (later still) — "What went wrong" adds up properly
+
+- **The waste panel on Spend was quoting the fare and calling it a share of your total.** The share is
+  measured against what actually left your account, so the amounts had to be on that same footing. It now
+  reads 345,33 € — 19,3 % of what you spent, where it used to say 319,66 € — 17,8 %. Nothing changed about
+  what you were charged; the panel was simply understating what those trips cost you.

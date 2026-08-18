@@ -74,6 +74,18 @@ export interface SpendTotals {
   noShow: number;
   noShowCount: number;
 
+  /**
+   * ⚑ THE ALL-IN TWINS of `cancelFees` / `noShow` / `waiting`, for the waste panel
+   * only. Those three are Course-basis on purpose — with the two fee lines they
+   * decompose the invoice exactly (docs/06 §3) — but the waste panel has no fee
+   * line beside them, so it was calling a Course-basis sum "17,8 % of what you
+   * spent" against an all-in total. Two bases in one ratio. Same money, the
+   * Business's side of it.
+   */
+  cancelFeesAllIn: number;
+  noShowAllIn: number;
+  waitingAllIn: number;
+
   /** Excluded from `total`, never hidden: a Driver took it and never closed it. */
   unsettled: number;
   unsettledCount: number;
@@ -110,6 +122,9 @@ const EMPTY: SpendTotals = {
   cancelCount: 0,
   noShow: 0,
   noShowCount: 0,
+  cancelFeesAllIn: 0,
+  noShowAllIn: 0,
+  waitingAllIn: 0,
   unsettled: 0,
   unsettledCount: 0,
   unfilledCount: 0,
@@ -171,6 +186,7 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
     const waiting = num(m.waiting_fee);
     if (waiting > 0) {
       t.waiting += waiting;
+      t.waitingAllIn += businessCost(m, waiting);
       t.waitingMinutes += m.waiting_minutes ?? 0;
       t.waitingCount += 1;
     }
@@ -187,6 +203,7 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
       const fee = num(m.cancellation_fee);
       if (fee > 0 || m.cancellation_fee != null) {
         t.cancelFees += fee;
+        t.cancelFeesAllIn += businessCost(m, fee);
         t.cancelCount += 1;
       }
       continue;
@@ -205,6 +222,7 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
       t.tripCost += businessCost(m, fare + waiting);
       if (m.no_show) {
         t.noShow += fare;
+        t.noShowAllIn += businessCost(m, fare);
         t.noShowCount += 1;
       } else {
         t.fares += fare;
@@ -495,7 +513,7 @@ export function wasteLines(t: SpendTotals): WasteLine[] {
         t.cancelCount > 0
           ? `${t.cancelCount} cancelled${t.cancelFees > 0 ? " after a Driver took them" : " — no fee applied"}`
           : "none this period",
-      amount: t.cancelFees,
+      amount: t.cancelFeesAllIn,
       count: t.cancelCount,
     },
     {
@@ -505,7 +523,7 @@ export function wasteLines(t: SpendTotals): WasteLine[] {
         t.noShowCount > 0
           ? `${t.noShowCount} Guest${t.noShowCount === 1 ? "" : "s"} never came down`
           : "none this period",
-      amount: t.noShow,
+      amount: t.noShowAllIn,
       count: t.noShowCount,
     },
     {
@@ -515,7 +533,7 @@ export function wasteLines(t: SpendTotals): WasteLine[] {
         t.waitingCount > 0
           ? `${t.waitingCount} trip${t.waitingCount === 1 ? "" : "s"} · ${Math.round(t.waitingMinutes)} min`
           : "none this period",
-      amount: t.waiting,
+      amount: t.waitingAllIn,
       count: t.waitingCount,
     },
     {
@@ -533,5 +551,7 @@ export function wasteLines(t: SpendTotals): WasteLine[] {
 
 /** The avoidable slice — everything in the waste panel that actually cost money. */
 export function avoidable(t: SpendTotals): number {
-  return t.cancelFees + t.noShow + t.waiting;
+  // ALL IN — it is divided by `total`, which is all-in, to make "x % of what you
+  // spent". A Course-basis numerator understated that share by the whole fee.
+  return t.cancelFeesAllIn + t.noShowAllIn + t.waitingAllIn;
 }
