@@ -84,6 +84,8 @@ export interface SpendTotals {
 
   /** Trips that ran (completed, no-shows included — the Guest was still billed). */
   trips: number;
+  /** What those trips cost ALL IN — the numerator behind `costPerTrip`. */
+  tripCost: number;
   costPerTrip: number | null;
   /** Missions that found a Driver ÷ missions ordered. */
   fillRate: number | null;
@@ -113,6 +115,7 @@ const EMPTY: SpendTotals = {
   unfilledCount: 0,
   unfilledCeiling: 0,
   trips: 0,
+  tripCost: 0,
   costPerTrip: null,
   fillRate: null,
   medianToAccept: null,
@@ -143,7 +146,8 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
 
     if (isExpired(m)) {
       t.unfilledCount += 1;
-      t.unfilledCeiling += num(m.ceiling);
+      // ALL IN — a Ceiling shown to a Business is always its own side of it.
+      t.unfilledCeiling += businessCost(m, num(m.ceiling));
       continue;
     }
 
@@ -155,7 +159,11 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
       // only the fare dropped it out of every figure on the page INCLUDING this
       // one, so the money existed nowhere. No live row carries one today, which
       // is exactly why it was worth fixing before one does.
-      t.unsettled += settledFare(m) + num(m.waiting_fee);
+      // ALL IN — this is money the Business will owe once the trip closes, and it
+      // sits beside a total that already includes the fee. The four transport
+      // components below stay Course-basis on purpose (they decompose the invoice
+      // with the two fee lines, docs/06 §3); this one has no fee line beside it.
+      t.unsettled += businessCost(m, settledFare(m) + num(m.waiting_fee));
       t.unsettledCount += 1;
       continue;
     }
@@ -191,6 +199,10 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
       // trips that happened for time spent on one that didn't.
       t.tripWaiting += waiting;
       const fare = settledFare(m);
+      // ALL IN, per row, so "Cost per trip" is on the same basis as the Total
+      // spend it sits next to. Summing the Course-basis buckets understated it
+      // by the whole service fee.
+      t.tripCost += businessCost(m, fare + waiting);
       if (m.no_show) {
         t.noShow += fare;
         t.noShowCount += 1;
@@ -206,7 +218,7 @@ export function spendTotals(rows: HistoryRow[]): SpendTotals {
   // `transport === fares + noShow + waiting + cancelFees` holds.
   t.total = t.transport + t.serviceFee + t.serviceFeeVat;
   t.trips = t.fareCount + t.noShowCount;
-  t.costPerTrip = t.trips > 0 ? (t.fares + t.noShow + t.tripWaiting) / t.trips : null;
+  t.costPerTrip = t.trips > 0 ? t.tripCost / t.trips : null;
   t.fillRate = t.ordered > 0 ? (t.filledCount / t.ordered) * 100 : null;
 
   if (accepts.length > 0) {

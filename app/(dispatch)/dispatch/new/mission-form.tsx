@@ -81,11 +81,13 @@ function SubmitButton({
   intent,
   className,
   pendingLabel,
+  blocked,
   children,
 }: {
   intent: "pooled" | "draft";
   className: string;
   pendingLabel: string;
+  blocked?: boolean;
   children: React.ReactNode;
 }) {
   const { pending, data } = useFormStatus();
@@ -96,7 +98,7 @@ function SubmitButton({
       name="intent"
       value={intent}
       className={className}
-      disabled={pending}
+      disabled={pending || blocked}
       aria-busy={isThis}
     >
       {isThis ? pendingLabel : children}
@@ -172,6 +174,7 @@ export function MissionForm({
   pickupPrefill,
   rateCard = [],
   commissionRates = null,
+  commissionRatesUnavailable = false,
 }: {
   error?: string;
   prefillDate?: string;
@@ -180,6 +183,8 @@ export function MissionForm({
   pickupPrefill?: Place | null;
   rateCard?: RateCardRow[];
   commissionRates?: Rates | null;
+  /** The rate lookup FAILED (≠ no rates in force). Nothing may be posted on a guess. */
+  commissionRatesUnavailable?: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -191,8 +196,12 @@ export function MissionForm({
   // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE (docs/06 §1, founder 2026-08-17).
   // A saved draft stores the fare; the Business set — and must see again — what
   // they will pay, fee inside. createMission converts it back on the way out.
+  // ⚑ Seed BLANK when the rate lookup failed. The stored number is a Course and
+  // this field is all-in; without the rate there is no honest conversion, and the
+  // one thing we must not do is show the Course under an "everything in" label —
+  // createMission would convert it a second time. Blank asks; a wrong number lies.
   const [ceiling, setCeiling] = useState(
-    draft?.ceiling != null
+    draft?.ceiling != null && !commissionRatesUnavailable
       ? commissionSplit(Number(draft.ceiling), commissionRates).businessTotal.toFixed(2)
       : "",
   );
@@ -539,6 +548,19 @@ export function MissionForm({
       )}
       {error === "db" && (
         <div className="notice error">Something went wrong. Please try again.</div>
+      )}
+      {error === "rates" && (
+        <div className="notice error">
+          We couldn&rsquo;t read the current service fee, so nothing was saved — your
+          Ceiling has to mean the same thing on both sides of that number. Try again.
+        </div>
+      )}
+      {commissionRatesUnavailable && (
+        <div className="notice error">
+          We can&rsquo;t read the current service fee, so this form can&rsquo;t work out
+          what&rsquo;s inside your Ceiling. Posting and saving are off until it comes back
+          &mdash; please reload in a moment.
+        </div>
       )}
 
       <div className="mx-form-grid">
@@ -1019,8 +1041,13 @@ export function MissionForm({
                   }}
                 >
                   <span className="muted small">Your Ceiling, all in</span>
+                  {/* The BILLABLE all-in, not the typed one. On the ~1 value in 8 that
+                      snaps, ceilingNum contradicted both the Pricing card's own "Your
+                      Ceiling" and the "climbs up to" line directly below this one — and
+                      this rail is the last number seen before Post. The typed figure is
+                      still named, once, by the "Rounded down from…" note. */}
                   <span style={{ fontSize: 16, fontWeight: 600 }}>
-                    {formatMoney(ceilingNum)}
+                    {formatMoney(ceilingAllIn)}
                   </span>
                 </div>
                 <div
@@ -1081,7 +1108,7 @@ export function MissionForm({
                 <button type="button" className="btn" onClick={review}>
                   Review mission →
                 </button>
-                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…">
+                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…" blocked={commissionRatesUnavailable}>
                   Save as draft
                 </SubmitButton>
               </div>
@@ -1096,7 +1123,7 @@ export function MissionForm({
                 <button type="button" className="btn secondary" onClick={() => setMode("edit")}>
                   ← Edit
                 </button>
-                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…">
+                <SubmitButton intent="draft" className="btn secondary" pendingLabel="Saving…" blocked={commissionRatesUnavailable}>
                   Save as draft
                 </SubmitButton>
               </div>
@@ -1152,7 +1179,7 @@ export function MissionForm({
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <ConfirmCancelButton onCancel={() => setConfirmPost(false)} />
-              <SubmitButton intent="pooled" className="btn" pendingLabel="Posting…">
+              <SubmitButton intent="pooled" className="btn" pendingLabel="Posting…" blocked={commissionRatesUnavailable}>
                 {draft ? "Post draft to the Pool" : "Post to the Pool"}
               </SubmitButton>
             </div>

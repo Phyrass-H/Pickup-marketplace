@@ -51,15 +51,30 @@ export default async function NewMissionPage({
   // the Ceiling field is the Business's ALL-IN maximum, so the form needs them to
   // show what is inside it while they type. The server reads them again when the
   // mission is written and snapshots them onto the row — this copy only displays.
+  //
+  // ⚑ A FAILED READ IS NOT "NO COMMISSION" — and this is the one read where the
+  // difference costs money. Both come back as `null` from ratesFromRow, and they
+  // mean opposite things: no generation in force is a real state (the whole
+  // pre-2026-08-17 archive), where the Course IS the all-in and nothing converts;
+  // a query that fell over means we simply do not know the rate. Guess the second
+  // as the first and resuming a saved draft seeds this ALL-IN field with a raw
+  // Course, labelled "everything in" — then createMission, whose own read
+  // succeeded, converts it a SECOND time. The stored fare falls ~13% per
+  // open-and-save cycle, silently, taking the Driver's pay down with it.
+  let commissionRatesUnavailable = false;
   const commissionRates: Rates | null = await (async () => {
     const supabase = await createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("commission_rate")
       .select(COMMISSION_RATE_COLS)
       .lte("effective_from", new Date().toISOString())
       .order("effective_from", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (error) {
+      commissionRatesUnavailable = true;
+      return null;
+    }
     return ratesFromRow(data as CommissionRateRow | null);
   })();
 
@@ -100,6 +115,7 @@ export default async function NewMissionPage({
         pickupPrefill={pickupPrefill}
         rateCard={rateCard}
         commissionRates={commissionRates}
+        commissionRatesUnavailable={commissionRatesUnavailable}
       />
     </div>
   );

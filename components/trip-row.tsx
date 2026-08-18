@@ -560,6 +560,7 @@ export function TripRow({
                 <BusinessCancel
                   missionId={mission.id}
                   fare={settledFare(mission)}
+                  rates={ratesOf(mission)}
                   pickupAtIso={mission.pickup_at}
                   hasDriver={!!mission.driver_id}
                   /* Gated on 'arrived' — the exact condition business_cancel_mission uses

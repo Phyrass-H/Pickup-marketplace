@@ -11,6 +11,7 @@ import {
   waitingBetween,
   WAITING_RATE_PER_MIN,
 } from "@/lib/cancellation";
+import { commissionSplit, type Rates } from "@/lib/commission";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 
@@ -59,13 +60,17 @@ const RAMP = [
 export function BusinessCancel({
   missionId,
   fare,
+  rates,
   pickupAtIso,
   hasDriver,
   waitingFromIso = null,
   waitingUntilIso = null,
 }: {
   missionId: string;
+  /** COURSE, like everything stored — converted for display by `allIn` below. */
   fare: number;
+  /** The mission's commission snapshot. NULL on a trip priced before commission. */
+  rates: Rates | null;
   pickupAtIso: string;
   hasDriver: boolean;
   /**
@@ -121,7 +126,22 @@ export function BusinessCancel({
     waitingFromIso && waitingUntilIso && now != null
       ? waitingBetween(Date.parse(waitingFromIso), Date.parse(waitingUntilIso), now)
       : { minutes: 0, fee: 0 };
-  const total = feeAmount + wait.fee;
+  // ALL IN — the only basis a Business is ever shown (docs/06 §1). Both halves of
+  // this total carry commission: the cancellation compensation ("a €90 fee becomes
+  // €103,50 paid") and the waiting meter. The WaitingPanel behind this modal already
+  // converted; this one did not, so the same minute was quoted at 1,00 € here and
+  // 1,15 € there. NULL rates (priced before commission) pass straight through.
+  //
+  // Converted PART BY PART, not once over the sum, so the split under the headline
+  // always adds up to the headline — a cent of drift against a future invoice line
+  // matters less than a total that does not reconcile on screen.
+  const allIn = (gross: number) => commissionSplit(gross, rates).businessTotal;
+  const shownFare = allIn(fare);
+  const shownFee = allIn(feeAmount);
+  const shownWait = allIn(wait.fee);
+  // What the RPC charges is `feeAmount + wait.fee` in Course space; this is the
+  // same total on the Business's side of the commission.
+  const shownTotal = shownFee + shownWait;
   // ⚑ "Free" has to mean free of EVERYTHING, not free of the percentage. The meter runs from
   // the Guest's due moment, and `guest_ready_at` is the tracked landing instant — so an early
   // flight can start the meter while pickup is still hours away and the percentage is 0.
@@ -135,7 +155,7 @@ export function BusinessCancel({
   const raiseAtIso = raise
     ? new Date(new Date(pickupAtIso).getTime() - raise.atHoursToPickup * 3_600_000).toISOString()
     : null;
-  const raiseFee = raise ? cancelFeeAmount(fare, raise.pct) : 0;
+  const raiseFee = raise ? allIn(cancelFeeAmount(fare, raise.pct)) : 0;
 
   return (
     <>
@@ -203,19 +223,19 @@ export function BusinessCancel({
                       split goes underneath so the total is still explainable. */}
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4 }}>
                     {wait.fee > 0 ? (
-                      <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(total)}</span>
+                      <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(shownTotal)}</span>
                     ) : (
                       <>
                         <span style={{ fontSize: 26, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{Math.round(pct)}%</span>
-                        <span style={{ fontSize: 18, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(feeAmount)}</span>
-                        <span style={{ fontSize: 12, color: "var(--tone-danger-fg)" }}>of {formatMoney(fare)}</span>
+                        <span style={{ fontSize: 18, fontWeight: 600, color: "var(--tone-danger-fg)" }}>{formatMoney(shownFee)}</span>
+                        <span style={{ fontSize: 12, color: "var(--tone-danger-fg)" }}>of {formatMoney(shownFare)}</span>
                       </>
                     )}
                   </div>
                   {wait.fee > 0 && (
                     <div style={{ color: "var(--tone-danger-fg)", fontSize: 12.5, marginTop: 4, opacity: 0.9 }}>
-                      {Math.round(pct)}% of {formatMoney(fare)} = {formatMoney(feeAmount)} · plus{" "}
-                      {formatMoney(wait.fee)} waiting ({wait.minutes} min)
+                      {Math.round(pct)}% of {formatMoney(shownFare)} = {formatMoney(shownFee)} · plus{" "}
+                      {formatMoney(shownWait)} waiting ({wait.minutes} min)
                     </div>
                   )}
                   {/* The percentage HOLDS until the moment below — that is the deal the step
@@ -230,7 +250,7 @@ export function BusinessCancel({
                       <>
                         {wait.fee > 0 ? "The percentage holds until " : "This price holds until "}
                         <strong style={{ fontWeight: 600 }}>{deadlineWords(raiseAtIso, now)}</strong> — then {raise.pct}% (
-                        {formatMoney(cancelFeeAmount(fare, raise.pct) + wait.fee)}), {untilWords(raiseAtIso, now)}
+                        {formatMoney(raiseFee + shownWait)}), {untilWords(raiseAtIso, now)}
                       </>
                     ) : (
                       "The percentage stops here — it cannot go above 100%."
@@ -238,7 +258,8 @@ export function BusinessCancel({
                     {wait.fee > 0 && (
                       <>
                         <br />
-                        The waiting keeps running at {formatMoney(WAITING_RATE_PER_MIN)}/min until you confirm.
+                        The waiting keeps running at {formatMoney(allIn(WAITING_RATE_PER_MIN))}/min until you
+                        confirm.
                       </>
                     )}
                   </div>
@@ -337,7 +358,7 @@ export function BusinessCancel({
                     ? "Cancel trip"
                     : free
                       ? "Cancel trip"
-                      : `Cancel — accept ${formatMoney(total)}`}
+                      : `Cancel — accept ${formatMoney(shownTotal)}`}
               </button>
             </div>
           </div>

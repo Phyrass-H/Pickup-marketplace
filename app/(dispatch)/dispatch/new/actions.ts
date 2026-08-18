@@ -227,13 +227,21 @@ export async function createMission(formData: FormData) {
   // snapshot onto the row, so re-rating later can never rewrite this trip's
   // invoice. `transport_vat_rate` stays NULL: it is the assigned Driver's
   // status, and nobody has accepted yet.
-  const { data: rateRow } = await supabase
+  const { data: rateRow, error: rateErr } = await supabase
     .from("commission_rate")
     .select(COMMISSION_RATE_COLS)
     .lte("effective_from", new Date().toISOString())
     .order("effective_from", { ascending: false })
     .limit(1)
     .maybeSingle();
+  // ⚑ A FAILED READ IS NOT "NO COMMISSION". `rates = null` is a legitimate answer —
+  // no generation in force — and it makes `course` the typed number verbatim, which
+  // is right when it is TRUE. When it is only a query that fell over, that same line
+  // stores the Business's ALL-IN maximum as the fare: the Driver is paid from the
+  // Business's gross, the invoice bills 15% on top of it, and the row is stamped
+  // "never charged a fee" forever after. Nothing downstream can tell the two apart,
+  // so refuse rather than guess. Write nothing on a rate we could not read.
+  if (rateErr) redirect(backTo("rates"));
   const rates = ratesFromRow(rateRow);
 
   // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE. The Business types (and

@@ -15,6 +15,7 @@ import { parseWaypoints } from "@/lib/waypoints";
 import { SERVICE_TIERS, type ServiceTier } from "@/lib/vehicle-catalog";
 import { canEditInfo, isExpired, missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
+import { commissionSplit, ratesOf } from "@/lib/commission";
 import { addressLine, formatDateTime, formatMoney, serviceClassLabel } from "@/lib/format";
 import { EditMissionForm } from "./edit-form";
 
@@ -129,8 +130,11 @@ export default async function EditMissionPage({
         </div>
         <div className="ex-meta">
           <span>{formatDateTime(mission.pickup_at)}</span>
+          {/* ALL IN, both of them — the stored fare and Ceiling are Course-basis
+              and this header sits beside figures that already convert. */}
           <span>
-            Fare <b>{formatMoney(settledFare(mission))}</b> · ceiling {formatMoney(mission.ceiling)}
+            Fare <b>{formatMoney(commissionSplit(settledFare(mission), ratesOf(mission)).businessTotal)}</b> ·
+            ceiling {formatMoney(commissionSplit(Number(mission.ceiling), ratesOf(mission)).businessTotal)}
           </span>
           <span>
             {serviceClassLabel(mission.category, mission.required_body_type)}
