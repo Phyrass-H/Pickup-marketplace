@@ -937,3 +937,24 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   through; what it actually means is that a Driver has committed to the trip.
 - **The route is back above the money** on an expanded trip. It's where you see how far along the trip is, so
   it shouldn't sit under an invoice.
+
+## 2026-08-18 — the same trip, the same price, wherever you look
+
+- **Cancelling a trip now quotes what you'll actually be charged.** The fee and the waiting are both shown
+  with our fee inside them, like every other number you see. The waiting meter on that screen said 1,15 € a
+  minute while the cancel box beside it said 1,00 € — same minute, two prices. One price now.
+- **Your Ceiling reads the same in all three places on the new-mission screen.** On about one amount in
+  eight, the summary on the right showed the figure you typed while the card on the left showed the figure
+  that will actually be billed — a cent apart. They agree now, and the note still tells you when we rounded
+  your number down.
+- **Drafts, the calendar, the trip you're editing and three figures on Spend** were still showing the fare
+  alone. They now show what leaves your account: cost per trip, the trips a Driver hasn't closed yet, and the
+  Ceiling on missions nobody took.
+- **A Driver is no longer told they charge no VAT when we haven't been told either.** Until a Driver takes a
+  trip we don't know their VAT status, and after a trip goes back into the Pool we forget it again. The app
+  now says nothing rather than guessing.
+- **The new-mission form stops rather than guess a price.** If we can't read the current service fee, it says
+  so and won't post — before, a bad moment could quietly shave 13% off your Ceiling every time you reopened a
+  saved draft.
+- **Nothing about the waiting rate changed.** €1 a minute is still a placeholder pending your study; the docs
+  now say so plainly, and note that the €40 / €60 caps move with it.

@@ -2764,3 +2764,100 @@ them; they are the founder's to keep until the whole-DB cleanup after step 5.
   asked whether it should instead appear only at creation and after acceptance. Argued both ways and settled on
   leaving it: **it lives behind an expand**, so nobody meets it by accident, and when a Dispatcher opens a row
   more detail is what they came for.
+
+---
+
+## Session 62 — the all-in basis sweep, and a VAT sentence the app could not honestly say (2026-08-18)
+
+Local session on the Mac, clean tree at `5622165`. The founder opened with two things: strip the
+local/online environment check from `NEXT_SESSION.md`, then a design question — *"do we need TTC on the
+hotel spend and on the driver income?"*
+
+**The answer was no, and the question found a bug instead.** `docs/06` §2 already makes every displayed
+price TTC by convention, and §1 (LOCKED, S61) settles the rest: the Business figure is all-in with the fee
+and its VAT inside, so "TTC" is redundant; the Driver's figure is neither TTC nor HT but **cash received
+after commission**, so "TTC" would invite them to read it as the fare they invoice. Offered "Total, all in"
+on the two Business breakdown totals and argued against it — the total sits directly under three named
+lines including *VAT on service fee*. Founder agreed to skip it. The app's money labels are also English;
+`TTC` would have been the first French tax token in the UI, and the invoice document (which stays French)
+is where it belongs.
+
+**The founder then proposed removing the VAT detail from the Driver's trip card entirely** ("once they have
+the info it's enough forever"). Laid out three options; they chose to **keep the four lines**. Noted the
+tension with their own message rather than silently building either one.
+
+### Shipped
+
+1. **The Driver VAT sentence no longer asserts a tax status the app doesn't know**
+   (`components/mission-run-view.tsx`). `transportVat()` coerces NULL to 0, so *"we have not been told"* and
+   *"this Driver charges no VAT"* rendered identically — as **"You charge no VAT, so there is none to declare
+   and none to reclaim."** The trigger's own comment says the intent is the opposite: *"the app renders no VAT
+   line rather than guessing one."* Now gated on `vatKnown = m.transport_vat_rate != null`. NULL is reachable
+   in production: the trigger clears the stamp on every re-pool.
+   *Live check:* 6 charged trips, 4 held by a Driver, all 4 with a real rate — nothing on screen changes today.
+   Probe left at `.local/probe/vat-null-check.ts`.
+
+2. **The cancel modal is on the Business's basis** (`components/dispatch-cancel.tsx` + its call site).
+   It quoted **1,00 €/min** for waiting while `dispatch-waiting.tsx`, on the same screen, quoted **1,15 €/min**
+   — and the fee itself was Course-basis, though `docs/06` §1 is explicit that a Business cancellation carries
+   commission (*"a €90 fee becomes €103,50 paid"*). Takes `rates` now and converts fee, fare, waiting,
+   next-raise, per-minute rate and the confirm button. Converted **part by part, not once over the sum**, so
+   the split always adds to the headline.
+   *Verified live* on a purpose-made trip (`.local/probe/cancel-modal-trip.ts`, created and removed, baseline
+   re-asserted at 277): modal reads **80% · 50,23 € of 62,79 €**, next raise **85% (53,37 €)**. Before: 43,68 €
+   of 54,60 €.
+
+3. **The Summary rail showed a Ceiling that will not be billed** (`.../new/mission-form.tsx:1023`). It printed
+   the **typed** all-in while the Pricing card and the line directly beneath it printed the **billable** one.
+   ~1 value in 8 is unreachable as a Course, so they disagreed by a cent — on the last number seen before Post.
+   *Verified live:* typing 50,02 now reads 50,01 in all three places, with "Rounded down from 50,02 €" the one
+   surviving mention of the typed figure.
+
+4. **A failed rate read is no longer treated as "no commission"** (`.../new/page.tsx`, `.../new/actions.ts`,
+   `mission-form.tsx`). Both reads dropped their error, and `ratesFromRow(null)` means *no generation in force*
+   — a legitimate state. If the page's read failed while the server's succeeded, resuming a draft seeded the
+   ALL-IN field with a raw Course and `createMission` converted it **a second time**: the stored fare falls
+   ~13% per open-and-save cycle, silently, taking the Driver's pay with it (159,40 → 138,61 → 120,53 → 104,81).
+   The mirror case — the server's read failing — stores the typed all-in as the Course, a 15% overcharge
+   stamped "never charged a fee" forever. Now: the page seeds **blank**, shows a notice and blocks both submits;
+   the action redirects `?error=rates` and writes nothing.
+
+5. **Four more Business surfaces converted** — Drafts (`Ceiling`), the Edit header (`Fare · ceiling`), the
+   Calendar drawer (converted at the page's event builder, so the component stays unaware of commission), and
+   three Spend figures: **Cost per trip** (a Course-basis numerator beside an all-in total), **Agreed, not
+   settled**, and **… of Ceiling never spent**.
+   *Verified live on /dispatch/spend:* Cost per trip 84,99 € · Agreed-not-settled 62,79 € (54,60 × 1,15) ·
+   Unfilled 308,00 € (203,00 + 105,00).
+
+6. **`docs/06` §10 now says the €1/min waiting rate is provisional.** The section is headed LOCKED and stated
+   the rate flat, while the SQL says `PROVISIONAL (D48)` and BACKLOG § N owes the research. Also recorded the
+   two places it lives (`WAITING_RATE_PER_MIN` + `v_rate` in the live `mission_waiting()`, currently defined in
+   `2026-07-22_airport_accent_fix.sql`, which superseded the original migration) and that **the caps move with
+   the rate** — €40/€60 are 40 and 60 *paid minutes*, not typed figures.
+
+7. **`project/NEXT_SESSION.md` no longer opens with the local/online check.** The S55 history entries keep the
+   word; they are a record.
+
+`tsc` clean · **415/415** throughout.
+
+### Deliberately NOT changed
+
+- **The four transport components on Spend** (Trip fares · Waiting · Cancellation fees · No-shows) stay
+  Course-basis. They are the invoice decomposition — with the two fee lines they sum to the total, exactly, per
+  `docs/06` §3. The same reasoning protects the "Transport" line on the mission form. **Do not "fix" these.**
+- **The "What went wrong" panel** reuses those same variables, so its 319,66 € is Course-basis while the
+  "17,8% of what you spent" it is measured against is all-in. Fixing it means a separate all-in accumulator,
+  not a conversion — flagged to the founder as a decision, not done unilaterally.
+
+### ⚑ FOUND, NOT FIXED — the amendment flow never got the S61 commission pass
+
+`mission_amendment.new_fare` is Course space (the accept RPC sets `ceiling = new_fare`), and **nothing
+converts it on either side**:
+- `.../[id]/amend/amend-form.tsx:133,182` — the Business types and reads a raw Course. **This is a write
+  path**: converting the display without `courseFromBusinessTotal` on the way in would store a 15%
+  over-priced fare.
+- `components/trip-row.tsx:620,678` — the Business's own row, raw Course.
+- `components/amendment-card.tsx:118` — rendered inside `mission-run-view.tsx`, i.e. **the Driver**, showing a
+  gross figure. That contradicts the LOCKED §1 ruling that no gross number exists anywhere in the Driver's app.
+
+Three display sites plus one write path. Awaiting the founder's go.

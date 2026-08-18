@@ -7,27 +7,12 @@
 
 We're continuing Kavenue (B2B VTC booking marketplace).
 
-**⚑ FIRST, BEFORE ANYTHING ELSE — WORK OUT WHERE YOU ARE RUNNING.** This file used to open by asserting "this is
-a local session on my Mac". That stopped being true (S55 ran online), and a session that assumes wrong will
-promise verification it cannot deliver. Check it, don't guess:
+**This is a local session on the Mac** — working directory `…/02_Cactus/Kavenue/Kavenue_project_dev`, with
+`.env.local` and `node_modules` in place. Don't spend a turn working out where you're running.
 
-| | **On the Mac** (local) | **Online** (Claude Code on the web / a cloud container) |
-| --- | --- | --- |
-| Working directory | `…/02_Cactus/Kavenue/Kavenue_project_dev` | `/home/user/Pickup-marketplace` |
-| `.env.local` | present | **absent** |
-| Platform | darwin | linux |
-| `node_modules` | there | usually absent — `npm install` first |
-
-- **On the Mac:** everything works. `npm run dev`, the browser preview, reads against the real Supabase DB, the
-  D25 preview loop. Push to `main` and Vercel auto-deploys — **Claude Code is allowed to push `main`**
-  (`autoMode.allow` in `.claude/settings.local.json`).
-- **Online:** there is **no `.env.local`, so no Supabase and no browser.** Anything needing the live DB, a real-data
-  check or a D25 browser preview is **off the table — say so in your opening message** rather than half-doing it
-  and discovering it later. `next build` needs the env vars to *exist*, so run it once with placeholder values to
-  prove the code compiles. You are on an **assigned branch, not `main`** — push there and let the founder merge
-  (they may then ask you to fast-forward `main` yourself; S55 did).
-  **What online sessions are good for:** pure logic, tests, refactors, docs — work whose proof is `npm test` +
-  `tsc` + `next build`, not a screenshot. Session 55 is the worked example.
+Everything works: `npm run dev`, the browser preview, reads against the real Supabase DB, the D25 preview loop.
+Push to `main` and Vercel auto-deploys — **Claude Code is allowed to push `main`**
+(`autoMode.allow` in `.claude/settings.local.json`).
 
 **⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-16, S60).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
@@ -1183,11 +1168,8 @@ SPEED WIN — never "client"/"principal"); Kavenue is an AGENT, never principal;
 schema is ALREADY APPLIED — never re-run it (additive ALTERs only, founder-approved, in `docs/migrations/`);
 build only KEEP items (Doc 02).
 
-WORKFLOW: work on `main` (or a branch off it) for code — **online sessions work on their assigned branch, not
-`main`** (see the environment check at the top). Keep **`npm test`** + `tsc` + `next build` green; verify in the
-browser preview vs the real Supabase DB **when you're on the Mac** — an online session can't, and should say so
-rather than implying it did. ⚠️ The deployment check below (`gh api`) also needs the Mac; an online session has
-no `gh` and no API token, so it must ask the founder to confirm the Vercel deploy landed. **Don't run `next build` while the `next dev` preview is running** — it corrupts
+WORKFLOW: work on `main` (or a branch off it) for code. Keep **`npm test`** + `tsc` + `next build` green; verify
+in the browser preview vs the real Supabase DB. **Don't run `next build` while the `next dev` preview is running** — it corrupts
 `.next` (ChunkLoadError); if it happens, `rm -rf .next` + restart the dev server. Push `main` to deploy (Claude
 Code may push). Append to `project/SESSION_LOG.md` when a chunk is done; keep `project/CHANGELOG.md` updated with
 a plain-language line per shipped item.

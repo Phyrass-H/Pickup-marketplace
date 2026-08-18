@@ -454,6 +454,16 @@ Courtesy **20 min city / 60 min airport**, then **€1/min** Business → Driver
 €60 airport**. Derived from status timestamps, never typed. Billed at completion, carrying both
 commissions.
 
+⚑ **THE €1/min IS A PLACEHOLDER, NOT A LOCKED RATE (D48).** The founder set it to unblock the build and the
+research is still owed (BACKLOG § N) — the rest of this section is locked, that number is not. It lives in
+exactly two places, on purpose: `WAITING_RATE_PER_MIN` in `lib/cancellation.ts` (what is displayed) and
+`v_rate` in the live `mission_waiting()` (what is charged — currently defined in
+`docs/migrations/2026-07-22_airport_accent_fix.sql`, which superseded the original migration). Changing it
+never re-prices a settled trip: `mission.waiting_rate` is stamped onto each row.
+⚠️ **The caps move with the rate.** €40 / €60 are not typed anywhere — they are 40 and 60 *paid minutes*
+(the 60/120-minute money ceiling less the courtesy wait) times the rate, so at €1,50 they become €60 / €90.
+Decide the minute ceilings in the same pass as the rate.
+
 ⛔ **The clock starts when the GUEST was due** — `guest_ready_at ?? pickup_at` — **never from the
 Driver's "I've arrived" tap.** Anchoring it to arrival was a live exploit and was fixed. Do not
 re-introduce it.
