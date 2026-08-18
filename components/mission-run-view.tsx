@@ -203,7 +203,11 @@ export function MissionRunView({
             <CloseTripCard
               missionId={m.id}
               boarded={m.status === "on_board"}
-              fare={settledFare(m)}
+              // NET, like every other figure a Driver reads. The card says
+              // "closing settles X - the fare you accepted", and X has to be the
+              // number the footer, My Rides and Earnings will show the instant
+              // they tap Yes. It was the last gross fare left in their app.
+              fare={driverNet(m, settledFare(m))}
               line={closingLine(m)}
             />
           )}

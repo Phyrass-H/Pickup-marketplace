@@ -14,6 +14,7 @@ import {
   type HistoryRow,
 } from "@/lib/history-filter";
 import { rowCost } from "@/lib/spend";
+import { businessCost } from "@/lib/commission";
 import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -165,8 +166,11 @@ export async function GET(req: NextRequest) {
         // was already inside. Same definition on both surfaces now, and the same
         // column name the Spend export uses.
         r.counted && (r.fare != null || waiting > 0) ? euro(rowCost(r)) : "",
-        r.counted ? "" : euro(r.fare),
-        waiting > 0 ? euro(waiting) : "",
+        // ⚑ ALL IN, and the unsettled column now carries fare + waiting, exactly
+        // like the Spend export and the tile both files mirror. It was writing a
+        // bare Course with the waiting dropped, beside an all-in "Cost to you".
+        r.counted ? "" : euro(businessCost(m, Number(r.fare ?? 0) + waiting)),
+        waiting > 0 ? euro(businessCost(m, waiting)) : "",
         note,
       ]
         .map(cell)

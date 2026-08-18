@@ -26,6 +26,7 @@ import {
   avoidable,
   type SpendTotals,
 } from "@/lib/spend";
+import { businessCost } from "@/lib/commission";
 import {
   comparisonSpan,
   currentSpan,
@@ -651,7 +652,9 @@ export default async function DispatchSpend({
                   // included — so the row sums to the bar above it and the
                   // "incl. … waiting" note under it is finally true. A row that
                   // isn't settled keeps showing its agreed fare, greyed.
-                  fare={r.counted ? rowCost(r) : r.fare}
+                  fare={
+                    r.counted ? rowCost(r) : r.fare == null ? null : businessCost(r.mission, r.fare)
+                  }
                   farePending={!r.counted}
                   query={query.q}
                   matchedOn={matches.get(r.mission.id) ?? null}

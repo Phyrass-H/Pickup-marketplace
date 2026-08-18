@@ -2904,3 +2904,48 @@ commission) is still handled correctly. The four transport components are untouc
 Cancellation fees 154,11 → 177,23 · Waiting 94,00 → 96,55 · No-shows unchanged at 71,55, correctly — that
 trip predates commission.
 
+### Session 62 part D — the pre-curve money audit, and the six things it found (2026-08-18)
+
+A six-way sweep of every money surface and write path, each finding then handed to a separate agent told to
+**refute** it. **26 raised, 15 survived**, collapsing to six real defects. The 11 refutations were mostly the
+two deliberate exceptions being mistaken for bugs (the §3 invoice decomposition, the gross Driver
+cancellation penalty) — worth knowing that both read as bugs to a fresh pair of eyes.
+
+1. **The last gross fare in the Driver's app.** `CloseTripCard` was handed `settledFare(m)` raw
+   (`mission-run-view.tsx:206`) and rendered it as *"closing settles X — the fare you accepted"*. On a
+   100,00 € Course it promised 100,00 € and paid 88,00 € the instant they tapped Yes. `f85715f` netted
+   every other Driver surface and missed this call site; `close-trip-card.tsx` has one commit and imports
+   nothing from `lib/commission`. Now `driverNet(m, settledFare(m))`.
+2. **My Rides dropped the waiting.** The card showed `driverNet(m, settledFare(m))` while the trip's own
+   page showed `missionAmount(m)` — fare **plus** settled waiting. Waiting settles at boarding and
+   `on_board` is in `ACTIVE_STATUSES`, so the two disagreed live, with the smaller number on the card seen
+   first. Both now use `missionAmount`, the definition Earnings and Past rides already share.
+3. **Unsettled rows showed the Course** on the archive and on Spend (`r.counted ? rowCost(r) : r.fare`).
+   The bare-fare-no-waiting choice is deliberate for those rows; the basis was not.
+4. **"incl. … waiting" was short by the fee** everywhere it appeared — the row caption, the archive summary
+   line, and both CSV exports. It is a containment claim about a total built with `businessCost(fare +
+   waiting)`, so it has to be the all-in waiting.
+5. **Both CSV exports** were writing Course-basis columns beside all-in ones — "Of which waiting",
+   "Agreed, not settled" (which also dropped waiting entirely in the History export) and "Ceiling". A
+   spreadsheet could not reconcile its own columns.
+6. **"Highest fare" sorted on a quantity nobody could see** (`history-filter.ts` `byFare`): the bare Course,
+   waiting excluded, so the column visibly disordered itself — and a pre-commission trip was compared
+   against a post-commission one 15% larger. Now keys on the same figure the column renders.
+
+**And the one that needed thinking rather than a conversion — the breakdown decomposed the wrong amount.**
+`fareSplit` was always `splitFor(mission, settledFare(mission))`, so "What you pay" disagreed with the row's
+own headline on two endings. Live, before: a cancelled trip's headline read *"177,23 € · Your cancellation
+fee"* while the table under it read *"What you pay … Total 157,53 €"* — the fare of a trip that never ran —
+followed by *"You saved 39,38 €"*. A completed trip with waiting totalled the fare alone.
+
+Now a second split, `paidSplit`, over **what the row's amount is actually made of** (`historyFare`'s rule in
+Course space): a cancelled trip decomposes its fee, an expired one gets no table, and waiting has its own
+line so "Transport" means transport. Gated on `carriesCommission`, mirroring `businessCost`, so a
+Driver-cancelled indemnity stays one plain amount. "You saved" no longer renders on a cancellation.
+
+*Verified live on the S61DEMO archive:* cancelled → Cancellation fee 154,11 · fee 19,26 · VAT 3,86 ·
+**Total 177,23 €**, matching its headline. Completed-with-waiting → Transport 69,18 · Waiting 17,00 ·
+fee 10,77 · VAT 2,16 · **Total 99,11 €**, matching its headline and its "incl. 19,55 € waiting" caption.
+
+`tsc` clean · 415/415.
+

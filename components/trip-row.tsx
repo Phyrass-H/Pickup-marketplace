@@ -6,7 +6,7 @@ import { closeRelease } from "@/app/(dispatch)/dispatch/actions";
 import { settledFare } from "@/lib/pdp";
 import { tripDistanceKm } from "@/lib/geo";
 import { parseWaypoints } from "@/lib/waypoints";
-import { ratesOf, splitFor } from "@/lib/commission";
+import { businessCost, carriesCommission, ratesOf, splitFor } from "@/lib/commission";
 import {
   addressLine,
   formatDateTime,
@@ -297,7 +297,12 @@ export function TripRow({
   // number and named nowhere. Suffix it wherever it is part of the total.
   // Deliberately NOT on a `farePending` row: that one shows the bare agreed fare
   // and is excluded from every total, so there is no waiting folded into it.
-  const waitingNote = waitingFee > 0 ? `incl. ${formatMoney(waitingFee)} waiting` : null;
+  // ALL IN. "incl." is a containment claim about the amount directly above,
+  // which is rowCost() - fare AND waiting put through the commission together.
+  // Naming the Course here left the note ~15% short of the waiting actually
+  // inside that total, on exactly the rows a Dispatcher queries.
+  const waitingNote =
+    waitingFee > 0 ? `incl. ${formatMoney(businessCost(mission, waitingFee))} waiting` : null;
 
   // ── What the Business pays (docs/06 §1, §3) ───────────────────────────────
   // `settledFare` and `mission.ceiling` are the COURSE — the Driver's side of
@@ -308,6 +313,29 @@ export function TripRow({
   const ceilingSplit = splitFor(mission, Number(mission.ceiling));
   // Only once a Driver holds it: while the price is still climbing, "saved" is
   // a claim about a number that is still moving.
+  // ⚑ WHAT THE ROW'S OWN AMOUNT IS MADE OF, in Course space — `historyFare`'s
+  // rule, so the "What you pay" table can never total something other than the
+  // figure at the top of the row. It used to decompose the accepted fare always,
+  // which disagreed on two endings:
+  //   · a trip with waiting — the headline included it, the table did not;
+  //   · a CANCELLED trip — the headline said "177,23 € · Your cancellation fee"
+  //     while the table underneath said "What you pay … Total 157,53 €", the
+  //     fare of a trip that never ran and was never billed.
+  // An expired mission billed nothing at all, so it gets no table.
+  // `carriesCommission` mirrors `businessCost`: a Driver-cancelled trip is an
+  // indemnity, no fee comes off it, so it stays one plain amount.
+  const billedGross = expired
+    ? null
+    : mission.status === "cancelled"
+      ? mission.cancellation_fee == null
+        ? null
+        : Number(mission.cancellation_fee) + waitingFee
+      : settledFare(mission) + waitingFee;
+  const paidSplit =
+    billedGross == null || !carriesCommission(mission)
+      ? null
+      : splitFor(mission, billedGross);
+
   const savedAgainstMax = mission.accepted_at
     ? Math.round((ceilingSplit.businessTotal - fareSplit.businessTotal) * 100) / 100
     : 0;
@@ -841,18 +869,28 @@ export function TripRow({
             stay separable. Absent on a mission priced before commission
             existed — it was billed no fee, and inventing lines for it would be
             a lie about what was charged. */}
-        {fareSplit.charged && (
+        {paidSplit?.charged && (
           <div className="dx-panel">
             <div className="dx-panel__h">What you pay</div>
             <dl className="dx-fee">
-              <dt>Transport</dt>
-              <dd>{formatMoney(fareSplit.course)}</dd>
+              {/* The first line names what the money is FOR, so it has to be the
+                  charge alone — waiting gets its own line when there is any.
+                  They are exact halves of `paidSplit.course`, so the table still
+                  adds up to the total. */}
+              <dt>{mission.status === "cancelled" ? "Cancellation fee" : "Transport"}</dt>
+              <dd>{formatMoney(paidSplit.course - waitingFee)}</dd>
+              {waitingFee > 0 && (
+                <>
+                  <dt>Waiting</dt>
+                  <dd>{formatMoney(waitingFee)}</dd>
+                </>
+              )}
               <dt>Service fee ({formatRate(mission.commission_business_rate)})</dt>
-              <dd>{formatMoney(fareSplit.businessFeeHt)}</dd>
+              <dd>{formatMoney(paidSplit.businessFeeHt)}</dd>
               <dt>VAT on service fee</dt>
-              <dd>{formatMoney(fareSplit.businessFeeVat)}</dd>
+              <dd>{formatMoney(paidSplit.businessFeeVat)}</dd>
               <dt className="dx-fee__tot">Total</dt>
-              <dd className="dx-fee__tot">{formatMoney(fareSplit.businessTotal)}</dd>
+              <dd className="dx-fee__tot">{formatMoney(paidSplit.businessTotal)}</dd>
             </dl>
             {/* docs/06 §6: "the row shows what they saved against that maximum —
                 the argument for the whole auction, made visible on every
@@ -863,7 +901,9 @@ export function TripRow({
                 already in the tile above, and the fee is in the table above
                 that; repeating them here made a simple, good piece of news read
                 like an accounting note. */}
-            {savedAgainstMax > 0 && (
+            {/* Only where it means something: a cancelled trip saved nobody
+                anything, and the line sat under a cancellation fee. */}
+            {savedAgainstMax > 0 && mission.status !== "cancelled" && (
               <p className="dx-fee__saved">You saved {formatMoney(savedAgainstMax)}</p>
             )}
           </div>

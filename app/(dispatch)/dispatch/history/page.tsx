@@ -20,6 +20,7 @@ import {
   type Sort,
 } from "@/lib/history-filter";
 import { rowCost } from "@/lib/spend";
+import { businessCost } from "@/lib/commission";
 import type { MissionRow, VehicleCategory } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -152,7 +153,9 @@ export default async function DispatchHistory({
   let waitingPart = 0;
   for (const r of shown) {
     spend += rowCost(r);
-    if (r.counted) waitingPart += Number(r.mission.waiting_fee ?? 0);
+    // ALL IN, like `spend` beside it - it is rendered as "incl. … waiting"
+    // INSIDE that figure, and rowCost puts the waiting through the commission.
+    if (r.counted) waitingPart += businessCost(r.mission, Number(r.mission.waiting_fee ?? 0));
   }
 
   // Classes that actually occur in this archive — a dropdown offering "First"
@@ -298,12 +301,17 @@ export default async function DispatchHistory({
               }}
             />
             {list.map((r) => (
+              // An unsettled row deliberately shows the bare agreed fare, with no
+              // waiting folded in — but a Business is still only ever shown its own
+              // side of that fare.
               <TripRow
                 key={r.mission.id}
                 mission={r.mission}
                 driver={contacts.get(r.mission.id) ?? null}
                 archived
-                fare={r.counted ? rowCost(r) : r.fare}
+                fare={
+                  r.counted ? rowCost(r) : r.fare == null ? null : businessCost(r.mission, r.fare)
+                }
                 farePending={!r.counted}
                 query={query.q}
                 matchedOn={matches.get(r.mission.id) ?? null}

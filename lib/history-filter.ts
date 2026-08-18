@@ -7,6 +7,7 @@
 import type { MissionRow, VehicleCategory } from "@/lib/database.types";
 import { isExpired, parisDayKey } from "@/lib/dispatch-status";
 import { settledFare } from "@/lib/pdp";
+import { businessCost } from "@/lib/commission";
 import { parsePassengers, passengerName } from "@/lib/passengers";
 import { serviceClassLabel } from "@/lib/format";
 import {
@@ -448,9 +449,19 @@ export function applyHistoryQuery(all: HistoryRow[], q: HistoryQuery): HistoryRe
 
   // A trip with no fare (unfilled) sorts to the bottom either way rather than
   // pretending to be €0 — the same rule the Driver's archive uses for "—".
+  // ⚑ SORT ON WHAT IS RENDERED. The Fare column shows `rowCost(r)` — the
+  // Business's all-in figure, waiting included — so keying on the bare Course
+  // made the column visibly disorder itself two ways: waiting was in the number
+  // and not in the key, and a pre-commission trip was compared against a
+  // post-commission one 15% larger. Mirrors `rowCost` rather than importing it,
+  // to keep this file free of a runtime dependency on lib/spend.
+  const shownFare = (r: HistoryRow): number | null =>
+    r.fare == null
+      ? null
+      : businessCost(r.mission, r.fare + Number(r.mission.waiting_fee ?? 0));
   const byFare = (a: HistoryRow, b: HistoryRow, dir: number) => {
-    const av = a.fare,
-      bv = b.fare;
+    const av = shownFare(a),
+      bv = shownFare(b);
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;

@@ -973,3 +973,27 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   measured against what actually left your account, so the amounts had to be on that same footing. It now
   reads 345,33 € — 19,3 % of what you spent, where it used to say 319,66 € — 17,8 %. Nothing changed about
   what you were charged; the panel was simply understating what those trips cost you.
+
+## 2026-08-18 (evening) — a full check of every money screen, and six fixes
+
+Six passes over the app looking for numbers that disagree with each other, then a second round trying to
+prove each one wrong. Twenty-six suspicions, eleven of them false. The six real ones:
+
+- **A Driver closing a trip was told the wrong figure.** The card said "closing settles 100,00 € — the fare
+  you accepted", then paid them 88,00 €. It was the last place in their app quoting a number that was never
+  theirs.
+- **A Driver's ride list left out the waiting** they'd already earned, while the trip's own page included
+  it. Same trip, two amounts, the smaller one on the screen they see first.
+- **Trips a Driver hasn't closed** showed you the fare without our fee, sitting in a list where every other
+  row includes it.
+- **"incl. 40,00 € waiting"** was short — the total above it actually contained 46,00 €. Fixed on the row,
+  on the archive summary, and in both spreadsheet exports.
+- **The two CSV exports** had columns on two different footings, so the file couldn't be reconciled against
+  itself. All columns now agree.
+- **Sorting by highest fare** ranked on the old number and ignored waiting, so the list visibly came out in
+  the wrong order.
+
+**And the breakdown now explains the number above it.** On a cancelled trip the row said "177,23 € · your
+cancellation fee" while the table underneath said "what you pay: 157,53 €" — the price of a trip that never
+happened — and cheerfully added "you saved 39,38 €". The table now breaks down what you were actually
+charged, waiting has its own line, and an unfilled mission gets no table at all because nothing was billed.

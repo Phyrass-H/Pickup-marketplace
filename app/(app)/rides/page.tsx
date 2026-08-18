@@ -12,8 +12,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
-import { settledFare } from "@/lib/pdp";
-import { driverNet } from "@/lib/commission";
+import { missionAmount } from "@/lib/earnings";
 import {
   formatDayGroup,
   formatMoney,
@@ -184,7 +183,7 @@ function RideCard({
         <span className="pcard__facts">
           <Building2 size={13} aria-hidden="true" />
           {bizName}
-          <span className="pcard__veh">{formatMoney(driverNet(m, settledFare(m)))}</span>
+          <span className="pcard__veh">{formatMoney(missionAmount(m))}</span>
         </span>
       </div>
     </Link>

@@ -12,6 +12,7 @@ import {
   type HistoryRow,
 } from "@/lib/history-filter";
 import { minutesToAccept, rowCost } from "@/lib/spend";
+import { businessCost } from "@/lib/commission";
 import { currentSpan, LENS_LABEL, parseSpendQuery, type Lens } from "@/lib/spend-filter";
 import type { MissionRow } from "@/lib/database.types";
 
@@ -181,9 +182,13 @@ export async function GET(req: NextRequest) {
         // closed — and the "not settled" column beside it now carries the same
         // fare+waiting the page's own unsettled tile shows, so the CSV and the
         // screen can't report two different numbers for one filter.
-        waiting > 0 ? euro(waiting) : "",
-        r.counted ? "" : euro(Number(r.fare ?? 0) + waiting),
-        euro(Number(m.ceiling)),
+        // ⚑ ALL IN, like every column beside it. These three were still writing
+        // the Course after commission shipped on 2026-08-17, so a spreadsheet
+        // could not reconcile: "Of which waiting" claims to be part of "Cost to
+        // you", and "Agreed, not settled" claims to mirror the page's own tile.
+        waiting > 0 ? euro(businessCost(m, waiting)) : "",
+        r.counted ? "" : euro(businessCost(m, Number(r.fare ?? 0) + waiting)),
+        euro(businessCost(m, Number(m.ceiling))),
         took == null ? "" : String(Math.round(took)),
         note,
       ]
