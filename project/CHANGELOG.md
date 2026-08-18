@@ -958,3 +958,11 @@ Older shipped-work entries live in **`project/CHANGELOG_ARCHIVE.md`** to keep th
   saved draft.
 - **Nothing about the waiting rate changed.** €1 a minute is still a placeholder pending your study; the docs
   now say so plainly, and note that the €40 / €60 caps move with it.
+
+## 2026-08-18 (later) — changing a booked trip's price
+
+- **The screen where you change a trip's fare now works in the same money as everywhere else.** You type
+  what you'll pay, fee included, and that's what you'll be charged — before, the figure you typed was
+  stored as the fare alone, so the trip would have cost you about 15% more than the number on your screen.
+- **Your Driver sees what they'll be paid, not the gross.** Their card showed a figure that was never
+  theirs to keep. It now shows the same kind of number as everywhere else in their app.

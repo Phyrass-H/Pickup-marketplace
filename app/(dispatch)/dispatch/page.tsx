@@ -18,6 +18,7 @@ import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
 import { parseChangeItems } from "@/lib/info-changes";
 import { parseWaypoints } from "@/lib/waypoints";
 import { releaseDeclineReasonLabel } from "@/lib/releases";
+import { commissionSplit, ratesOf } from "@/lib/commission";
 import {
   parseFromSnapshot,
   routeDiff,
@@ -27,7 +28,10 @@ import {
 import type { MissionRow, MissionAmendmentRow, MissionReleaseRow } from "@/lib/database.types";
 
 // Reduce a stored amendment to the compact brief the schedule row renders.
-function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
+// ⚑ `m` is here for one reason: both fares are Course-basis in the row and a
+// Business is only ever shown its own side of them (docs/06 §1). The mission's
+// own snapshot rates, so a rate change never re-prices an agreed trip.
+function buildBrief(a: MissionAmendmentRow, m: MissionRow): AmendmentBrief {
   const from = parseFromSnapshot(a.from_snapshot);
   const diff = routeDiff(
     { pickup: from.pickup_address, dropoff: from.dropoff_address, waypoints: from.waypoints },
@@ -41,8 +45,8 @@ function buildBrief(a: MissionAmendmentRow): AmendmentBrief {
     id: a.id,
     status: a.status,
     summary: changeSummary(diff),
-    fareOld: from.fare,
-    fareNew: Number(a.new_fare),
+    fareOld: from.fare == null ? null : commissionSplit(from.fare, ratesOf(m)).businessTotal,
+    fareNew: commissionSplit(Number(a.new_fare), ratesOf(m)).businessTotal,
     declineReason: declineReasonLabel(a.decline_reason),
     at: a.responded_at ?? a.created_at,
   };
@@ -202,7 +206,8 @@ export default async function DispatchSchedule({
     for (const a of ams ?? []) {
       if (seen.has(a.mission_id)) continue; // keep only the latest per mission
       seen.add(a.mission_id);
-      amendments.set(a.mission_id, buildBrief(a));
+      const am = (missions ?? []).find((x) => x.id === a.mission_id);
+      if (am) amendments.set(a.mission_id, buildBrief(a, am));
     }
   }
 

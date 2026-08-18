@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { parseWaypoints } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
+import { commissionSplit, ratesOf } from "@/lib/commission";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import {
   addressLine,
@@ -68,7 +69,11 @@ export default async function AmendMissionPage({
   const t = missionTone(mission);
   const amendable = AMENDABLE.includes(mission.status);
   const waypoints = parseWaypoints(mission.waypoints);
-  const fare = settledFare(mission);
+  // ALL IN. `settledFare` is Course-basis like everything stored; a Business
+  // types and reads its own side of the price (docs/06 §1). `proposeAmendment`
+  // converts it back with `courseFromBusinessTotal` before it writes, exactly as
+  // `createMission` does with the Ceiling — the column keeps storing the fare.
+  const fare = commissionSplit(settledFare(mission), ratesOf(mission)).businessTotal;
 
   const pickupDefault: Place | null =
     mission.pickup_lat != null && mission.pickup_lng != null

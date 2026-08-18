@@ -3,6 +3,7 @@
 // accept/decline. Extracted from the old rides list so the dedicated mission page
 // (/missions/[id], the "opened" run view) can render them too.
 import { settledFare } from "@/lib/pdp";
+import { driverNet } from "@/lib/commission";
 import { parseWaypoints } from "@/lib/waypoints";
 import { routeDiff, parseFromSnapshot } from "@/lib/amendments";
 import { formatAgo, formatDateTime, shortPlaceLabel } from "@/lib/format";
@@ -86,8 +87,11 @@ export function buildAmendmentData(
     removedStops: diff.removedStops,
     wasLabel,
     note: a.note,
-    fareOld: from.fare ?? settledFare(m),
-    fareNew: Number(a.new_fare),
+    // ⚑ NET. Both figures are Course-basis in the row, and the price a Driver is
+    // shown IS what they bank — there is no gross number anywhere in their app
+    // (docs/06 §1, LOCKED). This card was the one place still showing one.
+    fareOld: driverNet(m, from.fare ?? settledFare(m)),
+    fareNew: driverNet(m, Number(a.new_fare)),
     distOld: from.distance_km,
     durOld: from.duration_min,
     distNew: a.new_distance_km != null ? Number(a.new_distance_km) : null,

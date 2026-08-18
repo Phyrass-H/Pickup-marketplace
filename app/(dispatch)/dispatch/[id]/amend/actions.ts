@@ -8,6 +8,7 @@ import { isValidLatLng } from "@/lib/geo";
 import { routeMetrics } from "@/lib/directions";
 import { parseWaypointsField } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
+import { courseFromBusinessTotal, ratesOf } from "@/lib/commission";
 import { buildFromSnapshot } from "@/lib/amendments";
 import type { MissionStatus } from "@/lib/database.types";
 
@@ -65,8 +66,17 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
   if (!pickupAddress || !pickupValid) redirect(backTo("missing"));
   if (!dropoffAddress || !dropoffValid) redirect(backTo("nodrop"));
 
-  const newFare = num(formData.get("new_fare"));
-  if (newFare == null || newFare <= 0) redirect(backTo("fare"));
+  // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE — the same split the Ceiling
+  // has had since S61. `accept_amendment` sets `ceiling = new_fare`, so what is
+  // stored here has to be a Course or accepting a change would inflate the trip
+  // by the whole service fee. Validated on the typed figure, stored converted.
+  //
+  // The mission's OWN snapshot rates, never the live ones: this trip's invoice is
+  // already stamped, and a rate change tomorrow must not re-price a trip agreed
+  // today.
+  const newFareAllIn = num(formData.get("new_fare"));
+  if (newFareAllIn == null || newFareAllIn <= 0) redirect(backTo("fare"));
+  const newFare = courseFromBusinessTotal(newFareAllIn, ratesOf(mission));
 
   const note = String(formData.get("note") ?? "").trim();
 

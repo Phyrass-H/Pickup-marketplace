@@ -2860,4 +2860,32 @@ converts it on either side**:
 - `components/amendment-card.tsx:118` — rendered inside `mission-run-view.tsx`, i.e. **the Driver**, showing a
   gross figure. That contradicts the LOCKED §1 ruling that no gross number exists anywhere in the Driver's app.
 
-Three display sites plus one write path. Awaiting the founder's go.
+Three display sites plus one write path. **Founder said go — done, see below.**
+
+### Session 62 part B — the amendment flow gets the commission pass (2026-08-18)
+
+`mission_amendment.new_fare` is Course space (`accept_amendment` sets `ceiling = new_fare`), and nothing
+converted it on either side. Fixed at the four boundaries, so no rendering component had to learn that
+commission exists:
+
+- **`.../[id]/amend/page.tsx`** — the "Agreed fare" and the pre-filled field are now the Business's all-in.
+- **`.../[id]/amend/actions.ts`** — ⚑ the write. Validates the typed all-in, then stores
+  `courseFromBusinessTotal(typed, ratesOf(mission))`. **The mission's own snapshot rates, never the live
+  ones** — this trip's invoice is already stamped, and a rate change tomorrow must not re-price a trip
+  agreed today. Without this the display fix alone would have stored a 15% over-priced fare.
+- **`.../dispatch/page.tsx`** — `buildBrief` now takes the mission and converts both fares to the
+  Business's side.
+- **`lib/mission-cards.ts`** — `buildAmendmentData` converts both to `driverNet`. This card was the one
+  place in the Driver's app still showing a gross figure, against the LOCKED §1 ruling.
+
+*Verified end to end on the live DB*, on the `S61DEMO` confirmed trip (Course 84):
+typed **70,00** → stored **60,87** (a Course) → the Business's schedule row reads *"Fare change · fare
+62,79 € → 70,00 €"*, the Driver's card reads *"Your fare 48,05 € → 53,57 €"*, and `mission.ceiling` is
+untouched at 84. Before the fix, typing 70,00 stored 70,00 as the Course: the Business would have been
+billed 80,50 and the Driver paid 61,60. Amendment row deleted afterwards, baseline re-asserted at 277.
+Probe: `.local/probe/amend-check.ts`.
+
+⚑ **The snap applies here too, undocumented on screen.** About one all-in value in eight is unreachable as
+a Course, so a typed fare can come back a cent under. The mission form says *"Rounded down from…"*; the
+amend form does not. Left as is — same direction as the Ceiling (never above what was typed) — but if a
+Business ever queries the cent, that is why.
