@@ -162,6 +162,12 @@ export function MissionRunView({
   // the footer shows, so the breakdown and the total can never disagree.
   const payment = splitFor(m, grossToDriver(m));
   const vatCollected = transportVat(payment.course, m.transport_vat_rate);
+  // NULL is not zero. The trigger stamps 0 for a Driver under *franchise en base*
+  // and leaves NULL when nobody has been attached yet, when the trip was re-pooled,
+  // or when no rate generation was in force (2026-08-17_transport_vat_snapshot).
+  // "We don't know" must never render as "you charge none" — that is a statement
+  // about someone's tax affairs.
+  const vatKnown = m.transport_vat_rate != null;
 
   return (
     <>
@@ -419,17 +425,20 @@ export function MissionRunView({
                 <dt className="dfee__tot">Paid to you</dt>
                 <dd className="dfee__tot">{formatMoney(payment.driverNet)}</dd>
               </dl>
-              <p className="dfee__note">
-                {vatCollected > 0 ? (
-                  <>
-                    The fare carries {formatMoney(vatCollected)} of VAT you collect and
-                    declare, and you reclaim the {formatMoney(payment.driverFeeVat)} above.
-                    After settling both you keep {formatMoney(driverKeeps(payment, m.transport_vat_rate))}.
-                  </>
-                ) : (
-                  <>You charge no VAT, so there is none to declare and none to reclaim.</>
-                )}
-              </p>
+              {/* Only when the snapshot answered. See `vatKnown` above. */}
+              {vatKnown && (
+                <p className="dfee__note">
+                  {vatCollected > 0 ? (
+                    <>
+                      The fare carries {formatMoney(vatCollected)} of VAT you collect and
+                      declare, and you reclaim the {formatMoney(payment.driverFeeVat)} above.
+                      After settling both you keep {formatMoney(driverKeeps(payment, m.transport_vat_rate))}.
+                    </>
+                  ) : (
+                    <>You charge no VAT, so there is none to declare and none to reclaim.</>
+                  )}
+                </p>
+              )}
             </div>
           )}
 
