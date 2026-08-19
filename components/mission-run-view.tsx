@@ -494,6 +494,7 @@ export function MissionRunView({
             missionId={m.id}
             fare={settledFare(m)}
             rates={ratesOf(m)}
+            category={m.category}
             guestDueIso={guestDueAt(m).toISOString()}
             availableAtIso={noShowAvailableAt(m, arrivedAtIso).toISOString()}
             waitMinutes={noShowWaitMinutes(isAirportPickup(m))}

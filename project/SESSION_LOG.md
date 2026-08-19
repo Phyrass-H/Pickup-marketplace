@@ -2986,3 +2986,30 @@ in one go.
 synthesis agent. The two surviving groups from the first run were recovered with `resumeFromRunId` rather
 than re-run.
 
+### Session 62 part F — the waiting rate, built (2026-08-18)
+
+Founder said build it. Eco **0,50** · Business **0,75** · First **1,00** €/min, replacing the flat 1,00.
+
+- **`lib/cancellation.ts`** — `WAITING_RATE_PER_MIN` is now a `Record<VehicleCategory, number>` and
+  `waitingBetween()` takes `ratePerMin` as a **required 4th argument**. Deliberate: a default would let a
+  screen quietly bill the wrong class, where a required argument makes the compiler find every call site.
+  It found all seven. Added `round2` — a per-class rate makes the meter float-unsafe (3 × 0,75 is
+  2.2500000000000004), and Postgres rounds half away from zero on `round(w_min * v_rate, 2)`.
+- **`waitingAt()`** now needs `category` in its `Pick<>`, so it reads the rate from the mission itself.
+- **The three meters** — `dispatch-waiting.tsx`, `dispatch-cancel.tsx`, `rides/cancel-noshow.tsx` — each take
+  a `category` prop; `trip-row.tsx` and `mission-run-view.tsx` pass `mission.category`.
+- **`docs/migrations/2026-08-18_waiting_rate_by_class.sql`** — `mission_waiting()`'s `v_rate` becomes a CASE
+  on `p_mission.category`. Otherwise the 2026-07-22 body verbatim. **Founder runs it.**
+- **Tests: 415 → 417.** The fixture is `category: "business"`, so every euro figure in the D48 block moved to
+  0,75 (40-min cap 40,00 → 30,00; airport 60,00 → 45,00). Two new tests: the same 40 minutes priced across
+  Eco/Business/First (20 / 30 / 40 with `minutes` identical), and one pinning the rates as clean cents plus
+  the never-zero fallback. `money-invariants.test.ts` passes an explicit `1` — it pins the real 2026-08-09
+  incident, so it keeps the rate that was in force that day rather than drifting with the table.
+
+**⚑ THE CAP WAS ALWAYS IN MINUTES, which is what makes this work.** 40 paid minutes city / 60 airport, so the
+euro ceiling follows the class down by itself — Eco tops out at 20,00 Course (23,00 to the Business) where it
+used to reach 40,00. Most of the market caps the same way.
+
+**⚠️ NOT DEPLOYED. The migration must be applied first**, or the meter quotes one rate and settles another.
+Code is on the branch with CI green, held out of `main` until the founder confirms.
+

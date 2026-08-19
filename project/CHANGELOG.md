@@ -1011,3 +1011,13 @@ charged, waiting has its own line, and an unfilled mission gets no table at all 
   chauffeur firms give; the two-minute windows belong to the ride-hail apps, which are a different business.
 - **The caps come down with the rate on the cheaper classes** — an Eco wait would stop at 23 € in town
   instead of 46 €, while First is unchanged.
+
+## 2026-08-18 — waiting is priced by the car, not by one flat rate
+
+- **Eco 0,50 €, Business 0,75 €, First 1,00 € a minute**, replacing 1,00 € on everything. A Guest keeping an
+  Eco car waiting no longer costs the same as one keeping a First car waiting.
+- **The ceiling comes down with it** on the cheaper classes — an Eco wait stops at 20 € in town rather than
+  40 €. The cap was always counted in minutes, so this happens by itself.
+- **Nothing already settled changed.** Every trip that has run keeps the rate that applied on its day.
+- **Not live yet** — it needs the migration run first, otherwise the meter would quote one price and charge
+  another.

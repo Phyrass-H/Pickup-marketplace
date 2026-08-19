@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Users, Phone, AlertTriangle, UserX, Clock, Handshake } from "lucide-react";
 import { driverCancelMission, markNoShow } from "./actions";
 import { formatMoney, formatTime } from "@/lib/format";
-import { WAITING_RATE_PER_MIN } from "@/lib/cancellation";
+import { waitingRatePerMin } from "@/lib/cancellation";
 import { commissionSplit, type Rates } from "@/lib/commission";
+import type { VehicleCategory } from "@/lib/database.types";
 
 // Driver cancel (O7, D45): always 100%. The trip re-pools on the D46 window — SPEED WIN
 // under 24h to pickup, the normal Pool at or above it. The sheet
@@ -150,6 +151,7 @@ export function NoShowControl({
   missionId,
   fare,
   rates,
+  category,
   guestDueIso,
   availableAtIso,
   waitMinutes,
@@ -162,6 +164,8 @@ export function NoShowControl({
   fare: number;
   /** The mission's snapshot rates, or null on a trip priced before commission. */
   rates: Rates | null;
+  /** The service class — it sets the waiting rate per minute (docs/06 §10). */
+  category: VehicleCategory;
   guestDueIso: string; // when the Guest was due — the courtesy wait starts here
   availableAtIso: string; // when reporting unlocks (wait elapsed + on-site floor)
   waitMinutes: number;
@@ -224,10 +228,13 @@ export function NoShowControl({
   const wUntil = new Date(waitingUntilIso).getTime();
   const wStop = Math.min(now, wUntil);
   const wMinutes = Math.max(0, Math.ceil((wStop - wFrom) / 60_000));
+  // The meter is per SERVICE CLASS since S62 (docs/06 §10) — Eco 0,50 · Business 0,75 ·
+  // First 1,00 per minute. Read from the mission's own class, never a constant.
+  const perMin = waitingRatePerMin(category);
   const waiting = {
     minutes: wMinutes,
-    fee: wMinutes * WAITING_RATE_PER_MIN,
-    maxFee: Math.round((wUntil - wFrom) / 60_000) * WAITING_RATE_PER_MIN,
+    fee: wMinutes * perMin,
+    maxFee: Math.round((wUntil - wFrom) / 60_000) * perMin,
     capped: now >= wUntil,
     until: new Date(wUntil),
   };
@@ -272,7 +279,7 @@ export function NoShowControl({
           <p className="dmeter__note">
             {waiting.capped
               ? `Stopped at the ${formatMoney(net(waiting.maxFee))} ceiling. You can still wait, but it no longer adds up — report when you're ready.`
-              : `${formatMoney(net(WAITING_RATE_PER_MIN))} per minute started · stops at ${formatMoney(net(waiting.maxFee))} (${formatTime(waiting.until.toISOString())})`}
+              : `${formatMoney(net(perMin))} per minute started · stops at ${formatMoney(net(waiting.maxFee))} (${formatTime(waiting.until.toISOString())})`}
           </p>
         </div>
       )}

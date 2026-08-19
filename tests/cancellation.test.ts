@@ -13,6 +13,7 @@ import {
   noShowWaitMinutes,
   waitingAt,
   waitingBetween,
+  waitingRatePerMin,
   waitingCeilingMinutes,
   WAITING_RATE_PER_MIN,
 } from "@/lib/cancellation";
@@ -101,6 +102,8 @@ describe("guestDueAt — the clock belongs to the Guest, not the Driver", () => 
 });
 
 describe("waitingAt — the D48 meter", () => {
+  // ⚑ The fixture is `category: "business"` = 0,75 €/min since S62 (docs/06 §10). Every
+  // euro figure in this block is 40 or 60 minutes at THAT rate, not at the old flat 1,00.
   const city = mission({ pickup_at: "2026-07-15T12:00:00+02:00" });
   const airport = mission({ pickup_at: "2026-07-15T12:00:00+02:00", flight_number: "AF7701" });
 
@@ -113,7 +116,7 @@ describe("waitingAt — the D48 meter", () => {
   it("charges the first minute the instant the courtesy wait lapses (per minute STARTED)", () => {
     const w = waitingAt(city, at("2026-07-15T12:20:01+02:00"));
     expect(w.minutes).toBe(1);
-    expect(w.fee).toBe(1 * WAITING_RATE_PER_MIN);
+    expect(w.fee).toBe(0.75);
   });
 
   it("counts minutes started, not minutes completed", () => {
@@ -121,26 +124,63 @@ describe("waitingAt — the D48 meter", () => {
     expect(waitingAt(city, at("2026-07-15T12:25:01+02:00")).minutes).toBe(6);
   });
 
-  it("caps the money without ending the trip — 40 € city", () => {
+  it("caps the money without ending the trip — 40 paid minutes in the city", () => {
     const capped = waitingAt(city, at("2026-07-15T13:00:00+02:00"));
     expect(capped.minutes).toBe(40);
-    expect(capped.fee).toBe(40);
+    expect(capped.fee).toBe(30); // 40 × 0,75
     expect(capped.capped).toBe(true);
-    expect(capped.maxFee).toBe(40);
+    expect(capped.maxFee).toBe(30);
 
-    // An hour later still 40 — the meter is frozen, the Driver is still there.
+    // An hour later still 30 — the meter is frozen, the Driver is still there.
     const later = waitingAt(city, at("2026-07-15T14:00:00+02:00"));
-    expect(later.fee).toBe(40);
+    expect(later.fee).toBe(30);
     expect(later.capped).toBe(true);
   });
 
-  it("caps at 60 € at an airport, on the longer courtesy wait", () => {
+  it("caps at 60 paid minutes at an airport, on the longer courtesy wait", () => {
     expect(waitingAt(airport, at("2026-07-15T12:59:00+02:00")).fee).toBe(0);
-    expect(waitingAt(airport, at("2026-07-15T13:30:00+02:00")).fee).toBe(30);
+    expect(waitingAt(airport, at("2026-07-15T13:30:00+02:00")).fee).toBe(22.5); // 30 × 0,75
     const capped = waitingAt(airport, at("2026-07-15T14:00:00+02:00"));
-    expect(capped.fee).toBe(60);
+    expect(capped.fee).toBe(45); // 60 × 0,75
     expect(capped.capped).toBe(true);
-    expect(capped.maxFee).toBe(60);
+    expect(capped.maxFee).toBe(45);
+  });
+
+  // ⚑ THE RATE IS PER SERVICE CLASS (docs/06 §10, S62). The cap is defined in MINUTES —
+  // 40 city / 60 airport — so the euro ceiling follows the class down, which is the whole
+  // point: the founder's objection was that one flat rate punishes a cheap trip.
+  it("prices the same 40 minutes by class — Eco, Business, First", () => {
+    const capAt = at("2026-07-15T13:00:00+02:00");
+    const forClass = (category: "eco" | "business" | "luxury") =>
+      waitingAt(mission({ pickup_at: "2026-07-15T12:00:00+02:00", category }), capAt);
+
+    expect(forClass("eco").fee).toBe(20); // 40 × 0,50
+    expect(forClass("business").fee).toBe(30); // 40 × 0,75
+    expect(forClass("luxury").fee).toBe(40); // 40 × 1,00 — First, unchanged
+
+    // Minutes never vary — only the price of one.
+    for (const c of ["eco", "business", "luxury"] as const) {
+      expect(forClass(c).minutes).toBe(40);
+      expect(forClass(c).maxFee).toBe(forClass(c).fee);
+    }
+  });
+
+  it("keeps the per-minute rates as clean cents, so no duration drifts", () => {
+    // Course-side, numeric(10,2). The Business-facing figure is deliberately NOT the round
+    // one — 0,50 all-in would have to be stored as 0,43 and would bill 9,89 € for 20 min.
+    expect(waitingRatePerMin("eco")).toBe(0.5);
+    expect(waitingRatePerMin("business")).toBe(0.75);
+    expect(waitingRatePerMin("luxury")).toBe(1);
+    // Never zero, whatever arrives — an unknown class bills at Business, never free.
+    expect(waitingRatePerMin(null)).toBe(0.75);
+    expect(waitingRatePerMin(undefined)).toBe(0.75);
+    // Float-safe at every minute count: 3 × 0,75 must be 2,25 and not 2.2500000000000004.
+    for (const m of [1, 3, 7, 13, 17, 23, 40, 60]) {
+      const eco = waitingBetween(0, 3_600_000 * 3, m * 60_000, 0.5).fee;
+      const biz = waitingBetween(0, 3_600_000 * 3, m * 60_000, 0.75).fee;
+      expect(eco).toBe(Math.round(m * 50) / 100);
+      expect(biz).toBe(Math.round(m * 75) / 100);
+    }
   });
 
   it("runs its window from the tracked Guest-ready instant when there is one", () => {
@@ -315,25 +355,29 @@ describe("waitingBetween — one meter, three screens", () => {
   const FROM = Date.parse("2026-07-15T12:20:00+02:00"); // due 12:00 + 20 min courtesy
   const UNTIL = Date.parse("2026-07-15T13:00:00+02:00"); // ceiling: due + 60 min
 
+  // The rate is a REQUIRED argument since S62 — a screen that forgets it fails to compile
+  // rather than quietly billing the wrong class.
+  const RATE = waitingRatePerMin(cityTrip.category); // business → 0,75
+
   it("owes nothing until the courtesy wait actually lapses", () => {
-    expect(waitingBetween(FROM, UNTIL, FROM).fee).toBe(0);
-    expect(waitingBetween(FROM, UNTIL, FROM - 60_000).fee).toBe(0);
+    expect(waitingBetween(FROM, UNTIL, FROM, RATE).fee).toBe(0);
+    expect(waitingBetween(FROM, UNTIL, FROM - 60_000, RATE).fee).toBe(0);
   });
 
   it("charges the minute the instant it starts — per minute STARTED", () => {
-    expect(waitingBetween(FROM, UNTIL, FROM + 1).minutes).toBe(1);
+    expect(waitingBetween(FROM, UNTIL, FROM + 1, RATE).minutes).toBe(1);
   });
 
   it("freezes at the ceiling and never grows past it", () => {
-    expect(waitingBetween(FROM, UNTIL, UNTIL).fee).toBe(40);
-    expect(waitingBetween(FROM, UNTIL, UNTIL + 3_600_000).fee).toBe(40);
+    expect(waitingBetween(FROM, UNTIL, UNTIL, RATE).fee).toBe(30); // 40 × 0,75
+    expect(waitingBetween(FROM, UNTIL, UNTIL + 3_600_000, RATE).fee).toBe(30);
   });
 
   it("is the same number waitingAt reports, so no screen can drift from the server", () => {
     for (const iso of ["2026-07-15T12:19:00+02:00", "2026-07-15T12:37:30+02:00", "2026-07-15T14:00:00+02:00"]) {
       const at = Date.parse(iso);
       const w = waitingAt(cityTrip, at);
-      expect(waitingBetween(w.from.getTime(), w.until.getTime(), at)).toEqual({
+      expect(waitingBetween(w.from.getTime(), w.until.getTime(), at, RATE)).toEqual({
         minutes: w.minutes,
         fee: w.fee,
       });

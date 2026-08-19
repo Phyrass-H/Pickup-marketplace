@@ -78,7 +78,9 @@ describe("what the Business is charged is what the Driver is paid", () => {
     // settles the meter. The modal is JSX and not in this suite, so what is pinned here
     // is the arithmetic behind it — the same two functions the modal now adds together.
     const fee = cancelFeeAmount(50.52, 95); // 47,99 €
-    const wait = waitingBetween(0, 3_600_000, 17 * 60_000); // 17 min → 17,00 €
+    // At the flat 1,00 €/min that was in force on the day — this pins a real incident,
+    // so it keeps its own rate rather than moving with the S62 per-class table.
+    const wait = waitingBetween(0, 3_600_000, 17 * 60_000, 1); // 17 min → 17,00 €
     expect(fee).toBe(47.99);
     expect(wait.fee).toBe(17);
 

@@ -4,7 +4,14 @@
 // 2026-07-22_waiting_fee.sql (mission_waiting / business_declare_no_show).
 // Euro AMOUNTS settle MANUAL in beta; these are the fixed RULES, shared by the UI (to show
 // the live cost) and the server actions (the fare snapshot).
-import type { MissionRow } from "@/lib/database.types";
+import type { MissionRow, VehicleCategory } from "@/lib/database.types";
+
+// Euros to the cent. The meter multiplies a rate by a minute count, and a per-class rate
+// makes that float-unsafe: 3 × 0,75 is 2.2500000000000004. Postgres rounds half away from
+// zero on `round(w_min * v_rate, 2)`, and so does this.
+function round2(n: number): number {
+  return Math.sign(n) * Math.round(Math.abs(n) * 100 + Number.EPSILON) / 100;
+}
 
 // Airport pickup = a flight number OR an airport-looking pickup address OR place label.
 // The label matters: the Mapbox autocomplete stores the POI name ("Aéroport Nice Côte
@@ -34,9 +41,41 @@ export function noShowWaitMinutes(isAirport: boolean): number {
 
 // D48 — after the courtesy wait, the Business is charged per minute STARTED and the Driver
 // is paid it. The meter stops at the ceiling (total from clock start), so the PAID stretch
-// is 40 min city / 60 min airport. ⚠️ The RATE IS PROVISIONAL — research owed (BACKLOG § N);
-// settled rows pin their own rate in mission.waiting_rate so history doesn't re-price.
-export const WAITING_RATE_PER_MIN = 1;
+// is 40 min city / 60 min airport. Settled rows pin their own rate in mission.waiting_rate,
+// so changing these numbers never re-prices a trip that has already run.
+//
+// ⚑ PER SERVICE CLASS since S62 (docs/06 §10), replacing a flat 1,00 €. The founder's
+// objection to the flat rate was that it is punishing on a 40 € trip and trivial on a 500 €
+// one. The market answer is NOT to scale with the fare — no operator anywhere does — but to
+// tier by vehicle class, which is the same lever, because a 40 € trip is an Eco job and a
+// 500 € trip is a First one. Calibrated against the French regulated taxi tariff
+// (0,58 €/min in the Alpes-Maritimes, 0,70 national ceiling) and FREE NOW, which charges
+// exactly 0,50 and 0,75.
+//
+// ⚑ THESE ARE COURSE-SIDE NUMBERS AND MUST STAY CLEAN CENTS. `mission.waiting_rate` is
+// numeric(10,2), so the Business-facing figure cannot be the round one: showing "0,50 €/min"
+// to a Business would mean storing 0,43, which displays 0,49 and bills 9,89 € for twenty
+// minutes. Stored this way it is exact at every duration — 20 min → 10,00 course · 11,50 to
+// the Business · 8,80 to the Driver.
+//
+// ⚑ MIRRORED IN SQL `mission_waiting()` (docs/migrations/2026-08-18_waiting_rate_by_class.sql).
+// Change one, change the other — the display and the charge are two copies on purpose.
+// ⚠️ STILL PROVISIONAL until the founder signs the numbers off.
+export const WAITING_RATE_PER_MIN: Record<VehicleCategory, number> = {
+  eco: 0.5,
+  business: 0.75,
+  // Vestigial — the taxonomy moved body type onto `required_body_type` and `van` as a
+  // CLASS should not occur (BACKLOG § X retires it). Priced with Business so an unexpected
+  // row is never charged nothing.
+  van: 0.75,
+  // First. The enum keeps the old name until § X renames it.
+  luxury: 1,
+};
+
+/** The rate in force for a mission's class. Never returns 0 — see the note above. */
+export function waitingRatePerMin(category: VehicleCategory | null | undefined): number {
+  return (category && WAITING_RATE_PER_MIN[category]) || WAITING_RATE_PER_MIN.business;
+}
 
 // Total minutes from clock start at which the METER stops. It does NOT end the trip —
 // past this the Driver simply stops earning. Mirrors v_ceiling in mission_waiting().
@@ -63,7 +102,7 @@ export type Waiting = {
 // mission_waiting() — keep the two in step; it is the single definition all three
 // settlement paths (mark_no_show, business_declare_no_show, business_cancel_mission) use.
 export function waitingAt(
-  m: Pick<MissionRow, "pickup_at" | "flight_number" | "pickup_address"> & {
+  m: Pick<MissionRow, "pickup_at" | "flight_number" | "pickup_address" | "category"> & {
     guest_ready_at?: string | null;
     pickup_label?: string | null;
   },
@@ -74,7 +113,8 @@ export function waitingAt(
   const from = due + noShowWaitMinutes(airport) * 60_000;
   const until = due + waitingCeilingMinutes(airport) * 60_000;
   const now = typeof at === "number" ? at : at.getTime();
-  const { minutes, fee } = waitingBetween(from, until, now);
+  const rate = waitingRatePerMin(m.category);
+  const { minutes, fee } = waitingBetween(from, until, now, rate);
   const maxMinutes = Math.round((until - from) / 60_000);
   return {
     from: new Date(from),
@@ -82,7 +122,7 @@ export function waitingAt(
     minutes,
     fee,
     capped: now >= until,
-    maxFee: maxMinutes * WAITING_RATE_PER_MIN,
+    maxFee: round2(maxMinutes * rate),
   };
 }
 
@@ -96,14 +136,19 @@ export function waitingAt(
  * `mission_waiting()` in SQL rather than one.
  *
  * "Per minute STARTED": minute 1 is owed the instant the courtesy wait lapses.
+ *
+ * ⚑ `ratePerMin` is REQUIRED, not defaulted. It became per-class in S62, and a default here
+ * would let a screen quietly bill the wrong class rather than fail to compile.
  */
 export function waitingBetween(
   fromMs: number,
   untilMs: number,
   at: number,
+  ratePerMin: number,
 ): { minutes: number; fee: number } {
   const minutes = Math.max(0, Math.ceil((Math.min(at, untilMs) - fromMs) / 60_000));
-  return { minutes, fee: minutes * WAITING_RATE_PER_MIN };
+  // Cents, not floats: 3 × 0,75 is 2.2500000000000004 before rounding.
+  return { minutes, fee: round2(minutes * ratePerMin) };
 }
 
 // On-site floor: a Driver who turns up AFTER the courtesy wait already closed still has to be

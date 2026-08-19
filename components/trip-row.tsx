@@ -568,6 +568,7 @@ export function TripRow({
             driverName={driver?.name ?? ""}
             fare={settledFare(mission)}
             rates={ratesOf(mission)}
+            category={mission.category}
             waitingFromIso={waitingAt(mission).from.toISOString()}
             waitingUntilIso={waitingAt(mission).until.toISOString()}
             courtesyMinutes={noShowWaitMinutes(isAirportPickup(mission))}
@@ -589,6 +590,7 @@ export function TripRow({
                   missionId={mission.id}
                   fare={settledFare(mission)}
                   rates={ratesOf(mission)}
+                  category={mission.category}
                   pickupAtIso={mission.pickup_at}
                   hasDriver={!!mission.driver_id}
                   /* Gated on 'arrived' — the exact condition business_cancel_mission uses

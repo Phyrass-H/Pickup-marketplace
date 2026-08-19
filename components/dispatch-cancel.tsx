@@ -9,9 +9,10 @@ import {
   cancelFeeAmount,
   nextCancelRaise,
   waitingBetween,
-  WAITING_RATE_PER_MIN,
+  waitingRatePerMin,
 } from "@/lib/cancellation";
 import { commissionSplit, type Rates } from "@/lib/commission";
+import type { VehicleCategory } from "@/lib/database.types";
 import { formatDateTime, formatMoney, formatTime } from "@/lib/format";
 import { parisDayKey } from "@/lib/dispatch-status";
 
@@ -61,6 +62,7 @@ export function BusinessCancel({
   missionId,
   fare,
   rates,
+  category,
   pickupAtIso,
   hasDriver,
   waitingFromIso = null,
@@ -71,6 +73,8 @@ export function BusinessCancel({
   fare: number;
   /** The mission's commission snapshot. NULL on a trip priced before commission. */
   rates: Rates | null;
+  /** The service class — it sets the waiting rate per minute (docs/06 §10). */
+  category: VehicleCategory;
   pickupAtIso: string;
   hasDriver: boolean;
   /**
@@ -124,7 +128,12 @@ export function BusinessCancel({
   // What the RPC will ACTUALLY charge: the policy fee plus whatever the meter has run.
   const wait =
     waitingFromIso && waitingUntilIso && now != null
-      ? waitingBetween(Date.parse(waitingFromIso), Date.parse(waitingUntilIso), now)
+      ? waitingBetween(
+          Date.parse(waitingFromIso),
+          Date.parse(waitingUntilIso),
+          now,
+          waitingRatePerMin(category),
+        )
       : { minutes: 0, fee: 0 };
   // ALL IN — the only basis a Business is ever shown (docs/06 §1). Both halves of
   // this total carry commission: the cancellation compensation ("a €90 fee becomes
@@ -258,7 +267,7 @@ export function BusinessCancel({
                     {wait.fee > 0 && (
                       <>
                         <br />
-                        The waiting keeps running at {formatMoney(allIn(WAITING_RATE_PER_MIN))}/min until you
+                        The waiting keeps running at {formatMoney(allIn(waitingRatePerMin(category)))}/min until you
                         confirm.
                       </>
                     )}

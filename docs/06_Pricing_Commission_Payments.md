@@ -460,7 +460,7 @@ in exactly two places, on purpose: `WAITING_RATE_PER_MIN` in `lib/cancellation.t
 `docs/migrations/2026-07-22_airport_accent_fix.sql`, which superseded the original migration). Changing it
 never re-prices a settled trip: `mission.waiting_rate` is stamped onto each row.
 
-### The rate, researched — PROPOSED, awaiting the founder's sign-off (S62, 2026-08-18)
+### The rate, researched — BUILT, awaiting the migration (S62, 2026-08-18)
 
 **The founder's objection to the flat €1:** *"1 € on a 40 € trip doesn't make sense compared to a trip that
 costs over 500 €."* A market scan was run to answer it. **The finding is that nobody scales waiting with the
@@ -509,11 +509,12 @@ falling to 23 €/34,50 € while First is unchanged. Most of the market caps in
 NOW stops the meter at 3 min) or not at all, leaving the Driver the right to go. Decide the minute ceilings in
 the same pass as the rate.
 
-**What shipping it involves** — the flat constant becomes a lookup by `mission.category`, so it is not a
-one-line change: `lib/cancellation.ts` (the shared helper), `components/dispatch-waiting.tsx`,
-`components/dispatch-cancel.tsx`, `app/(app)/rides/cancel-noshow.tsx`, and `v_rate` in `mission_waiting()`
-must learn the same rule together, or the charge and the display disagree. Ships with
-`.local/probe/migrations-2026-08-11.ts` re-run and the money tests updated.
+**Status: the code is written, the migration is not applied.** `WAITING_RATE_PER_MIN` in
+`lib/cancellation.ts` is now a per-class table and `waitingBetween()` takes the rate as a REQUIRED argument,
+so a screen that forgets it fails to compile rather than billing the wrong class. The three meters
+(`dispatch-waiting`, `dispatch-cancel`, `rides/cancel-noshow`) each read it from the mission's own class.
+⚑ **The SQL half — `docs/migrations/2026-08-18_waiting_rate_by_class.sql` — must be run before the code
+deploys**, or the meter quotes one rate and settles another.
 
 ⛔ **The clock starts when the GUEST was due** — `guest_ready_at ?? pickup_at` — **never from the
 Driver's "I've arrived" tap.** Anchoring it to arrival was a live exploit and was fixed. Do not

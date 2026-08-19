@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Clock, UserX } from "lucide-react";
 import { businessDeclareNoShow } from "@/app/(dispatch)/dispatch/actions";
 import { formatMoney, formatTime } from "@/lib/format";
-import { WAITING_RATE_PER_MIN, waitingBetween } from "@/lib/cancellation";
+import { waitingBetween, waitingRatePerMin } from "@/lib/cancellation";
+import type { VehicleCategory } from "@/lib/database.types";
 import { commissionSplit, type Rates } from "@/lib/commission";
 
 // The Business's view of a Driver waiting on site (O7 / D48). NET-NEW: before this the
@@ -23,6 +24,7 @@ export function WaitingPanel({
   driverName,
   fare,
   rates,
+  category,
   waitingFromIso,
   waitingUntilIso,
   courtesyMinutes,
@@ -33,6 +35,8 @@ export function WaitingPanel({
   fare: number;
   /** The mission's snapshot rates, or null on a trip priced before commission. */
   rates: Rates | null;
+  /** The service class — it sets the per-minute rate (docs/06 §10). */
+  category: VehicleCategory;
   waitingFromIso: string;
   waitingUntilIso: string;
   courtesyMinutes: number;
@@ -69,14 +73,17 @@ export function WaitingPanel({
   const until = new Date(waitingUntilIso).getTime();
   // One definition of the meter, shared with the cancel modal and the Driver's screen —
   // this used to be a hand-typed copy of the same arithmetic.
-  const { minutes, fee: grossFee } = waitingBetween(from, until, now);
+  // The meter is per SERVICE CLASS since S62 (docs/06 §10) — Eco 0,50 · Business 0,75 ·
+  // First 1,00 per minute. Read from the mission's own class, never a constant.
+  const perMin = waitingRatePerMin(category);
+  const { minutes, fee: grossFee } = waitingBetween(from, until, now, perMin);
   // ALL IN. The meter accrues 1 €/min between the parties (docs/06 §10); what
   // the Business pays is that plus the service fee and its VAT, and a Business
   // is only ever shown its own side. One helper so the running figure, the
   // ceiling and the per-minute rate cannot disagree.
   const allIn = (gross: number) => commissionSplit(gross, rates).businessTotal;
   const fee = allIn(grossFee);
-  const maxFee = allIn(Math.round((until - from) / 60_000) * WAITING_RATE_PER_MIN);
+  const maxFee = allIn(Math.round((until - from) / 60_000) * perMin);
   const capped = now >= until;
 
   // Before the courtesy wait lapses there is nothing to charge and nothing to declare.
@@ -141,7 +148,7 @@ export function WaitingPanel({
       >
         {capped
           ? `Stopped at the ${formatMoney(maxFee)} ceiling — it no longer grows. ${driverName || "The Driver"} may still be waiting.`
-          : `${formatMoney(allIn(WAITING_RATE_PER_MIN))} per minute started, paid to ${driverName || "the Driver"}. Stops at ${formatMoney(maxFee)} (${formatTime(waitingUntilIso)}).`}
+          : `${formatMoney(allIn(perMin))} per minute started, paid to ${driverName || "the Driver"}. Stops at ${formatMoney(maxFee)} (${formatTime(waitingUntilIso)}).`}
       </div>
 
       {error && <div className="notice error" style={{ marginTop: 10 }}>{error}</div>}
