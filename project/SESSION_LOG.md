@@ -3010,6 +3010,18 @@ Founder said build it. Eco **0,50** · Business **0,75** · First **1,00** €/m
 euro ceiling follows the class down by itself — Eco tops out at 20,00 Course (23,00 to the Business) where it
 used to reach 40,00. Most of the market caps the same way.
 
-**⚠️ NOT DEPLOYED. The migration must be applied first**, or the meter quotes one rate and settles another.
-Code is on the branch with CI green, held out of `main` until the founder confirms.
+**✅ SHIPPED AND VERIFIED END TO END.** The founder ran
+`docs/migrations/2026-08-18_waiting_rate_by_class.sql` (success), then `36ee3de` was fast-forwarded and
+deployed. Proven on a real trip rather than inferred: `.local/probe/waiting-class-e2e.ts` put one **Eco**
+mission at `arrived` with the meter running, the Driver's own screen read **"0,50 € per minute started ·
+stops at 20,00 €"**, boarding the Guest through the app fired `board_guest` for real, and SQL stamped
+`waiting_rate 0.50 · waiting_fee 9.50` on 19 minutes. The old flat rate would have stamped 1.00 / 19.00.
+Trip deleted, baseline re-asserted at 277.
+
+⚑ **Nothing was re-priced:** 33 already-settled rows still carry `waiting_rate 1.00`, which is the whole
+point of stamping the rate per row.
+
+⚑ **A note for whoever reads that probe:** the trip it clones is a pre-commission row, so its snapshot rates
+are NULL and the Driver's screen showed the Course unconverted (0,50, not 0,44). That is correct for a
+NULL-rate row, not a missing conversion — don't "fix" it.
 

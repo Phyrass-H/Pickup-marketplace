@@ -533,7 +533,25 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★★ START HERE — PRICING STEPS 0–4 ARE SHIPPED. NEXT IS STEP 5: THE §6 CURVE (S61, 2026-08-17).**
+**★★ START HERE — STEP 5, THE §6 CURVE. Everything else in the money is done (S62, 2026-08-18).**
+
+> **What S62 did, so you don't redo it.** A six-way audit of every money surface and write path (26 findings
+> raised, 15 survived an adversarial re-check) plus the fixes: every Business-facing figure is now on the
+> all-in basis — the cancel modal, Drafts, the Calendar drawer, the Edit header, the Summary rail Ceiling,
+> three Spend figures, both CSV exports, the archive sort key, and the "incl. … waiting" captions. **The
+> amendment flow got the commission pass it never had** (it stored a typed all-in as the Course, and showed
+> the Driver a gross figure). The expanded row's breakdown now decomposes *what was actually billed* rather
+> than always the fare. On the Driver's side, the close-trip card stopped promising the gross fare, My Rides
+> stopped dropping settled waiting, and the VAT sentence stopped asserting a tax status the app was never
+> told. **The waiting rate is now per class** — Eco 0,50 · Business 0,75 · First 1,00 €/min, researched
+> against the market and the regulated taxi tariff, migration applied and verified live.
+> Read `SESSION_LOG.md` Session 62 parts A–F for the detail; `docs/06` §10 holds the waiting-rate sources.
+>
+> **Still open, both the founder's call, neither blocking the curve:** the cancellation penalty (BACKLOG § Y
+> — too weak on a cheap trip; three shapes sketched, and the basis question pairs with it), and whether the
+> waiting caps should stay counted in minutes (they are, and the market agrees) or be pinned in euros.
+
+**(Superseded: "PRICING STEPS 0–4 ARE SHIPPED. NEXT IS STEP 5" — S61, 2026-08-17.)**
 
 **Read `docs/06_Pricing_Commission_Payments.md` first — all of it.** Source of truth for anything
 touching price or commission. §4 was re-calibrated in S60; **§1 gained three new locked subsections
