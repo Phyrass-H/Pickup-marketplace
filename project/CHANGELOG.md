@@ -997,3 +997,17 @@ prove each one wrong. Twenty-six suspicions, eleven of them false. The six real 
 cancellation fee" while the table underneath said "what you pay: 157,53 €" — the price of a trip that never
 happened — and cheerfully added "you saved 39,38 €". The table now breaks down what you were actually
 charged, waiting has its own line, and an unfilled mission gets no table at all because nothing was billed.
+
+## 2026-08-18 — what waiting should cost, researched
+
+- **Nothing changed in the app.** This is written down, not switched on.
+- **Your instinct was right that €1 a minute is too much — but not that it should follow the fare.** No
+  operator anywhere charges waiting as a share of the trip price. They all set it by vehicle class instead,
+  which does the same job: a cheap trip is an Eco car and an expensive one is a First car.
+- **Proposed: 0,50 € a minute on Eco, 0,75 € on Business, 1,00 € on First.** For reference, a taxi in the
+  Alpes-Maritimes charges 0,58 € a minute of waiting, and that rate is set by law. FREE NOW charges exactly
+  0,50 and 0,75.
+- **Your free wait stays as it is** — 20 minutes in town, an hour at the airport. That's what private
+  chauffeur firms give; the two-minute windows belong to the ride-hail apps, which are a different business.
+- **The caps come down with the rate on the cheaper classes** — an Eco wait would stop at 23 € in town
+  instead of 46 €, while First is unchanged.

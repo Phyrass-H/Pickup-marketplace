@@ -2949,3 +2949,40 @@ fee 10,77 · VAT 2,16 · **Total 99,11 €**, matching its headline and its "inc
 
 `tsc` clean · 415/415.
 
+### Session 62 part E — the waiting rate, researched (2026-08-18)
+
+The founder's objection to the flat €1: *"1 € on a 40 € trip doesn't make sense compared to a trip over
+500 €."* A market scan answered it, and the answer is not the one the objection implies.
+
+**Nobody scales waiting with the fare.** Every operator that publishes a rate tiers it by **vehicle class** —
+which is the same lever, since a 40 € trip is an Eco job and a 500 € trip is a First one. Uber is explicit
+that the wait rate is held out of surge, and their Berline rate is 1,57× their Eco rate on fares that run
+2–3× apart.
+
+**Proposed, written into `docs/06` §10 with sources, provisional until the founder signs off:**
+Eco **0,50** · Business **0,75** · First **1,00** €/min. Free wait unchanged.
+
+**The anchor worth remembering:** the French regulated taxi tariff is the only legally-fixed number in this
+market — 42,15 €/h national ceiling (*arrêté du 24 décembre 2025*), and **34,55 €/h = 0,58 €/min in the
+Alpes-Maritimes**, the founder's own département. FREE NOW France already charges exactly 0,50 and 0,75.
+
+**⚑ The mechanical finding that closed the open question.** Whether the round number should sit on the
+Business's side or the Driver's is not a taste question: `mission.waiting_rate` is `numeric(10,2)`, so a
+Business-facing 0,50 € would have to be stored as 0,43 — which displays 0,49 and bills **9,89 €** for twenty
+minutes. The headline would be false. Stored Course-side it is exact at every duration (20 min → 10,00 /
+11,50 / 8,80). My earlier recommendation was the wrong way round; the code decided it.
+
+**The free wait is confirmed, not just unchanged** (founder): 15–20 min city / 60 min airport is the
+private-hire convention, and Blacklane publishes exactly that. The 2–5 minute windows in the scan are
+ride-hail, a different product.
+
+**⚑ Not a two-line change, contrary to what was said mid-session.** A per-class rate turns the flat
+`WAITING_RATE_PER_MIN` into a lookup by `mission.category`, so `lib/cancellation.ts`, `dispatch-waiting.tsx`,
+`dispatch-cancel.tsx`, `rides/cancel-noshow.tsx` and SQL `mission_waiting()` all have to learn the same rule
+in one go.
+
+**Research note for next time:** the first two attempts at this scan failed — five of seven agents died on
+529s, then three stalled on retry. What worked was three narrow agents with a hard search budget and no
+synthesis agent. The two surviving groups from the first run were recovered with `resumeFromRunId` rather
+than re-run.
+

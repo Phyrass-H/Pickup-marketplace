@@ -454,15 +454,66 @@ Courtesy **20 min city / 60 min airport**, then **€1/min** Business → Driver
 €60 airport**. Derived from status timestamps, never typed. Billed at completion, carrying both
 commissions.
 
-⚑ **THE €1/min IS A PLACEHOLDER, NOT A LOCKED RATE (D48).** The founder set it to unblock the build and the
-research is still owed (BACKLOG § N) — the rest of this section is locked, that number is not. It lives in
-exactly two places, on purpose: `WAITING_RATE_PER_MIN` in `lib/cancellation.ts` (what is displayed) and
+⚑ **THE €1/min IS A PLACEHOLDER, NOT A LOCKED RATE (D48).** The founder set it to unblock the build. It lives
+in exactly two places, on purpose: `WAITING_RATE_PER_MIN` in `lib/cancellation.ts` (what is displayed) and
 `v_rate` in the live `mission_waiting()` (what is charged — currently defined in
 `docs/migrations/2026-07-22_airport_accent_fix.sql`, which superseded the original migration). Changing it
 never re-prices a settled trip: `mission.waiting_rate` is stamped onto each row.
-⚠️ **The caps move with the rate.** €40 / €60 are not typed anywhere — they are 40 and 60 *paid minutes*
-(the 60/120-minute money ceiling less the courtesy wait) times the rate, so at €1,50 they become €60 / €90.
-Decide the minute ceilings in the same pass as the rate.
+
+### The rate, researched — PROPOSED, awaiting the founder's sign-off (S62, 2026-08-18)
+
+**The founder's objection to the flat €1:** *"1 € on a 40 € trip doesn't make sense compared to a trip that
+costs over 500 €."* A market scan was run to answer it. **The finding is that nobody scales waiting with the
+fare — every operator that publishes a rate tiers it by VEHICLE CLASS**, which is the same lever, because a
+40 € trip is an Eco job and a 500 € trip is a First one. Uber is explicit that the wait rate is excluded from
+surge; their Berline rate is only 1,57× their Eco rate on fares that run 2–3× apart.
+
+**PROPOSED — per class, replacing the flat €1:**
+
+| | proposed | the Business sees | the Driver banks | cap, city | cap, airport |
+|---|---|---|---|---|---|
+| Eco | **0,50 €/min** | 0,58 | 0,44 | 23,00 € | 34,50 € |
+| Business | **0,75 €/min** | 0,86 | 0,66 | 34,50 € | 51,75 € |
+| First | **1,00 €/min** | 1,15 | 0,88 | 46,00 € | 69,00 € |
+
+**The market it is calibrated against** (all EUR/min, gathered 2026-08-18):
+
+| | rate | note |
+|---|---|---|
+| Welcome Pickups (airport transfers) | 0,40 · 0,60 · 0,80 | per 15-min block, tiered by vehicle |
+| **French taxi, Alpes-Maritimes** | **0,58** | 34,55 €/h — the local regulated ceiling |
+| French taxi, national ceiling | 0,70 | 42,15 €/h, *arrêté du 24 décembre 2025*, in force 2026-02-01 |
+| Uber France | 0,70 Eco · 0,90 Comfort/Van · 1,10 Berline | raised 2024-09-16 |
+| FREE NOW France | 0,50 Standard · 0,75 Priority/Van | **the same two numbers proposed above** |
+| Marcel | 0,50 e•co · 0,60 Berline · 0,70 Business | |
+| GroundLink | 0,80 sedan · 0,89 SUV | the one operator that scales — non-airport waiting prorates the hourly rate of the class booked |
+| Addison Lee ≈ 1,15 · Sixt Ride ≈ 1,45 | | chauffeur segment, secondary sources |
+| LeCab | 0,33 Green → 1,88 Prestige | figures look derived from an hourly rate |
+| Blacklane · Wheely | not published | |
+
+**The sentence it buys:** *an Eco minute costs less than a taxi minute in this département; a First minute
+costs what a chauffeur firm charges.*
+
+⚑ **THE STORED RATE MUST BE THE COURSE-SIDE NUMBER, and it must be a clean cent.** `mission.waiting_rate` is
+`numeric(10,2)`. Rounding the *Business-facing* rate instead would mean storing 0,43 to show "0,50 €/min" —
+which actually displays 0,49 and bills **9,89 €** for twenty minutes. The headline would be false. Stored on
+the Course side the arithmetic is exact at every duration: 20 min → meter 10,00 · Business 11,50 · Driver 8,80.
+
+**The free wait is CONFIRMED as it stands** — 20 min city / 60 min airport (founder, 2026-08-18): that is the
+private-hire convention, and Blacklane's published policy is 15 min at a street address and 60 min at an
+airport. The 2–5 minute windows found in the scan are ride-hail (Uber, Bolt, FREE NOW), a different product.
+
+⚠️ **The caps move with the rate.** €40 / €60 are not typed anywhere — they are 40 and 60 *paid minutes* (the
+60/120-minute money ceiling less the courtesy wait) times the rate, which is why the table above shows Eco
+falling to 23 €/34,50 € while First is unchanged. Most of the market caps in MINUTES rather than euros (FREE
+NOW stops the meter at 3 min) or not at all, leaving the Driver the right to go. Decide the minute ceilings in
+the same pass as the rate.
+
+**What shipping it involves** — the flat constant becomes a lookup by `mission.category`, so it is not a
+one-line change: `lib/cancellation.ts` (the shared helper), `components/dispatch-waiting.tsx`,
+`components/dispatch-cancel.tsx`, `app/(app)/rides/cancel-noshow.tsx`, and `v_rate` in `mission_waiting()`
+must learn the same rule together, or the charge and the display disagree. Ships with
+`.local/probe/migrations-2026-08-11.ts` re-run and the money tests updated.
 
 ⛔ **The clock starts when the GUEST was due** — `guest_ready_at ?? pickup_at` — **never from the
 Driver's "I've arrived" tap.** Anchoring it to arrival was a live exploit and was fixed. Do not
