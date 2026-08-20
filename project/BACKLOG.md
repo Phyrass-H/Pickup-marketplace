@@ -827,6 +827,39 @@ native app. V2 at the earliest. And even then, one hard rule: **location may sug
 trip is location *paying* someone. Failure case: the Driver returns to Nice airport at 11am for his *next* job and the
 app closes and pays out yesterday's trip. The right shape is *"Looks like you finished — tap to complete."*
 
+### ⚑ Q6 — THE BUSINESS HAS NO WAY OUT OF AN UNCLOSED ROW (found 2026-08-20, discussing § Q with the founder)
+
+**The founder's position, and it is the right one:** an unclosed trip should stay lifted into today's band, in
+plain sight beside real work, *because* that is uncomfortable — it pushes the desk to chase the Driver.
+**Keep it as it is.** What follows is not a case for hiding them.
+
+**The hole: friction only works while there is a door, and there isn't one.** On an unclosed row the trip row
+switches OFF amend, release and cancel (`components/trip-row.tsx:215-245`, the `unclosed` gate) and leaves a
+red line saying *"call them to confirm it happened."* That is the entirety of what a Dispatcher can do. If
+they ring the Driver and are told *"yes, it ran"* — **there is no way to record it.** The only exit is the
+Driver opening their own app and answering. The row stays lit indefinitely.
+
+**Why that matters more than it sounds.** The § Q close prompt carries its own warning on the Driver's side:
+answered is answered, because *"nagging them after that is how a prompt turns into noise people learn to
+ignore."* The identical mechanism applies to the Business, and nothing protects them from it — a Dispatcher
+who cannot clear a row learns to scroll past the band, which is the exact outcome the lift was designed to
+prevent. **Measured 2026-08-20 on the test data: 18 unclosed rows in today's band, 14 of them over a month
+old, 9 `on_board` and 9 `confirmed`, against 0 trips actually scheduled that day.** Seeded data exaggerates
+it — a working hotel closes daily and would carry nought or two — but it is a faithful picture of what
+unbounded accumulation looks like.
+
+**What to build, smallest first:**
+1. **A Business-side resolution: "I called them — it ran."** One control on the unclosed row. It records who
+   said so and when, and it is the single change that turns a nag into a workflow. ⚠️ **It settles money**, so
+   it is not a display change: it needs the same treatment as any close, and it is the trigger condition
+   already written into `2026-08-10_mission_close_answer.sql` for moving `close_answer` out of a mutable
+   column into `mission_close_answer` (read-only RLS, SECURITY DEFINER writes). Pairs with **U.3**.
+2. **Ageing.** A trip 30 minutes past its expected arrival is *call them now*; five weeks past is accounting,
+   not today's work. Carrying both at the same weight in the same band is what lets it grow without bound.
+   Either they age out into a separate unsettled list, or the tone escalates and then relaxes.
+3. **Point some of the cost at the Driver.** The missing tap is theirs; today the hotel's schedule carries the
+   whole visible cost of it. Reliability marks already exist as the mechanism — gated on **Q4** below.
+
 **Still open when it is built:**
 - **Q4 (reliability mark)** — untouched, still gated on the founder's parked "does a Driver see their own?" decision.
 - **Q5 (`on_board` specifically)** — moot under this design: `on_board` is asked the same question as `confirmed`.
@@ -1001,6 +1034,53 @@ is all the evidence needs to do.
 hung *nothing punishing* off missing it, on the stated grounds that you may not punish someone for ignoring a
 prompt they were never actually shown — no push, no reminder. That reasoning applies unchanged here: **a
 lateness penalty needs the notification phase as much as it needs GPS.**
+
+### U.4 Hard-closing a trip on observed arrival (founder, 2026-08-20) — YES, BUT NOT AS STATED
+
+**The founder's proposal:** *"once we have the live location of the driver and the destination matches the
+geo arrival of the drive then we can hard close the trip after a certain amount of time."*
+
+**The mechanism is right and § Q was built for it** — the close prompt already fires off *arrival*, estimated
+today and observed later, and the brief says one term changes and nothing else does. What follows is not a
+rejection; it is the shape that survives the founder's own rule at the top of § U: *location may suggest,
+never decide.* **A hard close settles the fare AND any waiting fee, so an automatic one is location paying
+someone** — the exact thing that rule exists to prevent.
+
+**Three corrections, in the order they matter:**
+
+1. **Dwell is the wrong signal. Arrive-THEN-LEAVE is the right one.** A Driver sitting inside the destination
+   geofence may still have the Guest aboard, or be part-way through a multi-stop. The signature of a completed
+   drop-off is entering the geofence and then departing it. The founder's *"certain amount of time"* then
+   stops being the evidence and becomes the **confirmation window** — which is where it belongs.
+2. **Location should trigger a far STRONGER PROMPT, not the close.** *"We saw you at the drop-off at 15:47 —
+   confirm?"*, one tap, pre-filled. That turns a cold *"did this happen three weeks ago?"* into a yes/no about
+   something the Driver still remembers, which is a different response rate entirely. The Driver stays the
+   decider, so the rule survives untouched — **and this alone removes most of the pile-up the auto-close was
+   meant to solve.** Cheapest, safest, biggest share of the benefit: build this first and measure before
+   building 3 at all.
+3. **Auto-close ONLY where nothing is being decided.** The narrow safe case: the Driver already tapped
+   `on_board` (so the trip demonstrably ran and the fare was already agreed), the geofence saw them reach the
+   destination and then leave, **no waiting money is open on the meter, and no no-show is in play.** There
+   every party's own signals already agree and the close invents no fact — corroboration, not decision.
+   ⛔ **Never auto-close the ambiguous cases, which are precisely the ones § Q exists for:** a Driver who never
+   marked `on_board`, a settled or running waiting meter, or a contested outcome. Those would pay someone on
+   the strength of a satellite fix.
+
+⚑ **§ Q ALREADY HOLDS THE KILLER FAILURE CASE, and it is the founder's own:** *"the Driver returns to Nice
+airport at 11am for his next job and the app closes and pays out yesterday's trip."* It is a sharper argument
+than any of the three above and it defeats naive dwell detection outright — which is why step 3 is gated on
+`on_board` **and** a destination-specific geofence **and** an arrive-then-leave transition, rather than on
+"the Driver's phone was near the drop-off." § Q also already names the right shape in one line: *"Looks like
+you finished — tap to complete."* That is step 2.
+
+⚑ **The inverse of U.1's fallback applies.** U.1 says a broken GPS fix must never punish an honest Driver;
+here it means a Driver whose phone died simply gets no auto-close. **The manual path has to survive in full
+regardless — auto-close is a fast lane, never the only lane.**
+
+⚑ **Pairs with U.3's first condition.** The day a close happens without a human tapping it, the Business needs
+a way to contest it — and that is the trigger written into `2026-08-10_mission_close_answer.sql` for turning
+`close_answer` from a mutable column into a `mission_close_answer` table in the `mission_release` idiom
+(read-only RLS, writes via SECURITY DEFINER). **Do not ship U.4 step 3 without that.**
 
 ### U.3 What this is really for — the dispute question (founder, 2026-08-10)
 *"What proves the Driver actually did the trip?"* Today: **nothing does.** Every signal is self-reported by
