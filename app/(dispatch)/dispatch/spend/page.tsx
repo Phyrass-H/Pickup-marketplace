@@ -352,7 +352,7 @@ export default async function DispatchSpend({
                   ? `a mean of ${t.trips}`
                   : back && p.costPerTrip
                     ? `was ${formatMoney(p.costPerTrip)}`
-                    : "fare + waiting"}
+                    : "fare, waiting and fee"}
             </div>
           </div>
         </div>

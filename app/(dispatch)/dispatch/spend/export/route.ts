@@ -12,7 +12,7 @@ import {
   type HistoryRow,
 } from "@/lib/history-filter";
 import { minutesToAccept, rowCost } from "@/lib/spend";
-import { businessCost } from "@/lib/commission";
+import { businessCost, splitFor } from "@/lib/commission";
 import { currentSpan, LENS_LABEL, parseSpendQuery, type Lens } from "@/lib/spend-filter";
 import type { MissionRow } from "@/lib/database.types";
 
@@ -49,6 +49,11 @@ const HEADERS = [
   "Desk",
   "Outcome",
   "Cost to you (EUR)",
+  // ⚑ docs/06 §3 — the invoice is three lines that separate. A Business reclaims the
+  // 20 % VAT on Kavenue's fee and NOTHING on the transport, so a file with one all-in
+  // figure is unusable to the person who opens it: the reclaimable number was not in it.
+  "Of which service fee (EUR)",
+  "Of which VAT on the fee (EUR)",
   "Of which waiting (EUR)",
   "Agreed, not settled (EUR)",
   "Ceiling (EUR)",
@@ -138,6 +143,10 @@ export async function GET(req: NextRequest) {
     const waiting = Number(m.waiting_fee ?? 0);
     const bucket = bucketOf(m);
     const cost = rowCost(r);
+    // The same triple the row and Spend show, so the file decomposes exactly the way
+    // the screen does (docs/06 §3). splitFor, not commissionSplit, so a Driver-cancelled
+    // trip carries no fee — the same rule businessCost encodes.
+    const split = splitFor(m, (r.fare ?? 0) + waiting);
     total += cost;
     const took = minutesToAccept(m);
     const note = m.no_show
@@ -177,6 +186,8 @@ export async function GET(req: NextRequest) {
         // counted rows with a null fare; writing 0,00 asserts the trip cost
         // nothing, where the screen honestly shows "—".
         r.counted && (r.fare != null || waiting > 0) ? euro(cost) : "",
+        r.counted && (r.fare != null || waiting > 0) ? euro(split.businessFeeHt) : "",
+        r.counted && (r.fare != null || waiting > 0) ? euro(split.businessFeeVat) : "",
         // ⚑ The waiting column is honest on an unclosed row too. Waiting settles
         // at boarding, so it is real money whether or not the trip was ever
         // closed — and the "not settled" column beside it now carries the same

@@ -3025,3 +3025,50 @@ point of stamping the rate per row.
 are NULL and the Driver's screen showed the Course unconverted (0,50, not 0,44). That is correct for a
 NULL-rate row, not a missing conversion — don't "fix" it.
 
+### Session 62 part G — the completeness audit, and the four mislabels it found (2026-08-20)
+
+The founder asked whether every kind of money is counted and broken down for both parties. Four passes:
+inventory (doc + schema vs code), the Business view, the Driver view, and reconciliation.
+
+**The arithmetic is complete and closes on both sides**, which is the part that matters most:
+`total = transport + serviceFee + serviceFeeVat` and `transport = fares + noShow + waiting + cancelFees`
+on the Business side; `total = trips + noShow + waiting + cancelledOnYou − penalties` on the Driver's.
+Nothing uncounted, nothing double-counted. What the audit found is a **visibility** problem, plus two things
+not charged at all.
+
+**Fixed now — four labels, three of them introduced earlier today:**
+1. **The Driver's "Fare" line was not the fare.** `mission-run-view.tsx:163` feeds `splitFor` with
+   `grossToDriver(m)` = fare + settled waiting, and it rendered under `<dt>Fare</dt>` — so a 100 € trip with
+   15 € of waiting read "Fare 115,00". Waiting now has its own line with its minutes, and the first line is
+   named for what the money is: *Cancellation compensation* on a cancelled trip, *No-show — full fare* on a
+   no-show, *Fare* otherwise. This closes the asymmetry part A opened by giving the Business panel a Waiting
+   line and not the Driver's. *Verified live:* Fare 69,18 · Waiting · 17 min 17,00 · commission −8,62 ·
+   VAT −1,72 · **Paid to you 75,84**, summing exactly.
+2. **"Cost per trip" said "fare + waiting"** under a figure that has been all-in since part A. Now "fare,
+   waiting and fee".
+3. **`docs/06` §10 still said the migration was not applied.** It was, on 2026-08-18.
+4. **Neither CSV had a service-fee or VAT column** — the one number a Business reclaims was missing from the
+   file its accountant opens. Both exports now carry *Of which service fee* and *Of which VAT on the fee*,
+   from `splitFor` so a Driver-cancelled trip carries none. *Verified live:* 135,49 = 117,82 + 14,73 + 2,94,
+   matching that trip's own row on screen.
+
+**⚑ STILL OPEN — three real gaps, in the order I would take them:**
+- **An extra stop typed WITHOUT picking the address from the suggestions is free.** It has no coordinates, so
+  `app/(dispatch)/dispatch/new/actions.ts:143-146` filters it out of the routed distance and it adds nothing
+  to the price — but it is still stored in `waypoints`, drawn on the Driver's route, and needs a "Reached"
+  tap. The Driver drives an unpaid detour. The pickup and drop-off already refuse an unlocated address
+  (`mission-form.tsx:429,431`); stops impose nothing.
+- **Adding a flight number to an ACCEPTED trip silently changes the waiting terms.** `flight_number` is
+  editable at `accepted`/`confirmed` through the free info edit, and `isAirportPickup` keys off it, so the
+  courtesy wait flips 20→60 min and the money ceiling 60→120. Real money, no Driver consent, no amendment
+  trail. ⚑ Note the founder is right that the field itself must stay editable — it is what switches on flight
+  tracking. The fix is consent or disclosure, not a lock.
+- **Charged but invisible:** the night ×1,20 (`night_applied` is stored and read by no screen), the waiting
+  rate + minutes on a settled trip (a Driver cannot check 13,20 € against anything), and a **Driver's
+  cancellation penalty**, which the Business is owed and which appears on no Business screen at all.
+
+**Two founder ideas parked properly** — BACKLOG **§ Z** (should waiting be charged at a STOP; the "Reached"
+taps already record the arrival instant, and the hard part is the clock origin, not the rate) and an
+addendum to **§ W** (measure demand from our own booking volume per zone against its trailing average — no
+events API needed; it must surface as advice to the Business, never as Kavenue moving the fare).
+

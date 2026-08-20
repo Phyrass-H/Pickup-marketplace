@@ -509,12 +509,14 @@ falling to 23 €/34,50 € while First is unchanged. Most of the market caps in
 NOW stops the meter at 3 min) or not at all, leaving the Driver the right to go. Decide the minute ceilings in
 the same pass as the rate.
 
-**Status: the code is written, the migration is not applied.** `WAITING_RATE_PER_MIN` in
+**Status: SHIPPED 2026-08-18** — migration applied, deployed, and verified end to end on a live Eco trip
+(the Driver's screen read "0,50 € per minute started · stops at 20,00 €"; boarding the Guest made SQL stamp
+`waiting_rate 0.50 · waiting_fee 9.50` on 19 minutes). Already-settled rows keep their own stamped rate. `WAITING_RATE_PER_MIN` in
 `lib/cancellation.ts` is now a per-class table and `waitingBetween()` takes the rate as a REQUIRED argument,
 so a screen that forgets it fails to compile rather than billing the wrong class. The three meters
 (`dispatch-waiting`, `dispatch-cancel`, `rides/cancel-noshow`) each read it from the mission's own class.
-⚑ **The SQL half — `docs/migrations/2026-08-18_waiting_rate_by_class.sql` — must be run before the code
-deploys**, or the meter quotes one rate and settles another.
+⚑ **The two halves must always move together** — `docs/migrations/2026-08-18_waiting_rate_by_class.sql`
+and `WAITING_RATE_PER_MIN`. If either is changed alone the meter quotes one rate and settles another.
 
 ⛔ **The clock starts when the GUEST was due** — `guest_ready_at ?? pickup_at` — **never from the
 Driver's "I've arrived" tap.** Anchoring it to arrival was a live exploit and was fixed. Do not

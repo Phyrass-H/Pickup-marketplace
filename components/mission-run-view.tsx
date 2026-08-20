@@ -161,6 +161,15 @@ export function MissionRunView({
   // The Driver's own money detail (docs/06 §1, §3) — over the same gross figure
   // the footer shows, so the breakdown and the total can never disagree.
   const payment = splitFor(m, grossToDriver(m));
+  // ⚑ `payment.course` is grossToDriver — the fare AND the settled waiting, or on a
+  // cancelled trip the compensation. Rendering it under a "Fare" label made the table
+  // say something untrue on any trip that waited: a 100 € trip with 15 € of waiting
+  // read "Fare 115,00". Split into its parts, which sum to exactly the same total, and
+  // name the first line for what the money actually is on this trip.
+  const settledWaitingGross = m.status === "cancelled" ? 0 : Number(m.waiting_fee ?? 0);
+  const baseGross = payment.course - settledWaitingGross;
+  const baseLabel =
+    m.status === "cancelled" ? "Cancellation compensation" : m.no_show ? "No-show — full fare" : "Fare";
   const vatCollected = transportVat(payment.course, m.transport_vat_rate);
   // NULL is not zero. The trigger stamps 0 for a Driver under *franchise en base*
   // and leaves NULL when nobody has been attached yet, when the trip was re-pooled,
@@ -420,8 +429,14 @@ export function MissionRunView({
             <div className="dnote">
               <div className="dnote__h">What you’re paid for this trip</div>
               <dl className="dfee">
-                <dt>Fare</dt>
-                <dd>{formatMoney(payment.course)}</dd>
+                <dt>{baseLabel}</dt>
+                <dd>{formatMoney(baseGross)}</dd>
+                {settledWaitingGross > 0 && (
+                  <>
+                    <dt>Waiting{m.waiting_minutes ? ` · ${m.waiting_minutes} min` : ""}</dt>
+                    <dd>{formatMoney(settledWaitingGross)}</dd>
+                  </>
+                )}
                 <dt>Kavenue commission ({formatRate(m.commission_driver_rate)})</dt>
                 <dd>−{formatMoney(payment.driverFeeHt)}</dd>
                 <dt>VAT on commission</dt>

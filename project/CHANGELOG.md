@@ -1021,3 +1021,17 @@ charged, waiting has its own line, and an unfilled mission gets no table at all 
 - **Nothing already settled changed.** Every trip that has run keeps the rate that applied on its day.
 - **Not live yet** — it needs the migration run first, otherwise the meter would quote one price and charge
   another.
+
+## 2026-08-20 — the money adds up, and now it says what it is
+
+- **A Driver's breakdown called everything "Fare".** On a trip where they waited, the fare line quietly
+  included the waiting — 100 € of driving and 15 € of waiting read as "Fare 115,00". Waiting now has its own
+  line with the minutes on it, and the top line says what the money actually is: a cancellation, a no-show,
+  or a fare.
+- **Your CSV exports now contain the service fee and its VAT.** That's the one number your accountant
+  reclaims, and it wasn't in the file. Each row now breaks into transport + fee + VAT, exactly like the
+  screen.
+- **"Cost per trip" said it was fare + waiting.** It's been fare + waiting + fee since this morning.
+- **Everything reconciles.** Checked the arithmetic on both sides, not just the screens: your total is
+  transport + fee + VAT, and a Driver's is trips + no-shows + waiting + cancellations, less any penalty.
+  Nothing is uncounted and nothing is counted twice.

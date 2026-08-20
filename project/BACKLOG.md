@@ -1087,6 +1087,27 @@ is already the answer to "I'm worried this won't fill".
 
 ---
 
+**⚑ THE FOUNDER'S REFINEMENT (2026-08-20) — measure demand from OUR OWN BOOKINGS, not from a calendar of
+events.** Their words: *"we can't know all events on all locations, so we can create a kind of algorithm or
+just simple code that understands that in the city or region there is a lot of bookings compared to the last
+weeks or month, so that way we know that the demand is high and it's an opportunity for all to make more
+money."*
+
+This is a better idea than the event calendar and it should be recorded as the shape this feature takes:
+- **It needs no external data.** A count of missions posted per zone per week, against that zone's own
+  trailing average, is a query we can already run. No events API, no guessing which festival matters.
+- **It is honest in a way a surge multiplier is not.** It measures what actually happened to us, in the same
+  way §8 learns route prices from fill rate rather than from a published tariff.
+- **⚠️ IT STILL MUST NOT MOVE THE FARE BY ITSELF.** See point 2 above — that is the line between agent and
+  principal, and it is a legal position, not a preference. The demand signal has to surface as **advice to
+  the Business**, e.g. *"bookings in Nice are up 40% on the last four weeks — trips are filling near the
+  Ceiling"*, leaving the Business to raise its own Ceiling. Kavenue recommends; the Business decides.
+- **The Driver side of the same signal** is the honest "opportunity" the founder is pointing at: a Pool that
+  is busier than usual is worth telling Drivers about, and it costs nobody anything.
+- **Open:** what the window is (week vs month), what counts as "a lot" (a percentage over trailing mean, or
+  a fill-rate/time-to-fill drop, which §8 already tracks), and whether it is a Dispatch banner, a Pool
+  banner, or both.
+
 ## X. Taxonomy cleanup — rename `luxury` → `first`, retire the vestigial `van` 🔨 (founder, 2026-08-16)
 
 **The ask.** The frontend says **Eco · Business · First**; the code and the DB say `eco` ·
@@ -1157,3 +1178,32 @@ it waits for a decision rather than being slipped into another step.
 **Where it lives when it happens:** `driver_cancel_mission` (the amount), `lib/cancellation.ts` (the shared
 ramp), `app/(app)/rides/cancel-noshow.tsx` (the copy). Money-critical: it ships with
 `.local/probe/migrations-2026-08-11.ts` re-run and the money-invariants tests updated.
+
+## Z. Should waiting be charged at an intermediate STOP? 🔨❓ (founder, 2026-08-20)
+
+**The founder's case:** *"If a Guest at a stop takes too long over a certain amount of time."* Today the
+meter is anchored to the PICKUP only — 40 minutes held at stop 2 is free, the same 40 minutes at the pickup
+bills. A Driver waiting outside a shop while the Guest runs an errand earns nothing for it.
+
+**What `docs/06` §10 says today.** Dwell time is **deliberately unpriced in V1**, on the reasoning that a
+flat fee would charge the same for a 2-minute stop as a 20-minute one. That reasoning argues against a *flat
+fee per stop*; it does not argue against a **metered** wait, which is exactly what we already do at the
+pickup and which prices short and long stops differently by construction.
+
+**⚑ The machinery already exists**, which is what makes this cheap: the Driver taps **"Reached — <stop>"**
+on every stop, so the arrival instant is recorded (`stops_reached`), and `mission_waiting()` is already a
+per-minute meter with a courtesy window and a cap.
+
+**The shape worth pricing out — none decided:**
+1. **A courtesy window per stop, then the same per-class rate.** Shorter than the pickup's 20 min — a stop is
+   an errand, not a hotel lobby. 5 or 10 minutes is the obvious candidate.
+2. **One shared cap for the whole trip**, so a trip with four stops cannot run away.
+3. **Who starts the clock.** At the pickup the origin is when the Guest was DUE ([[no-show-clock-origin]] —
+   never the Driver's arrival tap). At a stop there is no "due" time, so the only available origin IS the
+   Driver's "Reached" tap — which is the exact anchor that was a live exploit at the pickup. **This is the
+   hard part of the design, not the rate.** It needs a guard, e.g. the tap is only valid inside the routed
+   corridor, or the stop clock only counts once the Guest is off the vehicle.
+
+**Pairs with:** § Y (the cancellation penalty) and the waiting rate itself — all three are the same
+conversation about what a Driver's time is worth when the trip is not moving.
+

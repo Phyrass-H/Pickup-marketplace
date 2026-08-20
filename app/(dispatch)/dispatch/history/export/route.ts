@@ -14,7 +14,7 @@ import {
   type HistoryRow,
 } from "@/lib/history-filter";
 import { rowCost } from "@/lib/spend";
-import { businessCost } from "@/lib/commission";
+import { businessCost, splitFor } from "@/lib/commission";
 import type { MissionRow } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,11 @@ const HEADERS = [
   "Class",
   "Outcome",
   "Cost to you (EUR)",
+  // ⚑ docs/06 §3 — the invoice is three lines that separate. A Business reclaims the
+  // 20 % VAT on Kavenue's fee and NOTHING on the transport, so a file with one all-in
+  // figure is unusable to the person who opens it: the reclaimable number was not in it.
+  "Of which service fee (EUR)",
+  "Of which VAT on the fee (EUR)",
   "Agreed, not settled (EUR)",
   "Of which waiting (EUR)",
   "Note",
@@ -123,6 +128,10 @@ export async function GET(req: NextRequest) {
     const m = r.mission;
     const car = cars.get(m.id);
     const waiting = Number(m.waiting_fee ?? 0);
+    // The same triple the row and Spend show, so the file decomposes exactly the way
+    // the screen does (docs/06 §3). splitFor, not commissionSplit, so a Driver-cancelled
+    // trip carries no fee — the same rule businessCost encodes.
+    const split = splitFor(m, (r.fare ?? 0) + waiting);
     const bucket = bucketOf(m);
     const note = m.no_show
       ? "Guest no-show — charged in full"
@@ -166,6 +175,8 @@ export async function GET(req: NextRequest) {
         // was already inside. Same definition on both surfaces now, and the same
         // column name the Spend export uses.
         r.counted && (r.fare != null || waiting > 0) ? euro(rowCost(r)) : "",
+        r.counted && (r.fare != null || waiting > 0) ? euro(split.businessFeeHt) : "",
+        r.counted && (r.fare != null || waiting > 0) ? euro(split.businessFeeVat) : "",
         // ⚑ ALL IN, and the unsettled column now carries fare + waiting, exactly
         // like the Spend export and the tile both files mirror. It was writing a
         // bare Course with the waiting dropped, beside an all-in "Cost to you".
