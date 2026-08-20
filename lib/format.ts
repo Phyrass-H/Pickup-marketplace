@@ -57,6 +57,39 @@ export function formatRate(rate: number | string | null | undefined): string {
   return `${String(pct).replace(".", ",")} %`;
 }
 
+/** A per-minute waiting rate: 0,44 → "0,44 €/min". */
+export function formatPerMinute(rate: number | string | null | undefined): string {
+  const n = Number(rate);
+  if (rate == null || !Number.isFinite(n)) return "—";
+  return `${formatMoney(n)}/min`;
+}
+
+/**
+ * How a SETTLED waiting spell is stated on both sides: "13 min at 0,44 €/min".
+ * ⚑ The rate must come from the row's own stamped `waiting_rate`, never from
+ * `waitingRatePerMin(category)` — that one is the LIVE rate. Rows settled
+ * between 2026-07-22 and 2026-08-18 were billed a flat 1,00 whatever their
+ * class, so re-deriving a rate from the class would put a false number beside
+ * a real amount. Older rows have no rate at all and get the minutes alone.
+ * ⚑ The rate must also be on the SAME side as the amount it sits beside. The
+ * Driver's net rate (×0,88 → 0,44 · 0,66 · 0,88) multiplies out exactly at
+ * every minute count; the Business's all-in one does not (0,575 prints
+ * "0,58 €", and 0,58 × 20 ≠ the real 11,50). A Business rate is therefore only
+ * ever stated Course-side, inside the invoice table where the fee lines follow
+ * and the total still reconciles. docs/06 §10.
+ */
+export function formatWaitingSpell(
+  minutes: number | string | null | undefined,
+  ratePerMin: number | string | null | undefined,
+): string {
+  const m = Number(minutes);
+  if (minutes == null || !Number.isFinite(m) || m <= 0) return "—";
+  const label = `${Math.round(m)} min`;
+  const r = Number(ratePerMin);
+  if (ratePerMin == null || !Number.isFinite(r) || r <= 0) return label;
+  return `${label} at ${formatPerMinute(r)}`;
+}
+
 // Straight-line distance, flagged approximate with "~" (it's not road distance).
 // Under 10 km we keep one decimal; above, round to the nearest km.
 export function formatDistance(km: number | null | undefined): string {

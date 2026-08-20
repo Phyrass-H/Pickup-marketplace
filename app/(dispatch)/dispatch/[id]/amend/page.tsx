@@ -28,6 +28,8 @@ const ERROR_COPY: Record<string, string> = {
   locked: "This trip can no longer be changed — the Driver may have started it.",
   missing: "Pick the pickup from the address suggestions so it stays located.",
   nodrop: "Pick a destination from the address suggestions.",
+  nostop:
+    "Pick every stop from the address suggestions — a stop we can’t place isn’t on the route, so it isn’t in the price either.",
   fare: "Enter the new agreed fare.",
   db: "Couldn’t send the change. Please try again.",
 };

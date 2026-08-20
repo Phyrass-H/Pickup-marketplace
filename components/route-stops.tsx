@@ -56,6 +56,16 @@ export interface RouteSummary {
   pickupText: string;
   dropoffText: string;
   stops: string[];
+  /**
+   * Stops that were TYPED but never picked from the suggestions, so they carry
+   * no coordinates. Every routing path filters them out (here, /api/eta, and
+   * both server actions), which means the stop adds nothing to the distance and
+   * nothing to the fare — while still being stored, drawn on the Driver's route
+   * rail and needing a "Reached" tap. The Driver drives it for free, so the
+   * form refuses to post one, exactly as it already refuses an unlocated
+   * pickup or drop-off.
+   */
+  unlocatedStops: string[];
 }
 
 export function RouteStops({
@@ -186,6 +196,7 @@ export function RouteStops({
   // Publish a display snapshot upward (for the live Summary rail). Effect, not
   // render, so it never warns; onSummaryChange is expected to be a stable setter.
   const stopTexts = stops.map((s) => s.text.trim()).filter(Boolean);
+  const unlocatedStops = stops.filter((s) => s.text.trim() && !s.place).map((s) => s.text.trim());
   useEffect(() => {
     onSummaryChange?.({
       pickup: pk,
@@ -196,9 +207,20 @@ export function RouteStops({
       pickupText: pickup.text,
       dropoffText: dropoff.text,
       stops: stopTexts,
+      unlocatedStops,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pk, dp, viaCount, eta, etaLoading, pickup.text, dropoff.text, stopTexts.join("|")]);
+  }, [
+    pk,
+    dp,
+    viaCount,
+    eta,
+    etaLoading,
+    pickup.text,
+    dropoff.text,
+    stopTexts.join("|"),
+    unlocatedStops.join("|"),
+  ]);
 
   return (
     <div className="field" style={{ marginBottom: 0 }}>
@@ -231,10 +253,12 @@ export function RouteStops({
                   <Square size={11} fill="currentColor" strokeWidth={0} />
                 </span>
                 <div className="route-input">
+                  {/* NOT `compact`: compact's only effect is to hide the "pick
+                      an address from the list" nudge, and a stop needs it most
+                      — an unlocated stop is silently unpriced. */}
                   <AddressAutocomplete
                     defaultValue={{ label: s.text, lat: s.place?.lat, lng: s.place?.lng }}
                     placeholder={`Stop ${i + 1}`}
-                    compact
                     proximity={pk ? [pk.lng, pk.lat] : undefined}
                     onChange={(st) => setStop(i, st)}
                   />

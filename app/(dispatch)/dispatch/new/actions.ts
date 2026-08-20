@@ -10,7 +10,7 @@ import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { parisLocalToUtc } from "@/lib/time";
 import { routeMetrics } from "@/lib/directions";
-import { parseWaypointsField } from "@/lib/waypoints";
+import { parseWaypointsField, unlocatedStops } from "@/lib/waypoints";
 import {
   parsePassengers,
   primaryPassengerName,
@@ -163,6 +163,15 @@ export async function createMission(formData: FormData) {
   // A draft may legitimately be parked without one and finished later.
   if (!asDraft && (!dropoffAddress || !dropoffValid)) {
     redirect(backTo("nodrop"));
+  }
+
+  // ⚑ And every STOP must be located too, for the same reason the ends are: the
+  // `via` filter above drops a stop with no coords, so the route never passes
+  // through it and the fare never counts it — while the Driver still has to
+  // drive there and tap "Reached". See `unlocatedStops`. A draft may be parked
+  // with one half-typed, exactly as it may be parked without a drop-off.
+  if (!asDraft && unlocatedStops(waypoints).length > 0) {
+    redirect(backTo("nostop"));
   }
 
   // datetime-local carries no timezone — interpret it as Europe/Paris wall time

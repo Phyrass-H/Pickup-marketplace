@@ -30,7 +30,7 @@ import {
   activeFlagLabels,
   dressCodeLabel,
 } from "@/lib/driver-service";
-import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
+import { parseWaypoints, parseWaypointsField, unlocatedStops } from "@/lib/waypoints";
 import {
   parsePassengers,
   primaryPassengerName,
@@ -335,6 +335,10 @@ export function MissionForm({
     pickupText: pickupDefault?.label ?? "",
     dropoffText: dropoffDefault?.label ?? "",
     stops: stopsDefault.map((s) => s.label),
+    // Seeded empty: a resumed draft's stops may in fact be unlocated, and
+    // RouteStops republishes the truth on mount. The refusal reads the hidden
+    // `waypoints` field at review time, not this snapshot.
+    unlocatedStops: [],
   }));
 
   // ── Kavenue's price for this trip (docs/06 §4) ────────────────────────────
@@ -420,6 +424,9 @@ export function MissionForm({
       pickupLat != null && pickupLng != null && isValidLatLng(pickupLat, pickupLng);
     const dropoffLocated =
       dropLat != null && dropLng != null && isValidLatLng(dropLat, dropLng);
+    // Read the stops from the field that will actually be POSTed, not from the
+    // rail's own state, so the check and the write can never disagree.
+    const loose = unlocatedStops(parseWaypointsField(fd.get("waypoints")));
 
     // Name ONLY what's actually missing — not a fixed catch-all sentence. Drop-off
     // is required to POST (a draft can still be saved incomplete from the edit view).
@@ -429,6 +436,10 @@ export function MissionForm({
     else if (!pickupLocated) missing.push("a pickup chosen from the address suggestions");
     if (!dropoff) missing.push("a drop-off address");
     else if (!dropoffLocated) missing.push("a drop-off chosen from the address suggestions");
+    // An unlocated stop is unpriced and unpaid — see `unlocatedStops`.
+    if (loose.length === 1) missing.push("a stop chosen from the address suggestions");
+    else if (loose.length > 1)
+      missing.push(`${loose.length} stops chosen from the address suggestions`);
     if (!at) missing.push("a pickup time");
     if (ceilingN == null || ceilingN <= 0) missing.push("a ceiling price");
 
@@ -527,6 +538,12 @@ export function MissionForm({
         <div className="notice error">
           Add a drop-off and pick it from the address suggestions before posting.
           (You can still save it as a draft without one.)
+        </div>
+      )}
+      {error === "nostop" && (
+        <div className="notice error">
+          Pick every stop from the address suggestions before posting — a stop we
+          can’t place isn’t on the route, so it isn’t in the price either.
         </div>
       )}
       {error === "belowfloor" && (

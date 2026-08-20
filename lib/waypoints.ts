@@ -3,6 +3,7 @@
 // Shared by the Driver Pool card, the Driver mission detail, and the Dispatch
 // trip row so the parsing rule lives in one place.
 import type { Waypoint } from "@/lib/database.types";
+import { isValidLatLng } from "@/lib/geo";
 
 export function parseWaypoints(raw: unknown): Waypoint[] {
   if (!Array.isArray(raw)) return [];
@@ -56,4 +57,23 @@ export function parseWaypointsField(raw: unknown): StopInput[] {
     .map((a) => a.trim())
     .filter(Boolean)
     .map((address) => ({ address, lat: null, lng: null }));
+}
+
+/**
+ * The stops that carry no usable coordinates — typed, but never picked from the
+ * address suggestions.
+ *
+ * ⚑ AN UNLOCATED STOP IS FREE, WHICH IS WHY BOTH FORMS REFUSE ONE. Every
+ * routing path filters it out — the live ETA in `RouteStops`, `/api/eta`, and
+ * the distance both server actions send to the rate card — so the route never
+ * passes through it and the fare never moves. It is stored on the mission all
+ * the same: drawn on the Driver's route rail, counted in their stop progress
+ * and needing a "Reached" tap. The Driver drives the detour for nothing.
+ * The pickup and the drop-off have always had to be picked; this is that same
+ * rule, applied to the stops that sit between them.
+ */
+export function unlocatedStops(stops: StopInput[]): StopInput[] {
+  return stops.filter(
+    (w) => w.lat == null || w.lng == null || !isValidLatLng(w.lat, w.lng),
+  );
 }

@@ -14,6 +14,7 @@ import {
   Languages,
   VolumeX,
   Plane,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 import type { MissionRow } from "@/lib/database.types";
@@ -117,6 +118,16 @@ export function MissionCard({ mission }: { mission: MissionRow }) {
             <span className="pbadge pbadge--run">
               <Luggage size={12} strokeWidth={1.9} aria-hidden="true" />
               Luggage run
+            </span>
+          )}
+          {/* docs/06 §4 — a 22:00-06:00 pickup is priced at the card's night
+              multiplier. The Driver was never told either, so the better fare
+              on a late run read as luck. Named, not numbered: the multiplier
+              lives on the rate card, not on the mission. */}
+          {mission.night_applied && (
+            <span className="pbadge pbadge--run">
+              <Moon size={12} strokeWidth={1.9} aria-hidden="true" />
+              Night rate
             </span>
           )}
         </div>

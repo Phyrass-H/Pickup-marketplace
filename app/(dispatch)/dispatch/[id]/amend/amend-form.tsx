@@ -75,6 +75,9 @@ export function AmendForm({
     pickupText: pickupDefault?.label ?? "",
     dropoffText: dropoffDefault?.label ?? "",
     stops: stopsDefault.map((s) => s.label),
+    // A stored stop is always located (both forms refuse to write one that
+    // isn't); RouteStops republishes this the moment anything is typed.
+    unlocatedStops: [],
   }));
   const action = proposeMissionAmendment.bind(null, missionId);
 

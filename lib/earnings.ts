@@ -258,6 +258,20 @@ export function todayAnchor(now: Date = new Date()) {
 export interface DriverCancelRow {
   created_at: string;
   fee_amount: number | string | null;
+  /**
+   * Everything below is OPTIONAL because `totalsFor` needs none of it — it is
+   * what the Earnings trip list needs to draw a row for a trip that is no
+   * longer the Driver's. A driver cancellation clears `driver_id`, so the
+   * mission drops out of their own query and only this row survives.
+   * ⚑ `hours_before_pickup` is measured off the same transaction clock that
+   * defaults `created_at`, so `created_at + hours_before_pickup` reconstructs
+   * `pickup_at` exactly — which is how the row gets dated onto the right day
+   * without reading the mission at all.
+   */
+  mission_id?: string;
+  reason?: string | null;
+  fare_snapshot?: number | string | null;
+  hours_before_pickup?: number | string | null;
 }
 
 export interface Totals {
@@ -314,14 +328,30 @@ export function totalsFor(missions: MissionRow[], cancels: DriverCancelRow[]): T
         t.trips += fare;
         t.tripCount += 1;
       }
-      // Waiting is settled onto the mission row by both exits; a cancelled trip's
-      // waiting is already inside cancelCompensation, so only count it here.
+      // Waiting is settled onto the mission row by every exit that can run a
+      // meter — board_guest, both no-show paths, and a Business cancel from
+      // 'arrived'. It is counted here and, since 2026-08-20, in the cancelled
+      // branch below, so the line reports every minute the Driver sat there.
       t.waiting += driverNet(m, num(m.waiting_fee));
       t.waitingMinutes += m.waiting_minutes ?? 0;
     } else if (m.status === "cancelled") {
       const comp = cancelCompensation(m);
       if (comp != null) {
-        t.cancelledOnYou += driverNet(m, comp);
+        // ⚑ The waiting comes OUT of the compensation, it is not added to it.
+        // `cancelCompensation` is the policy fee PLUS any waiting the Driver
+        // had already run when the Business pulled the trip (business_cancel
+        // settles the meter from 'arrived'), and until 2026-08-20 the whole
+        // sum landed in "Cancelled on you" — so the minutes they actually sat
+        // there vanished from the "Waiting time" line entirely.
+        // ⚑ Carve it out of the NETTED figure rather than netting the two
+        // halves separately: driverNet rounds to the cent, so two calls can
+        // land a cent away from one. Subtracting inside the netted total keeps
+        // the euros conserved exactly, which is what the identity test pins.
+        const netComp = driverNet(m, comp);
+        const netWaiting = driverNet(m, num(m.waiting_fee));
+        t.waiting += netWaiting;
+        t.waitingMinutes += m.waiting_minutes ?? 0;
+        t.cancelledOnYou += netComp - netWaiting;
         t.cancelledOnYouCount += 1;
       }
     }
@@ -351,6 +381,22 @@ export function totalsFor(missions: MissionRow[], cancels: DriverCancelRow[]): T
  */
 export function missionAmount(m: MissionRow): number {
   return driverNet(m, grossToDriver(m));
+}
+
+/**
+ * When the trip a Driver walked away from was due, rebuilt from the cancellation
+ * row alone. `hours_before_pickup` was measured against the same clock that
+ * stamped `created_at`, so the two add back to `pickup_at` — which is what dates
+ * the row into the right day group without reading a mission the Driver can no
+ * longer see. Returns null if the column is missing (pre-O7 rows).
+ */
+export function driverCancelPickupAt(c: DriverCancelRow): string | null {
+  if (c.hours_before_pickup == null) return null;
+  const hours = Number(c.hours_before_pickup);
+  if (!Number.isFinite(hours)) return null;
+  const at = new Date(c.created_at).getTime();
+  if (!Number.isFinite(at)) return null;
+  return new Date(at + hours * 3_600_000).toISOString();
 }
 
 /** The same amount before commission — what actually moves between the parties. */

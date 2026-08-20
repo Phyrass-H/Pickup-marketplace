@@ -153,6 +153,15 @@ export default async function RideHistoryPage({
     // NET, like every figure a Driver reads (docs/06 §1): the meter runs at
     // 1 €/min between the parties and this is the Driver's share of it.
     const waiting = driverNet(m, Number(m.waiting_fee ?? 0));
+    // The minutes ride along with the euros: a Driver who banked 5,72 € for
+    // waiting had nothing on this screen to check it against. The RATE stays on
+    // the trip's own money detail — it is one clause too many for a list row.
+    const waitingNote =
+      waiting > 0
+        ? `incl. ${formatMoney(waiting)} waiting${
+            m.waiting_minutes ? ` · ${m.waiting_minutes} min` : ""
+          }`
+        : null;
     items.push({
       key: `m:${m.id}`,
       mission: m,
@@ -163,12 +172,12 @@ export default async function RideHistoryPage({
         ? comp == null
           ? { label: null, value: "—", tone: "muted" }
           : {
-              label: waiting > 0 ? `incl. ${formatMoney(waiting)} waiting` : "Compensation",
+              label: waitingNote ?? "Compensation",
               value: formatMoney(driverNet(m, comp)),
               tone: "plain",
             }
         : {
-            label: waiting > 0 ? `incl. ${formatMoney(waiting)} waiting` : null,
+            label: waitingNote,
             value: formatMoney(missionAmount(m)),
             tone: "plain",
           },
@@ -181,9 +190,13 @@ export default async function RideHistoryPage({
     for (const c of myCancels ?? []) {
       const m = eventMissions.get(c.mission_id);
       if (!m) continue;
-      // Always 100% of the fare at the time (D45) — a penalty owed to Kavenue, not
-      // a transport charge. fee_amount is the stored figure; fall back to the
-      // snapshot it was computed from.
+      // Always 100% of the fare at the time (D45). ⚑ It is an indemnity owed to
+      // the BUSINESS, not to Kavenue and not a transport charge — docs/06 §1,
+      // which is why no commission comes off it (see `carriesCommission`). This
+      // comment said "Kavenue" until 2026-08-20; it was the only site in the app
+      // that did, and it disagreed with the doc, with lib/commission.ts and with
+      // lib/earnings.ts. The code below was always right.
+      // fee_amount is the stored figure; fall back to the snapshot it came from.
       const penalty = c.fee_amount ?? c.fare_snapshot;
       items.push({
         key: `c:${c.mission_id}`,

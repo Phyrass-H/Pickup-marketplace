@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { categoryLabel, formatMoney, formatMonth } from "@/lib/format";
 import { isExpired, parisDayKey } from "@/lib/dispatch-status";
-import { TripRow, type DriverContact } from "@/components/trip-row";
+import { TripRow, type DriverContact, type DriverWalk } from "@/components/trip-row";
 import { HistoryFilters } from "@/components/history-filters";
 import { ScrollToTrip } from "@/components/scroll-to-trip";
 import {
@@ -107,6 +107,33 @@ export default async function DispatchHistory({
     .order("pickup_at", { ascending: false });
 
   const missions: MissionRow[] = all ?? [];
+
+  // Every trip a Driver walked away from. Without this the archive shows a
+  // walked-and-never-refilled trip as plain "unfilled" — with no Driver name,
+  // because the re-pool cleared driver_id — which is indistinguishable from a
+  // trip nobody ever took. Same read as the Schedule, kept in step with it:
+  // all walks per mission, newest first, never de-duplicated.
+  const driverWalks = new Map<string, DriverWalk[]>();
+  if (missions.length > 0) {
+    const { data: walks } = await supabase
+      .from("mission_cancellation")
+      .select("mission_id, created_at, reason, hours_before_pickup")
+      .in(
+        "mission_id",
+        missions.map((m) => m.id),
+      )
+      .eq("kind", "driver_cancel")
+      .order("created_at", { ascending: false });
+    for (const w of walks ?? []) {
+      const list = driverWalks.get(w.mission_id) ?? [];
+      list.push({
+        at: w.created_at,
+        hoursBefore: w.hours_before_pickup == null ? null : Number(w.hours_before_pickup),
+        reason: w.reason,
+      });
+      driverWalks.set(w.mission_id, list);
+    }
+  }
 
   // Driver + car for EVERY past trip, not just the ones on screen: the search
   // matches on a Driver's name and on a plate, which is impossible if the lookup
@@ -308,6 +335,7 @@ export default async function DispatchHistory({
                 key={r.mission.id}
                 mission={r.mission}
                 driver={contacts.get(r.mission.id) ?? null}
+                driverWalks={driverWalks.get(r.mission.id) ?? null}
                 archived
                 fare={
                   r.counted ? rowCost(r) : r.fare == null ? null : businessCost(r.mission, r.fare)

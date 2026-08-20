@@ -5,6 +5,36 @@
 
 ---
 
+## 20 August 2026 — the app now says the things it already knew
+
+- **A stop you didn't pick from the list was free.** If you typed a stop and moved on without choosing
+  one of the suggestions, we had no map location for it — so it wasn't on the route, and it wasn't in
+  the price. It still showed up on the Driver's screen, and they still had to drive there. The form
+  now asks you to pick it, exactly as it already does for the pickup and the drop-off. (You can still
+  save an unfinished draft with one.)
+- **You can see why a late trip cost more.** A pickup between 22:00 and 06:00 carries the night rate,
+  and until now nothing on any screen said so — two identical airport runs, one 20% dearer, no reason
+  given. There's now a small **Night rate** tag on the trip, on the Driver's card too, and a column in
+  both exports.
+- **Waiting time now shows what it was charged at.** A settled trip used to say "17 min" and an amount,
+  and you had to take both on trust. It now reads **"17 min at 0,75 €/min"**. The Driver sees the same
+  line at their own rate, so both of you can check the sum. Older trips that never recorded a rate
+  keep showing just the minutes — we won't guess a number they were never charged.
+- **When a Driver drops a trip, you'll know.** Until now the trip quietly went back to the Pool and
+  looked exactly like one nobody had ever taken. The row now says a Driver had it, how long before
+  pickup they walked, and the reason they gave — and both exports carry it.
+- **Drivers: two things in Earnings were counting wrong.** Waiting time on a trip a hotel then
+  cancelled was being swallowed into "Cancelled on you", so the minutes you actually sat there didn't
+  show. And a trip you cancelled yourself was taken off your total without appearing in the list — so
+  the days added up to more than the total, with nothing explaining the difference. Both fixed; the
+  totals themselves never moved.
+- **One thing we deliberately did NOT put on screen.** A Driver who drops a trip owes a penalty. Who
+  that money should end up with is a fair question you raised — the hotel paid nothing and charges its
+  Guest nothing, so 100% of the fare isn't really compensation for a loss. The block says what's
+  certain and no more; the money is written up and waiting for your decision.
+
+---
+
 ## 16 August 2026 — Kavenue now works out the price for you
 
 - **You don't type a price any more.** Pick the trip and the class, and the ceiling fills itself in

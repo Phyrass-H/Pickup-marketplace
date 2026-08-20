@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { routeMetrics } from "@/lib/directions";
-import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
+import { parseWaypoints, parseWaypointsField, unlocatedStops } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
 import { commissionSplit, courseFromBusinessTotal, ratesOf } from "@/lib/commission";
 import { buildFromSnapshot } from "@/lib/amendments";
@@ -69,6 +69,13 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
   const note = String(formData.get("note") ?? "").trim();
 
   const waypoints = parseWaypointsField(formData.get("waypoints"));
+  // ⚑ Same refusal as the ends, and as the new-mission form: a stop with no
+  // coords is dropped by the `via` filter below, so the re-measured distance —
+  // and therefore the priced change — behaves as if it were never added, while
+  // the Driver still has to drive there. See `unlocatedStops`. Reproduced live:
+  // "Add a stop at Place du Casino" while the route stayed 15 km and the fare
+  // did not move.
+  if (unlocatedStops(waypoints).length > 0) redirect(backTo("nostop"));
   const via = waypoints
     .filter((w) => w.lat != null && w.lng != null && isValidLatLng(w.lat, w.lng))
     .map((w) => ({ lat: w.lat as number, lng: w.lng as number }));

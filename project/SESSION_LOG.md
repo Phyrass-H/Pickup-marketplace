@@ -3152,3 +3152,147 @@ agents died on 529s, then three stalled on retry. Three narrow agents with a har
 synthesis agent got the answer in 97 seconds. When a workflow half-dies, `resumeFromRunId` replays the
 survivors from cache rather than re-running them.
 
+
+---
+
+## Session 63 — 2026-08-20 · the loose ends the money sweep left (branch `main`)
+
+**Scope, chosen by the founder in one line: "let's finish the little things."** The three items
+`NEXT_SESSION` had queued before the §6 curve. All four surfaces were mocked and signed off before a line was
+written; two of them changed shape as a result of what the founder asked back.
+
+### 1. An unlocated stop is no longer free
+
+A stop typed but never picked from the address suggestions carries no coordinates, and **six** separate
+filters dropped it — `RouteStops`' live ETA, `/api/eta`, and four in the three server actions — so the route
+never passed through it and the fare never counted it. It was stored all the same, drawn on the Driver's
+route rail, counted in their stop progress and needing a "Reached" tap. The Driver drove an unpaid detour.
+
+The fix is the rule the two ends have always carried, in three places:
+- `components/route-stops.tsx` — the stop's `AddressAutocomplete` **dropped `compact`**. That prop's only
+  effect is to suppress the *"Pick an address from the list so we can place it on the map"* nudge, which the
+  stop needed most. `RouteSummary` also gained `unlocatedStops`.
+- `lib/waypoints.ts` — new `unlocatedStops()`, so the client check and both server refusals share one rule.
+- `dispatch/new/actions.ts` + `[id]/amend/actions.ts` — a `?error=nostop` redirect, with copy in the form's
+  banner table and in the amend page's `ERROR_COPY`. **A draft may still be parked with a loose stop**, the
+  same latitude a draft has always had over the drop-off.
+
+### 2a. The night rate is finally visible
+
+`night_applied` had been written on every mission since the rate card shipped and read by **no screen at
+all**. Now: a `.dx-night` tag in the date cell of the Business row (all three variants), `Paris time · night
+rate (22:00–06:00)` under the Pickup tile, a `pbadge` on the Driver's Pool card and mission detail, a suffix
+on their Earnings row, and a column in both CSVs.
+
+⚑ **Named, never numbered.** The multiplier lives on `rate_card.night_multiplier`, reachable only through
+`mission.rate_card_id` — NULL on the whole pre-2026-08-16 archive. `×1,20` in the UI would be a constant in
+code (`docs/06` §9) and would lie the day the card is re-tuned.
+⚑ The CSS needed **two parent selectors** (`.dxh-when > .dx-night, .dx-trip__when > .dx-night`) to out-specify
+`.dxh-when > span` and `.dx-trip__when > span`, both of which target it. The third date-cell variant (today's
+Schedule, time only) was rewrapped in the § Q classes minus the `<b>`, so the time keeps its exact size and
+weight while the cell becomes a column a tag can sit under.
+
+### 2b. A settled wait states its own rate
+
+`mission.waiting_rate` was stamped per row and rendered by zero lines of app code. New `formatWaitingSpell()`
+and `formatPerMinute()` in `lib/format.ts`; used on the Driver's kept-money line and money table
+(`mission-run-view`), their Earnings trip row, and the Business's invoice table.
+
+⚑ **Each side on its own basis, and only where the arithmetic survives being checked.** The Driver's ×0,88
+gives 0,44 · 0,66 · 0,88 — clean cents, so minutes × rate is exactly the amount beside it. The Business's
+×1,15 turns 0,50 into **0,575**, which prints "0,58 €" and does *not* multiply out. So the Business gets the
+rate **Course-side inside the invoice table** (where the fee lines follow and the total reconciles) and
+**minutes without a rate** on the row face, in `rides/history`, and in both CSVs.
+⚑ **The STAMPED column, never `waitingRatePerMin(category)`** — that one is the live rate, and rows settled
+2026-07-22 → 2026-08-18 were billed a flat 1,00 whatever their class. No rate stamped → minutes alone.
+⚑ Gate on **minutes**, not on the rate: both no-show paths stamp a rate with 0 minutes.
+
+### 2c. The Driver-cancelled block — and the question that changed it
+
+`mission_cancellation` is written by six RPCs and was read by exactly **two** Driver-side screens. No Dispatch
+surface touched it, so a trip a Driver walked away from re-pooled silently and rendered *identically to one
+nobody had ever accepted* — same status, no Driver, no trace. Added: the read on the Schedule and the archive
+(`DriverWalk[]`, **never** the latest-per-mission de-dup the amendment and release blocks use — a re-pooled
+trip can be walked again), a `.dx-amend--declined` block on the row, and a `Driver cancelled` column in both
+CSVs.
+
+**⚑ IT SHIPPED WITH NO MONEY ON IT, AND THAT IS THE FOUNDER'S CALL.** The mock said *"Owed to you:
+190,00 €"*. The founder stopped it: *"the hotel will in the end not pay anything and won't charge their
+clients, so what do we do with the driver's money?"* They are right, and it is the hole in `docs/06` §1: the
+trip never ran, the Business paid nothing and billed nothing, and the trip went back into the Pool — so 100%
+of the fare is not compensation for a 100% loss. It is sized to **deter the Driver**, a different job pointing
+at a different recipient, which is exactly why `docs/06`:71 and the O7 migration header had disagreed for a
+month. Parked with three costed destinations in BACKLOG **§ Y**, cross-referenced from `docs/06` §1 and §12.
+Nothing is collected during the beta, so nothing is lost by waiting. **The block states only what is certain:
+a Driver held this trip, when they walked, and their reason.**
+
+**Settled on the way:** the `rides/history` comment calling the penalty *"owed to Kavenue"* was the outlier —
+`docs/06`, `lib/commission.ts`, `lib/earnings.ts` and `cancel-noshow.tsx` all say indemnity, and CLAUDE.md
+makes `docs/` canonical. Comment corrected; the code under it was always right.
+
+### 3. The two Earnings counting gaps
+
+- **GAP A.** `cancelCompensation` is fee **plus** waiting, and the whole sum landed in "Cancelled on you", so
+  the minutes a Driver actually sat there never reached the "Waiting time" line. Now carved out —
+  ⚑ **out of the NETTED figure, not netted separately**: `driverNet` rounds to the cent, so two calls can
+  land a cent from one. `t.waiting += netWaiting; t.cancelledOnYou += netComp - netWaiting` conserves the
+  euros exactly, which is what the identity test pins. Verified live: 30 min / 19,80 € where it had read
+  17 min, with "Cancelled on you" falling 144,20 → 135,62 and the headline unmoved.
+- **GAP B.** A driver cancellation clears `driver_id`, so the mission left the Driver's own query while its
+  penalty stayed in the headline — the day rows summed to **more** than the total, by exactly the penalty,
+  with nothing explaining it. Worst case: a period holding only a cancellation showed a *negative* headline
+  above *"Trips show up here the moment you complete them."* The trip list is now a discriminated
+  `ListItem[]` merging trips and penalties. `loadPeriod` gained an opt-in `withRows` (it runs **three** times
+  per render; only the first draws a list) which re-reads the missions through the service role, gated to the
+  ids the Driver's own cancellation rows point at — the `rides/history` pattern.
+  ⚑ **Dated by `created_at`**, the basis the headline filters on. Dating by the pickup would push the row
+  outside the period whenever a Driver walks away from next month's trip and the day rows would stop adding
+  up; the due time goes in the subtitle instead. New `driverCancelPickupAt()` rebuilds it from
+  `created_at + hours_before_pickup`, which reconcile exactly because both came off the same clock.
+
+### Two bugs found while verifying, neither in scope
+
+- **`Today · Today`** in the Earnings day heading. `formatDayGroup` already returns `"Today"`, and the page
+  prefixed it again. Latent since the feature shipped — no trip in the archive had ever fallen on the current
+  day, and a penalty row can. My Rides has always rendered the bare label; Earnings now matches it.
+- **`.local/probe/diff-sql-vs-lib.ts` was stale and loudly wrong** — it asserted `Number(sql.w_rate) !== 1`, a
+  flat rate that stopped being flat in S62. It reported **480 mismatches in 673 checks** on a codebase where
+  SQL and lib fully agree: every MIN, FEE, FROM and TO check passed. Now compares against
+  `waitingRatePerMin(m.category)` and reads **673 checks · ALL AGREE · 0 mismatches**. A future session would
+  have lost an hour to that.
+- **Also cleaned:** three unreachable `cancelled_by === "driver"` branches (row archive note, both CSV notes).
+  No RPC ever writes that value — `business_cancel_mission` is the only writer of `cancelled_by` and it
+  hard-codes `'business'` — and their presence made the missing case look handled.
+
+### Verified against the live DB, and how the gaps were covered
+
+The test data contained none of the new states: **0** missions with `night_applied`, **0** `driver_cancel`
+rows, and every `waiting_rate` either NULL or the legacy flat 1,00. Two throwaway fixtures
+(`.local/probe/_s63-display-seed.mjs`, `_s63-driver-seed.mjs`) wrote a manifest first, created exactly the
+missing states, and `--undo` restored the recorded prior values — **baseline 277 before and after, and the
+`waiting_rate` distribution back to `{1: 33, null: 1}`**.
+- Business: `incl. 19,55 € waiting · 17 min` on the row face, `Waiting · 17 min` in the invoice table (that
+  row has no stamped rate — the fallback), the `Night rate` tag rendering at 10px/slate-600, the Driver
+  cancelled block with its reason, and the blocking sentence *"Before posting, add a drop-off address, a stop
+  chosen from the address suggestions, a pickup time, and a ceiling price."*
+- Driver: `17 min at 0,66 €/min wait` in Earnings, `17 min at 0,75 €/min` Course-side in the money table
+  against `17 min at 0,66 €/min` on the kept line — **both multiplying out**, and the table still totalling
+  72,10 €.
+- CSVs fetched and parsed: 23 and 22 columns, the three new ones appended **last**, and the Spend total row
+  still landing at index 12 under "Cost to you (EUR)" — the hand-padded row that a mid-list insert would have
+  silently broken.
+- **NOT verified live:** the Driver's Pool-card night badge. There is no future pooled mission in the test
+  data, so the Pool is empty. It is a verbatim copy of the proven `pbadge--run` markup.
+
+**Green:** `tsc` clean · **420 → 443 tests** (new `tests/format.test.ts` 8, `tests/waypoints.test.ts` 9,
+`driverCancelPickupAt` 5, plus the two rewritten earnings cases) · `next build` clean · `diff-sql-vs-lib`
+673/673 · `write-test` 170/170 · `migrations-2026-08-10` 68 · `migrations-2026-08-11` 23 ·
+`commission-parity` GREEN. `transport-vat-2026-08-17` was **not** run — it still asserts a 271 baseline and
+the six S61DEMO trips make it 277, exactly as `NEXT_SESSION` warns.
+
+**Answered in passing:** the founder asked why today's Schedule is full. It reads
+**"Today · Jeudi 20 Août — 0 trips · 18 to close"**. There are no trips today; those 18 rows are past trips a
+Driver never closed, lifted into today's band by § Q, each carrying its own date and *"Not closed"*. Every
+mission in the database is now in the past (the newest is 18 August), so the whole unclosed backlog has piled
+into one band. It is the § Q feature working, not a bug — and it is one more argument for the wipe-and-reseed
+already queued after the curve.

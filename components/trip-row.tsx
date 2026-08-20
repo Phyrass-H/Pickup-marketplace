@@ -10,12 +10,14 @@ import { businessCost, carriesCommission, ratesOf, splitFor } from "@/lib/commis
 import {
   addressLine,
   formatDateTime,
+  formatDuration,
   formatMoney,
   formatRate,
   formatTime,
   formatArchiveDay,
   formatShortDay,
   formatTripMeta,
+  formatWaitingSpell,
   serviceClassLabel,
 } from "@/lib/format";
 import {
@@ -83,11 +85,46 @@ export interface ReleaseBrief {
   declineReason: string | null; // human label, or null — why the Driver kept it
 }
 
+/**
+ * A Driver who accepted this trip and then walked away from it (`kind =
+ * 'driver_cancel'` in `mission_cancellation`).
+ *
+ * ⚑ A LIST, not the latest. Unlike an amendment or a release, a driver
+ * cancellation does not end the trip — it re-pools it, so the same mission can
+ * be walked again by the next Driver. Keeping only the newest row would hide
+ * every walk but the last, on exactly the trips a desk most needs to see.
+ *
+ * ⚑ NO MONEY ON IT, DELIBERATELY (founder, 2026-08-20). The penalty is real and
+ * recorded (`fee_amount`, 100% of the Course), but who ultimately receives it is
+ * an open question: the hotel paid nothing and bills its Guest nothing, so 100%
+ * of the fare is not compensation for a 100% loss — it is sized to deter the
+ * Driver, which is a different job with a different answer. Nothing is collected
+ * during the beta either way. The block therefore states only what is certain.
+ * BACKLOG § Y.
+ */
+export interface DriverWalk {
+  at: string; // created_at — when they cancelled
+  hoursBefore: number | null; // lead time at that moment
+  reason: string | null;
+}
+
 // The latest detail-edit change-log for this trip (D40 follow-up) — the "what
 // changed" trail shown under the edit actions. Business-private (side table).
 export interface InfoChangeBrief {
   at: string;
   items: string[]; // human phrases: "Flight BA342 → BA118", "Added guest X"
+}
+
+/**
+ * How long before pickup something happened: "45 min", "2 h", "3 days".
+ * `formatDuration` alone would read "120 h" on a trip walked five days out.
+ */
+function leadLabel(hours: number | null): string | null {
+  if (hours == null || !Number.isFinite(hours)) return null;
+  const h = Math.max(0, hours);
+  if (h < 1) return `${Math.round(h * 60)} min`;
+  if (h < 48) return formatDuration(Math.round(h * 60));
+  return `${Math.round(h / 24)} days`;
 }
 
 /**
@@ -119,6 +156,7 @@ export function TripRow({
   guestContacts,
   amendment,
   release,
+  driverWalks,
   infoChange,
   archived = false,
   showDate = false,
@@ -132,6 +170,7 @@ export function TripRow({
   guestContacts?: GuestContact[] | null;
   amendment?: AmendmentBrief | null;
   release?: ReleaseBrief | null;
+  driverWalks?: DriverWalk[] | null;
   infoChange?: InfoChangeBrief | null;
   archived?: boolean;
   /**
@@ -301,8 +340,32 @@ export function TripRow({
   // which is rowCost() - fare AND waiting put through the commission together.
   // Naming the Course here left the note ~15% short of the waiting actually
   // inside that total, on exactly the rows a Dispatcher queries.
+  // ⚑ The MINUTES ride along, the rate does not. The amount here is all-in, and
+  // the all-in per-minute rate does not multiply out: a Course-side 0,50 shows
+  // as "0,58 €" and 0,58 × 20 is 11,60 against a true 11,50. A reader who
+  // checked the arithmetic would catch the row lying, so the rate is stated
+  // only Course-side, inside the invoice table below, where the fee lines
+  // follow it and the total still reconciles.
+  const waitingMinutes = mission.waiting_minutes ?? 0;
   const waitingNote =
-    waitingFee > 0 ? `incl. ${formatMoney(businessCost(mission, waitingFee))} waiting` : null;
+    waitingFee > 0
+      ? `incl. ${formatMoney(businessCost(mission, waitingFee))} waiting${
+          waitingMinutes > 0 ? ` · ${waitingMinutes} min` : ""
+        }`
+      : null;
+
+  // docs/06 §4 — a pickup between 22:00 and 06:00 prices at the card's night
+  // multiplier, on the floor and the ceiling alike. `night_applied` has been
+  // stamped on every mission since the rate card shipped precisely so "a past
+  // price stays explicable", and until now no screen read it: two identical
+  // airport runs, one 20% dearer, and nothing on either saying why.
+  // ⚑ NAMED, NOT NUMBERED. The multiplier lives on `rate_card.night_multiplier`,
+  // reachable only through `mission.rate_card_id` — which is NULL on the whole
+  // pre-2026-08-16 archive. Printing "×1,20" here would be a constant in the UI
+  // (docs/06 §9 forbids it) and would lie the day the card is re-tuned.
+  const nightTag = mission.night_applied ? (
+    <span className="dx-night">Night rate</span>
+  ) : null;
 
   // ── What the Business pays (docs/06 §1, §3) ───────────────────────────────
   // `settledFare` and `mission.ceiling` are the COURSE — the Driver's side of
@@ -346,11 +409,14 @@ export function TripRow({
       ? "Not settled"
       : mission.status === "cancelled"
         ? withWaiting(
-            mission.cancelled_by === "driver"
-              ? "Driver cancelled"
-              : mission.cancelled_by === "business"
-                ? "Your cancellation fee"
-                : "Cancellation fee",
+            // ⚑ There is deliberately no "Driver cancelled" branch here. A
+            // driver cancellation RE-POOLS the trip; it never sets
+            // status='cancelled', and `business_cancel_mission` is the only
+            // writer of `cancelled_by` — which it hard-codes to 'business'. The
+            // branch that used to sit here could not fire, and its presence made
+            // the missing case look handled. A Driver who walked is shown by the
+            // "Driver cancelled" block in the detail instead.
+            mission.cancelled_by === "business" ? "Your cancellation fee" : "Cancellation fee",
           )
         : mission.no_show
           ? withWaiting("Charged in full")
@@ -386,14 +452,22 @@ export function TripRow({
           <span className="dxh-when">
             <b>{formatArchiveDay(mission.pickup_at)}</b>
             <span className="mono">{formatTime(mission.pickup_at)}</span>
+            {nightTag}
           </span>
         ) : showDate ? (
           <span className="dxh-when dx-trip__when">
             <b>{formatShortDay(mission.pickup_at)}</b>
             <span className="mono">{formatTime(mission.pickup_at)}</span>
+            {nightTag}
           </span>
         ) : (
-          <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
+          // Same two classes as the § Q variant above, minus the <b> — so the
+          // time keeps the size and weight it has always had while the cell
+          // becomes a column that a tag can sit under.
+          <span className="dxh-when dx-trip__when">
+            <span className="mono">{formatTime(mission.pickup_at)}</span>
+            {nightTag}
+          </span>
         )}
 
         {/* Stacked route rail: pickup → stop(s) → drop-off, one address per line so
@@ -769,6 +843,42 @@ export function TripRow({
           </div>
         )}
 
+        {/* A Driver accepted this trip and then walked away from it. Until now
+            the Business got NO trace of that at all: driver_cancel_mission
+            re-pools the mission and clears driver_id, so the row went back to
+            looking exactly like one nobody had ever taken — same status, no
+            Driver, nothing to say a car had been arranged and lost. The release
+            block below is the same shape for the same event when it is agreed;
+            this is the one that isn't. */}
+        {driverWalks && driverWalks.length > 0 && (
+          <div className="dx-amend dx-amend--declined">
+            <div className="dx-amend__head">
+              <span className="dx-amend__tag dx-amend__tag--off">
+                {driverWalks.length > 1
+                  ? `Driver cancelled · ${driverWalks.length}×`
+                  : "Driver cancelled"}
+              </span>
+              <span className="muted small">
+                {leadLabel(driverWalks[0].hoursBefore)
+                  ? `· ${leadLabel(driverWalks[0].hoursBefore)} before pickup `
+                  : ""}
+                · back in the Pool · {formatDateTime(driverWalks[0].at)}
+              </span>
+            </div>
+            {driverWalks[0].reason && (
+              <div className="dx-amend__reason">
+                <span className="muted">Reason:</span> {driverWalks[0].reason}
+              </div>
+            )}
+            <p className="dx-amend__reassure">
+              The trip went straight back to the Pool
+              {mission.speed_win ? ", with SPEED WIN on so it fills faster" : ""}. A Driver
+              who drops an accepted trip owes a penalty under the rules — we settle that
+              with them directly.
+            </p>
+          </div>
+        )}
+
         {release && release.status === "accepted" && mission.status === "pooled" && (
           <div className="dx-amend dx-amend--neutral">
             <div className="dx-amend__head">
@@ -793,7 +903,9 @@ export function TripRow({
           <div className="dx-scan__c">
             <div className="dx-scan__cap">Pickup</div>
             <div className="dx-scan__v">{formatDateTime(mission.pickup_at)}</div>
-            <div className="dx-scan__s">Paris time</div>
+            <div className="dx-scan__s">
+              Paris time{mission.night_applied && " · night rate (22:00–06:00)"}
+            </div>
           </div>
           <div className="dx-scan__c">
             <div className="dx-scan__cap">Vehicle</div>
@@ -883,7 +995,13 @@ export function TripRow({
               <dd>{formatMoney(paidSplit.course - waitingFee)}</dd>
               {waitingFee > 0 && (
                 <>
-                  <dt>Waiting</dt>
+                  {/* Course-side rate, to match the Course-side amount beside
+                      it — 13 × 0,50 is exactly the 6,50 in the <dd>. */}
+                  <dt>
+                    Waiting
+                    {waitingMinutes > 0 &&
+                      ` · ${formatWaitingSpell(waitingMinutes, mission.waiting_rate)}`}
+                  </dt>
                   <dd>{formatMoney(waitingFee)}</dd>
                 </>
               )}

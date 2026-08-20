@@ -14,10 +14,11 @@ Everything works: `npm run dev`, the browser preview, reads against the real Sup
 Push to `main` and Vercel auto-deploys — **Claude Code is allowed to push `main`**
 (`autoMode.allow` in `.claude/settings.local.json`).
 
-**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-16, S60).**
+**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-20, S63).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
-"NEXT" headings are superseded and say so. The job is **the pricing engine, step 4 (commission)** — steps
-0–3 are shipped and live. Open by confirming that in one line, not by re-offering a menu.
+"NEXT" headings are superseded and say so. **Steps 0–4 of the pricing engine are shipped and live, and so is
+every loose end the money sweep left. The job is now step 5 — the §6 curve, and nothing before it.** Open by
+confirming that in one line, not by re-offering a menu.
 
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
@@ -535,7 +536,7 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★★ START HERE — STEP 5, THE §6 CURVE. Everything else in the money is done (S62, 2026-08-18).**
+**★★ START HERE — STEP 5, THE §6 CURVE. Nothing else is queued in front of it (S63, 2026-08-20).**
 
 > **What S62 did, so you don't redo it.** A six-way audit of every money surface and write path (26 findings
 > raised, 15 survived an adversarial re-check) plus the fixes: every Business-facing figure is now on the
@@ -560,7 +561,30 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 
 ---
 
-## ⚑ FINISH THESE BEFORE THE CURVE — small, known, and all found this session
+## ✅ THE PRE-CURVE LOOSE ENDS — ALL SHIPPED (S63, 2026-08-20). Kept for the decision trail only.
+
+> **Do not rebuild any of this.** The list below is what S62 queued; every item is done and verified against
+> the live DB. Read `SESSION_LOG.md` Session 63 for the detail. The three things worth carrying forward:
+>
+> 1. **Who receives a Driver's cancellation penalty is now an OPEN question** — the founder opened it
+>    (*"the hotel will in the end not pay anything… so what do we do with the driver's money?"*) and they
+>    are right: the trip never ran, so 100% of the fare is not compensation for a loss. **The Business's
+>    "Driver cancelled" block therefore ships with NO amount and NO recipient** — only that a Driver held
+>    the trip, when they walked, and why. Three costed destinations are in BACKLOG **§ Y**, cross-referenced
+>    from `docs/06` §1 and §12. **Do not put a euro figure on that block until it is answered.**
+> 2. **`docs/06`:71 vs `rides/history` is settled** — the penalty is an indemnity, it carries no commission,
+>    and the "owed to Kavenue" comment was the outlier. Corrected; the code under it was always right.
+> 3. **`.local/probe/diff-sql-vs-lib.ts` was stale and was fixed** — it asserted a flat 1,00 waiting rate and
+>    reported 480 "mismatches" in 673 checks on a codebase that fully agrees. It now reads **673 · ALL
+>    AGREE**. If you see mass mismatches there again, suspect the probe before the code.
+>
+> Also shipped in passing: `Today · Today` in the Earnings day heading (latent since the feature landed —
+> `formatDayGroup` already returns "Today"), and three unreachable `cancelled_by === "driver"` branches
+> removed. New helpers with tests: `formatWaitingSpell` / `formatPerMinute` (`lib/format.ts`),
+> `unlocatedStops` (`lib/waypoints.ts`), `driverCancelPickupAt` (`lib/earnings.ts`). Suite is **443**.
+
+<details>
+<summary>The original S62 list, as written (all four now done)</summary>
 
 They are small. They are also the tail of a money sweep, so they are worth clearing while the context is
 warm rather than rediscovering them in three sessions' time. **Roughly in this order:**
@@ -598,6 +622,8 @@ warm rather than rediscovering them in three sessions' time. **Roughly in this o
      nothing on screen explaining the gap.
 
 4. **Then the curve.**
+
+</details>
 
 **Still the founder's call, neither blocking:** the cancellation penalty (BACKLOG **§ Y** — too weak on a
 cheap trip; three shapes sketched, and the basis question pairs with it), and whether the waiting caps stay

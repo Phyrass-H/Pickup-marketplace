@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 import { settledFare } from "@/lib/pdp";
 import { grossToDriver, missionAmount } from "@/lib/earnings";
-import { formatMoney, formatPoolWhen, formatRate, missionStatusLabel } from "@/lib/format";
+import {
+  formatMoney,
+  formatPoolWhen,
+  formatRate,
+  formatWaitingSpell,
+  missionStatusLabel,
+} from "@/lib/format";
 import {
   driverKeeps,
   driverNet,
@@ -256,7 +262,12 @@ export function MissionRunView({
           {settledWaiting > 0 && (
             <p className="dwait-kept">
               {formatMoney(settledWaiting)} waiting added
-              {m.waiting_minutes ? ` · ${m.waiting_minutes} min past the courtesy wait` : ""}
+              {m.waiting_minutes
+                ? ` · ${formatWaitingSpell(
+                    m.waiting_minutes,
+                    driverNet(m, Number(m.waiting_rate ?? 0)),
+                  )} past the courtesy wait`
+                : ""}
             </p>
           )}
 
@@ -433,7 +444,16 @@ export function MissionRunView({
                 <dd>{formatMoney(baseGross)}</dd>
                 {settledWaitingGross > 0 && (
                   <>
-                    <dt>Waiting{m.waiting_minutes ? ` · ${m.waiting_minutes} min` : ""}</dt>
+                    {/* Course-side here, like the <dd> beside it and the rest of
+                        this table — the commission comes off further down, so
+                        13 × 0,50 is exactly the 6,50 shown. The kept-money line
+                        above quotes the Driver's own 0,44 for the same wait. */}
+                    <dt>
+                      Waiting
+                      {m.waiting_minutes
+                        ? ` · ${formatWaitingSpell(m.waiting_minutes, m.waiting_rate)}`
+                        : ""}
+                    </dt>
                     <dd>{formatMoney(settledWaitingGross)}</dd>
                   </>
                 )}

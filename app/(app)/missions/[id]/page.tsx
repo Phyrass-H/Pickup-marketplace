@@ -10,6 +10,7 @@ import {
   Users,
   Plane,
   Lock,
+  Moon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -281,6 +282,13 @@ export default async function MissionDetailPage({
               <span className="pbadge pbadge--run">
                 <Luggage size={12} strokeWidth={1.9} aria-hidden="true" />
                 Luggage run
+              </span>
+            )}
+            {/* Mirrors the Pool card badge — the two blocks must not drift. */}
+            {mission.night_applied && (
+              <span className="pbadge pbadge--run">
+                <Moon size={12} strokeWidth={1.9} aria-hidden="true" />
+                Night rate
               </span>
             )}
           </div>

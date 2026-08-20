@@ -1166,6 +1166,36 @@ it waits for a decision rather than being slipped into another step.
 3. **Visible reliability marks.** Non-monetary, and the thing professionals actually respond to. Needs the
    review/reputation layer, which is gated on the community work.
 
+**⚑ THE THIRD QUESTION, AND THE FOUNDER RAISED IT FIRST (2026-08-20): WHO ACTUALLY RECEIVES THE MONEY?**
+Asked while reviewing the Business-side "Driver cancelled" block, and it stopped that block shipping with a
+figure on it. In their words: *"the hotel will in the end not pay anything and won't charge their clients, so
+what do we do with the driver's money?"*
+
+That is the hole in the current position. `docs/06` §1 makes the penalty an indemnity running **Driver →
+Business**, and 100% of the fare is presented as if it made the hotel whole. It does not correspond to a loss:
+the trip never ran, the Business paid nothing and billed its Guest nothing, and the trip goes straight back
+into the Pool. **The hotel's real damage is the price difference when it re-fills dearer** (SPEED WIN comes on
+automatically under 24h — `docs/06` §6), the **whole fare when it never re-fills at all**, and sometimes
+**nothing**. The 100% figure is not sized to that damage; it is sized to **deter the Driver**. Two different
+jobs, and they point at different recipients — which is exactly why `docs/06`:71 and the O7 migration header
+disagreed for a month without anyone noticing.
+
+**Three destinations, none decided:**
+1. **Damage first, remainder to Kavenue.** The Business is made whole on what it actually cost them; what is
+   left funds the platform that had to re-fill the trip. The standard "actual damage + deterrent" split, and
+   it removes the perverse incentive in (2). Needs the re-fill OUTCOME before it can settle, so it is the most
+   machinery.
+2. **All to the Business** — today's written position. Simplest, and the Driver-facing copy already assumes it.
+   But it over-pays a hotel whose trip re-fills in ten minutes, and it turns a service failure into revenue.
+3. **All to Kavenue** — what the O7 migration header said. Pure deterrent, but Kavenue then profits from a
+   failure, the hotel gets nothing for a real disruption, and collecting a penalty in its own name is the
+   weakest of the three against the agent position in `docs/01`.
+
+⚑ **Nothing is collected during the beta either way**, which is what made parking it safe. **Consequence
+already shipped:** the Business's "Driver cancelled" block states only what is certain — a Driver held this
+trip, when they walked, and their reason. No amount, no recipient. Decide the money and the block gains a
+line; decide it wrong and a hotel has been told it is owed something it is not.
+
 **⚑ Two things already settled that constrain the answer.**
 - **A penalty must be predictable** (`docs/06` §6): people plan around it, unlike the auction, which must not
   be. Whatever shape wins has to be stateable in one sentence a Driver can repeat.

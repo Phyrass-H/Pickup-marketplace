@@ -68,7 +68,7 @@ cases, because a rule cannot drift.
 | Completed fare · waiting time · extra stops · no-show | **Yes** — 15% / 12% |
 | Business cancellation compensation | **Yes** — a €90 fee becomes €103.50 paid / €79.20 received |
 | Agreed release | **No** — no money moves |
-| Driver cancellation penalty | **No** — it runs Driver → Business, so it is an indemnity, not a payment |
+| Driver cancellation penalty | **No** — it is an indemnity, not a payment. ⚑ **The RECIPIENT is open** — see below |
 
 ### How to talk about it
 
@@ -80,6 +80,31 @@ cases, because a rule cannot drift.
 
 ⛔ **Never say "27%."** It counts VAT handed to the state as income — overstating the take rate and
 understating competitiveness at the same time.
+
+### ⚑ Who receives a Driver's cancellation penalty is OPEN (founder, 2026-08-20)
+
+The line above used to read "it runs Driver → Business" as though that were settled. It is not, and the
+founder opened it: **the hotel paid nothing, bills its Guest nothing, and the trip goes straight back into
+the Pool — so 100% of the fare is not compensation for a 100% loss.** Their real damage is the price
+difference when the trip re-fills dearer (SPEED WIN comes on automatically under 24h, §6), the whole fare
+when it never re-fills, and sometimes nothing. The 100% figure is sized to **deter the Driver**, which is a
+different job from making the Business whole, and the two point at different recipients.
+
+**What is settled and is not in question:** the penalty **carries no commission** (it is not payment for
+transport), and `carriesCommission` / `lib/earnings.ts` / the Driver's own copy already implement that. The
+open part is only where the money ends up. Three candidates — damage-first with the remainder to Kavenue, all
+to the Business, all to Kavenue — are written up with their trade-offs in BACKLOG **§ Y**, which is also
+where the "is 100% enough on a cheap trip" and "100% of the fare or of what they'd have been paid" questions
+live. **Decide all three together.**
+
+⚑ **Until then, no screen names a recipient or an amount.** The Business's "Driver cancelled" block (shipped
+2026-08-20) states only that a Driver held the trip, when they walked and why. Nothing is collected during
+the beta, so nothing is lost by waiting — and a hotel told it is owed money it is not owed would be very hard
+to take back.
+
+⚑ **The old wrong wording:** `docs/migrations/2026-07-13_o7_cancellation.sql` (its header, and :93) says the
+penalty is owed to **Kavenue**. That file is a superseded historical record — do not carry its wording
+forward. The same error had been copied into `app/(app)/rides/history/page.tsx` and was corrected 2026-08-20.
 
 **Have this ready:** someone will add 15 and 12. Kavenue takes **22.5% of the fare, split across two
 parties**, each paying less than they would anywhere else. It is the Booking.com structure.
@@ -242,6 +267,15 @@ that used to sit here claimed First "collapses toward Business" with distance �
 
 **×1.20** on ceiling and floor alike, for a pickup between **22:00 and 06:00**, keyed to the
 **pickup time**. Store `night_applied` so a past price stays explicable.
+
+⚑ **And SHOW it — shipped 2026-08-20.** The column had been written on every mission since the card landed
+and read by no screen at all, so a Dispatcher comparing two identical airport runs could not see why the
+23:40 one cost 20% more, and the Driver never learned it either. Now: a quiet tag in the date cell of the
+Business row, a badge on the Driver's Pool card and mission detail, a suffix on their Earnings row, and a
+column in both CSVs. **Named, never numbered — the tag says "Night rate", not "×1,20".** The multiplier lives
+on `rate_card.night_multiplier`, reachable only via `mission.rate_card_id`, which is NULL on the whole
+pre-2026-08-16 archive; printing the number in the UI would be a constant in code (§9) and would lie the day
+the card is re-tuned.
 
 **This is the only time modifier in V1.** No season, no event calendar, no day of week, no demand
 input, no surge, no personalised pricing. Demand-based pricing is commercial judgement and belongs
@@ -525,6 +559,28 @@ re-introduce it.
 ✅ **The Business keeps its live running meter.** They are the only party who can stop the clock by
 calling the Guest.
 
+### The SETTLED wait now states its own rate — shipped 2026-08-20
+
+`mission.waiting_rate` was stamped on every settled row and rendered nowhere: the rate was only ever spoken
+while the meter was live, so a Driver who banked 13,20 € had nothing on screen to check it against. Both
+sides now read **"N min at X €/min"**.
+
+⚑ **Each side sees the rate on ITS OWN basis, and only where the arithmetic survives being checked.** The
+Driver's net rate is ×0,88 — 0,44 · 0,66 · 0,88, all clean cents, so minutes × rate is exactly the amount
+printed beside it. The Business's all-in rate is ×1,15, and 0,50 becomes **0,575**: it displays "0,58 €" and
+0,58 × 20 is 11,60 against a true 11,50. So a Business rate is stated **Course-side only, inside the invoice
+table** where the fee lines follow it and the total still reconciles; the row face and both CSVs get the
+**minutes without a rate**.
+
+⚑ **Read the STAMPED column, never `waitingRatePerMin(category)`.** That helper is the LIVE rate. Rows
+settled between 2026-07-22 and 2026-08-18 were billed a flat 1,00 whatever their class, and older rows have
+no rate at all — re-deriving one from the class would put a false number beside a real amount. A row with no
+stamped rate shows the minutes alone. `formatWaitingSpell` in `lib/format.ts` is the one place this is
+decided; `tests/format.test.ts` pins it.
+
+⚑ **`waiting_rate` non-null does NOT mean the trip waited.** Both no-show paths stamp the rate
+unconditionally, so a punctual no-show carries a rate with 0 minutes and a 0,00 fee. Gate on the minutes.
+
 ---
 
 ## 11. Corrections that must not be re-imported
@@ -549,6 +605,7 @@ reappear, they are stale, not new:
 |---|---|---|
 | 1 | ~~First card is provisional — no market data below 28 km~~ | ✅ **Closed 2026-08-16** — re-fitted on four sources; First is 1.80× Business per km |
 | 2 | Is 100% a strong enough Driver-cancellation penalty on a cheap trip? | Parked, not blocking |
+| 2b | **Who actually receives that penalty** — the hotel lost nothing it paid for | **Opened by the founder 2026-08-20.** Parked with § Y; no screen names a recipient until it is answered |
 | 3 | ~~Business and Van read slightly low against the founder's market knowledge~~ | ✅ **Closed 2026-08-16** — Business confirmed at 80–90% of Blacklane; van base 45 → 52 |
 | 4 | The 150 km band threshold has no direct evidence | Tunable; worth 3–6%. Revisit once real long-distance trips run |
 | 5 | Eco has no premium-source check above 110 km | Blacklane sells no entry tier; aggregators + the founder's own Geneva figure cover it |

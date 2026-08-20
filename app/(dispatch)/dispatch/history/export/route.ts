@@ -63,7 +63,64 @@ const HEADERS = [
   "Agreed, not settled (EUR)",
   "Of which waiting (EUR)",
   "Note",
+  // ⚑ MINUTES, NOT A RATE. Every euro column in this file is all-in, and an
+  // all-in per-minute waiting rate does not multiply out (a Course-side 0,50
+  // shows as 0,58, and 0,58 x 20 is 11,60 against a true 11,50) — a reader
+  // checking the arithmetic would catch the file lying. The rate is stated only
+  // Course-side, inside the row's own invoice table on screen. docs/06 §10.
+  "Waiting (min)",
+  // docs/06 §4 — a 22:00-06:00 pickup prices at the card's night multiplier.
+  // Named, not numbered: the multiplier lives on the rate card, not the mission.
+  "Night rate",
+  // The trip was arranged and lost. No money column: who ultimately receives the
+  // Driver's penalty is open (founder, 2026-08-20) — BACKLOG § Y.
+  "Driver cancelled",
 ];
+
+// Walk counts per mission — a Driver accepted the trip and then dropped it. The
+// re-pool leaves nothing on the mission row, so `mission_cancellation` is the
+// only record. Same read, same filter, same wording as the Schedule and the
+// archive; RLS scopes it to this Business. All rows, never de-duplicated: a
+// re-pooled trip can be walked again.
+async function loadDriverWalks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  missionIds: string[],
+): Promise<Map<string, { at: string; hoursBefore: number | null }[]>> {
+  const out = new Map<string, { at: string; hoursBefore: number | null }[]>();
+  if (missionIds.length === 0) return out;
+  const { data } = await supabase
+    .from("mission_cancellation")
+    .select("mission_id, created_at, hours_before_pickup")
+    .in("mission_id", missionIds)
+    .eq("kind", "driver_cancel")
+    .order("created_at", { ascending: false });
+  for (const w of data ?? []) {
+    const list = out.get(w.mission_id) ?? [];
+    list.push({
+      at: w.created_at,
+      hoursBefore: w.hours_before_pickup == null ? null : Number(w.hours_before_pickup),
+    });
+    out.set(w.mission_id, list);
+  }
+  return out;
+}
+
+// "1 · 2 h before pickup" — the fact and its lead time, in words, like every
+// other categorical column in this file. Empty when no Driver ever walked.
+function walkCell(walks: { at: string; hoursBefore: number | null }[] | undefined): string {
+  if (!walks || walks.length === 0) return "";
+  const h = walks[0].hoursBefore;
+  const lead =
+    h == null || !Number.isFinite(h)
+      ? null
+      : h < 1
+        ? `${Math.round(h * 60)} min`
+        : h < 48
+          ? `${Math.round(h)} h`
+          : `${Math.round(h / 24)} days`;
+  const count = walks.length > 1 ? `${walks.length} times` : "1";
+  return lead ? `${count} · ${lead} before pickup` : count;
+}
 
 const OUTCOME_TEXT: Record<string, string> = {
   completed: "Completed",
@@ -123,6 +180,11 @@ export async function GET(req: NextRequest) {
   // screen, and this is the only way that promise survives a future filter.
   const { rows: shown } = applyHistoryQuery(rows, query);
 
+  const driverWalks = await loadDriverWalks(
+    supabase,
+    shown.map((r) => r.mission.id),
+  );
+
   const lines = [HEADERS.join(SEP)];
   for (const r of shown) {
     const m = r.mission;
@@ -136,9 +198,12 @@ export async function GET(req: NextRequest) {
     const note = m.no_show
       ? "Guest no-show — charged in full"
       : m.status === "cancelled"
-        ? m.cancelled_by === "driver"
-          ? "Cancelled by the Driver"
-          : "Cancelled by you"
+        ? // ⚑ Always the Business. A driver cancellation RE-POOLS the trip and
+          // never writes status='cancelled'; `business_cancel_mission` is the
+          // only writer of `cancelled_by` and hard-codes 'business'. The branch
+          // that read "Cancelled by the Driver" here could not fire, and it made
+          // the missing case look covered. The real one is its own column now.
+          "Cancelled by you"
         : bucket === null
           ? "Not closed by the Driver"
           : "";
@@ -183,6 +248,9 @@ export async function GET(req: NextRequest) {
         r.counted ? "" : euro(businessCost(m, Number(r.fare ?? 0) + waiting)),
         waiting > 0 ? euro(businessCost(m, waiting)) : "",
         note,
+        m.waiting_minutes && waiting > 0 ? String(m.waiting_minutes) : "",
+        m.night_applied ? "Night rate" : "",
+        walkCell(driverWalks.get(m.id)),
       ]
         .map(cell)
         .join(SEP),

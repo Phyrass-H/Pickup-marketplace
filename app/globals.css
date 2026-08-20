@@ -1171,6 +1171,18 @@ textarea::placeholder {
    context for a row that is out of place, not the thing being scanned. */
 .dx-trip__when b { font-size: 11.5px; font-weight: 500; color: var(--text-muted); }
 .dx-trip__when > span { font-size: 13px; font-weight: 600; color: var(--text); }
+/* Night rate (docs/06 §4) — a pickup between 22:00 and 06:00 prices at the rate
+   card's night multiplier. The tag is why an otherwise identical run cost more.
+   Quiet on purpose: it explains a price, it doesn't warn about one. The two
+   parent selectors are needed to out-specify `.dxh-when > span` (12px, muted)
+   and `.dx-trip__when > span` (13px, 600) — both of which target this element. */
+.dxh-when > .dx-night,
+.dx-trip__when > .dx-night {
+  align-self: flex-start; margin-top: 3px;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+  padding: 1px 7px; border-radius: var(--radius-pill);
+  background: var(--slate-100); color: var(--slate-600);
+}
 /* Stacked route rail (summary line): pickup → via-stops → drop-off. */
 .dx-trip__route { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dx-route__node { display: flex; align-items: flex-start; gap: 9px; min-width: 0; position: relative; }
@@ -3313,6 +3325,11 @@ label.field > span.dhint {
 }
 .etrip__t span { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
 .etrip__a { font-size: 13.5px; font-weight: 500; flex: none; }
+/* A trip the Driver cancelled themselves: money OFF the total, so it reads in
+   the danger tone the Breakdown's "You cancelled" line already uses. Mirrors
+   `.pastcard__fare--pen` in the archive, which is the same row on another
+   screen. */
+.etrip__a--pen { color: var(--tone-danger-fg); }
 
 .ejump { text-align: center; margin: 4px 0 0; }
 .ejump a { font-size: 12.5px; color: var(--accent); font-weight: 500; text-decoration: none; }

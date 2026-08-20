@@ -15,6 +15,7 @@ import {
   periodRange,
   todayAnchor,
   totalsFor,
+  driverCancelPickupAt,
 } from "@/lib/earnings";
 import { completed, mission, standardCurve } from "./fixtures";
 
@@ -301,9 +302,12 @@ describe("totalsFor — what a Driver earned", () => {
     expect(t.total).toBe(72);
   });
 
-  it("counts a Business cancellation as fee plus waiting, once", () => {
-    // ⚑ cancelCompensation already folds the waiting in, so the waiting must NOT
-    // be added a second time — that would pay the Driver twice for the same wait.
+  it("splits a Business cancellation into the fee and the waiting, without paying either twice", () => {
+    // ⚑ cancelCompensation is fee PLUS waiting, so the waiting must not be ADDED
+    // a second time — that would pay the Driver twice for the same wait. Until
+    // 2026-08-20 the whole sum sat in "Cancelled on you" and the minutes the
+    // Driver actually sat there never reached the "Waiting time" line. It is now
+    // carved OUT of the compensation: the two buckets still sum to 55.
     const m = mission({
       status: "cancelled",
       driver_id: "drv-1",
@@ -312,10 +316,23 @@ describe("totalsFor — what a Driver earned", () => {
       waiting_minutes: 10,
     });
     const t = totalsFor([m], []);
-    expect(t.cancelledOnYou).toBe(55);
+    expect(t.cancelledOnYou).toBe(45);
     expect(t.cancelledOnYouCount).toBe(1);
-    expect(t.waiting).toBe(0);
+    expect(t.waiting).toBe(10);
+    expect(t.waitingMinutes).toBe(10);
     expect(t.total).toBe(55);
+  });
+
+  it("still shows the minutes when a Business cancels a trip that ran no fee", () => {
+    // A cancellation with waiting but no policy fee contributes nothing today
+    // (cancelCompensation returns null on a null fee) — pinned so a later
+    // change to that rule is a deliberate one, not a surprise.
+    const t = totalsFor(
+      [mission({ status: "cancelled", cancellation_fee: null, waiting_fee: 10, waiting_minutes: 10 })],
+      [],
+    );
+    expect(t.waitingMinutes).toBe(0);
+    expect(t.total).toBe(0);
   });
 
   it("ignores a cancelled trip with no fee stamped on it", () => {
@@ -353,7 +370,9 @@ describe("totalsFor — what a Driver earned", () => {
       [{ created_at: "2026-07-15T09:00:00+02:00", fee_amount: 30 }],
     );
     expect(t.total).toBe(t.trips + t.noShow + t.waiting + t.cancelledOnYou - t.penalties);
-    expect(t.total).toBe(60 + 60 + 20 + 55 - 30);
+    // 20 of the waiting is the no-show's, 10 is carved out of mission c's
+    // compensation — which is why "cancelled on you" reads 45 and not 55.
+    expect(t.total).toBe(60 + 60 + 30 + 45 - 30);
   });
 
   it("returns a zeroed set for an empty period without inventing nulls", () => {
@@ -384,5 +403,62 @@ describe("missionAmount — one row's contribution to the list", () => {
 
   it("is zero, not NaN, on a cancelled trip with nothing stamped", () => {
     expect(missionAmount(mission({ status: "cancelled", cancellation_fee: null }))).toBe(0);
+  });
+});
+
+describe("driverCancelPickupAt — dating a trip the Driver walked away from", () => {
+  // A driver cancellation clears `driver_id`, so the mission leaves the Driver's
+  // own query and the cancellation row is all that survives. Its penalty was
+  // still in the headline total while no row for it appeared in the list, so the
+  // day rows summed to MORE than the total with nothing explaining the gap.
+  // `hours_before_pickup` was measured against the same clock that stamped
+  // `created_at`, so the two add back to the pickup exactly.
+  it("adds the lead time back onto the moment they cancelled", () => {
+    expect(
+      driverCancelPickupAt({
+        created_at: "2026-07-15T10:00:00+02:00",
+        fee_amount: 190,
+        hours_before_pickup: 2,
+      }),
+    ).toBe("2026-07-15T10:00:00.000Z");
+  });
+
+  it("handles a fractional lead time", () => {
+    expect(
+      driverCancelPickupAt({
+        created_at: "2026-07-15T08:00:00Z",
+        fee_amount: 190,
+        hours_before_pickup: 1.5,
+      }),
+    ).toBe("2026-07-15T09:30:00.000Z");
+  });
+
+  it("coerces PostgREST's numeric-as-string", () => {
+    expect(
+      driverCancelPickupAt({
+        created_at: "2026-07-15T08:00:00Z",
+        fee_amount: 190,
+        hours_before_pickup: "3",
+      }),
+    ).toBe("2026-07-15T11:00:00.000Z");
+  });
+
+  it("returns null rather than guessing when the column is absent", () => {
+    // Pre-O7 rows have no lead time. The penalty row still has to appear — it
+    // just loses the "was due" clause; it is dated by `created_at` either way.
+    expect(driverCancelPickupAt({ created_at: "2026-07-15T08:00:00Z", fee_amount: 190 })).toBe(null);
+    expect(
+      driverCancelPickupAt({
+        created_at: "2026-07-15T08:00:00Z",
+        fee_amount: 190,
+        hours_before_pickup: null,
+      }),
+    ).toBe(null);
+  });
+
+  it("returns null on an unparseable timestamp instead of Invalid Date", () => {
+    expect(
+      driverCancelPickupAt({ created_at: "not a date", fee_amount: 190, hours_before_pickup: 2 }),
+    ).toBe(null);
   });
 });

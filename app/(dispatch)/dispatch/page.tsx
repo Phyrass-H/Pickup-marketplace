@@ -12,6 +12,7 @@ import {
   type DriverContact,
   type AmendmentBrief,
   type ReleaseBrief,
+  type DriverWalk,
   type InfoChangeBrief,
 } from "@/components/trip-row";
 import { parseGuestContacts, type GuestContact } from "@/lib/passengers";
@@ -85,6 +86,7 @@ function DayGroup({
   guestContacts,
   amendments,
   releases,
+  driverWalks,
   infoChanges,
   liftedIds,
   today,
@@ -95,6 +97,7 @@ function DayGroup({
   guestContacts: Map<string, GuestContact[]>;
   amendments: Map<string, AmendmentBrief>;
   releases: Map<string, ReleaseBrief>;
+  driverWalks: Map<string, DriverWalk[]>;
   infoChanges: Map<string, InfoChangeBrief>;
   /** § Q — rows shown outside their own day, so they print their date. */
   liftedIds?: Set<string>;
@@ -122,6 +125,7 @@ function DayGroup({
           guestContacts={guestContacts.get(m.id) ?? null}
           amendment={amendments.get(m.id) ?? null}
           release={releases.get(m.id) ?? null}
+          driverWalks={driverWalks.get(m.id) ?? null}
           infoChange={infoChanges.get(m.id) ?? null}
           showDate={liftedIds?.has(m.id) ?? false}
         />
@@ -231,6 +235,36 @@ export default async function DispatchSchedule({
     }
   }
 
+  // A Driver who accepted one of these trips and then walked away from it. The
+  // re-pool leaves NO trace on the mission itself — driver_id, accepted_at and
+  // confirmed_at are all cleared and the status goes back to 'pooled' — so this
+  // side table is the only record that a car was ever arranged and lost. RLS
+  // already scopes `mission_cancellation` to this Business; the explicit filters
+  // say so at the call site too. Degrades to empty if the O7 migration is absent.
+  //
+  // ⚑ ALL of them, newest first — NOT the latest-per-mission de-dup the
+  // amendment and release blocks above use. A driver cancellation re-pools the
+  // trip rather than ending it, so the same mission can be walked again by the
+  // next Driver, and "latest wins" would hide every walk but one.
+  const driverWalks = new Map<string, DriverWalk[]>();
+  if (missionIds.length > 0) {
+    const { data: walks } = await supabase
+      .from("mission_cancellation")
+      .select("mission_id, created_at, reason, hours_before_pickup")
+      .in("mission_id", missionIds)
+      .eq("kind", "driver_cancel")
+      .order("created_at", { ascending: false });
+    for (const w of walks ?? []) {
+      const list = driverWalks.get(w.mission_id) ?? [];
+      list.push({
+        at: w.created_at,
+        hoursBefore: w.hours_before_pickup == null ? null : Number(w.hours_before_pickup),
+        reason: w.reason,
+      });
+      driverWalks.set(w.mission_id, list);
+    }
+  }
+
   // Detail-edit change-log (D40): the latest "what changed" trail per mission, for
   // the trip detail. Business-private side table (RLS-scoped); degrades to empty if
   // the 2026-07-10 migration hasn't been applied yet.
@@ -309,6 +343,7 @@ export default async function DispatchSchedule({
               guestContacts={guestContacts}
               amendments={amendments}
               releases={releases}
+                driverWalks={driverWalks}
               infoChanges={infoChanges}
               liftedIds={liftedIds}
               today
@@ -328,6 +363,7 @@ export default async function DispatchSchedule({
                 guestContacts={guestContacts}
                 amendments={amendments}
                 releases={releases}
+                driverWalks={driverWalks}
                 infoChanges={infoChanges}
               />
             ))}
@@ -349,6 +385,7 @@ export default async function DispatchSchedule({
                     guestContacts={guestContacts}
                     amendments={amendments}
                     releases={releases}
+                driverWalks={driverWalks}
                     infoChanges={infoChanges}
                   />
                 ))}

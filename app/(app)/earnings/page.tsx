@@ -10,7 +10,9 @@ import {
   UserX,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getDriverContext } from "@/lib/driver";
+import { driverNet } from "@/lib/commission";
 import {
   isPeriod,
   parseAnchor,
@@ -18,12 +20,21 @@ import {
   periodRange,
   totalsFor,
   missionAmount,
+  driverCancelPickupAt,
   dayKey,
   todayAnchor,
+  type DriverCancelRow,
   type Period,
   type Totals,
 } from "@/lib/earnings";
-import { formatMoney, formatTime, shortPlaceLabel, formatDayGroup } from "@/lib/format";
+import {
+  formatMoney,
+  formatDuration,
+  formatTime,
+  formatWaitingSpell,
+  shortPlaceLabel,
+  formatDayGroup,
+} from "@/lib/format";
 import { EarningsPeriod } from "@/components/earnings-period";
 import type { MissionRow } from "@/lib/database.types";
 
@@ -50,7 +61,13 @@ async function loadFirstDay(driverId: string): Promise<string | null> {
   return data?.[0] ? dayKey(data[0].pickup_at) : null;
 }
 
-async function loadPeriod(driverId: string, from: Date, to: Date) {
+/**
+ * `withRows` is opt-in because this runs THREE times per render — this period,
+ * the one before, and the same one last year — and only the first draws a list.
+ * The other two read `.totals` and nothing else, so they must not pay for the
+ * service-role round trip that rebuilds the cancelled trips.
+ */
+async function loadPeriod(driverId: string, from: Date, to: Date, withRows = false) {
   const supabase = await createClient();
   const [{ data: missions }, { data: cancels }] = await Promise.all([
     supabase
@@ -65,14 +82,28 @@ async function loadPeriod(driverId: string, from: Date, to: Date) {
     // penalty only survives here — dated by when they cancelled, not by the pickup.
     supabase
       .from("mission_cancellation")
-      .select("created_at, fee_amount")
+      .select("mission_id, created_at, reason, fee_amount, fare_snapshot, hours_before_pickup")
       .eq("actor_driver_id", driverId)
       .eq("kind", "driver_cancel")
       .gte("created_at", from.toISOString())
       .lt("created_at", to.toISOString()),
   ]);
   const rows = (missions ?? []) as MissionRow[];
-  return { missions: rows, totals: totalsFor(rows, cancels ?? []) };
+  const cancelRows = (cancels ?? []) as DriverCancelRow[];
+
+  // The trips behind those penalties. The re-pool cleared `driver_id`, so the
+  // Driver's own query above cannot see them and RLS stops them reading the
+  // mission directly the moment somebody else takes it — the archive solves it
+  // the same way, through the service role, gated to exactly the ids their own
+  // cancellation rows point at.
+  const cancelMissions = new Map<string, MissionRow>();
+  const ids = withRows ? [...new Set(cancelRows.map((c) => c.mission_id!).filter(Boolean))] : [];
+  if (ids.length > 0) {
+    const { data } = await createAdminClient().from("mission").select("*").in("id", ids);
+    for (const r of (data ?? []) as MissionRow[]) cancelMissions.set(r.id, r);
+  }
+
+  return { missions: rows, cancels: cancelRows, cancelMissions, totals: totalsFor(rows, cancelRows) };
 }
 
 function Line({
@@ -101,9 +132,10 @@ function Line({
 }
 
 function Breakdown({ t }: { t: Totals }) {
-  const hours = Math.floor(t.waitingMinutes / 60);
-  const mins = t.waitingMinutes % 60;
-  const waitLabel = hours > 0 ? `Waiting time · ${hours} h ${mins}` : `Waiting time · ${mins} min`;
+  // formatDuration, not a hand-rolled pair: the old one dropped the unit the
+  // moment hours appeared ("1 h 5" — no "min", no zero-pad) on the one line
+  // that exists to report a duration.
+  const waitLabel = `Waiting time · ${formatDuration(t.waitingMinutes)}`;
 
   return (
     <div className="dcard">
@@ -179,7 +211,7 @@ export default async function EarningsPage({
   );
 
   const [now, before, yearAgo, firstEver] = await Promise.all([
-    loadPeriod(driver.id, range.from, range.to),
+    loadPeriod(driver.id, range.from, range.to, true),
     loadPeriod(driver.id, prevRange.from, prevRange.to),
     loadPeriod(driver.id, lastYearRange.from, lastYearRange.to),
     loadFirstDay(driver.id),
@@ -202,12 +234,58 @@ export default async function EarningsPage({
   const worked = new Set(now.missions.map((m) => dayKey(m.pickup_at))).size;
 
   // Trip list, newest first, grouped into Paris days.
-  const groups: { key: string; missions: MissionRow[] }[] = [];
-  for (const m of now.missions) {
-    const key = dayKey(m.pickup_at);
+  //
+  // ⚑ A trip the Driver cancelled themselves has to be IN this list. Its penalty
+  // has always been in the headline total, but the mission left the Driver's own
+  // query when `driver_id` was cleared — so the day rows summed to more than the
+  // total, by exactly the penalty, with nothing on screen to explain the gap.
+  // Worse: a period whose only event was one cancellation showed a NEGATIVE
+  // headline above "Trips show up here the moment you complete them".
+  //
+  // ⚑ Dated by `created_at` — the day they cancelled — because that is the basis
+  // the headline filters on. Dating it by the pickup would put the row outside
+  // the period whenever a Driver walks away from next month's trip, and the day
+  // rows would stop adding up again. The trip's own due time goes in the
+  // subtitle instead, where it explains rather than sorts.
+  type ListItem =
+    | { kind: "trip"; key: string; at: string; amount: number; mission: MissionRow }
+    | {
+        kind: "penalty";
+        key: string;
+        at: string;
+        amount: number;
+        mission: MissionRow | null;
+        dueAt: string | null;
+      };
+
+  const items: ListItem[] = now.missions.map((m) => ({
+    kind: "trip" as const,
+    key: `m:${m.id}`,
+    at: m.pickup_at,
+    amount: missionAmount(m),
+    mission: m,
+  }));
+  for (const c of now.cancels) {
+    // Gross, like the Breakdown's "You cancelled" line: the penalty is an
+    // indemnity Driver → Business (docs/06 §1) and carries no commission.
+    const penalty = Number(c.fee_amount ?? c.fare_snapshot ?? 0);
+    items.push({
+      kind: "penalty" as const,
+      key: `c:${c.mission_id ?? c.created_at}`,
+      at: c.created_at,
+      amount: -penalty,
+      mission: c.mission_id ? (now.cancelMissions.get(c.mission_id) ?? null) : null,
+      dueAt: driverCancelPickupAt(c),
+    });
+  }
+  items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+
+  const groups: { key: string; items: ListItem[] }[] = [];
+  for (const it of items) {
+    const key = dayKey(it.at);
     const last = groups[groups.length - 1];
-    if (last && last.key === key) last.missions.push(m);
-    else groups.push({ key, missions: [m] });
+    if (last && last.key === key) last.items.push(it);
+    else groups.push({ key, items: [it] });
   }
 
   return (
@@ -261,7 +339,7 @@ export default async function EarningsPage({
 
       {t.total !== 0 && <Breakdown t={t} />}
 
-      {now.missions.length === 0 ? (
+      {items.length === 0 ? (
         <div className="dcard">
           <div className="pempty" style={{ padding: "30px 16px 26px" }}>
             <div className="pempty__ic">
@@ -282,31 +360,66 @@ export default async function EarningsPage({
         <div className="dcard">
           <p className="dcard__label">Trip by trip</p>
           {groups.map((g) => {
-            const dayTotal = g.missions.reduce((sum, m) => sum + missionAmount(m), 0);
-            const { label, today: isToday } = formatDayGroup(g.missions[0].pickup_at);
+            const dayTotal = g.items.reduce((sum, it) => sum + it.amount, 0);
+            // ⚑ `label` alone. formatDayGroup ALREADY returns "Today" for today,
+            // so the `Today · ${label}` this used to print rendered "Today ·
+            // Today". It was never seen because no trip in the archive had ever
+            // fallen on the current day — a driver-cancellation row can, since
+            // it is dated by when they cancelled. My Rides has always rendered
+            // the bare label; this now matches it.
+            const { label } = formatDayGroup(g.items[0].at);
             return (
               <div key={g.key}>
                 <div className="eday">
-                  <b>{isToday ? `Today · ${label}` : label}</b>
+                  <b>{label}</b>
                   <span>{formatMoney(dayTotal)}</span>
                 </div>
-                {g.missions.map((m) => (
-                  <div className="etrip" key={m.id}>
-                    <span className="etrip__t">
-                      <b>
-                        {shortPlaceLabel(m.pickup_address)} →{" "}
-                        {shortPlaceLabel(m.dropoff_address) || "—"}
-                      </b>
-                      <span>
-                        {formatTime(m.pickup_at)}
-                        {m.no_show && " · no-show"}
-                        {m.status === "cancelled" && " · cancelled on you"}
-                        {!!m.waiting_minutes && ` · ${m.waiting_minutes} min wait`}
+                {g.items.map((it) =>
+                  it.kind === "trip" ? (
+                    <div className="etrip" key={it.key}>
+                      <span className="etrip__t">
+                        <b>
+                          {shortPlaceLabel(it.mission.pickup_address)} →{" "}
+                          {shortPlaceLabel(it.mission.dropoff_address) || "—"}
+                        </b>
+                        <span>
+                          {formatTime(it.mission.pickup_at)}
+                          {it.mission.no_show && " · no-show"}
+                          {it.mission.status === "cancelled" && " · cancelled on you"}
+                          {!!it.mission.waiting_minutes &&
+                            ` · ${formatWaitingSpell(
+                              it.mission.waiting_minutes,
+                              driverNet(it.mission, Number(it.mission.waiting_rate ?? 0)),
+                            )} wait`}
+                          {it.mission.night_applied && " · night rate"}
+                        </span>
                       </span>
-                    </span>
-                    <span className="etrip__a">{formatMoney(missionAmount(m))}</span>
-                  </div>
-                ))}
+                      <span className="etrip__a">{formatMoney(it.amount)}</span>
+                    </div>
+                  ) : (
+                    // The mission comes back through the service role; if it has
+                    // since been hard-deleted the row still has to appear, or the
+                    // day stops adding up. It just says less.
+                    <div className="etrip" key={it.key}>
+                      <span className="etrip__t">
+                        <b>
+                          {it.mission
+                            ? `${shortPlaceLabel(it.mission.pickup_address)} → ${
+                                shortPlaceLabel(it.mission.dropoff_address) || "—"
+                              }`
+                            : "A trip you cancelled"}
+                        </b>
+                        <span>
+                          {formatTime(it.at)} · you cancelled
+                          {it.dueAt && ` · was due ${formatTime(it.dueAt)}`}
+                        </span>
+                      </span>
+                      <span className="etrip__a etrip__a--pen">
+                        −{formatMoney(Math.abs(it.amount))}
+                      </span>
+                    </div>
+                  ),
+                )}
               </div>
             );
           })}
@@ -316,8 +429,8 @@ export default async function EarningsPage({
       <div className="dlock dlock--foot" style={{ marginTop: 0 }}>
         <Info size={15} strokeWidth={1.9} aria-hidden="true" />
         <span>
-          Every trip you completed, at the fare you accepted. During the beta we settle
-          with you directly.
+          Every trip you completed, at the fare you accepted, less any trip you
+          cancelled yourself. During the beta we settle with you directly.
         </span>
       </div>
 
