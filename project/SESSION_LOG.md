@@ -3125,3 +3125,30 @@ Casino", the route stayed 15 km and the fare did not move. A stop with no coordi
 routing, so it is priced at zero on both the new-mission and the amend paths, while still being drawn on the
 Driver's route and needing a "Reached" tap. Next.
 
+### Session 62 — closing state (2026-08-20)
+
+**Shipped and deployed, in order:** `487d879` the all-in basis sweep + the rate-read guard · `5bee3e8` the
+amendment flow's commission pass · `2c139a6` the waste panel on one basis · `732ec14` the six defects the
+pre-curve audit found · `72869a2` the waiting rate researched · `36ee3de` the waiting rate per class (with
+`2026-08-18_waiting_rate_by_class.sql`) · `9242e63` the resume point · `838b9c2` the labels and the CSV fee
+columns · `4fb5c53` amendment repricing + the airport predicate (with
+`2026-08-20_airport_pickup_is_the_pickup.sql`). Both migrations were run by the founder and confirmed.
+
+**Where the money stands.** Every Business-facing figure is on the all-in basis; both decompositions
+reconcile exactly; the Driver's app has no gross figure left except the deliberate cancellation penalty; the
+waiting meter is priced per class; and no fare is typed by a human anywhere — the amendment was the last one.
+
+**Left deliberately, written into NEXT_SESSION under "FINISH THESE BEFORE THE CURVE":** the unlocated stop
+that is priced at zero, three charges that are real but invisible (the night ×1,20, the waiting rate on a
+settled trip, and the Driver penalty the Business is owed but never sees), and two Driver-side counting gaps
+in Earnings. None of them is a wrong charge — they are things the app knows and does not say.
+
+⚑ **Two comments disagree about who receives a Driver's cancellation penalty** — `docs/06:71` says it runs
+Driver → Business; `app/(app)/rides/history/page.tsx:185` calls it "a penalty owed to Kavenue". That is a
+one-line question with a real answer and it should be settled before anything is built on top of it.
+
+**Method note.** The wide six-way audit workflows worked; the wide *research* ones did not — five of seven
+agents died on 529s, then three stalled on retry. Three narrow agents with a hard search budget and no
+synthesis agent got the answer in 97 seconds. When a workflow half-dies, `resumeFromRunId` replays the
+survivors from cache rather than re-running them.
+

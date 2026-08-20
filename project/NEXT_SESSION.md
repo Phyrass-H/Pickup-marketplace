@@ -47,7 +47,9 @@ and it loses nothing — the docs are all still here, just read when relevant):
   `2026-07-22_airport_accent_fix`, `2026-07-22_guest_ready_at_guard_fix`, `2026-07-25_accept_always_confirms`,
   `2026-07-28_driver_account_and_documents`, `2026-07-30_mission_check_in`, `2026-07-31_expired_missions`,
   `2026-08-09_cancel_fee_30min_steps`, `2026-08-09_waiting_settles_on_board`, the three 08-10/08-11 drift
-  migrations, `2026-08-10_mission_close_answer`) —
+  migrations, `2026-08-10_mission_close_answer`, `2026-08-17_commission`,
+  `2026-08-17_transport_vat_snapshot`, `2026-08-18_waiting_rate_by_class`,
+  `2026-08-20_airport_pickup_is_the_pickup`) —
   **ONLY** for schema/data work. (All applied to the live DB.)
 - For any **big read** (the schema, a wide code sweep), prefer a **subagent** that reads it and returns just the
   answer — so the bulk never enters the main conversation.
@@ -547,9 +549,63 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 > against the market and the regulated taxi tariff, migration applied and verified live.
 > Read `SESSION_LOG.md` Session 62 parts A–F for the detail; `docs/06` §10 holds the waiting-rate sources.
 >
-> **Still open, both the founder's call, neither blocking the curve:** the cancellation penalty (BACKLOG § Y
-> — too weak on a cheap trip; three shapes sketched, and the basis question pairs with it), and whether the
-> waiting caps should stay counted in minutes (they are, and the market agrees) or be pinned in euros.
+> **Then 2026-08-20 (parts F–H):** the waiting rate is **per class and live** (Eco 0,50 · Business 0,75 ·
+> First 1,00 €/min, migration applied, verified on a real trip). A completeness audit followed — the
+> arithmetic closes on both sides, the labels did not, so the Driver's "Fare" line stopped silently
+> containing the waiting, both CSVs gained the service fee and its VAT, and "Cost per trip" stopped claiming
+> to be fare + waiting. Then the two the founder called out: **Kavenue now prices an amendment** (it prices
+> the CHANGE against the rate card and leaves the agreed fare standing — never re-quoting the whole trip),
+> and **a flight number no longer turns a departure into an airport pickup** (47 live trips moved from a
+> 60-minute courtesy wait at a hotel door back to 20).
+
+---
+
+## ⚑ FINISH THESE BEFORE THE CURVE — small, known, and all found this session
+
+They are small. They are also the tail of a money sweep, so they are worth clearing while the context is
+warm rather than rediscovering them in three sessions' time. **Roughly in this order:**
+
+1. **AN UNLOCATED STOP IS FREE.** A stop typed but not picked from the address suggestions has no
+   coordinates, so `app/(dispatch)/dispatch/new/actions.ts:143-146` (and the same filter in the amend
+   action) drops it from the routed distance — it adds **nothing** to the price. It is still stored in
+   `mission.waypoints`, drawn on the Driver's route rail, counted in their progress, and needs a "Reached"
+   tap. The Driver drives an unpaid detour. **Reproduced live on the amend screen**: the change summary read
+   *"Add a stop at Place du Casino"* while the route stayed 15 km and the fare did not move.
+   The pickup and drop-off already refuse an unlocated address (`mission-form.tsx:429,431`); stops impose
+   nothing. Cheapest fix is that same rule — and it belongs on BOTH the new-mission form and the amend form.
+
+2. **THREE CHARGES THAT ARE REAL BUT INVISIBLE.**
+   - **The night ×1,20.** `night_applied` is written on every mission and read by **no screen at all**. A
+     Dispatcher comparing two identical airport runs cannot see why the 23:40 one cost 20% more, and the
+     Driver never learns it either. `docs/06` §4 stored it precisely so "a past price stays explicable".
+     A tag on the trip row and a column in both CSVs is most of the fix.
+   - **The waiting rate and minutes on a SETTLED trip.** `mission.waiting_rate` is stamped per row and
+     rendered nowhere. A Driver who banks 13,20 € for waiting has nothing on screen to check it against;
+     the rate is only ever shown while the meter is live. Both sides should see "N min at X €/min".
+   - **A Driver's own cancellation penalty is invisible to the Business.** It is an indemnity Driver →
+     Business (`docs/06` §1), it is recorded in `mission_cancellation`, and **no Dispatch screen reads that
+     table** — not the row, not Spend, not History, not either CSV. A hotel whose Driver walked at T−2h sees
+     no trace of what it is owed. ⚠️ Note the audit also found two comments disagreeing about who receives
+     it (`docs/06:71` says the Business; `app/(app)/rides/history/page.tsx:185` says Kavenue) — settle that
+     first, it is a one-line doc question with a real answer.
+
+3. **TWO DRIVER-SIDE COUNTING GAPS** (found in the same audit, not yet fixed):
+   - Waiting settled on a trip the **Business** then cancelled is absorbed into "Cancelled on you" in
+     Earnings (`lib/earnings.ts:319-320` only adds waiting inside the `completed` branch), so the "Waiting
+     time · N min" line under-reports both the euros and the minutes the Driver actually sat there.
+   - A **driver-cancelled** mission has `driver_id` cleared, so it has no row in the Earnings trip list
+     while its penalty is still in the headline total — the day rows sum to more than the total, with
+     nothing on screen explaining the gap.
+
+4. **Then the curve.**
+
+**Still the founder's call, neither blocking:** the cancellation penalty (BACKLOG **§ Y** — too weak on a
+cheap trip; three shapes sketched, and the basis question pairs with it), and whether the waiting caps stay
+counted in minutes (they are, and the market agrees) or get pinned in euros. **New this session:** BACKLOG
+**§ Z** — should waiting be charged at an intermediate stop (the "Reached" taps already record the arrival
+instant; the hard part is the clock origin, not the rate) — and a **§ W** addendum recording the founder's
+own version of demand pricing: measure it from our own booking volume per zone against that zone's trailing
+average, and surface it as **advice to the Business**, never as Kavenue moving the fare.
 
 **(Superseded: "PRICING STEPS 0–4 ARE SHIPPED. NEXT IS STEP 5" — S61, 2026-08-17.)**
 

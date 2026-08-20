@@ -1049,3 +1049,21 @@ charged, waiting has its own line, and an unfilled mission gets no table at all 
 - **You should still add flight numbers** — that's the field that switches on flight tracking. The app was
   drawing the wrong conclusion from it, which is fixed.
 - **Not live yet** — the airport change needs the migration run first.
+
+## 2026-08-20 — where the money stands, end of the day
+
+Everything you see now shows the same kind of number, on both sides:
+
+- **You always see what leaves your account** — the fare with our fee inside it — on every screen, in the
+  exports, and in the totals.
+- **A Driver always sees what they bank.** The one exception is a penalty they owe, which is shown gross on
+  purpose, and says why.
+- **No price is typed by a person any more.** Posting a trip and changing a booked one are both priced by
+  Kavenue from the rate card. That was the last place a human number could get in.
+- **Waiting is priced by the car** and stops being charged at your hotel door for a trip that's going to the
+  airport rather than coming from one.
+
+Still on the list, and none of them is a wrong charge — they're things the app knows but doesn't say: a stop
+you type without picking it from the suggestions is free, the night rate is invisible once a trip is booked,
+a settled waiting charge doesn't show its rate, and a penalty a Driver owes you doesn't appear anywhere on
+your side.
