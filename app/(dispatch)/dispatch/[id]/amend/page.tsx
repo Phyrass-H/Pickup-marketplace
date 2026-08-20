@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { parseWaypoints } from "@/lib/waypoints";
+import { routeMetrics } from "@/lib/directions";
 import { settledFare } from "@/lib/pdp";
 import { commissionSplit, ratesOf } from "@/lib/commission";
+import { RATE_CARD_COLS, type RateCardRow } from "@/lib/rate-card";
 import { missionTone, TONE_BG, TONE_COLOR } from "@/lib/dispatch-status";
 import {
   addressLine,
@@ -75,6 +77,15 @@ export default async function AmendMissionPage({
   // `createMission` does with the Ceiling — the column keeps storing the fare.
   const fare = commissionSplit(settledFare(mission), ratesOf(mission)).businessTotal;
 
+  // Kavenue prices the change, so the form needs the card to show what the new
+  // route is worth as it is edited. The SERVER re-prices authoritatively on submit
+  // (proposeMissionAmendment) — this copy only guides, exactly like /dispatch/new.
+  const rateCard: RateCardRow[] = await (async () => {
+    const sb = await createClient();
+    const { data } = await sb.from("rate_card").select(RATE_CARD_COLS);
+    return (data ?? []) as RateCardRow[];
+  })();
+
   const pickupDefault: Place | null =
     mission.pickup_lat != null && mission.pickup_lng != null
       ? { label: mission.pickup_address, lat: mission.pickup_lat, lng: mission.pickup_lng }
@@ -88,9 +99,34 @@ export default async function AmendMissionPage({
     lat: w.lat ?? null,
     lng: w.lng ?? null,
   }));
+  // ⚑ RE-MEASURE THE AGREED ROUTE, don't trust `mission.distance_km`. It was measured
+  // when the trip was posted and can disagree with what the router says today — map
+  // data moves, and a hand-seeded row can be plainly wrong. Since Kavenue now prices
+  // the DIFFERENCE between the old route and the new one, a stale baseline invents a
+  // fare change on a route nobody touched: a demo trip stored at 24 km and routed
+  // today at 15 km opened this screen at −18,60 € before a single edit. The server
+  // re-measures the same way in proposeMissionAmendment, so the screen and the write
+  // agree. Falls back to the stored figures if routing is unavailable.
+  const freshOriginal =
+    mission.pickup_lat != null && mission.pickup_lng != null &&
+    mission.dropoff_lat != null && mission.dropoff_lng != null
+      ? await routeMetrics(
+          { lat: Number(mission.pickup_lat), lng: Number(mission.pickup_lng) },
+          { lat: Number(mission.dropoff_lat), lng: Number(mission.dropoff_lng) },
+          new Date(mission.pickup_at).getTime() > Date.now()
+            ? new Date(mission.pickup_at).toISOString().replace(/\.\d{3}Z$/, "Z")
+            : null,
+          parseWaypoints(mission.waypoints)
+            .filter((w) => w.lat != null && w.lng != null)
+            .map((w) => ({ lat: w.lat as number, lng: w.lng as number })),
+        )
+      : null;
+  const agreedKm = freshOriginal?.distanceKm ?? (mission.distance_km != null ? Number(mission.distance_km) : null);
+  const agreedMin = freshOriginal?.durationMin ?? (mission.duration_min != null ? Number(mission.duration_min) : null);
+
   const etaDefault =
-    mission.distance_km != null && mission.duration_min != null
-      ? { distanceKm: Number(mission.distance_km), durationMin: Number(mission.duration_min) }
+    agreedKm != null && agreedMin != null
+      ? { distanceKm: agreedKm, durationMin: agreedMin }
       : null;
 
   return (
@@ -153,13 +189,17 @@ export default async function AmendMissionPage({
           missionId={mission.id}
           driverName={driverName}
           currentFare={fare}
+          rateCard={rateCard}
+          tier={mission.category}
+          body={mission.required_body_type}
+          night={mission.night_applied ?? false}
           pickupDefault={pickupDefault}
           dropoffDefault={dropoffDefault}
           stopsDefault={stopsDefault}
           etaDefault={etaDefault}
           pickupAtIso={mission.pickup_at}
-          fromDurationMin={mission.duration_min != null ? Number(mission.duration_min) : null}
-          fromDistanceKm={mission.distance_km != null ? Number(mission.distance_km) : null}
+          fromDurationMin={agreedMin}
+          fromDistanceKm={agreedKm}
           original={{
             pickup: mission.pickup_address,
             dropoff: mission.dropoff_address,

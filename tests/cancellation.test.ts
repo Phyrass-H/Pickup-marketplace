@@ -61,8 +61,51 @@ describe("isAirportPickup — the S42 accent bug", () => {
     ).toBe(true);
   });
 
-  it("is true whenever a flight number is attached, wherever the pickup is", () => {
+  it("is true for a flight number when neither end names an airport — an unlabelled terminal", () => {
+    // An arrival's pickup is often "Terminal 2, 06200 Nice" with no airport word in it,
+    // which is the whole reason the flight number is still consulted at all.
     expect(isAirportPickup(mission({ flight_number: "AF7701" }))).toBe(true);
+    expect(
+      isAirportPickup(
+        mission({ flight_number: "AF7701", pickup_address: "Terminal 2, 06200 Nice", dropoff_address: "Pl. du Casino, 98000 Monaco" }),
+      ),
+    ).toBe(true);
+  });
+
+  // ⚑ THE 2026-08-20 FIX. A flight number on a DEPARTURE describes the flight the Guest is
+  // catching, not one they have landed from — the pickup is a hotel door and deserves the
+  // 20-minute city wait. On the live data 52 of 89 flight-number trips were departures, each
+  // one handing the Driver 40 extra unpaid minutes and doubling the meter's ceiling.
+  it("is FALSE for a hotel → airport departure, even with a flight number", () => {
+    const departure = mission({
+      flight_number: "U26541",
+      pickup_address: "5 Prom. des Anglais, 06000 Nice, France",
+      pickup_label: "Le Grand Hôtel",
+      dropoff_address: "Aéroport Nice Côte d'Azur, Terminal 1, 06200 Nice",
+    });
+    expect(isAirportPickup(departure)).toBe(false);
+    expect(noShowWaitMinutes(isAirportPickup(departure))).toBe(20);
+  });
+
+  it("is still TRUE for the arrival that runs the other way", () => {
+    const arrival = mission({
+      flight_number: "U26541",
+      pickup_address: "Aéroport Nice Côte d'Azur, Terminal 1, 06200 Nice",
+      dropoff_address: "5 Prom. des Anglais, 06000 Nice, France",
+    });
+    expect(isAirportPickup(arrival)).toBe(true);
+    expect(noShowWaitMinutes(isAirportPickup(arrival))).toBe(60);
+  });
+
+  it("reads the PICKUP first — an airport-to-airport transfer is an arrival", () => {
+    expect(
+      isAirportPickup(
+        mission({
+          pickup_address: "Aéroport Nice Côte d'Azur, 06200 Nice",
+          dropoff_address: "Aéroport Cannes-Mandelieu, 06150 Cannes",
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("is false for an ordinary city pickup", () => {

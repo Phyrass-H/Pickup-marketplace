@@ -1035,3 +1035,17 @@ charged, waiting has its own line, and an unfilled mission gets no table at all 
 - **Everything reconciles.** Checked the arithmetic on both sides, not just the screens: your total is
   transport + fee + VAT, and a Driver's is trips + no-shows + waiting + cancellations, less any penalty.
   Nothing is uncounted and nothing is counted twice.
+
+## 2026-08-20 — Kavenue prices a change, and a flight number stops meaning "airport"
+
+- **You no longer type a price when you change a booked trip.** Change the route and Kavenue works out what
+  the change is worth from the rate card. The price your Driver agreed stands — only the difference moves.
+  Adding 16 km to a 62,79 € trip makes it 94,79 €, not the 110 € it would cost if we re-quoted the whole
+  thing from scratch. A shorter route brings it down the same way.
+- **A trip to the airport was being treated as a trip from one.** If a booking carried a flight number, the
+  app gave it the airport courtesy wait — an hour of free waiting at your hotel door instead of twenty
+  minutes. On your current trips, 52 of the 89 with a flight number were departures, so Drivers were sitting
+  40 extra minutes unpaid. It now looks at where the trip starts, not just whether a flight is attached.
+- **You should still add flight numbers** — that's the field that switches on flight tracking. The app was
+  drawing the wrong conclusion from it, which is fixed.
+- **Not live yet** — the airport change needs the migration run first.

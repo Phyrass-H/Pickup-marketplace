@@ -25,13 +25,33 @@ function round2(n: number): number {
 // see 2026-07-22_airport_accent_fix.sql, which this mirrors.
 const AIRPORT_RE = /roport|airport/i;
 
+/**
+ * Is the PICKUP an airport? It decides the courtesy wait (60 min vs 20) and the money
+ * ceiling (120 min vs 60), so it is worth more than it looks.
+ *
+ * ⚑ A FLIGHT NUMBER ALONE IS NOT AN AIRPORT PICKUP (fixed 2026-08-20). The old rule was
+ * "has a flight number, OR the pickup says airport", which gave the 60-minute airport
+ * courtesy wait to every hotel → airport DEPARTURE — the flight number there describes the
+ * flight the Guest is catching, not one they have landed from. Measured on the live data at
+ * the time: 52 of the 89 trips carrying a flight number were departures, so a Driver waited
+ * 40 extra minutes unpaid at a hotel door, and the meter's ceiling was doubled with it.
+ *
+ * The flight number still has to count for something: an arrival's pickup address is often
+ * "Terminal 2, 06200 Nice" with no airport word in it at all. So the order is:
+ *   1. the pickup itself says airport  → airport (an arrival)
+ *   2. the DROP-OFF says airport and the pickup does not → a departure, city wait
+ *   3. a flight number and neither end named → an arrival with an unlabelled terminal
+ */
 export function isAirportPickup(
   m: Pick<MissionRow, "flight_number" | "pickup_address"> & {
     pickup_label?: string | null;
+    dropoff_address?: string | null;
+    dropoff_label?: string | null;
   },
 ): boolean {
-  if (m.flight_number) return true;
-  return AIRPORT_RE.test(`${m.pickup_address ?? ""} ${m.pickup_label ?? ""}`);
+  if (AIRPORT_RE.test(`${m.pickup_address ?? ""} ${m.pickup_label ?? ""}`)) return true;
+  if (AIRPORT_RE.test(`${m.dropoff_address ?? ""} ${m.dropoff_label ?? ""}`)) return false;
+  return !!m.flight_number;
 }
 
 // The COURTESY WAIT (minutes) — free, charged to nobody: airport 60, city 20.

@@ -3072,3 +3072,56 @@ taps already record the arrival instant, and the hard part is the clock origin, 
 addendum to **§ W** (measure demand from our own booking volume per zone against its trailing average — no
 events API needed; it must surface as advice to the Business, never as Kavenue moving the fare).
 
+### Session 62 part H — Kavenue prices the amendment, and a flight number stops meaning "airport" (2026-08-20)
+
+**1. THE AMENDMENT FARE IS NO LONGER TYPED.** `docs/06` §0 forbids any discretionary typed amount and §10's
+build note says an amendment's fare "must be recomputed from the rate card using the new distance — never
+typed". It was typed, and the screen admitted it: *"Auto-pricing arrives with the pricing engine — for now
+you enter it."* The engine shipped in S61.
+
+**⚑ THE RULE THE FOUNDER CHOSE: price the CHANGE, not the whole trip.** Re-quoting the new distance outright
+is the literal reading of §10, and it is wrong in practice — it throws away the auction result. A Driver who
+won a 15 km trip at 62,79 € against a 96,60 € Ceiling would be handed **110,00 €** for one extra stop. Instead
+the card prices the old route and the new one, and the **difference** is applied to the fare the two sides
+agreed. *Verified with `.local/probe/amend-repricing.ts`:* 15→15 km +0,00 · 15→18 +6,00 · 15→22 +14,00 ·
+15→31 **+32,00 → 94,79** (against 110,00 re-quoted) · 15→12 **−6,00**. Every result round-trips through
+`courseFromBusinessTotal` and reads back to the cent.
+
+- Server (`amend/actions.ts`) prices through the same `mission_price` RPC `createMission` uses, from the
+  server's own road distance. If either quote is missing it **redirects rather than guessing** — a proposal
+  with an invented fare is the thing §0 forbids.
+- The form no longer has a `new_fare` input at all; it shows the computed figure and says what it did.
+
+**⚑ AND THE TRAP THAT CAME WITH IT — measure BOTH routes at the same moment.** First run opened at
+**−18,60 € on a route nobody had touched**: the demo trip's stored `distance_km` is 24 (hand-seeded) while
+the router returns 15 for the same addresses today. Diffing a stale baseline against a fresh measurement
+invents a fare change. Both the page and the action now **re-measure the agreed route** with `routeMetrics`
+and diff fresh-against-fresh; the form also forces the delta to 0 when `routeDiff` reports no change. Now it
+opens at 62,79 → 62,79, "The route is the same length, so the fare doesn't move."
+
+**2. A FLIGHT NUMBER IS NOT AN AIRPORT PICKUP.** `isAirportPickup` answered true for any trip carrying a
+flight number. On a hotel → airport DEPARTURE that number is the flight the Guest is *catching*, and the
+pickup is a hotel door — so it was getting the airport courtesy wait: **60 free minutes instead of 20**, and
+a 120-minute money ceiling instead of 60. The Driver waited 40 extra minutes unpaid.
+**Measured live: of 89 missions carrying a flight number, 37 were arrivals and 52 were departures.** The
+majority were on the wrong side of the rule.
+
+New order, because an arrival's pickup is often "Terminal 2, 06200 Nice" with no airport word in it:
+pickup says airport → true · **drop-off says airport and pickup does not → false** · flight number with
+neither end named → true. Three new tests pin the departure, the arrival and the airport-to-airport case.
+Mirrored in `docs/migrations/2026-08-20_airport_pickup_is_the_pickup.sql`. **Founder runs it.**
+
+⚑ The founder's instinct was right that the field must stay editable — it is what switches on flight
+tracking. The bug was never that they can add it; it was what the app inferred from it.
+
+`tsc` clean · **420 tests** (was 417).
+
+**⚑ NOT DEPLOYED — the airport migration must be applied first**, or the Driver's screen shows a 20-minute
+courtesy wait while SQL settles on 60.
+
+**⚑ SEEN IN PASSING, NOT YET FIXED — the unlocated stop hole, on the amend screen too.** Driving the amend
+form with a typed-but-not-picked stop reproduced it live: the change summary said "Add a stop at Place du
+Casino", the route stayed 15 km and the fare did not move. A stop with no coordinates is filtered out of
+routing, so it is priced at zero on both the new-mission and the amend paths, while still being drawn on the
+Driver's route and needing a "Reached" tap. Next.
+

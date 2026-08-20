@@ -13,6 +13,8 @@ import {
   dropoffInstants,
 } from "@/lib/amendments";
 import { formatMoney, formatKm, formatDuration, formatTime } from "@/lib/format";
+import { priceFor, type RateCardRow } from "@/lib/rate-card";
+import type { VehicleCategory, BodyType } from "@/lib/database.types";
 import { proposeMissionAmendment } from "./actions";
 
 function SendButton({ driverName }: { driverName: string }) {
@@ -34,6 +36,10 @@ export function AmendForm({
   missionId,
   driverName,
   currentFare,
+  rateCard,
+  tier,
+  body,
+  night,
   pickupDefault,
   dropoffDefault,
   stopsDefault,
@@ -46,6 +52,11 @@ export function AmendForm({
   missionId: string;
   driverName: string;
   currentFare: number;
+  /** The live rate card — the form prices the CHANGE with it as the route is edited. */
+  rateCard: RateCardRow[];
+  tier: VehicleCategory;
+  body: BodyType | null;
+  night: boolean;
   pickupDefault: Place | null;
   dropoffDefault: Place | null;
   stopsDefault: DefaultPlace[];
@@ -65,8 +76,6 @@ export function AmendForm({
     dropoffText: dropoffDefault?.label ?? "",
     stops: stopsDefault.map((s) => s.label),
   }));
-  const [fare, setFare] = useState<string>(currentFare.toFixed(2));
-
   const action = proposeMissionAmendment.bind(null, missionId);
 
   // Live diff of the proposed route vs the agreed trip (advisory preview; the
@@ -78,16 +87,38 @@ export function AmendForm({
   });
   const parts = changeSummaryParts(diff);
 
-  const newFareNum = Number(fare);
-  const validFare = Number.isFinite(newFareNum) && newFareNum > 0;
-  const delta = validFare ? Math.round((newFareNum - currentFare) * 100) / 100 : 0;
-  const deltaLabel =
-    delta > 0 ? `+${formatMoney(delta)}` : delta < 0 ? `−${formatMoney(-delta)}` : null;
-
   const newDuration = summary.eta?.durationMin ?? fromDurationMin;
   const newDistance = summary.eta?.distanceKm ?? fromDistanceKm;
-  const { before, after } = dropoffInstants(pickupAtIso, fromDurationMin, newDuration);
   const routeChanged = diff.hasChanges;
+
+  // ⚑ KAVENUE PRICES THE CHANGE — nobody types a fare (docs/06 §0, §10). The card
+  // prices the OLD route and the NEW one, and the difference is applied to the fare
+  // the two sides already agreed. Re-quoting the new distance outright would throw
+  // away the auction result the Driver won. Advisory here; proposeMissionAmendment
+  // re-prices from the server's own road distance on submit.
+  const round2 = (n: number) => Math.sign(n) * Math.round(Math.abs(n) * 100 + Number.EPSILON) / 100;
+  // `van` is the vestigial category (BACKLOG § X); the card has no row for it, so it
+  // prices as Business — the same fallback the waiting rate uses.
+  const cardTier = tier === "van" ? "business" : tier;
+  const wasQuote = priceFor(rateCard, cardTier, body, fromDistanceKm, { night });
+  const nowQuote = priceFor(rateCard, cardTier, body, newDistance, { night });
+  // An unchanged route cannot change the fare, whatever two measurements say. The
+  // server re-measures the original route to make the same guarantee properly; this
+  // keeps the screen from flickering a delta the moment it loads.
+  const delta = !routeChanged
+    ? 0
+    : wasQuote && nowQuote
+      ? round2(nowQuote.ceiling - wasQuote.ceiling)
+      : null;
+  const newFareNum = delta == null ? null : round2(currentFare + delta);
+  const validFare = newFareNum != null && newFareNum > 0;
+  const deltaLabel =
+    delta == null || delta === 0
+      ? null
+      : delta > 0
+        ? `+${formatMoney(delta)}`
+        : `−${formatMoney(-delta)}`;
+  const { before, after } = dropoffInstants(pickupAtIso, fromDurationMin, newDuration);
 
   return (
     <form action={action} className="am-grid">
@@ -116,32 +147,32 @@ export function AmendForm({
             <h3 className="mx-card__title">New agreed fare</h3>
           </div>
           <div className="am-fare">
-            <div className="am-fare__input">
+            <div
+              className="am-fare__input"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+              aria-live="polite"
+            >
               <span aria-hidden>€</span>
-              <input
-                type="number"
-                name="new_fare"
-                min={0}
-                step="0.01"
-                inputMode="decimal"
-                value={fare}
-                onChange={(e) => setFare(e.target.value)}
-                aria-label="New agreed fare in euros"
-              />
+              <span style={{ fontWeight: 500 }}>
+                {validFare ? formatMoney(newFareNum).replace(/\s*€$/, "") : "—"}
+              </span>
             </div>
             <div className="am-fare__delta muted">
               Current <s>{formatMoney(currentFare)}</s>
               {deltaLabel && (
                 <>
                   {" · "}
-                  <span className={delta > 0 ? "am-up" : "am-down"}>{deltaLabel}</span>
+                  <span className={(delta ?? 0) > 0 ? "am-up" : "am-down"}>{deltaLabel}</span>
                 </>
               )}
             </div>
           </div>
           <p className="muted small am-hint">
-            You set the new agreed total. Auto-pricing arrives with the pricing engine — for now you
-            enter it.
+            {!validFare
+              ? "Pick the addresses from the suggestions so Kavenue can measure the route and price it."
+              : delta === 0
+                ? "The route is the same length, so the fare doesn’t move."
+                : `Kavenue priced the change: ${formatKm(fromDistanceKm)} → ${formatKm(newDistance)} on the rate card. The fare your Driver agreed stands; only the difference is added.`}
           </p>
         </div>
 
@@ -180,7 +211,9 @@ export function AmendForm({
               <span className="muted">Fare</span>
               <span>
                 <s>{formatMoney(currentFare)}</s> → <b>{validFare ? formatMoney(newFareNum) : "—"}</b>
-                {deltaLabel && <span className={delta > 0 ? "am-up" : "am-down"}> {deltaLabel}</span>}
+                {deltaLabel && (
+                  <span className={(delta ?? 0) > 0 ? "am-up" : "am-down"}> {deltaLabel}</span>
+                )}
               </span>
             </div>
             {routeChanged && (

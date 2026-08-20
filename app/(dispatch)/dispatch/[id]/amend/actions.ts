@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getAppContext } from "@/lib/app-context";
 import { isValidLatLng } from "@/lib/geo";
 import { routeMetrics } from "@/lib/directions";
-import { parseWaypointsField } from "@/lib/waypoints";
+import { parseWaypoints, parseWaypointsField } from "@/lib/waypoints";
 import { settledFare } from "@/lib/pdp";
-import { courseFromBusinessTotal, ratesOf } from "@/lib/commission";
+import { commissionSplit, courseFromBusinessTotal, ratesOf } from "@/lib/commission";
 import { buildFromSnapshot } from "@/lib/amendments";
 import type { MissionStatus } from "@/lib/database.types";
 
@@ -66,18 +66,6 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
   if (!pickupAddress || !pickupValid) redirect(backTo("missing"));
   if (!dropoffAddress || !dropoffValid) redirect(backTo("nodrop"));
 
-  // ⚑ THE FIELD IS ALL-IN, THE COLUMN IS THE COURSE — the same split the Ceiling
-  // has had since S61. `accept_amendment` sets `ceiling = new_fare`, so what is
-  // stored here has to be a Course or accepting a change would inflate the trip
-  // by the whole service fee. Validated on the typed figure, stored converted.
-  //
-  // The mission's OWN snapshot rates, never the live ones: this trip's invoice is
-  // already stamped, and a rate change tomorrow must not re-price a trip agreed
-  // today.
-  const newFareAllIn = num(formData.get("new_fare"));
-  if (newFareAllIn == null || newFareAllIn <= 0) redirect(backTo("fare"));
-  const newFare = courseFromBusinessTotal(newFareAllIn, ratesOf(mission));
-
   const note = String(formData.get("note") ?? "").trim();
 
   const waypoints = parseWaypointsField(formData.get("waypoints"));
@@ -100,6 +88,72 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
   );
   const newDistanceKm = metrics ? metrics.distanceKm : num(formData.get("route_distance_km"));
   const newDurationMin = metrics ? metrics.durationMin : num(formData.get("route_duration_min"));
+
+  // ── KAVENUE PRICES THE CHANGE (docs/06 §0, §10) ───────────────────────────
+  // §0: no discretionary amount may ever be typed in. §10's build note: "an
+  // amendment's new fare must be recomputed from the rate card using the new
+  // distance — never typed." Until now it WAS typed; the screen said so.
+  //
+  // ⚑ WE PRICE THE CHANGE, NOT THE WHOLE TRIP (founder, 2026-08-20). Re-quoting
+  // the new distance outright would throw away the auction result: a Driver who
+  // won a 24 km trip at 62,79 € against a 96,60 € Ceiling would be handed ~120 €
+  // for one extra stop. Instead the rate card prices the DIFFERENCE between the
+  // old route and the new one, and that difference is applied to the fare the two
+  // sides actually agreed. A shorter route lowers it by the same rule.
+  //
+  // Priced in SQL, from the SERVER's own road distance — the same `mission_price`
+  // createMission calls, never a number the browser sent. The mission's OWN
+  // snapshot rates convert it back to the Course, never the live ones: this trip's
+  // invoice is already stamped and a rate change tomorrow must not re-price it.
+  const rates = ratesOf(mission);
+  const priceAt = (km: number | null) =>
+    km == null || !Number.isFinite(km) || km <= 0
+      ? Promise.resolve({ data: null })
+      : supabase
+          .rpc("mission_price", {
+            // `van` is vestigial and has no card row (BACKLOG § X) — price it as Business.
+            p_tier: mission.category === "van" ? "business" : mission.category,
+            p_body: mission.required_body_type,
+            p_km: km,
+            p_night: mission.night_applied ?? false,
+          })
+          .maybeSingle();
+  // ⚑ MEASURE THE OLD ROUTE NOW, not `mission.distance_km`. The stored distance was
+  // measured when the trip was posted and can disagree with what the router returns
+  // today — map data moves, and a hand-seeded row can be plainly wrong. Diffing a
+  // stale baseline against a fresh measurement invents a fare change on a route
+  // nobody touched: a demo trip stored at 24 km and routed today at 15 km opened the
+  // screen showing −18,60 € before a single edit. Both sides of the difference now
+  // come from the same source at the same moment, so an unchanged route is exactly 0.
+  const originalVia = parseWaypoints(mission.waypoints)
+    .filter((w) => w.lat != null && w.lng != null && isValidLatLng(w.lat, w.lng))
+    .map((w) => ({ lat: w.lat as number, lng: w.lng as number }));
+  const wasMetrics =
+    mission.pickup_lat != null && mission.pickup_lng != null &&
+    mission.dropoff_lat != null && mission.dropoff_lng != null
+      ? await routeMetrics(
+          { lat: Number(mission.pickup_lat), lng: Number(mission.pickup_lng) },
+          { lat: Number(mission.dropoff_lat), lng: Number(mission.dropoff_lng) },
+          departAt,
+          originalVia,
+        )
+      : null;
+  const wasKm = wasMetrics ? wasMetrics.distanceKm : mission.distance_km == null ? null : Number(mission.distance_km);
+
+  const [wasQuote, nowQuote] = await Promise.all([priceAt(wasKm), priceAt(newDistanceKm)]);
+  // No card, or no route: we cannot price the change, so we do not guess one.
+  // Refusing is the whole point — a proposal with an invented fare is the thing
+  // §0 forbids.
+  if (!wasQuote.data || !nowQuote.data) redirect(backTo("noprice"));
+
+  const round2 = (n: number) => Math.sign(n) * Math.round(Math.abs(n) * 100 + Number.EPSILON) / 100;
+  const agreedAllIn = commissionSplit(settledFare(mission), rates).businessTotal;
+  const deltaAllIn =
+    Number((nowQuote.data as { ceiling_price: number }).ceiling_price) -
+    Number((wasQuote.data as { ceiling_price: number }).ceiling_price);
+  const newFareAllIn = round2(agreedAllIn + deltaAllIn);
+  if (!(newFareAllIn > 0)) redirect(backTo("noprice"));
+  const newFare = courseFromBusinessTotal(newFareAllIn, rates);
 
   // The trip as agreed at this moment — including the CURRENT fare the Driver
   // agreed to (computed, never stored) — for the "was …" display + audit trail.
