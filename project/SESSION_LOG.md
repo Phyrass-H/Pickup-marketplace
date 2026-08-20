@@ -3296,3 +3296,45 @@ Driver never closed, lifted into today's band by § Q, each carrying its own dat
 mission in the database is now in the past (the newest is 18 August), so the whole unclosed backlog has piled
 into one band. It is the § Q feature working, not a bug — and it is one more argument for the wipe-and-reseed
 already queued after the curve.
+
+### Follow-up the same session — three real defects the adversarial review found, all mine
+
+A six-lens review of the shipped diff (17 candidates, **6 survived** a two-verifier adversarial pass; four of
+the six were the same defect). All three were **confirmed by hand before touching anything** — the reviewers
+were right on every count.
+
+1. **A negative lead time, printed two different wrong ways.** `mission_cancellation.hours_before_pickup` is
+   **signed** — `driver_cancel_mission` computes `(pickup_at - now())/3600` and accepts a cancel from
+   `accepted`, `confirmed`, `en_route` and `arrived`, the last two of which routinely happen *after* the
+   pickup. A Driver who sits out a 60-minute airport courtesy wait and gives up stamps a negative number.
+   `project/BACKLOG.md:272` already recorded exactly this on no-show rows; both my helpers ignored it. The
+   CSVs printed **"1 · -18 min before pickup"** — a negative duration in a hotel's spreadsheet — while the row
+   clamped with `Math.max(0, …)` to **"0 min before pickup"**, asserting they walked at the pickup moment.
+   Neither was true, and they disagreed on the same row in a file whose whole promise is to be what the screen
+   shows. They also rounded on different scales: 2,5 h read "3 h" in the CSV and "2 h 30" on screen.
+   **Fixed by deleting both copies** for one `formatLeadTime()` in `lib/format.ts` that names the side:
+   *"18 min after pickup"*. Verified live on a seeded walk at −0,3 h — screen and CSV both read
+   `18 min after pickup`. Six new tests.
+2. **The amend refusal stranded legacy trips.** `if (unlocatedStops(waypoints).length > 0)` fired on the stops
+   `RouteStops` re-posts from the mission row, not only on ones being added — so a mission posted before today
+   with an unlocated stop could not be amended **at all**. A hotel moving a pickup time at T−2h would have been
+   told to re-pick a stop they never touched, on the one screen where minutes matter. My own comment in
+   `amend-form.tsx` asserted *"A stored stop is always located"*, which is false for the whole pre-2026-08-20
+   archive — and there is one such row in the live data right now. Now only a **newly** loose stop is refused;
+   an already-stored one is exempt and keeps its nudge. Comment corrected.
+3. **The Schedule's pickup time shrank 16px → 13px.** Rewrapping the third date-cell variant in
+   `dxh-when dx-trip__when` pulled the time under `.dx-trip__when > span { font-size: 13px }` — the § Q lifted-row
+   styling — where a bare `.dx-trip__time` had inherited the summary's 16px. The primary scan column ended up
+   smaller than the Guest and Driver cells, and `.dx-trip__time` was left **matching no element in the
+   codebase**, which is what gave it away. My comment claimed the opposite of what shipped. Measured in the
+   browser both ways before and after (16 → 13 → 16). Now `.dxh-when` only, the inner span keeps
+   `.dx-trip__time`, and one paired rule (`.dxh-when > .dx-trip__time { font-size: inherit }`) restores it —
+   `inherit` rather than a literal so it keeps tracking the base size.
+
+**Method note.** The three defects have one shape in common: **each was a place where I wrote a comment
+asserting the behaviour I intended rather than the behaviour I had.** The font one was screenshotted after the
+change with nothing to compare against, and looked fine. Duplicating a formatter across screen and export is
+the same failure at a different scale — the CSV files are deliberate copies of each other, which makes a
+shared helper the right default there, not the exception.
+
+**Green after the fixes:** `tsc` clean · **448 tests** · `next build` clean · fixtures undone, baseline 277.

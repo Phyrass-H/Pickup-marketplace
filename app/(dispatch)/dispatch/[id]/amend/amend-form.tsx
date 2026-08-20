@@ -75,8 +75,10 @@ export function AmendForm({
     pickupText: pickupDefault?.label ?? "",
     dropoffText: dropoffDefault?.label ?? "",
     stops: stopsDefault.map((s) => s.label),
-    // A stored stop is always located (both forms refuse to write one that
-    // isn't); RouteStops republishes this the moment anything is typed.
+    // Seeded empty, NOT a claim that a stored stop is located — a mission
+    // posted before 2026-08-20 can carry one that never was. RouteStops
+    // republishes the truth on mount, and the server exempts a stop that was
+    // already stored loose so an unrelated amendment isn't blocked by it.
     unlocatedStops: [],
   }));
   const action = proposeMissionAmendment.bind(null, missionId);

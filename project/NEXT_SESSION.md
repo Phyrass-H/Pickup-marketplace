@@ -581,7 +581,14 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 > Also shipped in passing: `Today · Today` in the Earnings day heading (latent since the feature landed —
 > `formatDayGroup` already returns "Today"), and three unreachable `cancelled_by === "driver"` branches
 > removed. New helpers with tests: `formatWaitingSpell` / `formatPerMinute` (`lib/format.ts`),
-> `unlocatedStops` (`lib/waypoints.ts`), `driverCancelPickupAt` (`lib/earnings.ts`). Suite is **443**.
+> `unlocatedStops` (`lib/waypoints.ts`), `driverCancelPickupAt` (`lib/earnings.ts`), `formatLeadTime`
+> (`lib/format.ts`). Suite is **448**.
+>
+> ⚑ **An adversarial review of that same diff found three real defects, all fixed the same session** — a
+> signed `hours_before_pickup` printed as "-18 min before pickup" in the CSVs and clamped to "0 min before
+> pickup" on screen (**it is signed by design; BACKLOG:272 already said so**), an amend refusal that stranded
+> any trip whose stop was stored unlocated before today, and the Schedule's pickup time shrinking 16px → 13px.
+> See SESSION_LOG Session 63, "Follow-up the same session".
 
 <details>
 <summary>The original S62 list, as written (all four now done)</summary>

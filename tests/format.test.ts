@@ -5,7 +5,13 @@
 // a Driver who banked 13,20 € for waiting had nothing on screen to check it
 // against. The rate is now shown — which makes HOW it is shown load-bearing.
 import { describe, expect, it } from "vitest";
-import { formatDuration, formatMoney, formatPerMinute, formatWaitingSpell } from "@/lib/format";
+import {
+  formatDuration,
+  formatLeadTime,
+  formatMoney,
+  formatPerMinute,
+  formatWaitingSpell,
+} from "@/lib/format";
 
 // fr-FR puts a NO-BREAK SPACE (U+00A0) before the € sign. Asserting the literal
 // would make these tests unreadable and fragile against an ICU change, so both
@@ -78,5 +84,46 @@ describe("formatDuration — the helper the Earnings breakdown now uses", () => 
     expect(formatDuration(45)).toBe("45 min");
     expect(formatDuration(60)).toBe("1 h");
     expect(formatDuration(65)).toBe("1 h 05");
+  });
+});
+
+describe("formatLeadTime — when a Driver walked, relative to the pickup", () => {
+  it("reads in the units the distance deserves", () => {
+    expect(formatLeadTime(2)).toBe("2 h before pickup");
+    expect(formatLeadTime(0.75)).toBe("45 min before pickup");
+    expect(formatLeadTime(72)).toBe("3 days before pickup");
+  });
+
+  it("says AFTER when the value is negative, instead of clamping or printing a minus", () => {
+    // ⚑ `hours_before_pickup` is SIGNED and negative is a normal value.
+    // driver_cancel_mission computes (pickup_at - now())/3600 and accepts a
+    // cancel from 'en_route' and 'arrived' — a Driver who sits out a 60-minute
+    // airport courtesy wait and then gives up stamps a negative number.
+    // Two wrong answers were shipped for this on 2026-08-20 and caught the same
+    // day: the CSVs printed "-18 min before pickup" (a negative duration in a
+    // spreadsheet) while the row clamped to "0 min before pickup" (claiming
+    // they walked at the pickup moment). Neither was true.
+    expect(formatLeadTime(-0.3)).toBe("18 min after pickup");
+    expect(formatLeadTime(-0.9166)).toBe("55 min after pickup");
+    // Under the 48 h threshold, so hours — the same scale the positive side uses.
+    expect(formatLeadTime(-26)).toBe("26 h after pickup");
+    expect(formatLeadTime(-72)).toBe("3 days after pickup");
+  });
+
+  it("rounds minutes, not hours — the screen and the CSV must not drift", () => {
+    // The first CSV copy did Math.round(hours) and read "3 h" where the row,
+    // rounding minutes, read "2 h 30" for the same row. One helper now.
+    expect(formatLeadTime(2.5)).toBe("2 h 30 before pickup");
+  });
+
+  it("returns null rather than a phrase when the lead time is unknown", () => {
+    expect(formatLeadTime(null)).toBe(null);
+    expect(formatLeadTime(undefined)).toBe(null);
+    expect(formatLeadTime("nonsense")).toBe(null);
+  });
+
+  it("coerces PostgREST's numeric-as-string", () => {
+    expect(formatLeadTime("2")).toBe("2 h before pickup");
+    expect(formatLeadTime("-0.5")).toBe("30 min after pickup");
   });
 });

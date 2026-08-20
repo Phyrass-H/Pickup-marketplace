@@ -75,7 +75,27 @@ export async function proposeMissionAmendment(missionId: string, formData: FormD
   // the Driver still has to drive there. See `unlocatedStops`. Reproduced live:
   // "Add a stop at Place du Casino" while the route stayed 15 km and the fare
   // did not move.
-  if (unlocatedStops(waypoints).length > 0) redirect(backTo("nostop"));
+  //
+  // ⚑ ONLY a stop being ADDED or CHANGED. A mission posted before 2026-08-20
+  // can legitimately carry a stop that was never located — nothing checked back
+  // then — and RouteStops re-posts it unchanged. Refusing on that would strand
+  // the trip: a hotel moving a pickup time at T−2h would be told to re-pick a
+  // stop they never touched, on the one screen where minutes matter. The nudge
+  // under the field still asks them to fix it; it just isn't a blocker for a
+  // change that has nothing to do with it.
+  const alreadyLoose = new Set(
+    unlocatedStops(
+      parseWaypoints(mission.waypoints).map((w) => ({
+        address: w.address,
+        lat: w.lat ?? null,
+        lng: w.lng ?? null,
+      })),
+    ).map((w) => w.address.trim().toLowerCase()),
+  );
+  const newlyLoose = unlocatedStops(waypoints).filter(
+    (w) => !alreadyLoose.has(w.address.trim().toLowerCase()),
+  );
+  if (newlyLoose.length > 0) redirect(backTo("nostop"));
   const via = waypoints
     .filter((w) => w.lat != null && w.lng != null && isValidLatLng(w.lat, w.lng))
     .map((w) => ({ lat: w.lat as number, lng: w.lng as number }));

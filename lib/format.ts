@@ -57,6 +57,39 @@ export function formatRate(rate: number | string | null | undefined): string {
   return `${String(pct).replace(".", ",")} %`;
 }
 
+/**
+ * When something happened relative to the pickup: "2 h before pickup",
+ * "18 min after pickup", "3 days before pickup". Null when unknown.
+ *
+ * ⚑ `mission_cancellation.hours_before_pickup` IS SIGNED, and negative is a
+ * normal value — not a data error. `driver_cancel_mission` computes it as
+ * `(pickup_at - now()) / 3600` and accepts a cancel from `accepted`,
+ * `confirmed`, `en_route` AND `arrived`; the last two routinely happen at or
+ * after the pickup, and a Driver who sits out a 60-minute airport courtesy wait
+ * and then gives up stamps a negative number. BACKLOG records the same on
+ * no-show rows. Clamping at zero claims they walked exactly at the pickup
+ * moment; printing it raw puts "-18 min before pickup" in a hotel's
+ * spreadsheet. Both are false — so say which side of the pickup it fell on.
+ *
+ * ⚑ ONE helper for the screen AND both CSV exports, deliberately: the first
+ * version of this was two near-copies that disagreed with each other on the
+ * same row (the export promises to be what the screen shows).
+ */
+export function formatLeadTime(hours: number | string | null | undefined): string | null {
+  const h = Number(hours);
+  if (hours == null || !Number.isFinite(h)) return null;
+  const side = h < 0 ? "after pickup" : "before pickup";
+  const a = Math.abs(h);
+  // formatDuration alone would read "120 h" on a trip walked five days out.
+  const label =
+    a < 1
+      ? `${Math.round(a * 60)} min`
+      : a < 48
+        ? formatDuration(Math.round(a * 60))
+        : `${Math.round(a / 24)} days`;
+  return `${label} ${side}`;
+}
+
 /** A per-minute waiting rate: 0,44 → "0,44 €/min". */
 export function formatPerMinute(rate: number | string | null | undefined): string {
   const n = Number(rate);

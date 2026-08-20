@@ -32,6 +32,13 @@
   that money should end up with is a fair question you raised — the hotel paid nothing and charges its
   Guest nothing, so 100% of the fare isn't really compensation for a loss. The block says what's
   certain and no more; the money is written up and waiting for your decision.
+- **Three of our own mistakes, caught and fixed the same day.** A second review of the work above found
+  them: a Driver who gives up *after* the pickup time (waiting for a Guest who never came) was described
+  as "−18 min before pickup" in the exports and "0 min before pickup" on screen — both wrong, and they
+  disagreed with each other; it now reads **"18 min after pickup"** in both places. A trip whose stop was
+  typed without picking it *before* today couldn't be changed at all until someone re-picked that stop —
+  now only a newly-added one blocks you. And the pickup time on the Schedule had quietly shrunk; it's
+  back to full size.
 
 ---
 

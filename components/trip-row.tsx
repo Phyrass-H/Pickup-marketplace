@@ -10,7 +10,7 @@ import { businessCost, carriesCommission, ratesOf, splitFor } from "@/lib/commis
 import {
   addressLine,
   formatDateTime,
-  formatDuration,
+  formatLeadTime,
   formatMoney,
   formatRate,
   formatTime,
@@ -113,18 +113,6 @@ export interface DriverWalk {
 export interface InfoChangeBrief {
   at: string;
   items: string[]; // human phrases: "Flight BA342 → BA118", "Added guest X"
-}
-
-/**
- * How long before pickup something happened: "45 min", "2 h", "3 days".
- * `formatDuration` alone would read "120 h" on a trip walked five days out.
- */
-function leadLabel(hours: number | null): string | null {
-  if (hours == null || !Number.isFinite(hours)) return null;
-  const h = Math.max(0, hours);
-  if (h < 1) return `${Math.round(h * 60)} min`;
-  if (h < 48) return formatDuration(Math.round(h * 60));
-  return `${Math.round(h / 24)} days`;
 }
 
 /**
@@ -461,11 +449,14 @@ export function TripRow({
             {nightTag}
           </span>
         ) : (
-          // Same two classes as the § Q variant above, minus the <b> — so the
-          // time keeps the size and weight it has always had while the cell
-          // becomes a column that a tag can sit under.
-          <span className="dxh-when dx-trip__when">
-            <span className="mono">{formatTime(mission.pickup_at)}</span>
+          // ⚑ `.dxh-when` ONLY — never `.dx-trip__when` as well. That second
+          // class is the § Q lifted-row styling, and its `> span` rule would
+          // capture the time and shrink it 16px → 13px, on the column a
+          // Dispatcher scans first. `.dxh-when` alone makes the cell a column a
+          // tag can sit under; `.dx-trip__time` keeps the size and weight the
+          // time has always had (see the paired rule in globals.css).
+          <span className="dxh-when">
+            <span className="dx-trip__time mono">{formatTime(mission.pickup_at)}</span>
             {nightTag}
           </span>
         )}
@@ -859,8 +850,8 @@ export function TripRow({
                   : "Driver cancelled"}
               </span>
               <span className="muted small">
-                {leadLabel(driverWalks[0].hoursBefore)
-                  ? `· ${leadLabel(driverWalks[0].hoursBefore)} before pickup `
+                {formatLeadTime(driverWalks[0].hoursBefore)
+                  ? `· ${formatLeadTime(driverWalks[0].hoursBefore)} `
                   : ""}
                 · back in the Pool · {formatDateTime(driverWalks[0].at)}
               </span>

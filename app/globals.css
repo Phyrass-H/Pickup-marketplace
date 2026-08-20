@@ -1166,6 +1166,12 @@ textarea::placeholder {
 .dx-trip > summary::-webkit-details-marker { display: none; }
 .dx-trip > summary > .status-pill { justify-self: end; } /* hug the right edge */
 .dx-trip__time { font-weight: 600; }
+/* The plain Schedule row's time now sits inside `.dxh-when` so a Night rate tag
+   can stack under it. `.dxh-when > span` would drop it to 12px and mute it, so
+   this restores exactly what a bare `.dx-trip__time` inherited: the summary's
+   own size, full-strength text. `inherit`, not a literal, so it keeps tracking
+   the base size. Two classes to out-specify `.dxh-when > span`. */
+.dxh-when > .dx-trip__time { font-size: inherit; color: var(--text); }
 /* § Q — a row lifted out of its own past day carries the date above the time.
    Quieter and smaller than the archive's version: on the Schedule the date is
    context for a row that is out of place, not the thing being scanned. */

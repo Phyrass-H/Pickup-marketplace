@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppContext } from "@/lib/app-context";
 import { parisDayKey } from "@/lib/dispatch-status";
-import { serviceClassLabel } from "@/lib/format";
+import { formatLeadTime, serviceClassLabel } from "@/lib/format";
 import { parsePassengers, passengerName } from "@/lib/passengers";
 import { parseWaypoints } from "@/lib/waypoints";
 import {
@@ -107,19 +107,17 @@ async function loadDriverWalks(
 
 // "1 · 2 h before pickup" — the fact and its lead time, in words, like every
 // other categorical column in this file. Empty when no Driver ever walked.
+//
+// ⛑ `formatLeadTime` is the SAME helper the row uses on screen. This started
+// as a near-copy and the two disagreed on real rows: the copy printed "-18 min
+// before pickup" where the row clamped to "0 min before pickup" — on a file
+// whose whole promise is to be what the screen shows. It also rounded HOURS
+// where the row rounded minutes, so 2,5 h read "3 h" here and "2 h 30" there.
 function walkCell(walks: { at: string; hoursBefore: number | null }[] | undefined): string {
   if (!walks || walks.length === 0) return "";
-  const h = walks[0].hoursBefore;
-  const lead =
-    h == null || !Number.isFinite(h)
-      ? null
-      : h < 1
-        ? `${Math.round(h * 60)} min`
-        : h < 48
-          ? `${Math.round(h)} h`
-          : `${Math.round(h / 24)} days`;
+  const lead = formatLeadTime(walks[0].hoursBefore);
   const count = walks.length > 1 ? `${walks.length} times` : "1";
-  return lead ? `${count} · ${lead} before pickup` : count;
+  return lead ? `${count} · ${lead}` : count;
 }
 
 const OUTCOME_TEXT: Record<string, string> = {
