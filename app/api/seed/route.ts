@@ -118,8 +118,8 @@ export async function GET() {
       base_fare: 70,
       ceiling: 90,
       pdp_start: 50,
-      pdp_step: 5,
-      pdp_interval: 10,
+      pdp_step: null,
+      pdp_interval: null,
     },
     {
       ...base,
@@ -138,8 +138,8 @@ export async function GET() {
       base_fare: 95,
       ceiling: 120,
       pdp_start: 70,
-      pdp_step: 5,
-      pdp_interval: 15,
+      pdp_step: null,
+      pdp_interval: null,
     },
     {
       ...base,
@@ -158,8 +158,8 @@ export async function GET() {
       base_fare: 25,
       ceiling: 35,
       pdp_start: 18,
-      pdp_step: 2,
-      pdp_interval: 10,
+      pdp_step: null,
+      pdp_interval: null,
     },
     {
       ...base,
@@ -179,8 +179,8 @@ export async function GET() {
       base_fare: 130,
       ceiling: 160,
       pdp_start: 90,
-      pdp_step: 8,
-      pdp_interval: 15,
+      pdp_step: null,
+      pdp_interval: null,
     },
     {
       ...base,
@@ -202,8 +202,8 @@ export async function GET() {
       ceiling: 200,
       // SPEED WIN curve per D21: start at 70% of ceiling, climb +5%/5 min.
       pdp_start: 140,
-      pdp_step: 10,
-      pdp_interval: 5,
+      pdp_step: null,
+      pdp_interval: null,
       speed_win: true,
     },
     {
@@ -224,8 +224,8 @@ export async function GET() {
       base_fare: 85,
       ceiling: 110,
       pdp_start: 60,
-      pdp_step: 5,
-      pdp_interval: 15,
+      pdp_step: null,
+      pdp_interval: null,
     },
   ];
 

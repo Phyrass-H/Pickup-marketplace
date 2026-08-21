@@ -8,8 +8,10 @@ import { settledFare } from "@/lib/pdp";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
+// ⚑ `id` and `pickup_at` are curve INPUTS (the jitter seed and the anchor), not
+// bookkeeping — drop either and settledFare stops compiling, which is the point.
 const FARE_COLS =
-  "id, business_id, ceiling, base_fare, pdp_start, pdp_step, pdp_interval, speed_win, created_at, pooled_at, accepted_at";
+  "id, business_id, ceiling, pdp_start, speed_win, pickup_at, created_at, pooled_at, accepted_at";
 
 function revalidateDispatch() {
   revalidatePath("/dispatch", "layout");

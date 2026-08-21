@@ -328,6 +328,10 @@ price is alive whether you look a fortnight out or the same morning.
 3. **Posted inside 5 hours:** the climb runs from posting to the **midpoint** to pickup, then sits
    at the ceiling. Posted at T−3h → ceiling at T−1h30. Even a very late trip gets a real climb *and*
    time at the top to be taken.
+   ⚑ **Rules 2 and 3 overlap between 5 and 10 hours of lead, and rule 2 wins** (founder, 2026-08-22,
+   [[d78]]). Rule 3 governs only what it says — posted *inside* five hours. A trip posted 6h out is
+   urgent and reaches its ceiling at T−5h like any other, rather than sitting a third of the way up
+   its range while the clock runs down. In code: `topLeadFor(lead) = lead > 5h ? 5h : lead/2`.
 4. **The curve never starts earlier than 2 weeks out.** A trip posted a month ahead sits at its
    floor until then. Two identical trips for the same pickup are therefore worth the same at every
    moment, whoever typed theirs in first.
@@ -341,6 +345,14 @@ price is alive whether you look a fortnight out or the same morning.
 - **The jitter is seeded from the mission id.** The curve is unguessable from outside but perfectly
   reproducible: every read agrees, and any past price can be replayed and proved in a dispute.
 - **The price never goes down**, and always lands exactly on the ceiling.
+
+⚑ **BUILT 2026-08-22 (S64) — `lib/pdp.ts`.** The climb is **linear in `log(time remaining)`**, which is
+what "equal movement every time the remaining time halves" means arithmetically. The staircase is that
+continuous curve sampled at `n+1` positions, evenly spaced (= log-spaced in time), each interior one slid
+by ±0.45 of a step by a `mulberry32` stream seeded from `xmur3(mission.id)`; `n = clamp(round(gap/2), 8, 60)`.
+The endpoints are never jittered. **Where the opening price is stored, and why it had to survive a re-pool,
+is [[d79]].** Both generators are written out in `lib/pdp.ts` rather than imported — a curve that has to be
+replayable in a dispute years from now needs its generator readable beside it.
 
 ### Why unpredictable
 
@@ -626,9 +638,13 @@ hard-wire Stripe into mission logic.
    (S61)** — `commission_rate` + snapshot columns + `commission_split()`, mirrored by `lib/commission.ts` in
    integer cents (float loses the exact `.5` ties Postgres rounds). All-in for the Business, net for the
    Driver; see §1.
-3. **The §6 curve**, replacing the current `pdp_start`/`pdp_step`/`pdp_interval` climb. Money-critical
-   — `pdp_start` is used by the SQL fee-basis band, so this ships with the money tests updated and
-   both existing probes re-run.
+3. ~~**The §6 curve**, replacing the `pdp_start`/`pdp_step`/`pdp_interval` climb.~~ ✅ **SHIPPED
+   2026-08-22 (S64)** — `lib/pdp.ts` + `2026-08-22_pdp_curve.sql` (the three re-pool RPCs stop
+   overwriting the opening price). `pdp_start` now holds the rate-card **floor** in Course space and the
+   fee-basis band is unchanged and more accurate for it ([[d79]]); `pdp_step` / `pdp_interval` are dead
+   columns. Money tests rewritten (455), both migration probes updated, `write-test` 170/170, plus a new
+   `curve-live` probe against the real DB. **Still owed:** the two riders (§ R volume ceiling, BACKLOG
+   § V), the Business-facing copy sentence, and §9's stored accepted fare.
 4. **The §7 hold** — after the pricing engine, since both touch the accept path.
 5. **§8 learned routes** — once there is volume.
 

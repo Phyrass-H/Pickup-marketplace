@@ -31,7 +31,7 @@ describe("rowCost — one trip's line on the bill", () => {
   it("is zero for a trip nobody settled — § Q, agreed but not owed", () => {
     // A past trip left `confirmed`: the fare is agreed, nothing has settled, and
     // counting it would inflate a hotel's spend with trips that may not have run.
-    const r = row(mission({ status: "confirmed", ...standardCurve(), accepted_at: "2026-07-15T10:20:00+02:00" }));
+    const r = row(mission({ status: "confirmed", ...standardCurve(), accepted_at: "2026-07-15T10:00:00+02:00" }));
     expect(r.counted).toBe(false);
     expect(r.fare).toBe(60);
     expect(rowCost(r)).toBe(0);
@@ -48,7 +48,7 @@ describe("rowCost — one trip's line on the bill", () => {
 
 describe("minutesToAccept", () => {
   it("measures from entering the Pool to the accept", () => {
-    expect(minutesToAccept(completed())).toBe(20);
+    expect(minutesToAccept(completed({ accepted_at: "2026-07-15T10:20:00+02:00" }))).toBe(20);
   });
 
   it("measures from pooled_at on a re-pooled mission", () => {
@@ -97,7 +97,7 @@ describe("spendTotals — the hero number", () => {
     const unclosed = mission({
       status: "on_board",
       ...standardCurve(),
-      accepted_at: "2026-07-15T10:20:00+02:00",
+      accepted_at: "2026-07-15T10:00:00+02:00",
     });
     const t = spendTotals([row(completed()), row(unclosed)]);
     expect(t.unsettled).toBe(60);
@@ -115,7 +115,7 @@ describe("spendTotals — the hero number", () => {
     const unclosed = mission({
       status: "on_board",
       ...standardCurve(),
-      accepted_at: "2026-07-15T10:20:00+02:00",
+      accepted_at: "2026-07-15T10:00:00+02:00",
       waiting_fee: 25,
       waiting_minutes: 25,
     });

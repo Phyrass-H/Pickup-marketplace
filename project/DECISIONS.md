@@ -1608,3 +1608,58 @@ therefore *checkable* and **fails the check on two classes in three**.
 follow it and the total still reconciles — and **minutes without a rate** on the row face, in the archive and
 in both CSVs. Better to say less than to print a number a reader can disprove with a calculator. The same
 reasoning kept the per-minute rate out of the CSVs entirely: every euro column in those files is all-in.
+
+### D78 — Rule 2 wins where rules 2 and 3 overlap: the Ceiling is reached at T−5h (2026-08-22, S64)
+
+`docs/06` §6 rule 2 says the Ceiling is reached at **T−5h**. Rule 3 says a trip posted **inside 5 hours**
+climbs to the **midpoint** between posting and pickup instead. Both are written as absolutes, and
+**between 5 and 10 hours of lead they contradict each other.**
+
+The two readings, on a trip posted 6 hours before its pickup:
+
+| | rule 2 read literally | `top = T − min(5h, lead/2)` |
+|---|---|---|
+| Tops out at | T−5h | T−3h |
+| Price at T−5h | the Ceiling | ~26 % of the way up the gap — ≈35 € all-in on a 26,30 → 60,70 trip |
+| At the 5h boundary | discontinuous | continuous |
+
+The smooth version is mathematically nicer and it is the one that reproduces both of §6's own worked
+examples. It was still rejected. **A trip five hours from its pickup with no Driver is urgent, and an
+urgent trip should be at the top of its range so it fills.** Pricing it a third of the way up because it
+happened to be posted at T−6h rather than T−14d gets the incentive backwards, and "five hours" is exactly
+where §6 already puts the SPEED WIN nudge — the moment the normal climb runs out is the moment the trip
+is meant to be as attractive as it will ever be.
+
+**Decided:** `topLeadFor(lead) = lead > 5h ? 5h : lead/2`. Rule 3 governs only what it actually says —
+posted *inside* five hours. The discontinuity at exactly 5h of lead is real and accepted: a Business could
+in principle wait two minutes past T−5h to get a floor-opening auction instead of an instant Ceiling, at
+the cost of two minutes of fill time on a trip that already has none to spare.
+
+### D79 — The floor lives in `pdp_start`, and SPEED WIN's opening is derived, never stored (2026-08-22, S64)
+
+The §6 curve opens at the rate-card **floor**, so the floor became a money input on every read and had to be
+snapshot on the row. Three homes were possible: a new `price_floor` column, the vestigial `base_fare`, or
+`pdp_start` itself.
+
+**`pdp_start` won because the SQL fee-basis band already reads it.**
+`least(coalesce(pdp_start, ceiling * 0.5), ceiling)` (`2026-08-11_fee_basis_band.sql`) clamps every
+cancellation and no-show basis. Putting the floor there leaves that expression **byte-identical and more
+correct**: it used to describe a flat 50 % of the Ceiling, and now describes the real bottom of the
+legitimate range. The `coalesce` keeps every pre-curve row reading exactly as it always did. A new column
+would have meant a second number to keep in step with the band, for nothing.
+
+The consequence, and the reason this is a decision rather than a detail: **`pdp_start` must now survive a
+re-pool.** The three re-pool RPCs overwrote it with `ceiling × 0.7` / `× 0.5`, which under the old curve
+*was* the opening price. `2026-08-22_pdp_curve.sql` removes those assignments and nothing else.
+
+That is only safe because **SPEED WIN's 70 % opening is derived on read** — `openingPrice()` returns
+`speed_win ? max(floor, ceiling × 0.70) : floor`. A re-pool flips one boolean, so SPEED WIN can come on
+(under 24h) and go off (24h+) any number of times without the floor underneath ever being lost. Storing the
+*effective* opening instead would have destroyed the floor on the first re-pool that turned SPEED WIN on.
+The `max` also closes a real edge: a Business may set a Ceiling close enough to its floor that 70 % of it
+falls below the floor.
+
+**The band's bottom moved as a side effect, and that is intended.** It was a flat 50 % of Ceiling; it is now
+the floor, which sits at roughly 27–47 % of Ceiling depending on class and distance. The band is a guard
+against a forged fee basis, not a valuation — and a fare genuinely *can* now be the floor, so the wider band
+is the honest one. See [[d78]] for the curve's shape and `docs/06` §5 for why the floor is a guard rail.

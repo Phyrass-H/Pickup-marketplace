@@ -401,9 +401,21 @@ export function MissionForm({
   // it lands a cent under — never over, because a maximum is a promise.
   const ceilingAllIn = split.businessTotal;
   const snapped = hasCeiling && Math.round(ceilingAllIn * 100) !== Math.round(ceilingNum * 100);
-  // Where the auction opens, in the Business's own terms.
-  const startAllIn = commissionSplit(round2(course * (speedWin ? 0.7 : 0.5)), commissionRates)
-    .businessTotal;
+  // Where the auction opens, in the Business's own terms: the FLOOR (docs/06 §6
+  // rule 1), or 70% of the Ceiling under SPEED WIN — never below the floor, since
+  // a Ceiling set close to the floor can make 70% of it the smaller number.
+  //
+  // ⚑ This mirrors `openingPrice()` in lib/pdp.ts and `pdpStart` in
+  // dispatch/new/actions.ts. All three compute in Course space and convert once,
+  // so the number previewed here is the number that gets stored. Change one,
+  // change all three. With no quote (no drop-off yet) there is no floor to open
+  // at, and the server falls back to the same 50% this does.
+  const openCourse = quote
+    ? speedWin
+      ? Math.max(courseFromBusinessTotal(quote.floor, commissionRates), round2(course * 0.7))
+      : courseFromBusinessTotal(quote.floor, commissionRates)
+    : round2(course * (speedWin ? 0.7 : 0.5));
+  const startAllIn = commissionSplit(Math.min(openCourse, course), commissionRates).businessTotal;
 
   function review() {
     const form = formRef.current;
@@ -859,8 +871,13 @@ export function MissionForm({
                   onChange={(e) => setSpeedWin(e.target.checked)}
                 />
                 <span>
-                  <strong>SPEED WIN</strong> — start high (70% of ceiling) and climb
-                  fast for near-instant pickup
+                  {/* ⚑ It no longer climbs FASTER. Under docs/06 §6 SPEED WIN is
+                      "the same curve with a higher starting point — nothing more":
+                      every trip now reaches the Ceiling at T−5h whether it is on
+                      or off. Saying otherwise was true of the old fixed-step
+                      ladder and is false of this one. */}
+                  <strong>SPEED WIN</strong> — open at 70% of your Ceiling instead of
+                  the floor, so a Driver takes it sooner
                 </span>
               </label>
             </div>

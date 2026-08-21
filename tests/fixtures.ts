@@ -99,41 +99,56 @@ export function mission(over: Partial<MissionRow> = {}): MissionRow {
 }
 
 /**
- * A standard (non-SPEED-WIN) curve: starts at 50 % of the ceiling and climbs
- * 5 € every 10 minutes. Mirrors what dispatch/new/actions.ts writes.
+ * A standard (non-SPEED-WIN) §6 curve: opens at the trip's FLOOR — 60 € on the
+ * default 100 € Ceiling — and climbs to the Ceiling by T−5h. Mirrors what
+ * dispatch/new/actions.ts writes: the floor in `pdp_start`, and nothing else.
+ *
+ * `pdp_step` / `pdp_interval` are dead columns as of the §6 curve. They are
+ * written null here for the same reason the app writes them null — so nothing
+ * can quietly read a fixed-step ladder that no longer exists.
  */
-export function standardCurve(ceiling = 100) {
+export function standardCurve(ceiling = 100, floor = ceiling * 0.6) {
   return {
     ceiling,
-    pdp_start: ceiling * 0.5,
-    pdp_step: 5,
-    pdp_interval: 10,
+    pdp_start: floor,
+    pdp_step: null,
+    pdp_interval: null,
     speed_win: false,
   } satisfies Partial<MissionRow>;
 }
 
-/** A SPEED WIN curve: hotter start (70 %), faster climb (5 min). */
-export function speedWinCurve(ceiling = 100) {
+/**
+ * A SPEED WIN curve: the same shape, opening at 70 % of the Ceiling instead of
+ * at the floor. The 70 % is DERIVED from `speed_win` on read — the stored
+ * `pdp_start` is still the floor, which is what lets a re-pool flip SPEED WIN on
+ * and off without ever losing it.
+ */
+export function speedWinCurve(ceiling = 100, floor = ceiling * 0.6) {
   return {
     ceiling,
-    pdp_start: ceiling * 0.7,
-    pdp_step: 5,
-    pdp_interval: 5,
+    pdp_start: floor,
+    pdp_step: null,
+    pdp_interval: null,
     speed_win: true,
   } satisfies Partial<MissionRow>;
 }
 
 /**
- * A completed trip taken `acceptedAfterMin` minutes into its climb — the shape
- * every archive read sees. `settledFare` on this is what the Business owes and
- * what the Driver is paid.
+ * A completed trip — the shape every archive read sees. `settledFare` on this is
+ * what the Business owes and what the Driver is paid.
+ *
+ * ⚑ TAKEN THE INSTANT IT WAS POSTED, so its settled fare is the opening price,
+ * exactly 60,00 €. That is deliberate: every test downstream of here (Spend,
+ * Earnings, History) is about what happens TO a fare, not about how the curve
+ * produced it. Pinning it at the opening keeps those tests free of the curve's
+ * jitter — the curve itself is tested in tests/pdp.test.ts, where it belongs.
  */
 export function completed(over: Partial<MissionRow> = {}): MissionRow {
   return mission({
     status: "completed",
     driver_id: "drv-1",
     ...standardCurve(),
-    accepted_at: "2026-07-15T10:20:00+02:00", // 2 steps in → 60
+    accepted_at: "2026-07-15T10:00:00+02:00", // = created_at → the opening price, 60
     confirmed_at: "2026-07-15T10:20:00+02:00",
     ...over,
   });

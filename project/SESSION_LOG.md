@@ -3374,3 +3374,152 @@ and every one held.
 the review found in them · `6b35d21` the backlog write-ups. All CI-green, all deployed, working tree clean,
 live DB baseline 277 with every fixture reverted. **No migration was written this session** — nothing here
 needed one.
+
+---
+
+## Session 64 — 2026-08-22 · PRICING STEP 5: THE §6 CURVE (branch `main`)
+
+**The last thing that changes what a newly posted trip looks like.** `pdp_start` / `pdp_step` /
+`pdp_interval` — a fixed-size, fixed-interval ladder climbing from 50 % of the Ceiling since D21 — is
+replaced by the curve `docs/06` §6 designed. Money-critical, so it shipped with the money tests
+rewritten, both migration probes updated, `write-test` re-run, and a new live probe.
+
+### What the curve is
+
+`lib/pdp.ts`, rewritten. Given a mission and an instant it returns one number, for ever:
+
+| | old (D21) | §6 |
+|---|---|---|
+| Opens at | 50 % of the Ceiling (70 % SPEED WIN) | **the rate-card floor** |
+| Steps | fixed size, fixed interval | equal movement each time the remaining time **halves** |
+| Anchored to | when it was posted | **the pickup** |
+| Reaches the Ceiling | whenever the steps add up | exactly at **T−5h** |
+| Predictability | a ladder anyone can compute | **jittered, seeded from the mission id** |
+
+The shape is one line: the climb is **linear in `log(time remaining)`**, which *is* "equal movement every
+time the remaining time halves". Progress runs from the trip's remaining time when it entered the Pool
+down to the top lead, and the staircase is that continuous curve sampled at `n + 1` step positions —
+evenly spaced (= log-spaced in time), each interior one slid by ±0.45 of a step by a `mulberry32` stream
+seeded from `xmur3(mission.id)`. **Uneven step sizes fall out of the uneven step times for free — one
+source of randomness, not two**, exactly as §6 asks. `n = clamp(round(gap / 2), 8, 60)`. The endpoints are
+never jittered, so every trip opens exactly on its floor and lands exactly on its Ceiling.
+
+**Both PRNGs are written out in the file rather than imported.** The curve has to be replayable years from
+now to settle a dispute; the generator must be readable next to the thing it seeds, not versioned somewhere
+else.
+
+### The one judgement call, and the founder ruled on it
+
+§6 rule 2 says the Ceiling is reached at T−5h. Rule 3 says a trip posted *inside* 5 hours climbs to the
+midpoint instead. **Between 5h and 10h of lead the two collide** — read rule 2 literally and a trip posted
+6 h out is at its Ceiling almost immediately; smooth it (`top = T − min(5h, lead/2)`) and that same trip is
+only ~26 % up its gap at T−5h, ≈35 € all-in for a job five hours away.
+
+**Founder, 2026-08-22: rule 2 wins wherever they overlap** ([[d78]]). An urgent trip should reach its
+Ceiling fast and fill. `topLeadFor()` is therefore `lead > 5h ? 5h : lead/2` — nothing clever.
+
+### Where the floor is stored — and the defect that decided it
+
+`mission.ceiling` is the Course. The floor has to be the Course too, so `createMission` converts
+`mission_price().floor_price` (which is **all-in**, like the field the Dispatcher types) with the *same*
+snapshot rates as the Ceiling. Mixing the two spaces would have opened every auction 15 % high.
+
+It goes in **`pdp_start`, which keeps its exact meaning** — the price the auction opens at. That was chosen
+over a new column for one reason: **the SQL fee-basis band reads `pdp_start` and now works unchanged and
+better.** `least(coalesce(pdp_start, ceiling * 0.5), ceiling)` used to describe a flat 50 %; it now
+describes a real floor, which is the honest bottom of the legitimate range. The `coalesce` is what keeps
+every pre-curve row reading exactly as it always did.
+
+**⚑ The map found the defect that would have broken it.** The three re-pool RPCs — `driver_cancel_mission`,
+`reclaim_mission`, `respond_to_release` — **overwrite `pdp_start` with `round(ceiling * 0.7)` or
+`round(ceiling * 0.5)`**. Under the old curve that WAS the opening price and rewriting it was the whole
+mechanism. Under the §6 curve it erases the floor the first time a Driver walks, permanently, since nothing
+recomputes it. `docs/migrations/2026-08-22_pdp_curve.sql` re-creates the three functions **verbatim** from
+their live definitions with only those three assignments removed — diffed line by line, 16/10/10 changed
+lines, all of them the pdp block and one comment.
+
+**SPEED WIN's hotter opening is derived, never stored.** `openingPrice()` returns
+`speed_win ? max(floor, ceiling × 0.70) : floor`. That is precisely what lets a re-pool turn SPEED WIN on
+(under 24h) and off (24h+) without ever losing the floor underneath — the RPCs now flip one boolean.
+It also fixes a real edge: a Business may set a Ceiling close enough to the floor that 70 % of it is
+*below* the floor.
+
+**`pdp_step` / `pdp_interval` are dead.** The step count falls out of the gap and the step times out of the
+mission id. Written `null` everywhere rather than left stale, so nothing can read a ladder that no longer
+exists. The columns stay for the archive.
+
+### The compile error that was the point
+
+`PdpInputs` gained `id` and `pickup_at` as **required** fields, and `tsc` immediately failed on
+`app/(app)/rides/actions.ts:15` and `app/(dispatch)/dispatch/actions.ts:12` — both `FARE_COLS` constants
+selected neither. Those five reads produce the `p_fare_snapshot` argument to `driver_cancel_mission`,
+`mark_no_show` and `business_cancel_mission`. **This is the exact bug class `lib/pdp.ts` already documents
+having shipped once** (a narrow select silently fell back to the live fare and recorded a €100 penalty on a
+€70 trip). Making the anchor and the seed non-optional turned it into a compile error instead of a money bug.
+Both constants are now `id, …, ceiling, pdp_start, speed_win, pickup_at, created_at, pooled_at, accepted_at`.
+
+`pickup_at` is safe as an anchor because **nothing moves it after posting**: the info edit whitelists it out
+by name, `respond_to_amendment` rewrites the pickup *address* but not the time, and no SQL path assigns it.
+
+### Tests — 448 → 455
+
+`tests/pdp.test.ts` rewritten against the RULES, not a schedule. Pinning the euro value of step 7 would be
+pinning the jitter. What it pins instead: opens on the floor at every lead time · lands on the Ceiling
+exactly at T−5h and sits there through pickup and past it · climbs to the midpoint when posted inside 5h ·
+**moves by the same amount on every halving** (within a step and a half — the staircase both lags the
+continuous curve and carries the jitter) · monotone across 20 000 samples · step count 8/21/61 for a 6 €,
+40 € and 400 € gap · a month-out and a fortnight-out trip priced identically at every instant (rule 4) ·
+same id → same curve, different id → different schedule, both still hitting both endpoints · SPEED WIN
+opens at 70 % but never below the floor · a null `pdp_start` falls back to half the Ceiling, the same
+number the SQL band coalesces to · an amendment-collapsed curve is flat · re-pool restarts from `pooled_at`.
+
+The other 25 failures were fixtures encoding the old ladder. `standardCurve()` is now a §6 curve
+(100 € Ceiling / 60 € floor) and `completed()` **accepts at the instant it was posted**, so its settled fare
+is the opening price, exactly 60 — deliberately, so that Spend, Earnings and History tests stay free of the
+curve's jitter. Only `minutesToAccept` still passes an explicit later accept, because it is the one test
+actually about fill time.
+
+### Probes
+
+- `.local/probe/write-test.ts` — **170 checks, ALL AGREE.** Its `FARE_COLS` now mirrors the app's.
+- `.local/probe/migrations-2026-08-10.ts` — **55 passed · 3 failed**, and the three are one per re-pool RPC,
+  all the new "pdp_start UNTOUCHED" assertion. `.local/probe/migrations-2026-08-11.ts` — **22 · 1**, same.
+  **These four go green when the migration is applied**; they are red on purpose until then.
+- `.local/probe/curve-live.ts` — NEW. Creates one mission on the live DB the way `createMission` does,
+  reads it back through the app's own `FARE_COLS`, and asserts the endpoints. **8 checks, ALL AGREE**:
+  opens on 26,30 € all-in (the exact quoted floor), the Business sees the floor it was quoted, the Ceiling
+  is reached at T−5h to the second, monotone, frozen at accept. Cleans up after itself.
+- `.local/seed/s64-curve.ts` — NEW, with `--undo`. Three POOLED trips at 14 days / 2 days / 6 hours of
+  lead, priced through the real RPC. The Driver's Pool rendered **27,74 €** for the 31 km Business trip —
+  the driver-net of its floor, matching the seeder to the cent. No console errors.
+
+### Also changed
+
+- `mission-form.tsx` carried a **second copy** of the opening-price formula for the preview card. It now
+  mirrors `openingPrice()` exactly — three places compute it, all in Course space, converted once.
+- The SPEED WIN checkbox said *"start high (70% of ceiling) and climb **fast**"*. It no longer climbs
+  faster — §6 makes it "the same curve with a higher starting point, nothing more", and every trip reaches
+  the Ceiling at T−5h whether it is on or off. Now: *"open at 70% of your Ceiling instead of the floor, so
+  a Driver takes it sooner."*
+- `.local/seed/seed-fleet.mjs` — its private copy of `settledFare` was the old linear climb; ported to the
+  curve. **It still hand-sets ceilings and writes no commission snapshot** — flagged in place, and that is
+  the re-seed job, which the founder sequenced after this one.
+- `.local/seed/s61-priced.ts` and `app/api/seed/route.ts` — opening price and dead columns.
+
+### Not done, on purpose
+
+- **The two riders** (§ R volume ceiling, BACKLOG § V lower-class pricing) and **step 6, the §7 hold**.
+- **The Business-facing copy pass.** §6 prescribes a publishable sentence — *"the price rises in steps
+  until 5 hours before pickup, when it reaches the maximum you set"* — and the form still says only
+  "climbs up to your Ceiling". True, but less than it could say. UI copy needs a preview first (D25).
+- **No accepted-fare column.** `settledFare` still recomputes at `accepted_at`, so shipping the curve
+  reprices historical accepted trips. Founder, 2026-08-22: *"no need to update prices on existing trips"* —
+  it is all test data and the wipe follows. `docs/06` §9 still asks for the frozen fare to be stored, and
+  §7's hold will need it. Parked, not solved.
+- `.earn-probe.mjs` at the repo root is a tracked scratch probe carrying its own copy of the old linear
+  fare. Left alone; it is stale, not load-bearing.
+
+### The order this has to land in
+
+**Migration first, then the code.** The app is correct before and after, but a re-pool run against the old
+RPCs writes `ceiling × 0.5` into what is now the floor column. Nothing is pushed until the migration is in.

@@ -5,6 +5,33 @@
 
 ---
 
+## 22 August 2026 — the price now moves the way it was designed to
+
+- **Every trip starts at its floor.** Until today a trip went into the Pool at half the maximum you
+  set — a number that had nothing to do with what the trip actually costs to run. It now opens at the
+  **floor**: the lowest price the trip may legally be offered at, worked out from the rate card. On a
+  22 km Eco run that is 26,30 € rather than half your Ceiling.
+- **The price climbs against the clock, not against the stopwatch.** It used to go up by a fixed
+  amount every ten minutes from the moment you posted it. It now climbs by the same amount **every
+  time the time left before the pickup halves** — two weeks to one week is one rise, one week to
+  3½ days another, ten hours to five hours another. The same rule whether you look a fortnight out or
+  the same morning, and a trip posted two days ahead runs its whole climb over those two days.
+- **It reaches your Ceiling five hours before the pickup**, and sits there until someone takes it or it
+  expires. Post inside five hours and it climbs to the halfway point instead, so even a very late trip
+  gets a real climb *and* time at the top to be taken.
+- **Nobody can time it.** The rises are deliberately unevenly spaced, generated from the trip's own
+  identity — so a Driver can't work out that "if I wait eleven more minutes it goes up again" and hold
+  out. There is only one sensible strategy left: take it when it's worth it to you. It is still exactly
+  reproducible: any past price can be replayed and proved, months later.
+- **A trip a Driver walked away from re-auctions on the time that's left.** Put back in the Pool at
+  T−12h, it runs its whole climb over the remaining seven hours and still tops out five hours before
+  the pickup. Under 24h it comes back with SPEED WIN on, so it opens at 70% of your Ceiling.
+- **SPEED WIN is now honestly described.** The box used to say it "climbs fast". It doesn't — it is the
+  same curve with a higher starting point, and every trip reaches your Ceiling at the same moment
+  whether it's ticked or not. The wording now says what it does.
+
+---
+
 ## 20 August 2026 — the app now says the things it already knew
 
 - **A stop you didn't pick from the list was free.** If you typed a stop and moved on without choosing
