@@ -1534,3 +1534,77 @@ leaves the account rather than the fare alone. (2) A Driver's own cancellation p
 BACKLOG **§ Y**, alongside whether 100% is enough on a cheap trip at all.
 
 **Superseded nothing.** [[d59]]'s "no gross/net language" instinct is now the implemented rule.
+
+### D74 — Nobody is told who receives a Driver's cancellation penalty until it is decided (2026-08-20, S63)
+
+The Business-side "Driver cancelled" block was mocked with **"Owed to you: 190,00 €"**. The founder stopped it
+with the question that breaks the current position: *"the hotel will in the end not pay anything and won't
+charge their clients, so what do we do with the driver's money?"*
+
+They are right. `docs/06` §1 called the penalty an indemnity running Driver → Business as though 100% of the
+fare made the hotel whole. It does not correspond to a loss: **the trip never ran, the Business paid nothing
+and billed its Guest nothing, and the trip goes straight back into the Pool.** Their real damage is the price
+difference when it re-fills dearer (SPEED WIN comes on automatically under 24h), the whole fare when it never
+re-fills, and sometimes nothing at all. The 100% figure is sized to **deter the Driver** — a different job,
+pointing at a different recipient. That is why `docs/06`:71 and the O7 migration header had disagreed for a
+month without anyone noticing: two true-sounding sentences about two different purposes.
+
+**Decided: park the money, ship the facts.** The block states only what is certain — a Driver held this trip,
+when they walked, and their reason. **No amount, no recipient.** Nothing is collected during the beta, so
+nothing is lost by waiting, and a hotel told it is owed something it is not would be very hard to take back.
+Three costed destinations (damage-first with the remainder to Kavenue · all to the Business · all to Kavenue)
+are in BACKLOG **§ Y**, to be decided together with "is 100% enough on a cheap trip" and "100% of the fare or
+of what they'd have been paid" — the same conversation.
+
+**Settled on the way:** the penalty carries **no commission**, which was never in doubt and is already
+implemented in `carriesCommission` / `lib/earnings.ts` / the Driver's copy. The `rides/history` comment calling
+it "owed to Kavenue" was the outlier and was corrected; the code under it was always right.
+
+### D75 — An unclosed trip stays in plain sight, but friction needs a door (2026-08-20, S63)
+
+§ Q lifts a trip a Driver never closed into **today's band**, mixed in with real work. The founder was asked
+whether that is noise and ruled deliberately: **keep it.** *"It's as you said noisy and bothering, so it would
+push business to handle it and reach the driver to close the trip."* The discomfort is the feature.
+
+**But the same session measured what it degrades into.** On the test data: **18 unclosed rows in today's band,
+14 of them over a month old, against 0 trips actually scheduled that day.** And on an unclosed row the app
+switches **off** amend, release and cancel, leaving only *"call them to confirm it happened"* — so a Dispatcher
+who rings the Driver and is told *"yes, it ran"* has **nowhere to record it**. The only exit is the Driver
+answering in their own app.
+
+The § Q close prompt already carries the warning for the Driver's side — *"nagging them after that is how a
+prompt turns into noise people learn to ignore"* — and nothing protects the Business from the identical
+mechanism. **A nag with no door is what turns pressure into wallpaper.** Seeded data exaggerates the volume (a
+working hotel closes daily and would carry nought or two), so the plain-sight design is right at real density;
+the accumulation is the part that needs an answer. Three fixes queued smallest-first in BACKLOG **§ Q6**, the
+first being a Business-side *"I called them — it ran"*, which settles money and therefore pairs with **U.3**.
+
+### D76 — Name the rule, don't print the number, when the number lives in a table (2026-08-20, S63)
+
+`mission.night_applied` became visible this session on five surfaces. The tag says **"Night rate"**, never
+**"×1,20"**.
+
+The multiplier lives on `rate_card.night_multiplier`, reachable from a mission only through
+`mission.rate_card_id` — which is **NULL on the entire pre-2026-08-16 archive**. Printing the literal would put
+a pricing constant in the UI, which `docs/06` §9 forbids ("numbers live in tables, not in code"), and it would
+**lie the day the card is re-tuned** while every historical row silently kept claiming the new figure.
+
+**The general rule this sets:** a display may name a rule that was applied; it may only print the number when
+it reads that number from the row that was actually charged. The same principle decided the waiting rate the
+same day — the *stamped* `mission.waiting_rate`, never `waitingRatePerMin(category)`, because rows settled
+between 2026-07-22 and 2026-08-18 were billed a flat 1,00 whatever their class. Where no number was stamped,
+the display says less rather than guessing: minutes alone, no rate.
+
+### D77 — Each side reads a rate on its own basis, and only where the arithmetic survives being checked (2026-08-20, S63)
+
+A settled wait now states *"N min at X €/min"*. The two sides get **different numbers**, deliberately.
+
+The Driver's net rate is `× 0,88` → **0,44 · 0,66 · 0,88**, all clean cents, so minutes × rate is exactly the
+amount printed beside it. The Business's all-in rate is `× 1,15`, and a Course-side 0,50 becomes **0,575**: it
+displays "0,58 €", and 0,58 × 20 is **11,60** against a true **11,50**. Any Business-facing per-minute rate is
+therefore *checkable* and **fails the check on two classes in three**.
+
+**Decided:** the Business sees the rate **Course-side only, inside the invoice table**, where the fee lines
+follow it and the total still reconciles — and **minutes without a rate** on the row face, in the archive and
+in both CSVs. Better to say less than to print a number a reader can disprove with a calculator. The same
+reasoning kept the per-minute rate out of the CSVs entirely: every euro column in those files is all-in.

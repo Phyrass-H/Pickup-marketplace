@@ -25,16 +25,21 @@ START BY READING — **just these four**; they get you fully up to date without 
 - **This file** (`project/NEXT_SESSION.md`) — the current state + what's next (the resume point).
 - `project/CHANGELOG.md` — plain-language history, the **recent entries** (the big picture, fast). Older entries live in
   `project/CHANGELOG_ARCHIVE.md` — read it only if you need the deep history.
-- `project/SESSION_LOG.md` — skim the **newest entries (Session 58 and its parts)** for recent technical detail.
-  Older sessions (1–33) are in `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
+- `project/SESSION_LOG.md` — skim the **newest entry (Session 63)** for recent technical detail; Sessions 61–62
+  behind it are the commission and the money sweep. Older sessions (1–33) are in
+  `project/SESSION_LOG_ARCHIVE.md` — don't open it unless you need deep history.
 
 READ ON DEMAND — open these **only when the task actually touches that area** (this is the big context saver,
 and it loses nothing — the docs are all still here, just read when relevant):
 - `project/DESIGN_BRIEF.md` — for any UI/design work (brand, navy `#25344C`, screen inventory, constraints).
-- `project/SPEND_BRIEF.md` § 9 — **the next job.** · `project/NEEDS_CLOSING_BRIEF.md` — § Q, both slices, and
-  the two money traps that must not be re-introduced.
-- `project/BACKLOG.md` (§ M = 2026-06-25 dump · § L = guided-form polish) · `project/DECISIONS.md` (newest
-  **D39**; note the D-numbers referenced in recent logs run past it) · `project/IDEAS.md` — for planning, "why was this decided", or parked ideas.
+- `docs/06_Pricing_Commission_Payments.md` — **READ IN FULL BEFORE THE NEXT JOB.** §6 is the curve you are
+  building; §13 is the build order. Do not price anything from memory.
+- `project/SPEND_BRIEF.md` § 9 (§ S, Spend pass 2 — queued, not next) · `project/NEEDS_CLOSING_BRIEF.md` —
+  § Q, both slices, and the two money traps that must not be re-introduced.
+- `project/BACKLOG.md` — **§ Y** (the cancellation penalty, incl. who receives it) · **§ Q6** (the unclosed-trip
+  pile) · **§ U.4** (hard-closing on observed arrival) · § V · § W · § X · § Z are the live ones; § M and § L are
+  older dumps. · `project/DECISIONS.md` (newest **D77**) · `project/IDEAS.md` — for planning, "why was this
+  decided", or parked ideas.
 - `project/GUIDANCE_AUDIT.md` — the full in-app guidance inventory + gaps + roadmap (for any guidance/microcopy work).
 - `docs/` — `00`–`05` + `Kavenue_Phase0_Data_Spine.md`: the canonical spec; read the doc for the area you're in.
 - `docs/kavenue_schema.sql` (large) + `docs/migrations/` (`2026-06-17_driver_service_area`,
@@ -538,6 +543,25 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 
 **★★ START HERE — STEP 5, THE §6 CURVE. Nothing else is queued in front of it (S63, 2026-08-20).**
 
+> **What S63 did, so you don't redo it.** It cleared the four loose ends S62 queued and nothing else. An
+> unlocated stop is refused by both forms (drafts excepted); the night rate, the settled waiting rate and its
+> minutes, and a Driver walking away from a trip are all finally visible; and the two Earnings counting gaps
+> are closed. Then an adversarial review of that diff found **three real defects in it**, all fixed the same
+> day — see SESSION_LOG Session 63, "Follow-up the same session". **No migration was needed or written.**
+> `d6f0932` the loose ends · `7bcbf49` the three defects the review found in them · `6b35d21` the backlog
+> write-ups · plus the docs/handoff commit that follows it.
+>
+> **Three things S63 decided that constrain what you build ([[d74]]–[[d77]]):**
+> 1. **No screen names who receives a Driver's cancellation penalty, or how much** — the founder opened the
+>    question (the hotel lost nothing it paid for, so 100% of the fare is not compensation) and it is parked in
+>    BACKLOG **§ Y**. **Do not put a euro figure on the "Driver cancelled" block.**
+> 2. **Name the rule, don't print the number, when the number lives in a table** — the night tag says "Night
+>    rate", not "×1,20". Same reason the settled waiting rate is read from the row's own stamped column and
+>    never re-derived from the service class.
+> 3. **A Business-facing per-minute rate is checkable and fails the check** — `×1,15` turns 0,50 into 0,575.
+>    The Business gets the rate Course-side inside the invoice table only, and minutes-without-a-rate
+>    everywhere else.
+
 > **What S62 did, so you don't redo it.** A six-way audit of every money surface and write path (26 findings
 > raised, 15 survived an adversarial re-check) plus the fixes: every Business-facing figure is now on the
 > all-in basis — the cancel modal, Drafts, the Calendar drawer, the Edit header, the Summary rail Ceiling,
@@ -640,6 +664,14 @@ instant; the hard part is the clock origin, not the rate) — and a **§ W** add
 own version of demand pricing: measure it from our own booking volume per zone against that zone's trailing
 average, and surface it as **advice to the Business**, never as Kavenue moving the fare.
 
+**New in S63, also the founder's call, also non-blocking:** **§ Y** gained the question that matters most —
+**who actually receives the penalty** (the hotel paid nothing and bills its Guest nothing, so 100% of the fare
+is not compensation for a loss); three destinations are costed there and no screen names one until it is
+answered. **§ Q6** — an unclosed trip stays lifted into today's band on purpose, but there is no way for a
+Business to clear one, so the band grows without bound; three fixes, smallest first. **§ U.4** — can live
+Driver location hard-close a trip? Yes in mechanism, but not as stated: it collides with § U's own rule that
+*location may suggest, never decide*, since a close settles the fare and any waiting fee.
+
 **(Superseded: "PRICING STEPS 0–4 ARE SHIPPED. NEXT IS STEP 5" — S61, 2026-08-17.)**
 
 **Read `docs/06_Pricing_Commission_Payments.md` first — all of it.** Source of truth for anything
@@ -724,7 +756,7 @@ once means doing the careful part once.
 
 ---
 
-## THREE THINGS SAVED, NOT FORGOTTEN — all in `project/BACKLOG.md`
+## SAVED, NOT FORGOTTEN — all in `project/BACKLOG.md`
 
 - **§ V** — Driver opts in to lower-class trips. Ships with step 5.
 - **§ W** — demand-based pricing. Parked with the reasoning (the auction already is demand pricing).
@@ -735,8 +767,51 @@ once means doing the careful part once.
   now. A floor (they floated €150 *as an illustration*), a multiplier near pickup, or visible
   reliability marks. **Pairs with the basis question:** after S61 the penalty is the one figure a
   Driver sees gross, so "100% of what you'd have been paid" is the same conversation.
+  ⚑ **Extended S63 — and this is now the load-bearing part of § Y:** *who receives it.* The founder's
+  question — *"the hotel will in the end not pay anything and won't charge their clients, so what do we do
+  with the driver's money?"* — is the hole in `docs/06` §1. The trip never ran; 100% of the fare is sized to
+  deter the Driver, not to make the hotel whole, and those two jobs point at different recipients. Three
+  destinations costed. **Until it is answered, no screen names a recipient or an amount** ([[d74]]).
+- **§ Q6 (new, S63)** — the unclosed-trip pile. The lift into today's band **stays** (founder: the
+  discomfort is what makes a desk chase the Driver), but a Dispatcher has **no way to clear a row** — amend,
+  release and cancel are all switched off and the only instruction is "call them". A nag with no door becomes
+  wallpaper. Three fixes, smallest first; the first settles money ([[d75]]).
+- **§ U.4 (new, S63)** — hard-closing a trip on observed arrival. Right mechanism, wrong shape as proposed:
+  use arrive-**then-leave**, make location drive a one-tap prompt rather than the close, and auto-close only
+  where `on_board` was already tapped and no waiting or no-show money is open. § Q's own failure case (the
+  Driver returns to the airport next morning and the app pays out yesterday's trip) is the argument.
 
 ---
+
+## TRAPS LEARNED IN S63 — every one of these cost real time
+
+- **`.local/probe/diff-sql-vs-lib.ts` WAS LYING, and was fixed.** It asserted a flat 1,00 waiting rate — a
+  rate that stopped being flat in S62 — and reported **480 mismatches in 673 checks** on a codebase where SQL
+  and lib agree completely (every MIN, FEE, FROM and TO check passed). It now reads **673 · ALL AGREE**.
+  ⚑ **If you ever see mass mismatches from a probe, suspect the probe's expectations before the code** — the
+  probes are not covered by CI and drift silently when the thing they mirror changes.
+- **`mission_cancellation.hours_before_pickup` IS SIGNED, and negative is normal.** `driver_cancel_mission`
+  computes `(pickup_at - now())/3600` and accepts a cancel from `accepted`, `confirmed`, `en_route` AND
+  `arrived` — the last two routinely happen *after* the pickup (a Driver who waits out a 60-minute airport
+  courtesy wait and gives up). BACKLOG already recorded the same on no-show rows. **Clamping it at zero and
+  printing it raw are both lies**; `formatLeadTime()` in `lib/format.ts` names the side ("18 min after
+  pickup") and is shared by the row and both CSVs so they cannot drift.
+- **`.dxh-when > span` and `.dx-trip__when > span` capture ANY child span.** Wrapping the Schedule's plain
+  time cell in `dx-trip__when` silently shrank it **16px → 13px** — the column a Dispatcher scans first. The
+  tell was `.dx-trip__time` ending up matching no element in the codebase. Adding a child to either of those
+  cells needs a paired rule with two-class specificity.
+- **`waiting_rate` non-null does NOT mean the trip waited.** Both no-show paths stamp the rate
+  unconditionally, so a punctual no-show carries a rate with **0 minutes** and a 0,00 fee. Gate any waiting
+  display on the MINUTES.
+- **`needsClosing` also accepts `on_board`, and requires `close_answer` to be null.** Counting "unclosed past
+  trips" as `{accepted, confirmed, en_route, arrived}` gave 13 against the screen's 18 and did not reconcile.
+  Re-measure against the real predicate before quoting a number to the founder.
+- **A refusal added to a form applies to STORED data too.** The new unlocated-stop rule fired on the stops the
+  amend screen re-posts from the mission row, so any trip whose stop predated the rule became un-amendable.
+  When you add a validation, ask what it does to rows written before it existed.
+- ⚑ **Commit to a BRANCH, not to `main`.** `main` is protected and the push is rejected — recoverable
+  (`git branch <name>` at the same SHA, push, wait for CI, then `git push origin main`), but it wastes a CI
+  cycle. See the workflow warning further down; S63 tripped it once.
 
 ## TRAPS LEARNED IN S61 — they will cost you an hour each
 

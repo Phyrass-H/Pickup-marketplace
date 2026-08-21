@@ -3338,3 +3338,39 @@ the same failure at a different scale — the CSV files are deliberate copies of
 shared helper the right default there, not the exception.
 
 **Green after the fixes:** `tsc` clean · **448 tests** · `next build` clean · fixtures undone, baseline 277.
+
+### Closing conversations — two rulings, both parked, neither built ([[d74]] · [[d75]] · [[d76]] · [[d77]])
+
+The session ended on the founder's question about **why today's Schedule was full**. Measured rather than
+guessed: **0 trips dated today, 0 trips in the future at all**, newest pickup anywhere 18 August — so all 18
+rows in the band are § Q lifts (9 `on_board`, 9 `confirmed`, 14 of them over a month old, all one Business).
+⚑ The first count said 13 and did not reconcile with the screen's "18 to close"; `needsClosing` also accepts
+`on_board` and requires `close_answer` null. Re-measured against the real predicate before answering.
+
+**The founder ruled the lift stays** — *"it would push business to handle it and reach the driver"* — and they
+are right that the discomfort is the point. What the same measurement exposed is that **there is no exit**:
+`components/trip-row.tsx:215-245` switches off amend, release and cancel on an unclosed row, leaving only
+*"call them to confirm it happened"*, so a Dispatcher who rings the Driver and is told "yes, it ran" cannot
+record it. § Q's own Driver-side comment already names the failure mode this produces. Written up as BACKLOG
+**§ Q6**, three fixes smallest-first; the first settles money and therefore pairs with **U.3**.
+
+**Then: "can live location hard-close a trip?"** The mechanism is right and § Q was built for exactly that
+swap — but as stated it collides with the founder's **own** rule at the head of § U: *location may suggest,
+never decide*, because closing settles the fare **and** any waiting fee. Written up as **§ U.4** with three
+corrections: **arrive-then-leave, not dwell** (a Driver inside the geofence may still have the Guest aboard);
+**location drives a one-tap prompt, not the close** — which keeps the Driver deciding and takes most of the
+benefit on its own; and auto-close **only** where `on_board` was already tapped, arrival and departure were
+both seen, and no waiting or no-show money is open.
+⚑ **§ Q already held the sharper argument, and it is the founder's:** *"the Driver returns to Nice airport at
+11am for his next job and the app closes and pays out yesterday's trip."* It defeats naive dwell detection
+outright, which is why step 3 needs three signals agreeing rather than a phone near an address. Cross-linked.
+
+**Method note that generalises.** Both answers came from re-measuring rather than reasoning: the "18 vs 13"
+gap was a wrong predicate on my side, and it would have shipped as a confident wrong number in a message. The
+same instinct caught the review's three defects — every one was verified by hand before a line was changed,
+and every one held.
+
+**Session close.** `main` at `6b35d21`, three commits: `d6f0932` the loose ends · `7bcbf49` the three defects
+the review found in them · `6b35d21` the backlog write-ups. All CI-green, all deployed, working tree clean,
+live DB baseline 277 with every fixture reverted. **No migration was written this session** — nothing here
+needed one.
