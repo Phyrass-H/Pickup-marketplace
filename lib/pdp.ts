@@ -198,8 +198,22 @@ function stepPositions(id: string, n: number): number[] {
  *
  * Falls back to the live fare when there's no `accepted_at` (a mission still
  * pooled, or a legacy row).
+ *
+ * ⚑ SINCE 2026-08-22 THE FROZEN FARE IS STORED. `accept_mission` writes
+ * `accepted_fare` from a number this file computed server-side, so the contract
+ * price is a column and not a re-derivation (docs/06 §9: "the fare freezes at
+ * acceptance… that frozen figure is the contract price"). Prefer it whenever it
+ * is there. Recomputing stays the fallback, and has to: every trip accepted
+ * before that migration has NULL, and nothing was backfilled.
+ *
+ * Storing it is also what makes the re-pool floor work — a re-pool raises
+ * `pdp_start` to the fare the last Driver agreed to, so the trip can never
+ * re-open below a price the market already cleared (founder, 2026-08-22).
  */
-export function settledFare(m: PdpInputs & { accepted_at: string | null }): number {
+export function settledFare(
+  m: PdpInputs & { accepted_at: string | null; accepted_fare: number | null },
+): number {
+  if (m.accepted_fare != null) return round2(Number(m.accepted_fare));
   return currentFare(m, m.accepted_at ? new Date(m.accepted_at) : new Date());
 }
 

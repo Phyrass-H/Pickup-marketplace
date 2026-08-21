@@ -470,6 +470,11 @@ adjusts routes relative to that; it never sets the level on its own.
 - **The fare freezes at acceptance.** That frozen figure is the contract price and the basis for
   every cancellation fee, however late the trip closes. Storing it also closes the €0-fee hole,
   since there is finally a fare in the database to recompute a fee against.
+  ✅ **BUILT 2026-08-22 (S64)** — `mission.accepted_fare`, written by `accept_mission` from a number
+  computed server-side by `lib/pdp.ts` (Postgres cannot evaluate the §6 curve) and clamped into
+  `[floor, ceiling]` in SQL. **NULL means priced before this existed** — readers recompute, and nothing
+  was backfilled. It is also what makes [[d80]] possible: a re-pool raises `pdp_start` to it, so a trip
+  never re-opens below a fare a Driver already agreed to.
 - **Rounding: store full precision, round only at render.** Never back-derive a fare from a rounded
   displayed total.
 - **Category, never model.** The Business picks a service class, never a make or model.

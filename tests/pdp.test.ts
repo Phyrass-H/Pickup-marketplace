@@ -253,6 +253,52 @@ describe("settledFare — the climb FROZEN at accept (the S48b money bug)", () =
     const m = trip(2 * DAY, { accepted_at: null });
     expect(settledFare(m)).toBe(currentFare(m));
   });
+
+  // 2026-08-22: the frozen fare is a COLUMN now, not a re-derivation.
+  it("prefers the stored accepted_fare over recomputing the curve", () => {
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: 73.5 });
+    expect(settledFare(m)).toBe(73.5);
+    expect(settledFare(m)).not.toBe(currentFare(m, before(100)));
+  });
+
+  it("still recomputes when accepted_fare is null — the whole pre-2026-08-22 archive", () => {
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: null });
+    expect(settledFare(m)).toBe(currentFare(m, before(100)));
+  });
+
+  it("reads a stored fare that PostgREST handed back as a string", () => {
+    // numeric(10,2) arrives as a string often enough that this is not theoretical.
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: "73.50" });
+    expect(settledFare(m)).toBe(73.5);
+  });
+});
+
+describe("the re-pool floor (founder, 2026-08-22)", () => {
+  // The RAISING happens in SQL — the re-pool RPCs write
+  // `pdp_start = greatest(pdp_start, accepted_fare)` — and is verified against the
+  // real database by .local/probe/curve-live.ts. What belongs HERE is the other
+  // half of the contract: that lib/pdp.ts honours a raised floor with no special
+  // case, and re-auctions from it over whatever time is left.
+  it("re-opens at the raised floor and climbs from there", () => {
+    const agreed = 82.4; // a Driver accepted at 82,40 and walked at T−30h
+    const m = trip(14 * DAY, { pdp_start: agreed, pooled_at: before(30).toISOString() });
+    expect(openingPrice(m)).toBe(agreed);
+    expect(currentFare(m, before(30))).toBe(agreed);
+    expect(currentFare(m, before(20))).toBeGreaterThan(agreed);
+    expect(currentFare(m, before(5))).toBe(100);
+  });
+
+  it("never returns less than the opening price, whatever the floor was raised to", () => {
+    // The SQL fee-basis band clamps a fee into [pdp_start, ceiling], so a fare
+    // below the opening would make the band start rewriting honest money.
+    for (const floor of [60, 82.4, 99.99, 100]) {
+      const m = trip(14 * DAY, { pdp_start: floor, pooled_at: before(30).toISOString() });
+      for (const h of [30, 20, 10, 6, 5, 1]) {
+        expect(currentFare(m, before(h))).toBeGreaterThanOrEqual(floor);
+        expect(currentFare(m, before(h))).toBeLessThanOrEqual(100);
+      }
+    }
+  });
 });
 
 describe("isAtCeiling", () => {

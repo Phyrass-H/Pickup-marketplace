@@ -3523,3 +3523,68 @@ actually about fill time.
 
 **Migration first, then the code.** The app is correct before and after, but a re-pool run against the old
 RPCs writes `ceiling × 0.5` into what is now the floor column. Nothing is pushed until the migration is in.
+
+---
+
+## Session 64, part B — 2026-08-22 · the frozen fare, and the re-pool floor ([[d80]])
+
+**The founder read the re-pool behaviour off the curve and found the hole in it the same day.** Not a
+regression — the D21 curve did the same thing — but the §6 curve made it visible, because the ≥24h branch
+now opens at a real floor rather than at 50 % of the Ceiling.
+
+**The scenario, on real numbers** (Business 31 km · floor 36,25 → Ceiling 110,00 all-in): a Driver accepts
+at **50,68** and walks at **T−30h**. The trip re-pooled at **36,25**. Under 24h it never bit — SPEED WIN
+comes on and 70 % of the Ceiling lands within 2 € of where the price already was (79,18 → 77,00).
+
+Ruling and reasoning are in [[d80]]. Built as **a raised floor, not a special case**:
+
+    pdp_start = greatest(pdp_start, accepted_fare)   -- then accepted_fare = null
+
+so `openingPrice()` needs no branch and the SQL fee-basis band's bottom rises with it. `greatest` skips
+NULLs, so a trip nobody ever took keeps its original floor. Repeated re-pools can only raise it.
+
+### That forced §9's stored fare, which had never been built
+
+`settledFare` re-derived the curve at `accepted_at` on every read. `docs/06` §9 has asked for the frozen
+figure to be *stored* since it was written. `docs/migrations/2026-08-22_accepted_fare.sql`:
+
+- **`mission.accepted_fare numeric(10,2)`**, nullable, Course space. **Nothing backfilled** (founder:
+  *"no need to update prices on existing trips"*). NULL → every reader recomputes, exactly as before.
+- **`accept_mission(p_mission_id uuid, p_fare numeric default null)`.** Postgres cannot evaluate the curve,
+  so the number is computed in the **accept server action** with `lib/pdp.ts`. That is safe because the
+  Driver's browser sends only a mission id — there is nothing to forge — and it is clamped into
+  `[floor, ceiling]` in SQL regardless, using the fee-basis band's own expression. **The one-argument
+  function is dropped first**, or `accept_mission(uuid)` becomes an ambiguous call. The DEFAULT is what made
+  the migration safe to apply *before* the code deployed: the old call still worked and stored NULL.
+- **`respond_to_amendment` sets `accepted_fare = new_fare`** beside the collapse it already does. Without
+  that line an amended trip keeps billing the PRE-amendment number on the invoice, the cancellation basis
+  and Earnings.
+- The three re-pool RPCs raise the floor and clear the fare. `business_cancel_mission` / `mark_no_show`
+  deliberately KEEP it — the trip was cancelled, not re-pooled, and that number is their fee's basis.
+
+456 lines, of which **28 actually differ** and ~9 of those are a comment: Postgres cannot patch a function
+body, so five whole functions are reproduced. All five were extracted from their live definitions by script
+and diffed back, not retyped.
+
+### The type system caught the read paths again
+
+Adding `accepted_fare` to `settledFare`'s parameter type produced nine compile errors across `rides/actions`,
+`dispatch/actions`, both amend files and two pages — every one a select list or a row shape that would have
+silently read `undefined`. Both `FARE_COLS` gained the column.
+
+### Verification
+
+- **`.local/probe/accepted-fare.ts` — NEW, 18 checks, ALL AGREE.** Drives the whole cycle through the real
+  RPCs as the real Driver: post at T−48h → sit until T−30h so it has really climbed → accept → the fare
+  freezes on the row → `settledFare` reads the column not the curve → the Driver walks → **the floor rises
+  to 44,07 Course (50,68 all-in), the frozen fare is cleared, and the trip re-opens at 50,68, not 36,25** →
+  it still reaches the Ceiling by T−5h → a second re-pool never lowers it → and an accept with **no** fare
+  argument still works and stores NULL, which is what made the migration deployable ahead of the code.
+- `write-test` **170 · ALL AGREE** · `curve-live` **8 · ALL AGREE** · `migrations-2026-08-10` **58 · 0** ·
+  `migrations-2026-08-11` **23 · 0**. All four green with both migrations applied.
+- Suite **460**.
+
+### Still owed after this
+
+`docs/06` §7's hold now has the column it needs to freeze a price against. The Business-facing copy sentence
+and the two riders (§ R, BACKLOG § V) are untouched, and the founder has asked to be reminded of both later.

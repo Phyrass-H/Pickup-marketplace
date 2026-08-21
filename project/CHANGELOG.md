@@ -7,6 +7,17 @@
 
 ## 22 August 2026 — the price now moves the way it was designed to
 
+- **A trip a Driver drops never goes back out cheaper than they agreed to pay for it.** This was the
+  one real hole in the new curve, and you caught it. A Driver took a Cannes run at 50,68 € and walked
+  thirty hours before the pickup; the trip went back into the Pool at **36,25 €** — cheaper than it
+  had been a minute earlier, on a trip that was now *more* urgent, throwing away the one thing we
+  actually knew: that a Driver had said yes at 50,68. It now re-opens at **50,68 €** and climbs from
+  there. Every time it happens again it can only go up, never back down.
+- **The agreed fare is now written down.** Until today the app worked out what a trip had sold for by
+  replaying the price curve backwards every time it needed the number. It's now recorded the moment a
+  Driver accepts, which is what makes the point above possible — and means a past price can be shown
+  rather than re-derived. Trips from before today are untouched and read exactly as they always did.
+
 - **Every trip starts at its floor.** Until today a trip went into the Pool at half the maximum you
   set — a number that had nothing to do with what the trip actually costs to run. It now opens at the
   **floor**: the lowest price the trip may legally be offered at, worked out from the rate card. On a

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { currentFare } from "@/lib/pdp";
 
 export type AcceptResult = { ok: true } | { ok: false; message: string };
 
@@ -12,8 +13,27 @@ export type AcceptResult = { ok: true } | { ok: false; message: string };
 export async function acceptMission(missionId: string): Promise<AcceptResult> {
   const supabase = await createClient();
 
+  // ⚑ THE FARE IS COMPUTED HERE, ON THE SERVER, AND FROZEN BY THE RPC.
+  // docs/06 §9: "the fare freezes at acceptance… that frozen figure is the
+  // contract price." Postgres cannot evaluate the §6 curve — lib/pdp.ts is the
+  // only place it exists — so the number has to be computed in TypeScript and
+  // handed over. It is safe to hand over because THIS IS A SERVER ACTION: the
+  // Driver's browser sends a mission id and nothing else, so there is no number
+  // to forge. `accept_mission` clamps it into [floor, ceiling] regardless.
+  //
+  // A failed read is not a reason to refuse the accept — the column is nullable
+  // and every reader still falls back to recomputing the curve, which is what
+  // the whole archive does. Losing the trip to another Driver over a slow select
+  // would be the worse outcome.
+  const { data: m } = await supabase
+    .from("mission")
+    .select("id, ceiling, pdp_start, speed_win, pickup_at, created_at, pooled_at")
+    .eq("id", missionId)
+    .maybeSingle();
+
   const { error } = await supabase.rpc("accept_mission", {
     p_mission_id: missionId,
+    p_fare: m ? currentFare(m) : null,
   });
 
   if (error) {

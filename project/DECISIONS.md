@@ -1663,3 +1663,47 @@ falls below the floor.
 the floor, which sits at roughly 27–47 % of Ceiling depending on class and distance. The band is a guard
 against a forged fee basis, not a valuation — and a fare genuinely *can* now be the floor, so the wider band
 is the honest one. See [[d78]] for the curve's shape and `docs/06` §5 for why the floor is a guard rail.
+
+### D80 — A re-pool never re-opens below the fare the last Driver agreed to (2026-08-22, S64)
+
+Spotted by the founder the day the §6 curve shipped. A Business 31 km trip, floor 36,25 → Ceiling 110,00
+all-in. A Driver accepts at **50,68** and walks at **T−30h**. The trip re-pooled and re-opened at **36,25**.
+
+Three things wrong with that, in order of how much they cost:
+
+1. **The trip is now more urgent and is being offered cheaper.** It has 30 hours of runway instead of 48,
+   and less time to climb, and we drop the ask by a quarter.
+2. **It throws away the only real market signal we have.** Nobody took it under 50,68, and one Driver
+   actually said yes at exactly that. Re-opening below it is worse information, not fresh information —
+   the §8 learned-prices design says the same thing about which signals are safe to learn from.
+3. **A Business whose Driver walks ends up with a better "saved against your maximum" figure** than one
+   whose Driver didn't. The number that exists to argue for the auction rewards the failure case.
+
+⚑ **Under 24h it never bit**, which is why it survived the D21 curve unnoticed: the re-pool turns SPEED WIN
+on and 70 % of the Ceiling lands near where the price already was (79,18 → 77,00 in the same worked example).
+It is only the ≥24h branch, which opens at the floor, that drops.
+
+**Decided:** the opening becomes `max(floor or 70 %, the fare the last Driver agreed to)`.
+
+**Built as a raised floor, not a special case.** The three re-pool RPCs write
+`pdp_start = greatest(pdp_start, accepted_fare)` and then clear `accepted_fare`. `openingPrice()` in
+`lib/pdp.ts` needs no branch at all, and the **SQL fee-basis band follows for free** — its bottom rises to
+the agreed fare, which is strictly more protective than the floor. `greatest` skips NULLs in Postgres, so a
+trip nobody ever accepted keeps its original floor. Repeated re-pools can only ever raise it.
+
+**This is what finally forced §9's stored fare.** There was no frozen fare in the database — `settledFare`
+re-derived the curve at `accepted_at` on every read, which `docs/06` §9 has asked us not to do since it was
+written. `mission.accepted_fare` (2026-08-22 migration) is that column. Nothing was backfilled: founder,
+same day, *"no need to update prices on existing trips."* NULL means "never accepted, or accepted before the
+migration" and every reader falls back to recomputing, exactly as before.
+
+**Where the number comes from, and why it is not forgeable.** Postgres cannot evaluate the §6 curve —
+`lib/pdp.ts` is the only place it exists — so `accept_mission` gained `p_fare`. It is computed inside the
+**accept server action**, where the Driver's browser has sent only a mission id; there is no number to
+forge. It is clamped into `[floor, ceiling]` in SQL anyway, with the same expression the fee-basis band
+uses, because a money column should not depend on its caller being well-behaved. The argument **defaults to
+NULL**, which is what made the migration safe to apply before the code deployed.
+
+`respond_to_amendment` sets `accepted_fare = new_fare` alongside the collapse it already does. Without that
+one line an amended trip would keep billing the pre-amendment number on every downstream read. See
+[[d79]] for why the opening price lives in `pdp_start` in the first place.
