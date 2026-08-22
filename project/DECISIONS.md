@@ -1818,3 +1818,32 @@ much is left to gain by waiting. Dropped because the exploit only pays off if wa
 is only safe in a thin Pool — in the liquid Pool the badge is for, a Driver doing arithmetic loses the trip.
 **If it is ever wanted, the fix is three lines: jitter the threshold per mission (65–80 %) off the seed the
 curve already uses.** Recorded so it need not be re-derived.
+
+### D84 — The booking screen keeps its wording; the fix for "hotels don't get it" is a tutorial (2026-08-22, S64)
+
+`docs/06` §6 prescribes a sentence the Business screen could safely publish — *"the price rises in steps
+until 5 hours before pickup, when it reaches the maximum the Business set"* — and specifies that the
+Business should see **"Your maximum cost: €273.67", with the range beneath it**. The form does neither: it
+leads with the starting price and says only *"climbs up to your Ceiling, 110,00 €"*.
+
+Four variants were mocked up (D25 loop) — a one-line minimum change, a two-line version, a from→to range,
+and §6's own maximum-first shape. **The founder rejected all four:**
+
+> *"I found them technical and to that end a bit confusing, because people are not pros in that new to them
+> domain of work. I find the current one simple and enough, they already know the ceiling because they fixed
+> it themselves."*
+
+**They are right on the mechanics.** The Ceiling is not hidden — the Business typed it two fields above the
+rail, on the same screen. The argument for leading with the maximum was that a hotel might underquote its
+Guest by anchoring on the starting price, and that assumed they had forgotten a number they had just entered.
+
+**And right on the diagnosis.** None of the four wordings *teaches* how an auction works; they compress it.
+A reader who does not already hold the model gets a denser sentence, not an understanding. Microcopy is the
+wrong instrument for a first-principles gap.
+
+**Decided:** the screen ships as it is. **The gap is real and gets a real fix** — an enrolment
+tutorial / training that teaches a Business how the pricing works and how to deal with Drivers, built once
+V1 is complete. BACKLOG **§ AC**.
+
+⚑ **This is a deliberate deviation from `docs/06` §6, recorded in §6 itself**, so no future session "fixes"
+the screen back to the spec and undoes it.

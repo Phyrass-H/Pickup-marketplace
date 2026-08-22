@@ -1393,3 +1393,41 @@ A prompt nobody sees because they are not looking at the Dispatch tab is worse t
 
 **Pairs with:** § P (expired / unfilled trips, shipped) — that is the same trip one step later, after nobody
 took it at all.
+
+---
+
+## AC. Business enrolment tutorial — teach the model, don't compress it into microcopy 🔨 (founder, 2026-08-22 — AFTER V1)
+
+**Where this came from.** Four rewordings of the booking screen's price line were mocked up and all four
+rejected ([[d84]]): *"people are not pros in that new to them domain of work."* The founder's read is that
+the problem is not the sentence, it is that nobody has ever explained the model — and no sentence on a busy
+form can carry it.
+
+**What it is:** an enrolment tutorial / short training a Business goes through when they join, covering how
+Kavenue actually works and how to deal with Drivers.
+
+**Timing — explicitly AFTER V1 is complete** (founder). It teaches the finished product; building it against
+a moving one means rebuilding it.
+
+### What it has to teach — the things every screen currently assumes are already known
+1. **The auction, and why the price they see is not the price they pay.** They set a Ceiling; the price opens
+   at the floor and climbs; a Driver takes it somewhere in between; **they are billed what that Driver
+   accepted, not the Ceiling.** This is the single biggest unexplained idea in the product.
+2. **Why booking early is cheaper** — the whole argument for the auction, and currently made nowhere.
+3. **What the Ceiling is** — their maximum, their decision, and the one number to quote their Guest from.
+4. **When the price stops moving** — T−5h. §6's publishable sentence belongs HERE, where there is room to
+   explain it, rather than crammed into a 12px line.
+5. **SPEED WIN** — what ticking it does, and when it is worth it.
+6. **Dealing with Drivers** — amendments, releases, cancellations, what a penalty is and who pays it, and
+   what to do when a Driver goes quiet.
+7. **Waiting time and no-shows** — the free window, when the clock starts (⚑ when the Guest was DUE, never
+   the Driver's arrival — [[no-show-clock-origin]]), and what it costs.
+
+### Constraints
+- **It must not publish the schedule.** §6: publish the RULE, never the schedule. "The price rises in steps
+  until 5 h before pickup" is safe; anything about step sizes or timings is not.
+- **Kavenue is an agent, never the principal** (§0). The tutorial talks about how the marketplace works, and
+  must not read as Kavenue selling transport.
+
+**Pairs with:** `project/GUIDANCE_AUDIT.md` — the existing in-app guidance inventory and its gaps. That
+audit is about guidance *inside* the screens; this is the thing that should come before them.

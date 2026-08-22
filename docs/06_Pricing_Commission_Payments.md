@@ -390,6 +390,17 @@ At booking: **"Your maximum cost: €273.67"**, with the range beneath it. They 
 from the maximum and add their margin. After acceptance, the row shows **what they saved against
 that maximum** — the argument for the whole auction, made visible on every booking.
 
+⛔ **THE BOOKING SCREEN DELIBERATELY DOES NOT DO THIS — founder, 2026-08-22 ([[d84]]).** The form
+leads with the STARTING price and keeps the maximum on the line beneath, and it stays that way.
+Four rewordings were mocked up — including this paragraph's own "maximum first" shape — and **all
+four were rejected as too technical for a reader new to how an auction works.** The Ceiling is not
+hidden from anyone: the Business typed it two fields above, on the same screen. And a denser
+sentence does not teach a model, it only makes a busy screen busier.
+**The gap is real and the fix is onboarding, not microcopy** — an enrolment tutorial that teaches a
+Business how the pricing works and how to deal with Drivers, once V1 is complete (BACKLOG **§ AC**).
+⚑ **Do not "fix" the screen back to the paragraph above.** It records the design intent; [[d84]]
+records what ships, and why.
+
 ⚑ **The commission follows the accepted fare, never the ceiling.** A hotel that fills cheaply saves
 twice: on the fare *and* on the fee.
 
