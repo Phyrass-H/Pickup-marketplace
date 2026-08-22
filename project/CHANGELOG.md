@@ -7,6 +7,10 @@
 
 ## 22 August 2026 — the price now moves the way it was designed to
 
+> **All of this is live.** Five database changes applied, 462 automated tests, and six checks run against
+> the real database rather than a copy. Next up: renaming the code repository off the old "Pickup" name,
+> then two speed/robustness jobs that were meant to ship alongside the pricing work.
+
 - **Putting a trip back in the Pool now changes nothing about its price except that time has passed.**
   It used to do three things at once — restart the climb, lift the starting price, and switch SPEED WIN
   on if the pickup was under 24h away. All three are gone. The trip simply goes back out at today's

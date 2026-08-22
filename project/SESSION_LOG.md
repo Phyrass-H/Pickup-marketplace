@@ -3666,3 +3666,50 @@ preview first (D25), and it needs a switch because in beta's thin Pool it would 
 
 Suite **462**. All six probes green: `diff-sql-vs-lib` 693 · `write-test` 170 · `curve-live` 8 ·
 `accepted-fare` 20 · `migrations-2026-08-10` 61/0 · `migrations-2026-08-11` 23/0.
+
+---
+
+## Session 64 — CLOSED (2026-08-22). Shipped, deployed, and the queue the founder set
+
+**Pricing step 5 is live.** The §6 curve, plus four corrections that came out of the founder reading the
+design back and an adversarial review of the diff. Parts A–D above hold the detail.
+
+| | |
+|---|---|
+| Migrations | **5, all applied** — `_pdp_curve` · `_accepted_fare` · `_opening_price_band` · `_amendment_keeps_ceiling` · `22e_repool_touches_nothing` |
+| Decisions | **[[d78]]–[[d84]]** |
+| Suite | **462** (was 448) |
+| Probes | `diff-sql-vs-lib` 693 · `write-test` 170 · `curve-live` 8 · `accepted-fare` 20 · `migrations-08-10` 61/0 · `migrations-08-11` 23/0 — **all green** |
+| Deployed | merged to `main`, CI green, live |
+
+### Two process things worth carrying forward
+
+**1 · The push route was misread, and it cost the founder a click.** `main` refuses commits CI has not
+already passed — but required checks are evaluated **per commit SHA**, so the route that has always worked
+here is: push a branch → wait ~1 min for CI → push the *same* SHAs to `main`, which then accepts them. S63
+did exactly this (`s63-backlog` 08-20, `s63-close` 08-21). S64 pushed to `main` first, got rejected,
+concluded "a PR is the only route", and opened **PR #1** — the first this repo ever had. It worked, but it
+was ceremony, and it made the founder click a Merge button for nothing. Corrected in the handoff, and then
+proved by pushing the correction itself straight to `main` after a branch CI run.
+
+**2 · Five migrations share one date and their filenames do NOT sort into apply order.** A script resolving
+"which file holds the live definition" alphabetically pointed at the wrong `driver_cancel_mission`. Caught
+before it did damage; the fifth file is named `2026-08-22e_` so it sorts last. **The date-prefix convention
+needs a real ordinal whenever a day carries more than one migration.**
+
+### What S64 did NOT do, and why
+
+- **§ R and § V** — the two riders that were meant to ride along with the curve. The session went long on the
+  founder's corrections instead, which was the right trade. Both are fully mapped in the handoff with
+  file:line, so the next session does not re-derive them.
+  ⚑ **S64 accidentally unblocked § R's hardest part.** Sorting History by fare in SQL was impossible because
+  Postgres cannot compute the PDP fare — `mission.accepted_fare` now stores it as a plain column on every
+  trip accepted from today.
+  ⚑ **§ V got more urgent, not less.** The V-Class reclassification it exists to make survivable has already
+  shipped (`441b50f`); it is one row update from biting.
+- **The Business-facing price sentence** — mocked up four ways, all rejected ([[d84]]). The fix is an
+  enrolment tutorial after V1 (BACKLOG **§ AC**), not microcopy.
+- **The repo rename** — queued for S65 as item 1. It is a trademark question, not cosmetics.
+
+### The founder's queue for S65, set explicitly
+**1.** rename the GitHub repo · **2.** § R volume ceiling · **3.** § V lower-class opt-in.

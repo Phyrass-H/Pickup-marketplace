@@ -34,7 +34,7 @@ asked**; that stands, and now there is no reason to.
 makes it *required* is a GitHub setting outside it. Read it with
 `gh api repos/Phyrass-H/Pickup-marketplace/rulesets`.
 
-**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-22, S64).**
+**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-22, S64 — closed).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
 "NEXT" headings are superseded and say so. **Steps 0–5 of the pricing engine are shipped and live — the §6
 curve landed 2026-08-22, with both its migrations applied and every probe green.** What is left is listed in
@@ -561,7 +561,117 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★★ START HERE — THE CURVE IS SHIPPED. THREE SMALL THINGS ARE QUEUED (S64, 2026-08-22).**
+**★★ START HERE — THE CURVE IS LIVE. THE QUEUE IS: REPO RENAME · § R · § V (S64 closed, 2026-08-22).**
+
+> **S64 shipped the §6 curve and it is deployed.** Everything below the horizontal rule is S64's own
+> write-up, kept because [[d78]]–[[d84]] constrain what you build. **Read those seven decisions before you
+> touch anything priced.** Five migrations, all applied. Six probes, all green. Suite **462**.
+>
+> **The founder set this queue explicitly at the end of S64. Do these three, in this order.**
+
+## 1 · RENAME THE GITHUB REPO — small, and it is a trademark question, not cosmetics
+
+`Phyrass-H/Pickup-marketplace` is still the remote. **"Pickup" is a registered trademark of Pickup Services
+SAS / GeoPost (Groupe La Poste) in class 39 — transport, the exact sector** ([[rebrand-from-pickup]]), which
+is the whole reason the product became Kavenue. A public repo under the old name is the kind of thing a
+trademark search surfaces.
+
+**The founder does not mind which name** — they said so. `kavenue` matches the Vercel project;
+`kavenue-marketplace` pairs with the landing repo's `kavenue-landing`. Pick one and say which you picked.
+
+    gh repo rename kavenue --repo Phyrass-H/Pickup-marketplace
+    git remote set-url origin https://github.com/Phyrass-H/kavenue.git
+
+⚑ **THEN IMMEDIATELY CHECK VERCEL.** It is connected to this repo and links by repo **ID**, not by name, so
+a rename normally survives — but production deploys run through that link. Push something trivial and
+confirm a build fires before you call it done. The open PR history and old URLs redirect fine.
+
+## 2 · § R — THE VOLUME CEILING. ⚑ THE CURVE JUST UNBLOCKED THE HARD PART
+
+Five screens load an entire table and filter it in JavaScript. Mapped in S64; use these, do not re-derive:
+
+| where | what it does |
+|---|---|
+| `app/(app)/pool/page.tsx:103-109` | fetches **every** pooled trip, then filters **four of the five** matching rules in JS (`:112-134`) — radius, luggage, body, car |
+| `app/(dispatch)/dispatch/history/page.tsx:101-107` | the Business's **whole archive**, all 76 columns, no limit, no date bound |
+| `…/history/page.tsx:141-159` | a **second** unbounded fan-out joining Driver + vehicle — this builds the name/plate search index |
+| `app/(dispatch)/dispatch/spend/page.tsx:126-133` | the **same** unbounded archive query |
+| `app/(app)/rides/history/page.tsx:96-101` | the Driver's own archive, same idiom |
+
+⚑ **`project/SPEND_BRIEF.md`:197-198 IS WRONG.** It claims Spend "bounds its query by the period instants…
+rather than loading the whole archive" and concludes § R does not apply to it. It does. Fix the brief.
+
+⚑ **The Pool throws away ~89 % of what it fetches.** `2026-08-11_accept_mission_eligibility.sql:32-34`
+measured **241 of 271 missions with `pickup_lat IS NULL`**, and `lib/geo.ts:43` drops every one of them in
+JS *after* transfer. A bounding-box prefilter in SQL is the cheapest single win here.
+
+⚑ **THE BLOCKER — AND WHY IT IS SMALLER THAN IT WAS.** Sorting or paginating History **by fare** needs
+Postgres to compute the fare, and there is no PDP function in Postgres by design
+(`2026-08-11_fee_basis_band.sql:16-20`). `lib/history-filter.ts:458-461` sorts on `settledFare()`, in JS.
+**S64 changed this:** `mission.accepted_fare` now stores the frozen fare on every trip accepted from
+2026-08-22, so **a settled trip's fare is a plain column and SQL can sort on it.** Rows accepted before that
+are NULL and still need the JS path — which the wipe + re-seed removes entirely. **Sequence § R after the
+re-seed and the blocker is simply gone.**
+
+⚑ **Do NOT paginate the CSV export** (`…/history/export/route.ts:137-142`). It runs the same query on
+purpose — its promise is "exactly what is on screen", over the *whole* result set. The two paths must
+diverge deliberately.
+
+⚑ **The chip counts are computed over the whole archive on purpose** (BACKLOG:919-923). Moving the list to
+SQL means a second aggregate query for them.
+
+## 3 · § V — A DRIVER MAY OPT IN TO LOWER-CLASS TRIPS. ⚑ NOW URGENT, NOT OPTIONAL
+
+**The reason it was queued behind the curve has already happened.** The V-Class reclassification
+`business` → `luxury` **shipped** (`441b50f`), and the Pool matches tier **exactly**
+(`query.eq("category", vehicle.category)`). So every V-Class Driver stops seeing Business-van work — which
+is where most van volume will be — the moment the last live `Classe V` row is moved to `luxury`. One row
+update away. § V is what makes the reclassification survivable.
+
+✅ **The pricing half is already done, by construction.** `currentFare()` reads **only mission columns** and
+never sees the Driver or their vehicle, so a First Driver on a Business job already sees the *Business*
+price. The §6 curve preserved that. § V's pricing requirement reduces to one negative rule: **the curve must
+resolve floor and ceiling from the MISSION's class, never the reader's.** It does. Do not break it.
+
+⚑ **Relaxing `=` to `tier ≤ mine` must change THREE places IN ONE COMMIT**, or the Pool lists trips
+`accept_mission` then refuses: the Pool query (`app/(app)/pool/page.tsx:108`), the SQL eligibility guard
+(`2026-08-11_accept_mission_eligibility.sql`), and the card. That migration's header (:64-68) states the SQL
+guard is a deliberate **superset** of the app filter so drift can only *hide* a trip, never refuse one the
+Pool offered — relaxing the app side alone **inverts** that guarantee. Ordering is already there:
+`lib/vehicle-catalog.ts:18`, `SERVICE_TIERS = ["eco","business","luxury"]`.
+
+⚑ **Missing, and it is a D25 preview item:** the Pool card names the *mission's* class but never the
+Driver's own, so a First Driver seeing a Business badge has nothing telling them this is a deliberate
+downgrade they opted into. Needs a contrast cue. Preview before building.
+
+## HOW TO PUSH (S64 got this wrong; don't repeat it)
+
+`main` accepts only commits CI has already passed, and required checks are per commit SHA:
+
+    git push origin main:s65-my-work        # CI runs, ~1 min
+    gh run list --branch s65-my-work        # wait for `success`
+    git push origin main                    # SAME SHAs → accepted, deploys
+
+**No PR needed.** Detail and the ruleset command are at the top of this file.
+
+## STATE OF THE DATABASE
+
+- **Three POOLED demo trips exist** (reference `S64CURVE`, 14 days / 2 days / 6 hours of lead, priced through
+  the real RPC) so the curve is visible in the app. Remove with
+  `node --experimental-strip-types .local/seed/s64-curve.ts --undo`.
+- **The wipe + re-seed is still owed** and still sequenced after the curve. ⚑ Fix `.local/seed/seed-fleet.mjs`
+  FIRST — it hand-sets ceilings, invents an opening price (`ceiling × 0.45`, flagged in place) and writes no
+  commission snapshot. `s61-priced.ts` and `s64-curve.ts` are both worked examples of seeding through the
+  real `mission_price()` RPC with `courseFromBusinessTotal`.
+- `.earn-probe.mjs` at the repo root is a **tracked, stale** scratch file carrying its own copy of the OLD
+  linear fare. Harmless, but it will mislead someone. Delete it when convenient.
+
+---
+
+**(Superseded: "★★ START HERE — THE CURVE IS SHIPPED. THREE SMALL THINGS ARE QUEUED" — the same S64, earlier.)**
+
+
+**SUPERSEDED (kept for [[d78]]–[[d81]] and the § AA / § AB write-ups) — "THE CURVE IS SHIPPED", S64 earlier the same day.**
 
 > ⚑ **S64 RAN LONG AND DID FOUR MORE THINGS AFTER THE CURVE.** Read [[d78]]–[[d83]] before touching
 > anything priced. The short version: the curve shipped, then the founder read the re-pool behaviour back
