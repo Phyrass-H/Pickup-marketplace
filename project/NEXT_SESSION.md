@@ -12,15 +12,27 @@ We're continuing Kavenue (B2B VTC booking marketplace).
 
 Everything works: `npm run dev`, the browser preview, reads against the real Supabase DB, the D25 preview loop.
 
-⚑ **`main` IS PROTECTED NOW — YOU CANNOT PUSH TO IT (discovered S64, 2026-08-22).** A GitHub ruleset
-requires the CI check **`types · tests · build`** to have passed before anything lands, and a direct push has
-no way to show that, so `git push origin main` is rejected outright. **The route to production is: push a
-branch → CI runs → open a PR → merge.** The merge is what deploys to Vercel.
+⚑ **`main` ONLY ACCEPTS COMMITS CI HAS ALREADY PASSED — so push a BRANCH first, then `main`.**
+The ruleset `main — CI must pass` (created 2026-08-10, `enforcement: active`, **no bypass actors**) requires
+the check **`types · tests · build`**. Required checks are evaluated **per commit SHA**, which is the whole
+trick:
+
+    git push origin main:s64-my-work     # CI runs on the branch, ~1 min
+    gh run list --branch s64-my-work     # wait for `success`
+    git push origin main                 # SAME SHAs, now checked → accepted
+
+**No PR is needed.** S63 did exactly this — see the branches `s63-backlog` (2026-08-20) and `s63-close`
+(2026-08-21), each a CI run followed by a push to `main`. Pushing to `main` FIRST is what fails, because
+brand-new SHAs have no check yet: *"Required status check `types · tests · build` is expected."*
+
+⚑ **S64 misread that rejection as "a PR is the only route" and opened PR #1** — the first this repo ever had —
+which made the founder click a Merge button for no reason. It worked, and a PR is a legitimate second route,
+but it is ceremony this project does not need. `CLAUDE.md` still says **do not open a PR unless explicitly
+asked**; that stands, and now there is no reason to.
+
 ⚑ **The rule is INVISIBLE FROM THE CODE.** `.github/workflows/ci.yml` is in the repo, but the ruleset that
-makes it *required* is a GitHub setting outside it — so you will not find it by reading files, you will find
-it by being rejected. This note exists so you don't.
-⚑ `CLAUDE.md` still says "do not open a PR unless explicitly asked". That stands — ask first. **PR #1 was
-S64's**, the first this repo has ever had.
+makes it *required* is a GitHub setting outside it. Read it with
+`gh api repos/Phyrass-H/Pickup-marketplace/rulesets`.
 
 **⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-22, S64).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
