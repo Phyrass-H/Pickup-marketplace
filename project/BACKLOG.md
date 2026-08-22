@@ -1317,3 +1317,79 @@ per-minute meter with a courtesy window and a cap.
 **Pairs with:** § Y (the cancellation penalty) and the waiting rate itself — all three are the same
 conversation about what a Driver's time is worth when the trip is not moving.
 
+
+---
+
+## AA. SPEED WIN as a badge the PRICE can earn, not only a box the Business ticks 🔨 (founder, 2026-08-22 — DECIDED, not built)
+
+**Decided in [[d83]].** A pooled trip whose fare climbs past **~70 % of its Ceiling** shows the SPEED WIN
+badge on the Pool card, exactly as if the Business had ticked it. Same badge, same name, same meaning to a
+Driver: *this one is priced hot — take it before someone else does.*
+
+**Why it is not a lie, and not a dark pattern.** §6 defines SPEED WIN as *"the same curve with a higher
+starting point — nothing more"*. A trip that **climbed** to 70 % and one that **opened** at 70 % are in the
+identical state, and the Driver's decision is identical. The badge describes the PRICE, never the Business —
+a last-minute booking is not a hotel being judged for anything. And the claim is true, which is the whole
+difference between a cue and a manipulation.
+
+**Why it will be rare, which is what makes it worth having.** At scale FOMO clears trips early: a Driver
+takes a good fare rather than risk losing it, and does not wait for a Ceiling they cannot see. So crossing
+70 % means the trip genuinely **failed to clear**, which is exactly the trip that deserves attention.
+`docs/06` §5 already says the same: *"At scale this changes. With enough Drivers, trips clear early."*
+
+### ⚑ IT RUNS BACKWARDS IN BETA — ship it behind a switch
+With few Drivers, trips sit, and **most of them would earn the badge**. A badge on everything is wallpaper.
+Build it with an on/off flag and turn it on when the Pool is liquid enough that it means something.
+**This is the only real blocker; the feature itself is small.**
+
+### What it needs
+- A threshold constant next to the curve in `lib/pdp.ts`, and a predicate — `isHotPrice(m, now)` — beside
+  `isAtCeiling`. It is a pure read, no migration, no column.
+- The badge already exists (`components/mission-card.tsx`, `app/(app)/missions/[id]/page.tsx` both render
+  `speed_win`); this widens the condition from `mission.speed_win` to `mission.speed_win || isHotPrice(m)`.
+- **UI → preview first (D25).**
+
+### The one objection, raised and dropped — recorded so it is not re-derived
+A badge flipping at *exactly* 70 % lets a Driver invert their net fare into the Business's Ceiling
+(`net ÷ 0.616`), which is the number §6 hides so nobody can compute how much is left to gain by waiting.
+**Dropped**, because the exploit only pays off if waiting is safe, and waiting is only safe in a thin Pool —
+in the liquid Pool the badge is for, a Driver stopping to do arithmetic loses the trip. **If it is ever
+wanted, the fix is three lines:** jitter the threshold per mission (say 65–80 %) off the same
+`xmur3(mission.id)` seed the curve already uses. Un-invertible, identical cue.
+
+**Pairs with:** § W (demand pricing, parked) and `docs/06` §8 (learned route prices) — the badge that would
+mean *"this is a good price for THIS route"* needs §8's baseline and ~15 trips per route to exist first.
+
+---
+
+## AB. A trip that will not fill near its pickup — ask the Business to raise the Ceiling 🔨❓ (founder, 2026-08-22)
+
+**The gap [[d82]] left open, and the founder found it while asking about a "hard SPEED WIN at a later
+stage".** They are reaching for something real, but it cannot be SPEED WIN: near the pickup the price is
+already AT the Ceiling, so there is nothing left to give. Every lever we have is spent.
+
+**The only lever left is raising the Ceiling — and that is the Business's money**, so it cannot be automatic.
+§0 is explicit: *"The Business sets its own Ceiling. Kavenue recommends a price; it does not impose one."*
+It has to be a genuine ask: *"nobody has taken this and it's in 3 hours — raise your maximum to €X?"*
+
+**This is the one place a popup or a notification is honestly earned** — unlike the re-pool SPEED WIN
+approval that [[d82]] made unnecessary, here something real is being asked of the Business and only they can
+answer it.
+
+### Why it is not next
+It needs **notifications** (Resend), which the founder has deferred until the in-app experience is finished.
+A prompt nobody sees because they are not looking at the Dispatch tab is worse than no prompt.
+
+### Open questions when it comes up
+1. **What does it suggest raising to?** The rate card has no number above the ceiling. A percentage step
+   (+10 %, +20 %) is arbitrary; the honest anchor might be what similar trips actually cleared at, which is
+   `docs/06` §8 again.
+2. **When does it fire?** T−5h is when the price tops out and the trip stops improving — that is the natural
+   trigger, and it is also the SPEED WIN nudge's own threshold.
+3. **How often may it ask?** Once per trip, or it becomes nagging.
+4. **Does raising the Ceiling re-open the auction?** Under the §6 curve the trip is past T−5h and pinned at
+   the top, so a raised Ceiling would make it jump straight to the new maximum, not climb to it. That may be
+   right — the trip is urgent — but it should be decided, not discovered.
+
+**Pairs with:** § P (expired / unfilled trips, shipped) — that is the same trip one step later, after nobody
+took it at all.
