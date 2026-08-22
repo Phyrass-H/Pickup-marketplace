@@ -569,6 +569,58 @@ specific trip by drivers name, or passenger or internal reference, or car… per
 >
 > **The founder set this queue explicitly at the end of S64. Do these three, in this order.**
 
+## ⚑ 0 · VERIFY BEFORE YOU BUILD — THIS IS A GATE, NOT A SUGGESTION
+
+**Read this first. It is here because the session that wrote the rest of this file got it wrong.**
+
+S64 finished the §6 curve, wrote the handoff below, and then — as the last act before closing — had three
+readers check every claim in it against the real code and the real database. **It was wrong twelve ways, five
+of them load-bearing.** Not typos. Wrong enough to send you down a dead end:
+
+- It told you `mission.accepted_fare` had made History's fare sortable in SQL. **It has not.** The list sorts
+  on the Business's **all-in** figure (`businessCost(fare + waiting_fee)`), and the comment at
+  `lib/history-filter.ts:452-457` records that keying on the bare Course is a defect this codebase **already
+  shipped once and fixed.** Following that advice walks you straight back into it.
+- It pointed § V's SQL change at `2026-08-11_accept_mission_eligibility.sql`. **S64 superseded that file
+  itself, hours earlier** — the live guard is `2026-08-22_accepted_fare.sql:100`. Editing the file it named
+  changes **nothing in the database**, and you would have lost an afternoon working out why.
+- It said the wipe + re-seed would populate `accepted_fare`. **No seeder writes it.** A re-seed reproduces a
+  100 %-NULL archive.
+- It said § V was "one row update away". **It has already happened** — that Driver is stranded right now.
+- It said the Pool discards ~89 % of what it fetches. That was a **whole-table** number. The Pool fetches
+  **2 rows** and discards none.
+
+⚑ **Two of those five were caused by S64's OWN migrations, written the same day.** That is the real lesson:
+a handoff is a *claim about the repo*, and claims decay — fastest of all when the session writing them is
+also the session changing the thing. Proofreading cannot catch that. Only re-reading the code can.
+
+### So: run this before you write a line of code.
+
+    node --experimental-strip-types .local/probe/handoff-check.ts
+
+Eleven assertions over the perishable claims in this file — the live SQL definitions (probed through the DB,
+**never** by reading migration filenames, which share dates and do **not** sort into apply order), the § V
+vehicle row, the `accepted_fare` population, the Pool's real size, the demo trips, and whether the repo has
+been renamed yet. It is read-only and takes seconds. **Anything it prints `STALE` means this file lies about
+that point — fix the file before you build on it.**
+
+Then the usual, and all of it must be green before you start:
+
+    npx tsc --noEmit && npx vitest run          # expect 462 passing
+    node --experimental-strip-types .local/probe/diff-sql-vs-lib.ts     # 693 · ALL AGREE
+    node --experimental-strip-types .local/probe/write-test.ts          # 170 · ALL AGREE
+    node --experimental-strip-types .local/probe/curve-live.ts          #   8 · ALL AGREE
+    node --experimental-strip-types .local/probe/accepted-fare.ts       #  20 · ALL AGREE
+    node --experimental-strip-types .local/probe/migrations-2026-08-10.ts   # 61 · 0 failed
+    node --experimental-strip-types .local/probe/migrations-2026-08-11.ts   # 23 · 0 failed
+
+**If a probe fails, that is the job** — not whatever is queued below. Something drifted between S64 closing
+and you opening, and finding out what matters more than starting the next feature.
+
+⚑ **When you finish, do the same to your own handoff.** Do not just re-read it — open the files it cites and
+check them, or have a subagent do it. And when something bites you that this probe did not catch, **add an
+assertion for it** so the next session gets it for free.
+
 ## 1 · RENAME THE GITHUB REPO — small, and it is a trademark question, not cosmetics
 
 `Phyrass-H/Pickup-marketplace` is still the remote. **"Pickup" is a registered trademark of Pickup Services
