@@ -1707,3 +1707,114 @@ NULL**, which is what made the migration safe to apply before the code deployed.
 `respond_to_amendment` sets `accepted_fare = new_fare` alongside the collapse it already does. Without that
 one line an amended trip would keep billing the pre-amendment number on every downstream read. See
 [[d79]] for why the opening price lives in `pdp_start` in the first place.
+
+### D81 — The price is a function of the time left, not of what any Driver did (2026-08-22, S64)
+
+**Supersedes the mechanism of [[d80]], not its intent.** D80 said a re-pool must never open below the fare
+the last Driver agreed to, and implemented that by *restarting* the auction from that fare. The founder read
+it back the same day and gave the better rule:
+
+> *"A driver accepts a price then lets it go, then going back to the Pool should start at the price it
+> should have been if the driver didn't take it and it would have kept rising. Trip 150 €, a driver takes it
+> at 65 € one week before, walks away 2 days before — the price should be what it was supposed to be at that
+> moment, which is 2 days before the trip, regardless of the driver behaviours. Otherwise the trip would be
+> re-pooled at the price from 7 days ago and doesn't make sense with the deadline."*
+
+They are right, and it is simpler than what was built. **A re-pool no longer restarts the climb at all.**
+`lib/pdp.ts` stopped reading `pooled_at`; the curve runs from when the trip FIRST entered the Pool to its
+pickup, and a re-pooled trip is simply read at today's point on it. A trip taken a week out and dropped two
+days out goes back to the Pool at the **two-days-out price** — because that is what a trip with two days
+left is worth, and re-opening it at a week-out price would ignore the deadline entirely.
+
+**D80's rule now holds for free.** The curve only rises as the pickup approaches, so whatever a Driver
+agreed at t₁, the price at any later t₂ is at least that. The `greatest(pdp_start, accepted_fare)` raise in
+the re-pool RPCs stays as a **backstop for the one corner the curve does not cover**: a SPEED WIN trip
+re-pooled at 24h+, where §6 switches SPEED WIN off and the opening would otherwise drop.
+
+**It also forced the amendment fix that came with it.** `respond_to_amendment` used to write
+`ceiling = base_fare = pdp_start = new_fare` — freezing the agreed fare by collapsing the curve to zero
+width. That was correct before `accepted_fare` existed, when `ceiling` doubled as "the fare". It now does
+two wrong things: it leaves an amended trip with **no band to auction inside** (so a re-pool after an
+amendment sits flat at one price for ever), and it **silently lowers the Business's own stated maximum** —
+Ceiling 110,00 → an amendment agreed at 71,53 → maximum 71,53, decided by nobody.
+
+**Decided:** `ceiling = greatest(ceiling, new_fare)` — an amendment may only ever RAISE the maximum —
+`pdp_start` is left holding the real floor, and `accepted_fare` does the freezing. Founder chose this over
+leaving it flat, with the cost stated: if an amended trip's Driver walks, it re-auctions up towards the
+original maximum, so the Business can pay more than it agreed with *that* Driver — but never more than the
+maximum it set itself, which is the deal on every other trip.
+
+⚑ **`pooled_at` is no longer a pricing input.** It still records when a trip re-entered the Pool and is
+still read by `lib/spend.ts` for the fill-time metric. Do not wire it back into the curve.
+
+### D82 — A re-pool changes nothing about the price except that time has passed (2026-08-22, S64)
+
+The last of the day's three corrections, and the one that makes the other two coherent. A re-pool used to do
+**three** things to the price. It now does none.
+
+| | what it did | why it's gone |
+|---|---|---|
+| Restart the climb | `pooled_at` became the new curve origin | [[d81]] — the price is what the deadline says, not what any Driver did |
+| Raise the opening | `pdp_start = greatest(pdp_start, accepted_fare)` | [[d80]]'s mechanism, made redundant by [[d81]] and actively harmful |
+| Flip SPEED WIN | on under 24h, off at 24h+ | the rule it served no longer exists, and it is the Business's checkbox |
+
+**The floor raise had to go because it fought [[d81]].** `.local/probe/accepted-fare.ts` caught it: an
+untouched trip read **43,37 €** at T−30h and the same trip, taken and dropped, read **52,70 €** at the same
+instant. A 21 % premium for nothing but a Driver having held it — precisely the history-dependence [[d81]]
+exists to remove. [[d80]]'s intent survives untouched, because the curve only rises toward the pickup: a
+re-pooled trip is *already* worth at least what the last Driver agreed to, with nothing enforcing it.
+
+**The SPEED WIN flip had to go for a different reason, and the founder found it by asking whether 24h was
+the right threshold.** It isn't, and no threshold is, because the premise is inverted. SPEED WIN raises
+where the curve *opens*, so its effect shrinks as the pickup nears — measured on a 110 € Ceiling:
+
+| | T−48h | T−24h | T−12h | T−6h | T−5h |
+|---|---|---|---|---|---|
+| off | 67,84 | 79,18 | 94,19 | 105,51 | 110,00 |
+| on | 90,16 | 97,37 | 100,95 | 106,90 | 110,00 |
+| **lift** | **+33 %** | **+23 %** | **+7 %** | **+1 %** | **0 %** |
+
+Switching it on *because* a trip became urgent does least exactly when it is needed most. The rule was
+written when a re-pool restarted the climb at 50 % of the Ceiling and needed a boost to fill; there is no
+restart any more. **And it is the Business's own checkbox and their own money** — Kavenue flipping it
+unasked is Kavenue nudging the fare, which §0 forbids. `speed_win` is now only ever what the Business set.
+
+⚑ **This also removed the need for the popup the founder was weighing** (should a re-pool ask the Business
+to approve SPEED WIN?). With nothing being changed on their behalf there is nothing to approve, no
+notification, and no extra work for the hotel. The ≤5h nudge at booking stays — that is the Business
+choosing, which was always the right shape.
+
+**What is left when a trip really will not fill near its pickup:** the price is already at the Ceiling, so
+there is nothing left to give. The only lever is *raising the Ceiling*, which is the Business's money and
+needs a genuine ask. Parked in `BACKLOG.md` — it needs notifications, which are deferred.
+
+⚑ **`pooled_at` is not a pricing input any more** but is still stamped: `lib/spend.ts` reads it for the
+Business's "time to fill" metric.
+
+### D83 — SPEED WIN becomes a badge the price can earn, not only a box the Business ticks (2026-08-22, S64)
+
+Founder's idea, argued through and accepted. **A pooled trip whose fare climbs past ~70 % of its Ceiling
+shows the SPEED WIN badge**, exactly as if the Business had ticked it. Designed, not yet built.
+
+Claude argued against it three ways and was wrong on all three:
+
+1. *"The badge would be on every trip."* Only in a thin Pool. At the scale this is built for, FOMO clears
+   trips early — a Driver takes a good fare rather than risk another Driver taking it, and does not wait
+   for a Ceiling they cannot see. **Crossing 70 % will mean the trip genuinely failed to clear, which is
+   rare and therefore worth flagging.** `docs/06` §5 already says the same thing: *"At scale this changes.
+   With enough Drivers, trips clear early."* ⚑ It runs backwards during beta — few Drivers, so most trips
+   would earn the badge. **Ship it behind a switch and turn it on when the Pool is liquid.**
+2. *"It would make SPEED WIN mean two things."* It does not. §6: SPEED WIN is *"the same curve with a higher
+   starting point — nothing more"*, so a trip that climbed to 70 % and one that opened there are in the
+   identical state and the Driver's decision is identical. The distinction protected was one no Driver uses
+   — and a last-minute booking is not a Business being judged for anything.
+3. *"The Driver cannot see the Ceiling, so 70 % is meaningless to them."* They do not need the number. They
+   need the cue — *this is a good one, take it before someone else does* — and the cue is TRUE, which is
+   what separates it from a dark pattern. Drivers are driven by money, not by timing.
+
+**The one objection raised and then dropped:** a badge flipping at exactly 70 % lets a Driver invert their
+net fare into the Business's Ceiling (`net ÷ 0.616`), which is the number §6 hides so nobody can compute how
+much is left to gain by waiting. Dropped because the exploit only pays off if waiting is safe, and waiting
+is only safe in a thin Pool — in the liquid Pool the badge is for, a Driver doing arithmetic loses the trip.
+**If it is ever wanted, the fix is three lines: jitter the threshold per mission (65–80 %) off the seed the
+curve already uses.** Recorded so it need not be re-derived.

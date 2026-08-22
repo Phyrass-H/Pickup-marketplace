@@ -280,9 +280,21 @@ export async function createMission(formData: FormData) {
   // the step TIMES both fall out of the gap and the mission id now. Written NULL
   // rather than left stale, so nothing can read a fixed-step curve that no longer
   // exists. The columns stay for the archive.
-  const pdpStart = quote
-    ? round2(courseFromBusinessTotal(Number(quote.floor_price), rates))
-    : round2(course * 0.5);
+  // ⚑ NO QUOTE MEANS NO FLOOR — SO WRITE NOTHING, DON'T INVENT ONE. `quote` is
+  // null whenever `metrics` is (routing fell over, or there is no located
+  // drop-off yet on a draft). Writing `course * 0.5` here looked harmless because
+  // it is what the old curve opened at anyway — but on a RE-SAVED DRAFT that
+  // already carries a real rate-card floor, it overwrites it with a number that
+  // has nothing to do with the trip's cost, and the §5 floor guard above is
+  // skipped in exactly the same breath (`!asDraft && quote &&`). A one-off Mapbox
+  // failure would silently re-open the auction in the wrong place, for good.
+  //
+  // Same conditional-spread idiom as `eta` above: absent, not overwritten. On a
+  // FIRST insert there is nothing to preserve, so it falls back to the old 50 %
+  // opening, which is also what `openingPrice()` coalesces a NULL to.
+  const pdpStart = quote ? round2(courseFromBusinessTotal(Number(quote.floor_price), rates)) : null;
+  const opening: { pdp_start: number } | Record<string, never> =
+    pdpStart != null ? { pdp_start: pdpStart } : {};
 
   const status: MissionStatus = asDraft ? "draft" : "pooled";
 
@@ -347,7 +359,6 @@ export async function createMission(formData: FormData) {
     commission_business_rate: rates?.businessHt ?? null,
     commission_driver_rate: rates?.driverHt ?? null,
     commission_vat_rate: rates?.feeVat ?? null,
-    pdp_start: pdpStart,
     pdp_step: null,
     pdp_interval: null,
     speed_win: speedWin,
@@ -368,8 +379,8 @@ export async function createMission(formData: FormData) {
     // this a draft saved hours/days ago would be posted already near/at the
     // ceiling. A plain re-save-as-draft keeps the original created_at.
     const updateRow = asDraft
-      ? { ...row, ...eta, ...boardUpload, ...labels }
-      : { ...row, ...eta, ...boardUpload, ...labels, created_at: new Date().toISOString() };
+      ? { ...row, ...eta, ...opening, ...boardUpload, ...labels }
+      : { ...row, ...eta, ...opening, ...boardUpload, ...labels, created_at: new Date().toISOString() };
     const { data: updated, error } = await supabase
       .from("mission")
       .update(updateRow)
@@ -384,7 +395,7 @@ export async function createMission(formData: FormData) {
   } else {
     const { data: inserted, error } = await supabase
       .from("mission")
-      .insert({ ...row, ...eta, ...boardUpload, ...labels })
+      .insert({ ...row, ...eta, ...opening, ...boardUpload, ...labels })
       .select("id")
       .single();
     if (error || !inserted) redirect(backTo("db"));

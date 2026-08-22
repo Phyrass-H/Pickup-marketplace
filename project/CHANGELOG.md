@@ -7,6 +7,29 @@
 
 ## 22 August 2026 — the price now moves the way it was designed to
 
+- **Putting a trip back in the Pool now changes nothing about its price except that time has passed.**
+  It used to do three things at once — restart the climb, lift the starting price, and switch SPEED WIN
+  on if the pickup was under 24h away. All three are gone. The trip simply goes back out at today's
+  price and carries on climbing towards your maximum.
+- **We stopped switching SPEED WIN on for you.** It's your box and your money, and it turned out to do
+  least exactly when it was supposed to help: on a 110 € trip it adds 33% two days out, 7% twelve hours
+  out, and nothing at all five hours out — because by then the price has climbed there on its own.
+  SPEED WIN is now only ever what you set. Nothing to approve, no popup, no extra work for you.
+
+- **A dropped trip goes back out at today's price, not the price it was taken at.** Your rule, and it's
+  better than the one I'd built. A trip a Driver took a week out and abandoned two days out now
+  re-enters the Pool at the **two-days-out** price and keeps climbing from there. The price depends on
+  how long is left before the pickup — never on what any Driver did along the way.
+- **Amending a trip no longer quietly lowers your maximum.** If you set a Ceiling of 110 € and then
+  agreed 71,53 € for an added stop, your maximum silently became 71,53 €. It now stays at 110 € — an
+  amendment can only ever raise it, never lower it — and the trip keeps a real price range to auction
+  inside if the Driver later drops it.
+- **Two holes closed that you'd never have seen.** A failed map lookup at the moment you re-posted a
+  saved draft could overwrite that trip's floor with an unrelated number, permanently. And on a SPEED
+  WIN trip the cancellation-fee check was still measuring against the old floor, which would have let a
+  cancellation be charged at 22,50 € where it should have been 60,00 €. Both found by a review that
+  reads the code adversarially and tries to break it.
+
 - **A trip a Driver drops never goes back out cheaper than they agreed to pay for it.** This was the
   one real hole in the new curve, and you caught it. A Driver took a Cannes run at 50,68 € and walked
   thirty hours before the pickup; the trip went back into the Pool at **36,25 €** — cheaper than it

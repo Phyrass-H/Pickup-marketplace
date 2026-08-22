@@ -3588,3 +3588,81 @@ silently read `undefined`. Both `FARE_COLS` gained the column.
 
 `docs/06` §7's hold now has the column it needs to freeze a price against. The Business-facing copy sentence
 and the two riders (§ R, BACKLOG § V) are untouched, and the founder has asked to be reminded of both later.
+
+---
+
+## Session 64, part C — 2026-08-22 · the adversarial review, and the founder's better rule ([[d81]])
+
+**A 47-agent adversarial review of the curve diff** (five lenses, each finding refuted by three independent
+skeptics on different angles, majority-survives). **7 confirmed, 7 refuted.** The confirmed set collapsed to
+four distinct defects — two were duplicates found by different lenses. All four reproduced by hand before
+anything was changed; the refuted seven included two I would otherwise have chased (the "settledFare
+re-prices 171 live missions" claim, and the 5h discontinuity, which is [[d78]] on purpose).
+
+**1 · The floor could be silently replaced by a wrong number.** `createMission` wrote
+`pdp_start = course * 0.5` whenever `quote` was null — and `quote` is null whenever routing fails, not only
+when there is no drop-off. On a **re-saved draft that already carried a real rate-card floor**, one bad
+minute from Mapbox overwrote it permanently, and the §5 floor guard was skipped in the same breath
+(`!asDraft && quote &&`). Fixed with the file's own conditional-spread idiom, the same way `eta` already
+works: absent, not overwritten. **Fixed in code.**
+
+**2 · The fee-basis band lost its teeth on SPEED WIN trips.** Since the curve derives SPEED WIN's 70 %
+opening on read rather than storing it, the SQL band went on clamping to the *stored* floor. On a SPEED WIN
+trip with Ceiling 100 / floor 30, the curve can never produce a fare below 70 — yet a forged basis of 30
+passed. At a 75 % cancellation that is **22,50 € charged instead of 60,00 €**, where the pre-curve code
+would have caught it at 52,50. Fixed by `mission_opening_price(mission)`, an `immutable` SQL mirror of
+`openingPrice()`, called by the band — and **wired into `diff-sql-vs-lib`** (now **693 checks**) so the two
+halves cannot drift silently again. `docs/migrations/2026-08-22_opening_price_band.sql`, **applied**.
+
+**3 · The amendment defect, and the rule the founder gave instead.** See [[d81]]. The review found that an
+amended trip which later re-pools is pinned at one flat price for ever, because `respond_to_amendment`
+collapses the curve to zero width. Offering the founder the choice produced something better than either
+option: **a re-pool should not restart the climb at all.** `lib/pdp.ts` stopped reading `pooled_at`;
+`respond_to_amendment` stops overwriting the Ceiling and the floor.
+`docs/migrations/2026-08-22_amendment_keeps_ceiling.sql` — 17 changed lines, 5 of them real.
+
+**4 · Cosmetic, not fixed.** The starting price previewed in the form can land a cent from the stored one on
+~1 % of distances — the browser computes the rate card in floats, Postgres in `numeric`. The Ceiling has
+carried the same property since S61 and already handles it (`snapped`). Noted, not chased.
+
+**Test surgery.** The re-pool tests were the ones asserting the OLD behaviour, so they were rewritten around
+the new rule: a re-pooled trip is worth the same as one nobody ever took; it goes back out at the deadline
+price, not the price it was taken at; SPEED WIN still lifts the opening without restarting anything. Suite
+**462**.
+
+---
+
+## Session 64, part D — 2026-08-22 · the re-pool stops touching the price ([[d82]], [[d83]])
+
+**Two removals, from two directions, landing on one rule.** `docs/migrations/2026-08-22e_repool_touches_nothing.sql`
+— the three re-pool RPCs each lose 15 lines and gain 4, because with no SPEED WIN flip the
+`if v_hours < 24` split has nothing to branch on and collapses. Full reasoning in [[d82]].
+
+1. **The floor raise, found by a probe.** `.local/probe/accepted-fare.ts` flagged that a re-pooled trip read
+   **52,70 €** where an untouched one read **43,37 €** at the same instant — [[d80]]'s mechanism fighting
+   [[d81]]'s rule. [[d80]]'s intent survives without it: the curve only rises toward the pickup, so a
+   re-pooled trip is already worth at least what the last Driver agreed to.
+2. **The SPEED WIN flip, found by the founder asking whether 24h was the right threshold.** It isn't, and no
+   threshold is — SPEED WIN raises where the curve *opens*, so its lift shrinks from +33 % at T−48h to
+   **+0 % at T−5h**. It did least exactly when it was supposed to help. Measured, tabulated in [[d82]].
+
+⚑ **A naming trap, hit while writing that migration.** Five migrations now share `2026-08-22`, and their
+filenames do **not** sort into apply order. A script that resolved "which file holds the live definition" by
+sorting alphabetically pointed at the wrong version of `driver_cancel_mission` — it is live in
+`_opening_price_band`, not `_pdp_curve`. Caught before it did damage; the fifth file is named **`2026-08-22e_`**
+so it sorts last. **The date-prefix convention needs a real ordinal when a day carries more than one migration.**
+
+**Copy that this made false, and is now fixed:** the reclaim button said *"Reclaim and re-pool as SPEED WIN"*
+(now *"Take it back and re-pool"*, with the block above it explaining the real reason another Driver takes it —
+this close to the pickup the curve has already carried the fare near the maximum); the release dialog said
+*"(as a SPEED WIN if it's within 24h of pickup)"*; and `docs/06` §6's "on re-pool it is automatic" bullet is
+struck through with the measurements.
+
+**[[d83]] — SPEED WIN as an earned badge.** The founder's idea, argued against three ways and right on all
+three: at scale FOMO clears trips early, so crossing 70 % of the Ceiling is rare and means something; §6
+already says SPEED WIN is only a higher starting point on the same curve, so the two cases are identical to
+a Driver; and the Driver needs the cue, not the number. **Designed, not built** — it is UI, so it gets a
+preview first (D25), and it needs a switch because in beta's thin Pool it would be on everything.
+
+Suite **462**. All six probes green: `diff-sql-vs-lib` 693 · `write-test` 170 · `curve-live` 8 ·
+`accepted-fare` 20 · `migrations-2026-08-10` 61/0 · `migrations-2026-08-11` 23/0.

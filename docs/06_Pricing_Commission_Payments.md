@@ -374,8 +374,15 @@ when it reaches the maximum the Business set."* True, complete, and still ungues
   trip can tick it a month out.
 - **Never applied automatically at posting.** At **≤5h** the form shows a nudge with a one-tap
   *Enable SPEED WIN* button. Nothing is ticked for them.
-- **On re-pool it is automatic** (Driver cancel · reclaim · agreed release): under 24h to pickup →
-  on; 24h or more → off.
+- ~~**On re-pool it is automatic** (Driver cancel · reclaim · agreed release): under 24h to pickup →
+  on; 24h or more → off.~~ ⛔ **REMOVED 2026-08-22 ([[d82]]).** A re-pool now changes nothing about the
+  price except that time has passed. That rule was written when a re-pool RESTARTED the climb at 50 % of
+  the Ceiling and needed a boost to fill; there is no restart any more (§6 curve, [[d81]]). And SPEED WIN
+  raises where the curve *opens*, so its effect shrinks as the pickup nears — on a 110 € Ceiling, **+33 %
+  at T−48h, +7 % at T−12h, +0 % at T−5h**. Switching it on *because* a trip became urgent does least
+  exactly when it is needed most. It is also the Business's own checkbox and their own money: Kavenue
+  moving it unasked is Kavenue nudging the fare, which §0 forbids. **`speed_win` is now only ever what the
+  Business set.** The ≤5h nudge at booking stays — that is the Business choosing.
 
 ### What the Business sees
 

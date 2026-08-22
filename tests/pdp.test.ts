@@ -209,20 +209,36 @@ describe("openingPrice — where the auction opens", () => {
 });
 
 describe("currentFare — a RE-POOLED mission (O7)", () => {
-  it("restarts the climb from pooled_at, ignoring created_at", () => {
-    // Posted a fortnight out, taken, then a Driver walked at T−12h.
-    const m = trip(14 * DAY, { pooled_at: before(12).toISOString() });
-    expect(currentFare(m, before(12))).toBe(60); // back to the floor, re-auctioned
-    expect(currentFare(m, before(8))).toBeGreaterThan(60);
+  // ⚑ A RE-POOL DOES NOT RESTART THE CLIMB (founder, 2026-08-22, [[d81]]).
+  // The price is a function of how long is LEFT, not of what any Driver did, so
+  // a trip is worth the same at T−12h whether or not somebody held it in between.
+  it("is worth the same as if nobody had ever taken it", () => {
+    const untouched = trip(14 * DAY);
+    const walked = trip(14 * DAY, { pooled_at: before(12).toISOString() });
+    for (const h of [12, 10, 8, 6, 5]) {
+      expect(currentFare(walked, before(h))).toBe(currentFare(untouched, before(h)));
+    }
+  });
+
+  it("goes back out at the DEADLINE price, not the price it was taken at", () => {
+    // The founder's own example, scaled: taken a week out, walked two days out.
+    // It must re-pool at the two-days-out price — a trip with two days left is
+    // not worth what a trip with a week left was worth.
+    const m = trip(14 * DAY, { pooled_at: before(48).toISOString() });
+    const takenAt = currentFare(m, before(7 * 24));
+    const backOutAt = currentFare(m, before(48));
+    expect(backOutAt).toBeGreaterThan(takenAt);
     expect(currentFare(m, before(5))).toBe(100);
   });
 
-  it("keeps the floor underneath when the re-pool turns SPEED WIN on", () => {
-    // Under 24h the re-pool sets speed_win — and stores nothing else, so the
-    // floor in pdp_start survives to be used again if it is ever turned off.
-    const m = trip(14 * DAY, { ...speedWinCurve(), pooled_at: before(12).toISOString() });
-    expect(m.pdp_start).toBe(60);
-    expect(currentFare(m, before(12))).toBe(70);
+  it("still lifts the opening when the re-pool turns SPEED WIN on (§6)", () => {
+    // Under 24h the re-pool sets speed_win. That raises where the curve OPENS,
+    // which lifts the whole curve — it does not restart it.
+    const plain = trip(14 * DAY, { pooled_at: before(12).toISOString() });
+    const hot = trip(14 * DAY, { ...speedWinCurve(), pooled_at: before(12).toISOString() });
+    expect(openingPrice(hot)).toBe(70);
+    expect(currentFare(hot, before(12))).toBeGreaterThan(currentFare(plain, before(12)));
+    expect(hot.pdp_start).toBe(60); // the floor is still underneath it
   });
 });
 
@@ -279,12 +295,24 @@ describe("the re-pool floor (founder, 2026-08-22)", () => {
   // real database by .local/probe/curve-live.ts. What belongs HERE is the other
   // half of the contract: that lib/pdp.ts honours a raised floor with no special
   // case, and re-auctions from it over whatever time is left.
-  it("re-opens at the raised floor and climbs from there", () => {
-    const agreed = 82.4; // a Driver accepted at 82,40 and walked at T−30h
-    const m = trip(14 * DAY, { pdp_start: agreed, pooled_at: before(30).toISOString() });
+  it("is satisfied by the curve itself — a later re-pool is never worth less", () => {
+    // [[d80]] said "never re-open below the fare the last Driver agreed to".
+    // Because the curve only rises as the pickup approaches, that is automatic:
+    // whatever a Driver agreed at t1, the price at any later t2 is at least it.
+    const m = trip(14 * DAY);
+    for (const [taken, walked] of [[7 * 24, 48], [200, 100], [48, 12], [12, 6]] as const) {
+      expect(currentFare(m, before(walked))).toBeGreaterThanOrEqual(currentFare(m, before(taken)));
+    }
+  });
+
+  it("honours a floor the re-pool RPC raised, as the backstop for SPEED WIN going off", () => {
+    // The one corner the curve does not cover on its own: a SPEED WIN trip
+    // re-pooled at 24h+ has SPEED WIN switched OFF, so its opening would drop.
+    // greatest(pdp_start, accepted_fare) in SQL raises the stored floor instead.
+    const agreed = 82.4;
+    const m = trip(14 * DAY, { pdp_start: agreed, speed_win: false });
     expect(openingPrice(m)).toBe(agreed);
-    expect(currentFare(m, before(30))).toBe(agreed);
-    expect(currentFare(m, before(20))).toBeGreaterThan(agreed);
+    for (const h of [30, 20, 10, 6]) expect(currentFare(m, before(h))).toBeGreaterThanOrEqual(agreed);
     expect(currentFare(m, before(5))).toBe(100);
   });
 

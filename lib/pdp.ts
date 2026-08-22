@@ -30,9 +30,11 @@ export interface PdpInputs {
   speed_win: boolean;
   /** The curve is anchored HERE, not to when the trip was posted. */
   pickup_at: string;
-  created_at: string; // when the mission entered the Pool
-  pooled_at?: string | null; // set when a mission is RE-POOLED (O7); restarts the climb
+  created_at: string; // when the mission first entered the Pool
 }
+
+// ⚑ `pooled_at` IS DELIBERATELY NOT AN INPUT. A re-pool does NOT restart the
+// climb (founder, 2026-08-22, [[d81]]). See `curveOpensAt` below.
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
@@ -82,8 +84,11 @@ export function currentFare(m: PdpInputs, now: Date = new Date()): number {
   const open = openingPrice(m);
   const gap = ceiling - open;
 
-  // An amendment FREEZES the fare by collapsing the curve — respond_to_amendment
-  // writes pdp_start = ceiling = the agreed total. Zero gap, nothing to climb.
+  // A zero-width band: nothing to climb. Reachable two ways — a Ceiling set at or
+  // below the floor (a draft, which the §5 guard does not police), and every trip
+  // amended before 2026-08-22, when respond_to_amendment still froze the agreed
+  // fare by collapsing the curve to pdp_start = ceiling. It no longer does — the
+  // fare is frozen in `accepted_fare` instead — but those rows still exist.
   if (!(gap > 0)) return round2(Math.min(open, ceiling));
 
   const u = progress(m, now);
@@ -134,13 +139,32 @@ function progress(m: PdpInputs, now: Date): number {
 }
 
 /**
- * When the climb starts: when the trip entered the Pool, or T−2 weeks, whichever
- * is LATER (§6 rule 4). A RE-POOLED mission (O7 cancel · reclaim · agreed
- * release) restarts from `pooled_at` — a re-pooled trip re-auctions.
+ * When the climb starts: when the trip FIRST entered the Pool, or T−2 weeks,
+ * whichever is LATER (§6 rule 4).
+ *
+ * ⚑ A RE-POOL DOES NOT RESTART THE CLIMB, and this is the whole reason the
+ * function does not read `pooled_at` (founder, 2026-08-22, [[d81]]):
+ *
+ *   "the price should be what it was supposed to be at that moment… regardless
+ *    of the driver behaviours. Otherwise the trip would be re-pooled at the
+ *    price from 7 days ago and doesn't make sense with the deadline."
+ *
+ * A trip whose Driver walks two days before the pickup goes back out at the two-
+ * days-out price, not at the one-week-out price it was taken at. The curve is a
+ * function of HOW LONG IS LEFT, not of what any Driver did — which is also why
+ * it satisfies [[d80]] for free: the curve only rises as the pickup approaches,
+ * so a re-pooled trip is automatically worth at least what the last Driver agreed
+ * to, with nothing extra needed to enforce it.
+ *
+ * ⚑ A RE-POOL NOW TOUCHES NOTHING PRICE-RELATED AT ALL ([[d82]]). It does not
+ * restart the climb, it does not raise the opening price, and it does not flip
+ * SPEED WIN — that last one used to happen automatically under 24h, and stopped
+ * because SPEED WIN raises where the curve OPENS, so its effect shrinks to zero
+ * as the pickup nears (+33 % at T−48h, +7 % at T−12h, +0 % at T−5h on a 110 €
+ * Ceiling). `speed_win` is now only ever what the Business set.
  */
 function curveOpensAt(m: PdpInputs, pickup: number): number {
-  const pooled = new Date(m.pooled_at ?? m.created_at).getTime();
-  return Math.max(pooled, pickup - HORIZON_MS);
+  return Math.max(new Date(m.created_at).getTime(), pickup - HORIZON_MS);
 }
 
 /**
