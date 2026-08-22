@@ -3702,14 +3702,48 @@ needs a real ordinal whenever a day carries more than one migration.**
 - **§ R and § V** — the two riders that were meant to ride along with the curve. The session went long on the
   founder's corrections instead, which was the right trade. Both are fully mapped in the handoff with
   file:line, so the next session does not re-derive them.
-  ⚑ **S64 accidentally unblocked § R's hardest part.** Sorting History by fare in SQL was impossible because
-  Postgres cannot compute the PDP fare — `mission.accepted_fare` now stores it as a plain column on every
-  trip accepted from today.
-  ⚑ **§ V got more urgent, not less.** The V-Class reclassification it exists to make survivable has already
-  shipped (`441b50f`); it is one row update from biting.
+  ⚑ **S64 first claimed it had unblocked § R's hardest part. IT HAD NOT** — caught by a verification pass
+  over the handoff itself, before the session closed. `lib/history-filter.ts:458-461` sorts on
+  `businessCost(fare + waiting_fee)`, the Business's ALL-IN figure, and `:452-457` records that keying on the
+  bare Course was already a shipped defect. So `accepted_fare` is not the sort key, and sorting by fare is
+  still the blocker. Worse, **no seeder writes `accepted_fare`** (`accept_mission` is its only writer), so the
+  owed re-seed would reproduce a 100%-NULL archive — 0 of 280 missions carry one today. Both corrected in the
+  handoff.
+  ⚑ **§ V is already biting, not pending.** The same verification pass found the live `Classe V` is
+  **already** stored `category='luxury'`, so that Driver is stranded off Business-van work right now —
+  `441b50f` and this log's own S60 entry describe it as still `business` because they predate the row move.
+  And `.local/seed/seed-fleet.mjs:49` still seeds that Driver as `business`, so the owed re-seed would
+  silently undo the reclassification and hide the bug.
 - **The Business-facing price sentence** — mocked up four ways, all rejected ([[d84]]). The fix is an
   enrolment tutorial after V1 (BACKLOG **§ AC**), not microcopy.
 - **The repo rename** — queued for S65 as item 1. It is a trademark question, not cosmetics.
 
 ### The founder's queue for S65, set explicitly
 **1.** rename the GitHub repo · **2.** § R volume ceiling · **3.** § V lower-class opt-in.
+
+### ⚑ Post-close: the handoff was verified, and it was wrong in five ways
+
+Written, then checked by three readers against the live repo and DB before the session closed. **Twelve
+errors, five of them load-bearing** — every one confirmed by hand before correcting:
+
+1. **`accepted_fare` does not make the fare sortable in SQL.** The sort key is `businessCost(fare + waiting)`,
+   and keying on the bare Course is a defect this codebase already shipped once and fixed.
+2. **No seeder writes `accepted_fare`** — the re-seed would produce a 100%-NULL archive. 0 of 280 today.
+3. **"The Pool throws away 89 % of what it fetches" was a whole-TABLE figure**, not a Pool one. The Pool is
+   bounded to future pooled trips: live, **2 rows, 0 with a null pickup**. A bounding-box prefilter is not
+   the cheap win. The Pool's real problem is that RLS makes it marketplace-wide.
+4. **The § V SQL guard moved** — S64's own `2026-08-22_accepted_fare.sql:100` superseded
+   `2026-08-11_accept_mission_eligibility.sql`. Editing the old file would have changed nothing in the DB, and
+   the next session would have wondered why.
+5. **The V-Class row is already `luxury`**, so § V is overdue rather than anticipatory — and the re-seed would
+   silently revert it.
+
+Also corrected: 74 columns not 76 · History does have an upper date bound, it is the lower one that is missing ·
+the truly unbounded History fan-out is the `mission_cancellation … .in(<every archived id>)` at `:118-126`,
+not the driver join (which is bounded by fleet size) · the superset sentence is at `:60-65` · one S64CURVE
+demo trip has aged into the past and the Pool hides it · the `s63-*` branches cited as push-route evidence
+were deleted on merge.
+
+**The lesson worth keeping: a handoff is a claim about the repo, and claims decay.** These were written the
+same day, by the session that did the work, and a fifth of them were already false — several *because of that
+same session's own migrations*. Verify a handoff against the code before closing, not just proofread it.

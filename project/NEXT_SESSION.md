@@ -494,7 +494,7 @@ wash that [[d55]] had made unreachable.
   `email` column says `s46.driver@pickup.local`. Match on `driver.auth_user_id`, never on `driver.email`.
 
 **REMAINING ON THE DRIVER↔DISPATCH LOOP** (audited from the code 2026-07-30, + the founder's own testing 2026-07-31).
-*(Historical, S51 — both A and B below shipped. **The live START HERE is the 2026-08-10 block further down**; this heading is kept only so the A/B references still resolve.)*
+*(Historical, S51 — both A and B below shipped. **SUPERSEDED — the live START HERE is the 2026-08-22 block (search "THE CURVE IS LIVE")**; this heading is kept only so the A/B references still resolve.)*
 
 **A. ✅ EXPIRED TRIPS — SHIPPED (S51, 2026-07-31, [[d62]]; migration `2026-07-31_expired_missions` applied; deployed
 `d7e06d4` → Vercel `success`).** A trip now expires **exactly at `pickup_at`** (founder: no grace), leaves the Pool, and
@@ -586,47 +586,71 @@ trademark search surfaces.
 a rename normally survives — but production deploys run through that link. Push something trivial and
 confirm a build fires before you call it done. The open PR history and old URLs redirect fine.
 
-## 2 · § R — THE VOLUME CEILING. ⚑ THE CURVE JUST UNBLOCKED THE HARD PART
+## 2 · § R — THE VOLUME CEILING
 
-Five screens load an entire table and filter it in JavaScript. Mapped in S64; use these, do not re-derive:
+Five screens load a table and filter it in JavaScript. Mapped in S64 **and then re-verified against the live
+DB, which corrected four of the claims** — the numbers below are the checked ones, not the first draft.
 
 | where | what it does |
 |---|---|
-| `app/(app)/pool/page.tsx:103-109` | fetches **every** pooled trip, then filters **four of the five** matching rules in JS (`:112-134`) — radius, luggage, body, car |
-| `app/(dispatch)/dispatch/history/page.tsx:101-107` | the Business's **whole archive**, all 76 columns, no limit, no date bound |
-| `…/history/page.tsx:141-159` | a **second** unbounded fan-out joining Driver + vehicle — this builds the name/plate search index |
-| `app/(dispatch)/dispatch/spend/page.tsx:126-133` | the **same** unbounded archive query |
+| `app/(app)/pool/page.tsx:106-108` | bounds in SQL by `status='pooled'`, `pickup_at > now()` **and** the Driver's tier — then filters **four of the five** matching rules in JS at `:114-133` (radius · luggage · body · car) |
+| `app/(dispatch)/dispatch/history/page.tsx:101-107` | the Business's whole archive, **74 columns**, no limit. There IS an upper date bound (`.lt("pickup_at", nowIso)`, `:106`); what is missing is a **lower** one |
+| `…/history/page.tsx:118-126` | ⚑ **the genuinely unbounded fan-out** — `mission_cancellation … .in("mission_id", <every archived id>)`. This hits PostgREST's **URL length limit** long before anything else breaks. Duplicated at `…/history/export/route.ts:94` |
+| `…/history/page.tsx:146-150` | the Driver + vehicle join. **Bounded by fleet size** (9 drivers live), not by archive size — lower priority than it looks, but it builds the name/plate search index |
+| `app/(dispatch)/dispatch/spend/page.tsx:126-133` | the same unbounded archive query |
 | `app/(app)/rides/history/page.tsx:96-101` | the Driver's own archive, same idiom |
 
 ⚑ **`project/SPEND_BRIEF.md`:197-198 IS WRONG.** It claims Spend "bounds its query by the period instants…
 rather than loading the whole archive" and concludes § R does not apply to it. It does. Fix the brief.
 
-⚑ **The Pool throws away ~89 % of what it fetches.** `2026-08-11_accept_mission_eligibility.sql:32-34`
-measured **241 of 271 missions with `pickup_lat IS NULL`**, and `lib/geo.ts:43` drops every one of them in
-JS *after* transfer. A bounding-box prefilter in SQL is the cheapest single win here.
-
-⚑ **THE BLOCKER — AND WHY IT IS SMALLER THAN IT WAS.** Sorting or paginating History **by fare** needs
-Postgres to compute the fare, and there is no PDP function in Postgres by design
-(`2026-08-11_fee_basis_band.sql:16-20`). `lib/history-filter.ts:458-461` sorts on `settledFare()`, in JS.
-**S64 changed this:** `mission.accepted_fare` now stores the frozen fare on every trip accepted from
-2026-08-22, so **a settled trip's fare is a plain column and SQL can sort on it.** Rows accepted before that
-are NULL and still need the JS path — which the wipe + re-seed removes entirely. **Sequence § R after the
-re-seed and the blocker is simply gone.**
-
 ⚑ **Do NOT paginate the CSV export** (`…/history/export/route.ts:137-142`). It runs the same query on
-purpose — its promise is "exactly what is on screen", over the *whole* result set. The two paths must
-diverge deliberately.
+purpose — its promise is "exactly what is on screen", over the *whole* result set.
 
 ⚑ **The chip counts are computed over the whole archive on purpose** (BACKLOG:919-923). Moving the list to
 SQL means a second aggregate query for them.
 
-## 3 · § V — A DRIVER MAY OPT IN TO LOWER-CLASS TRIPS. ⚑ NOW URGENT, NOT OPTIONAL
+### ⚑ TWO THINGS S64's FIRST DRAFT OF THIS SECTION GOT WRONG. Read before you plan.
 
-**The reason it was queued behind the curve has already happened.** The V-Class reclassification
-`business` → `luxury` **shipped** (`441b50f`), and the Pool matches tier **exactly**
-(`query.eq("category", vehicle.category)`). So every V-Class Driver stops seeing Business-van work — which
-is where most van volume will be — the moment the last live `Classe V` row is moved to `luxury`. One row
-update away. § V is what makes the reclassification survivable.
+**1 · `accepted_fare` does NOT make the fare sortable in SQL.** S64 claimed it did. It does not.
+`lib/history-filter.ts:458-461` sorts on
+`businessCost(mission, fare + waiting_fee)` — the Business's **all-in** figure — and the comment directly
+above it (`:452-457`) records that keying on the bare Course was **a shipped defect**: *"waiting was in the
+number and not in the key, and a pre-commission trip was compared against a post-commission one 15 % larger."*
+An `order('accepted_fare')` reintroduces exactly that bug. A SQL sort would have to reproduce `historyFare`'s
+branches (`:380-388` — expired → NULL, cancelled → `cancellation_fee`, else the settled fare) **plus**
+`waiting_fee` **plus** `businessCost`/`carriesCommission` over the four snapshot columns
+(`lib/commission.ts:238-253`). **Sorting by fare is still the blocker. Treat a generated/denormalised
+all-in column as the candidate fix, not `accepted_fare`.**
+
+**2 · The wipe + re-seed will NOT populate `accepted_fare`.** No seeder writes it — `s61-priced.ts:239`
+accepts with `.update({ driver_id, accepted_at, confirmed_at })` and `seed-fleet.mjs` inserts rows directly;
+both bypass `accept_mission`, which is the **only** writer
+(`docs/migrations/2026-08-22_accepted_fare.sql:133`). **Live right now: 0 of 280 missions have one.** A
+re-seed as written reproduces a 100 %-NULL archive. **Add `accepted_fare` to the seed-fix list.**
+
+⚑ **The "Pool throws away 89 %" claim was also wrong** and is corrected here so nobody re-derives it. The
+241-of-280 `pickup_lat IS NULL` figure is a **whole-table** number dominated by the archive; the migration
+that measured it (`2026-08-11_accept_mission_eligibility.sql:34-35`) says only that a faithful SQL *port of
+the radius rule* would refuse ~89 % — a statement about porting, not about what the page transfers. The Pool
+query is bounded to future pooled trips: **live, 2 rows, 0 of them with a null pickup.** And the rule is
+pickup **OR** dropoff (`pool/page.tsx:115-117`), so a null pickup with a geocoded dropoff survives anyway.
+**A bounding-box prefilter is not the cheap win here.** The Pool's real volume problem is structural — RLS
+lets any Driver read any pooled mission (`docs/kavenue_schema.sql:310-313`), so it scales with total
+marketplace supply, not with one Business's archive.
+
+## 3 · § V — A DRIVER MAY OPT IN TO LOWER-CLASS TRIPS. ⚑ ALREADY BITING, NOT PENDING
+
+⚑ **S64's first draft said this was "one row update away". It has already happened.** The live DB has one
+`Classe V` (plate IJ-905-KL, Driver Karim Nasri) and it is **already stored `category='luxury'`,
+`body_type='van'`, active**. The Pool matches tier exactly (`app/(app)/pool/page.tsx:108`), so that Driver is
+**stranded off Business-van work right now** — and Business-van is where most van volume will be. § V is the
+fix, and it is overdue rather than anticipatory. (`441b50f` and `SESSION_LOG.md:100-103` describe the row as
+still `business`; both were written 2026-08-16, before it was moved.)
+
+⚑ **AND THE OWED RE-SEED WOULD SILENTLY UNDO IT.** `.local/seed/seed-fleet.mjs:49` still seeds Karim with
+`cat: "business"` and `:268` writes `category: d.cat` verbatim — so a fresh fleet puts the row back to
+`business`, un-stranding him by accident and hiding the bug § V exists to fix. **Add this to the seed-fix
+list too.**
 
 ✅ **The pricing half is already done, by construction.** `currentFare()` reads **only mission columns** and
 never sees the Driver or their vehicle, so a First Driver on a Business job already sees the *Business*
@@ -634,11 +658,18 @@ price. The §6 curve preserved that. § V's pricing requirement reduces to one n
 resolve floor and ceiling from the MISSION's class, never the reader's.** It does. Do not break it.
 
 ⚑ **Relaxing `=` to `tier ≤ mine` must change THREE places IN ONE COMMIT**, or the Pool lists trips
-`accept_mission` then refuses: the Pool query (`app/(app)/pool/page.tsx:108`), the SQL eligibility guard
-(`2026-08-11_accept_mission_eligibility.sql`), and the card. That migration's header (:64-68) states the SQL
-guard is a deliberate **superset** of the app filter so drift can only *hide* a trip, never refuse one the
-Pool offered — relaxing the app side alone **inverts** that guarantee. Ordering is already there:
-`lib/vehicle-catalog.ts:18`, `SERVICE_TIERS = ["eco","business","luxury"]`.
+`accept_mission` then refuses:
+1. the Pool query — `app/(app)/pool/page.tsx:108`
+2. **the SQL guard — `docs/migrations/2026-08-22_accepted_fare.sql:100`** (`and v.category = v_mission.category`,
+   guard block `:97-108`). ⚑ **NOT `2026-08-11_accept_mission_eligibility.sql` — S64 superseded it**: the
+   2026-08-22 migration drops `accept_mission(uuid)` at `:67` and recreates it with `p_fare`, carrying its own
+   copy of the § B guard. Editing the 08-11 file changes **nothing** in the database.
+3. the Pool card.
+
+The 08-11 migration's own header still holds the reasoning, at **`:60-65`**: the SQL guard is a deliberate
+**superset** of the app filter so drift can only *hide* a trip, never refuse one the Pool offered — relaxing
+the app side alone **inverts** that guarantee. Same wording at `app/(app)/pool/page.tsx:93-96`. Ordering is
+ready: `lib/vehicle-catalog.ts:18`, `SERVICE_TIERS = ["eco","business","luxury"]`.
 
 ⚑ **Missing, and it is a D25 preview item:** the Pool card names the *mission's* class but never the
 Driver's own, so a First Driver seeing a Business badge has nothing telling them this is a deliberate
@@ -652,13 +683,17 @@ downgrade they opted into. Needs a contrast cue. Preview before building.
     gh run list --branch s65-my-work        # wait for `success`
     git push origin main                    # SAME SHAs → accepted, deploys
 
-**No PR needed.** Detail and the ruleset command are at the top of this file.
+**No PR needed.** Detail and the ruleset command are at the top of this file. (The `s63-*` branches cited
+up there as evidence have since been deleted — GitHub removes a merged branch. The route is still right:
+`s64-close` sits at the same SHA as `main`.)
 
 ## STATE OF THE DATABASE
 
-- **Three POOLED demo trips exist** (reference `S64CURVE`, 14 days / 2 days / 6 hours of lead, priced through
-  the real RPC) so the curve is visible in the app. Remove with
-  `node --experimental-strip-types .local/seed/s64-curve.ts --undo`.
+- **Three `S64CURVE` demo trips exist**, priced through the real RPC. ⚑ **They were seeded 2026-08-22 with
+  FIXED pickup times, so they age.** As of writing: one at T−313h, one at T−25h, and **one already in the
+  past — which the Pool hides** (`.gt("pickup_at", now)`, `app/(app)/pool/page.tsx:107`), so only two show.
+  Re-seed them to see three, or just remove them:
+  `node --experimental-strip-types .local/seed/s64-curve.ts --undo` (then re-run without `--undo`).
 - **The wipe + re-seed is still owed** and still sequenced after the curve. ⚑ Fix `.local/seed/seed-fleet.mjs`
   FIRST — it hand-sets ceilings, invents an opening price (`ceiling × 0.45`, flagged in place) and writes no
   commission snapshot. `s61-priced.ts` and `s64-curve.ts` are both worked examples of seeding through the
