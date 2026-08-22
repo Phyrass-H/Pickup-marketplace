@@ -376,6 +376,13 @@ export interface Database {
           cancelled_at: string | null;
           created_at: string;
           accepted_at: string | null;
+          // docs/06 §9 — the PDP fare FROZEN at acceptance, in Course space.
+          // Written by accept_mission from a number the SERVER computed with
+          // lib/pdp.ts; cleared on re-pool, after pdp_start has been raised to
+          // it so the trip can never re-open below a price a Driver already
+          // agreed to. NULL = never accepted, or accepted before the 2026-08-22
+          // migration — readers recompute the curve, exactly as they always did.
+          accepted_fare: number | null;
           confirmed_at: string | null;
           checked_in_at: string | null; // D61: Driver confirmed they'll be there (opens T-180). 2026-07-30 migration
           close_answer: CloseAnswer | null; // § Q: the Driver's answer to "what happened?". 2026-08-10 migration
@@ -453,6 +460,7 @@ export interface Database {
           cancelled_at?: string | null;
           created_at?: string;
           accepted_at?: string | null;
+          accepted_fare?: number | null;
           confirmed_at?: string | null;
           checked_in_at?: string | null;
           close_answer?: CloseAnswer | null;
@@ -841,9 +849,13 @@ export interface Database {
         Returns: number;
       };
       // Atomic accept + slot-conflict + Lock-in, server-side (Doc spine).
-      // The Driver PWA calls: rpc('accept_mission', { p_mission_id }).
+      // The Driver PWA calls: rpc('accept_mission', { p_mission_id, p_fare }).
+      // ⚑ p_fare is computed ON THE SERVER by lib/pdp.ts — the browser sends only a
+      // mission id, so there is nothing to forge — and is clamped into
+      // [floor, ceiling] in SQL anyway. Optional: omitting it stores NULL and every
+      // reader falls back to recomputing the curve (2026-08-22 migration).
       accept_mission: {
-        Args: { p_mission_id: string };
+        Args: { p_mission_id: string; p_fare?: number | null };
         Returns: Database["public"]["Tables"]["mission"]["Row"];
       };
       // Driver's consent to a proposed amendment (Phase-2 edit, D39). Atomic +

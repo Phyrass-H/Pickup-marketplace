@@ -164,7 +164,7 @@ describe("settledFare is the one basis", () => {
   it("prices the fare, the no-show and the cancellation basis identically", () => {
     // Same curve, same accept moment, three different endings: whatever the
     // trip became, the euro basis is the price the Driver accepted.
-    const base = { accepted_at: "2026-07-15T10:20:00+02:00" } as const;
+    const base = { accepted_at: "2026-07-15T10:00:00+02:00" } as const;
     const done = completed({ ...base });
     const noShow = completed({ ...base, no_show: true });
     expect(settledFare(done)).toBe(60);

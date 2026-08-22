@@ -421,8 +421,14 @@ export function ReclaimCard({
             {driverName} hasn’t confirmed — pickup is close
           </div>
           <div style={{ color: "var(--tone-danger-fg)", fontSize: 13, margin: "4px 0 12px" }}>
-            They accepted but never locked in. Couldn’t reach them by phone? Take the trip back — it re-pools as a
-            SPEED WIN so another Driver can grab it fast. No penalty to you.
+            {/* ⚑ It no longer re-pools "as a SPEED WIN". A re-pool changes nothing
+                about the price except that time has passed (2026-08-22, D82) —
+                and this close to the pickup the curve has already carried the
+                fare most of the way to the Ceiling on its own, which is what
+                actually makes another Driver take it. */}
+            They accepted but never locked in. Couldn’t reach them by phone? Take the trip back — it goes
+            straight to the Pool at today’s price, which this close to the pickup is near your maximum. No
+            penalty to you.
           </div>
           {error && <div className="notice error" style={{ marginBottom: 10 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -432,7 +438,7 @@ export function ReclaimCard({
               disabled={pending}
               style={{ background: "var(--tone-danger-fg)", color: "#fff", border: "none", borderRadius: 8, padding: "9px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
             >
-              <RefreshCw size={14} aria-hidden /> {pending ? "…" : "Reclaim and re-pool as SPEED WIN"}
+              <RefreshCw size={14} aria-hidden /> {pending ? "…" : "Take it back and re-pool"}
             </button>
             {driverPhone && (
               <a

@@ -11,14 +11,22 @@ We're continuing Kavenue (B2B VTC booking marketplace).
 `.env.local` and `node_modules` in place. Don't spend a turn working out where you're running.
 
 Everything works: `npm run dev`, the browser preview, reads against the real Supabase DB, the D25 preview loop.
-Push to `main` and Vercel auto-deploys — **Claude Code is allowed to push `main`**
-(`autoMode.allow` in `.claude/settings.local.json`).
 
-**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-20, S63).**
+⚑ **`main` IS PROTECTED NOW — YOU CANNOT PUSH TO IT (discovered S64, 2026-08-22).** A GitHub ruleset
+requires the CI check **`types · tests · build`** to have passed before anything lands, and a direct push has
+no way to show that, so `git push origin main` is rejected outright. **The route to production is: push a
+branch → CI runs → open a PR → merge.** The merge is what deploys to Vercel.
+⚑ **The rule is INVISIBLE FROM THE CODE.** `.github/workflows/ci.yml` is in the repo, but the ruleset that
+makes it *required* is a GitHub setting outside it — so you will not find it by reading files, you will find
+it by being rejected. This note exists so you don't.
+⚑ `CLAUDE.md` still says "do not open a PR unless explicitly asked". That stands — ask first. **PR #1 was
+S64's**, the first this repo has ever had.
+
+**⚑ THE LIVE RESUME POINT IS THE BLOCK HEADED "★★ START HERE" (2026-08-22, S64).**
 Search for it. Everything above it is history kept for its decision trail; several older "START HERE" and
-"NEXT" headings are superseded and say so. **Steps 0–4 of the pricing engine are shipped and live, and so is
-every loose end the money sweep left. The job is now step 5 — the §6 curve, and nothing before it.** Open by
-confirming that in one line, not by re-offering a menu.
+"NEXT" headings are superseded and say so. **Steps 0–5 of the pricing engine are shipped and live — the §6
+curve landed 2026-08-22, with both its migrations applied and every probe green.** What is left is listed in
+that block, smallest first. Open by confirming it in one line, not by re-offering a menu.
 
 START BY READING — **just these four**; they get you fully up to date without bloating context:
 - `CLAUDE.md` (root) — hard rules + glossary (auto-loaded anyway).
@@ -541,7 +549,85 @@ specific trip by drivers name, or passenger or internal reference, or car… per
   filters in memory, which is what lets the chip counts / Driver list / class list be honest about the *whole* archive.
   Correct at 28 trips, the first thing to break at 5 000. Also skipped: a density toggle (nobody asked).
 
-**★★ START HERE — STEP 5, THE §6 CURVE. Nothing else is queued in front of it (S63, 2026-08-20).**
+**★★ START HERE — THE CURVE IS SHIPPED. THREE SMALL THINGS ARE QUEUED (S64, 2026-08-22).**
+
+> ⚑ **S64 RAN LONG AND DID FOUR MORE THINGS AFTER THE CURVE.** Read [[d78]]–[[d83]] before touching
+> anything priced. The short version: the curve shipped, then the founder read the re-pool behaviour back
+> and found the design was carrying history it should not; then an adversarial review of the diff found four
+> real defects. **Five migrations, all applied. Six probes, all green. Suite 462.**
+>
+> **What S64 did.** Step 5, the whole of it. `lib/pdp.ts` is now the §6 curve: every trip opens at its
+> **rate-card floor**, moves by an equal amount **every time the time left to the pickup halves**, is
+> anchored to the **pickup** rather than to when it was posted, lands exactly on the Ceiling at **T−5h**,
+> and its steps are **log-spaced then jittered from a seed made of the mission id** — unguessable from
+> outside, perfectly replayable in a dispute. Then the founder read the re-pool behaviour off it the same
+> day and found the hole: a trip a Driver walked away from re-opened BELOW what that Driver had agreed to
+> pay. Fixed, which finally forced §9's stored fare into existence.
+>
+> **Two migrations, both APPLIED and verified:** `2026-08-22_pdp_curve.sql` (the three re-pool RPCs stop
+> overwriting the opening price) and `2026-08-22_accepted_fare.sql` (`mission.accepted_fare`,
+> `accept_mission` gains `p_fare`, the re-pool raises the floor to it, `respond_to_amendment` keeps it in
+> step). Commits `8a5db4c` and `602c458`. Suite **460**. Probes: `accepted-fare` 18 · `write-test` 170 ·
+> `curve-live` 8 · `migrations-2026-08-10` 58/0 · `migrations-2026-08-11` 23/0 — **all green**.
+>
+> **Seven things S64 decided that constrain what you build ([[d78]]–[[d83]], plus [[d73]] still standing):**
+> 1. **`mission.pdp_start` is the price the auction OPENS at, and it is now the rate-card floor in Course
+>    space.** The SQL fee-basis band reads it. Do not repurpose it, and do not let anything overwrite it
+>    except the re-pool's `greatest(pdp_start, accepted_fare)`.
+> 2. **SPEED WIN's 70 % opening is DERIVED on read, never stored.** That is what lets a re-pool turn it on
+>    and off without losing the floor. Never write `ceiling * 0.7` into a column.
+> 3. **Rule 2 beats rule 3 where §6 overlaps** — the Ceiling is reached at T−5h, full stop, for anything
+>    posted more than five hours out.
+> 4. **`accepted_fare` NULL is not zero.** It means priced before 2026-08-22, and those rows recompute the
+>    curve. Nothing was backfilled and nothing should be.
+> 5. **A RE-POOL TOUCHES NOTHING PRICE-RELATED** ([[d82]]). Not the climb, not the opening price, not
+>    `speed_win`. The price is a function of how long is LEFT, never of what a Driver did. If you find
+>    yourself writing "on re-pool, set the price to…", stop and read [[d81]].
+> 6. **`pooled_at` IS NOT A PRICING INPUT.** `lib/pdp.ts` deliberately does not read it. It is still stamped
+>    and still read by `lib/spend.ts` for the fill-time metric. **Do not wire it back into the curve.**
+> 7. **AN AMENDMENT MAY ONLY RAISE THE CEILING, NEVER LOWER IT**, and no longer collapses the curve
+>    ([[d81]]). The Ceiling is the Business's own maximum; `accepted_fare` is what freezes the agreed total.
+>
+> ⚑ **`pdp_step` and `pdp_interval` are DEAD.** Written null everywhere, read by nothing, left in the
+> schema for the archive. If you find code reading them, it is stale.
+
+## WHAT IS QUEUED, SMALLEST FIRST
+
+1. **The Business-facing copy sentence — PREVIEWED 2026-08-22, awaiting the founder's pick.** §6
+   prescribes one: *"the price rises in steps until 5 hours before pickup, when it reaches the maximum you
+   set."* The form still says only "starting price · climbs up to your Ceiling" — true, but it never says
+   *when* the rise stops, which is the half a hotel needs.
+   ⚑ **A REAL DRIFT WAS FOUND WHILE MOCKING IT UP.** §6 says the Business should see **"Your maximum cost:
+   €273.67", with the range beneath it** — the MAXIMUM leads. The form leads with the STARTING price
+   instead. That matters: a hotel quotes its Guest off the maximum, so making 36,25 € the hero when they may
+   pay 110,00 € invites them to underquote. Four variants were shown; **D restores §6's shape** (maximum
+   first, "opens at X and rises in steps until 5 h before pickup" beneath) and **A** is the one-line
+   minimum-change alternative. Preview first (D25) — the mockups are in the S64 transcript.
+2. **The two riders the curve was supposed to carry, and didn't.** `§ R` — the Pool and the archive load
+   everything and filter in memory. `BACKLOG § V` — a Driver may opt in to lower-class trips and must see
+   the *lower class's* price, which needed steps 1 and 5 both in place, and now has them. **The founder
+   asked to be reminded of these later too.**
+3. **Step 6 — the §7 30-second hold.** Last, because it shares the accept gate. It now has what it was
+   missing: `accepted_fare` gives it a price to freeze against, and the curve is a pure function of
+   (mission, instant) so a held price is trivially reproducible.
+4. **BACKLOG § AA — SPEED WIN as a badge the PRICE can earn** ([[d83]], decided, not built). Small: a
+   predicate beside `isAtCeiling`, no migration. **Needs a switch** — in beta's thin Pool it would be on
+   every trip. UI, so preview first.
+5. **BACKLOG § AB — asking a Business to raise the Ceiling on a trip that will not fill.** Blocked on
+   notifications (deferred). The one place a popup is honestly earned.
+
+**THEN the wipe + re-seed**, which the founder sequenced after the curve and confirmed again on 2026-08-22.
+⚑ **`.local/seed/seed-fleet.mjs` must be fixed FIRST or a fresh fleet is born stale** — it still hand-sets
+ceilings, invents an opening price from the ceiling (`× 0.45`, flagged in place) and writes no commission
+snapshot. `.local/seed/s61-priced.ts` and the new `.local/seed/s64-curve.ts` are both worked examples of
+seeding through the real `mission_price()` RPC with `courseFromBusinessTotal`.
+
+**Still the founder's call, none blocking:** BACKLOG **§ Y** (who receives a Driver's cancellation penalty —
+no screen names one until it is answered) · **§ Q6** (the unclosed-trip pile) · **§ U.4** · **§ W** · **§ Z**.
+
+---
+
+**(Superseded: "★★ START HERE — STEP 5, THE §6 CURVE" — S63, 2026-08-20.)**
 
 > **What S63 did, so you don't redo it.** It cleared the four loose ends S62 queued and nothing else. An
 > unlocated stop is refused by both forms (drafts excepted); the night rate, the settled waiting rate and its

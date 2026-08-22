@@ -328,6 +328,10 @@ price is alive whether you look a fortnight out or the same morning.
 3. **Posted inside 5 hours:** the climb runs from posting to the **midpoint** to pickup, then sits
    at the ceiling. Posted at T−3h → ceiling at T−1h30. Even a very late trip gets a real climb *and*
    time at the top to be taken.
+   ⚑ **Rules 2 and 3 overlap between 5 and 10 hours of lead, and rule 2 wins** (founder, 2026-08-22,
+   [[d78]]). Rule 3 governs only what it says — posted *inside* five hours. A trip posted 6h out is
+   urgent and reaches its ceiling at T−5h like any other, rather than sitting a third of the way up
+   its range while the clock runs down. In code: `topLeadFor(lead) = lead > 5h ? 5h : lead/2`.
 4. **The curve never starts earlier than 2 weeks out.** A trip posted a month ahead sits at its
    floor until then. Two identical trips for the same pickup are therefore worth the same at every
    moment, whoever typed theirs in first.
@@ -341,6 +345,14 @@ price is alive whether you look a fortnight out or the same morning.
 - **The jitter is seeded from the mission id.** The curve is unguessable from outside but perfectly
   reproducible: every read agrees, and any past price can be replayed and proved in a dispute.
 - **The price never goes down**, and always lands exactly on the ceiling.
+
+⚑ **BUILT 2026-08-22 (S64) — `lib/pdp.ts`.** The climb is **linear in `log(time remaining)`**, which is
+what "equal movement every time the remaining time halves" means arithmetically. The staircase is that
+continuous curve sampled at `n+1` positions, evenly spaced (= log-spaced in time), each interior one slid
+by ±0.45 of a step by a `mulberry32` stream seeded from `xmur3(mission.id)`; `n = clamp(round(gap/2), 8, 60)`.
+The endpoints are never jittered. **Where the opening price is stored, and why it had to survive a re-pool,
+is [[d79]].** Both generators are written out in `lib/pdp.ts` rather than imported — a curve that has to be
+replayable in a dispute years from now needs its generator readable beside it.
 
 ### Why unpredictable
 
@@ -362,14 +374,32 @@ when it reaches the maximum the Business set."* True, complete, and still ungues
   trip can tick it a month out.
 - **Never applied automatically at posting.** At **≤5h** the form shows a nudge with a one-tap
   *Enable SPEED WIN* button. Nothing is ticked for them.
-- **On re-pool it is automatic** (Driver cancel · reclaim · agreed release): under 24h to pickup →
-  on; 24h or more → off.
+- ~~**On re-pool it is automatic** (Driver cancel · reclaim · agreed release): under 24h to pickup →
+  on; 24h or more → off.~~ ⛔ **REMOVED 2026-08-22 ([[d82]]).** A re-pool now changes nothing about the
+  price except that time has passed. That rule was written when a re-pool RESTARTED the climb at 50 % of
+  the Ceiling and needed a boost to fill; there is no restart any more (§6 curve, [[d81]]). And SPEED WIN
+  raises where the curve *opens*, so its effect shrinks as the pickup nears — on a 110 € Ceiling, **+33 %
+  at T−48h, +7 % at T−12h, +0 % at T−5h**. Switching it on *because* a trip became urgent does least
+  exactly when it is needed most. It is also the Business's own checkbox and their own money: Kavenue
+  moving it unasked is Kavenue nudging the fare, which §0 forbids. **`speed_win` is now only ever what the
+  Business set.** The ≤5h nudge at booking stays — that is the Business choosing.
 
 ### What the Business sees
 
 At booking: **"Your maximum cost: €273.67"**, with the range beneath it. They quote their Guest
 from the maximum and add their margin. After acceptance, the row shows **what they saved against
 that maximum** — the argument for the whole auction, made visible on every booking.
+
+⛔ **THE BOOKING SCREEN DELIBERATELY DOES NOT DO THIS — founder, 2026-08-22 ([[d84]]).** The form
+leads with the STARTING price and keeps the maximum on the line beneath, and it stays that way.
+Four rewordings were mocked up — including this paragraph's own "maximum first" shape — and **all
+four were rejected as too technical for a reader new to how an auction works.** The Ceiling is not
+hidden from anyone: the Business typed it two fields above, on the same screen. And a denser
+sentence does not teach a model, it only makes a busy screen busier.
+**The gap is real and the fix is onboarding, not microcopy** — an enrolment tutorial that teaches a
+Business how the pricing works and how to deal with Drivers, once V1 is complete (BACKLOG **§ AC**).
+⚑ **Do not "fix" the screen back to the paragraph above.** It records the design intent; [[d84]]
+records what ships, and why.
 
 ⚑ **The commission follows the accepted fare, never the ceiling.** A hotel that fills cheaply saves
 twice: on the fare *and* on the fee.
@@ -458,6 +488,11 @@ adjusts routes relative to that; it never sets the level on its own.
 - **The fare freezes at acceptance.** That frozen figure is the contract price and the basis for
   every cancellation fee, however late the trip closes. Storing it also closes the €0-fee hole,
   since there is finally a fare in the database to recompute a fee against.
+  ✅ **BUILT 2026-08-22 (S64)** — `mission.accepted_fare`, written by `accept_mission` from a number
+  computed server-side by `lib/pdp.ts` (Postgres cannot evaluate the §6 curve) and clamped into
+  `[floor, ceiling]` in SQL. **NULL means priced before this existed** — readers recompute, and nothing
+  was backfilled. It is also what makes [[d80]] possible: a re-pool raises `pdp_start` to it, so a trip
+  never re-opens below a fare a Driver already agreed to.
 - **Rounding: store full precision, round only at render.** Never back-derive a fare from a rounded
   displayed total.
 - **Category, never model.** The Business picks a service class, never a make or model.
@@ -626,9 +661,13 @@ hard-wire Stripe into mission logic.
    (S61)** — `commission_rate` + snapshot columns + `commission_split()`, mirrored by `lib/commission.ts` in
    integer cents (float loses the exact `.5` ties Postgres rounds). All-in for the Business, net for the
    Driver; see §1.
-3. **The §6 curve**, replacing the current `pdp_start`/`pdp_step`/`pdp_interval` climb. Money-critical
-   — `pdp_start` is used by the SQL fee-basis band, so this ships with the money tests updated and
-   both existing probes re-run.
+3. ~~**The §6 curve**, replacing the `pdp_start`/`pdp_step`/`pdp_interval` climb.~~ ✅ **SHIPPED
+   2026-08-22 (S64)** — `lib/pdp.ts` + `2026-08-22_pdp_curve.sql` (the three re-pool RPCs stop
+   overwriting the opening price). `pdp_start` now holds the rate-card **floor** in Course space and the
+   fee-basis band is unchanged and more accurate for it ([[d79]]); `pdp_step` / `pdp_interval` are dead
+   columns. Money tests rewritten (455), both migration probes updated, `write-test` 170/170, plus a new
+   `curve-live` probe against the real DB. **Still owed:** the two riders (§ R volume ceiling, BACKLOG
+   § V), the Business-facing copy sentence, and §9's stored accepted fare.
 4. **The §7 hold** — after the pricing engine, since both touch the accept path.
 5. **§8 learned routes** — once there is volume.
 

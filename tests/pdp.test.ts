@@ -1,203 +1,359 @@
 // lib/pdp.ts — the fare itself. Everything downstream is arithmetic on top of
 // this, so a defect here is wrong money on every screen at once.
+//
+// These tests are written against the RULES in docs/06 §6, not against a
+// schedule. The schedule is jittered on purpose — pinning the exact euro value
+// of step 7 would be pinning the jitter, and the next tweak to the generator
+// would go red for no reason. What must never move is: it opens on the floor, it
+// only ever rises, it lands exactly on the Ceiling at T−5h, and it is the same
+// curve every time you ask.
 import { describe, expect, it } from "vitest";
-import { currentFare, isAtCeiling, settledFare } from "@/lib/pdp";
+import { ceilingReachedAt, currentFare, isAtCeiling, openingPrice, settledFare } from "@/lib/pdp";
 import { mission, speedWinCurve, standardCurve } from "./fixtures";
 
 const at = (iso: string) => new Date(iso);
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 
-describe("currentFare — the climb", () => {
-  it("starts at pdp_start and climbs one step per interval", () => {
-    const m = mission({ ...standardCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    expect(currentFare(m, at("2026-07-15T10:00:00+02:00"))).toBe(50);
-    expect(currentFare(m, at("2026-07-15T10:09:59+02:00"))).toBe(50);
-    expect(currentFare(m, at("2026-07-15T10:10:00+02:00"))).toBe(55);
-    expect(currentFare(m, at("2026-07-15T10:25:00+02:00"))).toBe(60);
+/** A trip picked up at noon on 4 September, posted `leadMs` before that. */
+function trip(leadMs: number, over: Record<string, unknown> = {}) {
+  const pickup = Date.parse("2026-09-04T12:00:00+02:00");
+  return mission({
+    id: "3f2a91c4-77bd-4e0a-9a1b-2c5d8e6f0a13",
+    pickup_at: new Date(pickup).toISOString(),
+    created_at: new Date(pickup - leadMs).toISOString(),
+    ...standardCurve(), // 100 € Ceiling, 60 € floor
+    ...over,
+  });
+}
+/** `hours` before that same pickup. */
+const before = (hours: number) => new Date(Date.parse("2026-09-04T12:00:00+02:00") - hours * HOUR);
+
+describe("currentFare — the two endpoints", () => {
+  it("opens at the floor, whatever the lead time (§6 rule 1)", () => {
+    for (const lead of [14 * DAY, 2 * DAY, 12 * HOUR, 6 * HOUR, 3 * HOUR]) {
+      const m = trip(lead);
+      expect(currentFare(m, new Date(Date.parse(m.created_at)))).toBe(60);
+    }
   });
 
-  it("climbs in whole steps only — no interpolation between them", () => {
-    const m = mission({ ...standardCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    // 15 min in is one and a half steps; the fare is one step, not 57,50.
-    expect(currentFare(m, at("2026-07-15T10:15:00+02:00"))).toBe(55);
+  it("lands exactly on the Ceiling at T−5h and sits there (§6 rule 2)", () => {
+    const m = trip(2 * DAY);
+    expect(currentFare(m, before(5.01))).toBeLessThan(100);
+    expect(currentFare(m, before(5))).toBe(100);
+    expect(currentFare(m, before(1))).toBe(100);
+    expect(currentFare(m, before(0))).toBe(100);
+    expect(currentFare(m, before(-2))).toBe(100); // two hours after the pickup
   });
 
-  it("clamps at the Ceiling and never exceeds it", () => {
-    const m = mission({ ...standardCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    // 50 + 10 steps × 5 = 100 exactly at T+100 min, then flat forever.
-    expect(currentFare(m, at("2026-07-15T11:40:00+02:00"))).toBe(100);
-    expect(currentFare(m, at("2026-07-15T23:00:00+02:00"))).toBe(100);
-    expect(currentFare(m, at("2027-07-15T10:00:00+02:00"))).toBe(100);
+  it("climbs to the MIDPOINT instead when it is posted inside 5 hours (§6 rule 3)", () => {
+    const m = trip(3 * HOUR); // posted at T−3h → Ceiling at T−1h30
+    expect(currentFare(m, before(3))).toBe(60);
+    expect(currentFare(m, before(1.51))).toBeLessThan(100);
+    expect(currentFare(m, before(1.5))).toBe(100);
+    expect(ceilingReachedAt(m)).toEqual(before(1.5));
   });
 
-  it("never goes backwards when the clock does (created_at in the future)", () => {
-    // Clock skew between the DB and the reader must not produce a negative step
-    // count and a fare below the start price.
-    const m = mission({ ...standardCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    expect(currentFare(m, at("2026-07-15T09:00:00+02:00"))).toBe(50);
-  });
-
-  it("is deterministic — same inputs, same now, same number", () => {
-    const m = mission({ ...standardCurve() });
-    const when = at("2026-07-15T10:33:00+02:00");
-    expect(currentFare(m, when)).toBe(currentFare(m, when));
-  });
-});
-
-describe("currentFare — a curve that isn't configured", () => {
-  it("falls back to half the Ceiling when pdp_start is null", () => {
-    const m = mission({ ceiling: 90, pdp_start: null, pdp_step: null, pdp_interval: null });
-    expect(currentFare(m, at("2026-07-15T18:00:00+02:00"))).toBe(45);
-  });
-
-  it("holds the start price flat when there is no step or no interval", () => {
-    const noStep = mission({ ceiling: 100, pdp_start: 60, pdp_step: 0, pdp_interval: 10 });
-    const noInterval = mission({ ceiling: 100, pdp_start: 60, pdp_step: 5, pdp_interval: 0 });
-    const late = at("2026-07-16T10:00:00+02:00");
-    expect(currentFare(noStep, late)).toBe(60);
-    expect(currentFare(noInterval, late)).toBe(60);
-  });
-
-  it("clamps even the flat start price to the Ceiling", () => {
-    // A malformed row (start above the Business's maximum) must never bill above
-    // what the Business authorised.
-    const m = mission({ ceiling: 40, pdp_start: 60, pdp_step: 0, pdp_interval: 0 });
-    expect(currentFare(m, at("2026-07-15T10:00:00+02:00"))).toBe(40);
+  it("still tops out at T−5h for a trip posted just over five hours ahead", () => {
+    // Founder, 2026-08-22: rule 2 wins wherever the two overlap. An urgent trip
+    // should reach its Ceiling fast and fill, not sit cheap while the clock runs.
+    const m = trip(6 * HOUR);
+    expect(ceilingReachedAt(m)).toEqual(before(5));
+    expect(currentFare(m, before(5))).toBe(100);
   });
 });
 
-describe("currentFare — SPEED WIN vs the standard curve", () => {
-  it("starts hotter and climbs faster", () => {
-    const created = "2026-07-15T10:00:00+02:00";
-    const normal = mission({ ...standardCurve(), created_at: created });
-    const hot = mission({ ...speedWinCurve(), created_at: created });
+describe("currentFare — the shape (§6: equal movement every time the time left halves)", () => {
+  it("moves by the same amount on every halving of the remaining time", () => {
+    const m = trip(14 * DAY); // 336 h → 5 h is log2(336/5) = 6.07 halvings
+    const halvings = Math.log2((14 * DAY) / (5 * HOUR));
+    const perHalving = 40 / halvings; // 40 € of gap spread over 6.07 halvings
 
-    expect(currentFare(hot, at(created))).toBe(70);
-    expect(currentFare(normal, at(created))).toBe(50);
-
-    // 10 minutes in: the standard curve has taken one step, SPEED WIN two.
-    expect(currentFare(normal, at("2026-07-15T10:10:00+02:00"))).toBe(55);
-    expect(currentFare(hot, at("2026-07-15T10:10:00+02:00"))).toBe(80);
+    let previous = 60;
+    let remaining = (14 * DAY) / HOUR;
+    for (let k = 1; remaining / 2 > 5; k++) {
+      remaining /= 2;
+      const fare = currentFare(m, before(remaining));
+      const expected = 60 + perHalving * k;
+      // One step is 2 € (40 € of gap, ~one step per 2 €) and the staircase both
+      // lags the continuous curve and carries ±0.45 of a step of jitter, so the
+      // honest tolerance is a step and a half — not a decimal place.
+      expect(Math.abs(fare - expected)).toBeLessThan(3);
+      expect(fare).toBeGreaterThan(previous);
+      previous = fare;
+    }
   });
 
-  it("reaches the Ceiling sooner", () => {
-    const hot = mission({ ...speedWinCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    expect(isAtCeiling(hot, at("2026-07-15T10:29:00+02:00"))).toBe(false);
-    expect(isAtCeiling(hot, at("2026-07-15T10:30:00+02:00"))).toBe(true);
+  it("is the same rule at every zoom level — a 2-day trip runs the whole climb over 2 days", () => {
+    const long = trip(14 * DAY);
+    const short = trip(2 * DAY);
+    // Both are 60 % of the way up their own window at the same FRACTION of it,
+    // even though one window is a fortnight and the other is two days.
+    const frac = (m: ReturnType<typeof trip>, lead: number) => {
+      const top = 5 * HOUR;
+      const r = Math.exp(Math.log(lead) - 0.6 * Math.log(lead / top));
+      return currentFare(m, before(r / HOUR));
+    };
+    expect(Math.abs(frac(long, 14 * DAY) - frac(short, 2 * DAY))).toBeLessThan(3);
+  });
+
+  it("never goes down, at any resolution", () => {
+    const m = trip(14 * DAY);
+    let previous = -1;
+    for (let i = 0; i <= 20_000; i++) {
+      const hours = 15 * 24 - (i / 20_000) * (16 * 24); // a day either side of the window
+      const fare = currentFare(m, before(hours));
+      expect(fare).toBeGreaterThanOrEqual(previous);
+      previous = fare;
+    }
+  });
+
+  it("takes roughly one step per €2 of gap, floored at 8 and capped at 60 (§6)", () => {
+    const distinct = (m: ReturnType<typeof trip>) => {
+      const seen = new Set<number>();
+      for (let i = 0; i <= 4000; i++) seen.add(currentFare(m, before(336 - (i / 4000) * 331)));
+      return seen.size;
+    };
+    // 40 € of gap → 20 steps → 21 distinct prices, opening included.
+    expect(distinct(trip(14 * DAY))).toBe(21);
+    // A 6 € gap would be 3 steps; the floor of 8 keeps every rise visible.
+    expect(distinct(trip(14 * DAY, standardCurve(100, 94)))).toBe(9);
+    // A 400 € gap would be 200 steps; the cap of 60 keeps it from flickering.
+    expect(distinct(trip(14 * DAY, standardCurve(500, 100)))).toBe(61);
+  });
+});
+
+describe("currentFare — anchored to the PICKUP, not to when it was posted", () => {
+  it("prices two trips for the same pickup alike, whoever typed theirs in first (§6 rule 4)", () => {
+    // The curve never starts earlier than 2 weeks out, so a trip entered a month
+    // ahead and one entered a fortnight ahead are worth the same at every moment.
+    const month = trip(30 * DAY);
+    const fortnight = trip(14 * DAY);
+    for (const hours of [336, 200, 100, 50, 20, 8, 5.5, 5, 1]) {
+      expect(currentFare(month, before(hours))).toBe(currentFare(fortnight, before(hours)));
+    }
+  });
+
+  it("holds a trip posted a month out at its floor until the curve opens", () => {
+    const m = trip(30 * DAY);
+    expect(currentFare(m, before(30 * 24))).toBe(60);
+    expect(currentFare(m, before(20 * 24))).toBe(60);
+    expect(currentFare(m, before(14 * 24))).toBe(60);
+    // It is still on the floor an hour into the fortnight — the first step is
+    // a fair way in, because the steps are log-spaced and the window is 336 h.
+    // What matters is that it HAS started: by T−200h it has moved.
+    expect(currentFare(m, before(200))).toBeGreaterThan(60);
+  });
+
+  it("is cheaper at a given instant when the pickup is further away", () => {
+    const soon = trip(2 * DAY);
+    const later = mission({ ...soon, pickup_at: new Date(Date.parse(soon.pickup_at) + 2 * DAY).toISOString() });
+    expect(currentFare(later, before(12))).toBeLessThan(currentFare(soon, before(12)));
+  });
+
+  it("returns the Ceiling when the pickup was already past at posting", () => {
+    expect(currentFare(trip(-1 * HOUR), before(2))).toBe(100);
+  });
+});
+
+describe("currentFare — the jitter (§6: unguessable, but replayable)", () => {
+  it("gives the same curve every single time it is asked", () => {
+    const m = trip(14 * DAY);
+    const once = [200, 100, 50, 20, 9].map((h) => currentFare(m, before(h)));
+    const again = [200, 100, 50, 20, 9].map((h) => currentFare(m, before(h)));
+    expect(again).toEqual(once);
+  });
+
+  it("gives a DIFFERENT schedule to a different mission id", () => {
+    const a = trip(14 * DAY);
+    const b = mission({ ...a, id: "8c1d5e77-40a2-4bb9-9f31-6de2c4a90b58" });
+    const sample = (m: typeof a) => [200, 100, 50, 20, 9].map((h) => currentFare(m, before(h)));
+    expect(sample(b)).not.toEqual(sample(a));
+    // …but both still obey the endpoints. Unguessable, not unbounded.
+    expect(currentFare(b, before(336))).toBe(60);
+    expect(currentFare(b, before(5))).toBe(100);
+  });
+});
+
+describe("openingPrice — where the auction opens", () => {
+  it("is the stored floor on a standard trip", () => {
+    expect(openingPrice(trip(2 * DAY))).toBe(60);
+  });
+
+  it("is 70 % of the Ceiling under SPEED WIN — the same curve, higher start (§6)", () => {
+    const m = trip(2 * DAY, speedWinCurve());
+    expect(openingPrice(m)).toBe(70);
+    expect(currentFare(m, before(48))).toBe(70);
+    expect(currentFare(m, before(5))).toBe(100);
+  });
+
+  it("never opens BELOW the floor, even when 70 % of the Ceiling is less", () => {
+    // A Business may set a Ceiling close to its floor; 70 % of it would be under.
+    const m = trip(2 * DAY, speedWinCurve(100, 80));
+    expect(openingPrice(m)).toBe(80);
+  });
+
+  it("falls back to half the Ceiling when pdp_start is null — a pre-curve row", () => {
+    // Exactly what the SQL fee-basis band coalesces to, so the two agree.
+    const m = trip(2 * DAY, { ...standardCurve(), pdp_start: null });
+    expect(openingPrice(m)).toBe(50);
+    expect(currentFare(m, before(48))).toBe(50);
+  });
+
+  it("is flat at the Ceiling on an amendment-collapsed curve", () => {
+    // respond_to_amendment freezes an agreed fare by writing
+    // ceiling = base_fare = pdp_start = new_fare. Zero gap, nothing to climb.
+    const m = trip(2 * DAY, { ...standardCurve(), ceiling: 175, pdp_start: 175 });
+    for (const hours of [48, 24, 6, 5, 1, 0]) expect(currentFare(m, before(hours))).toBe(175);
   });
 });
 
 describe("currentFare — a RE-POOLED mission (O7)", () => {
-  it("measures the climb from pooled_at, not created_at", () => {
-    // Posted at 08:00, cancelled and re-pooled at 10:00. At 10:10 the climb is
-    // one step old, not thirteen — otherwise a re-pooled trip would land in the
-    // Pool already at its Ceiling and the whole point of re-pooling is lost.
-    const m = mission({
-      ...standardCurve(),
-      created_at: "2026-07-15T08:00:00+02:00",
-      pooled_at: "2026-07-15T10:00:00+02:00",
-    });
-    expect(currentFare(m, at("2026-07-15T10:10:00+02:00"))).toBe(55);
+  // ⚑ A RE-POOL DOES NOT RESTART THE CLIMB (founder, 2026-08-22, [[d81]]).
+  // The price is a function of how long is LEFT, not of what any Driver did, so
+  // a trip is worth the same at T−12h whether or not somebody held it in between.
+  it("is worth the same as if nobody had ever taken it", () => {
+    const untouched = trip(14 * DAY);
+    const walked = trip(14 * DAY, { pooled_at: before(12).toISOString() });
+    for (const h of [12, 10, 8, 6, 5]) {
+      expect(currentFare(walked, before(h))).toBe(currentFare(untouched, before(h)));
+    }
   });
 
-  it("ignores created_at entirely once pooled_at is set", () => {
-    const m = mission({
-      ...standardCurve(),
-      created_at: "2026-07-01T08:00:00+02:00",
-      pooled_at: "2026-07-15T10:00:00+02:00",
-    });
-    expect(currentFare(m, at("2026-07-15T10:00:00+02:00"))).toBe(50);
+  it("goes back out at the DEADLINE price, not the price it was taken at", () => {
+    // The founder's own example, scaled: taken a week out, walked two days out.
+    // It must re-pool at the two-days-out price — a trip with two days left is
+    // not worth what a trip with a week left was worth.
+    const m = trip(14 * DAY, { pooled_at: before(48).toISOString() });
+    const takenAt = currentFare(m, before(7 * 24));
+    const backOutAt = currentFare(m, before(48));
+    expect(backOutAt).toBeGreaterThan(takenAt);
+    expect(currentFare(m, before(5))).toBe(100);
+  });
+
+  it("still lifts the opening when the re-pool turns SPEED WIN on (§6)", () => {
+    // Under 24h the re-pool sets speed_win. That raises where the curve OPENS,
+    // which lifts the whole curve — it does not restart it.
+    const plain = trip(14 * DAY, { pooled_at: before(12).toISOString() });
+    const hot = trip(14 * DAY, { ...speedWinCurve(), pooled_at: before(12).toISOString() });
+    expect(openingPrice(hot)).toBe(70);
+    expect(currentFare(hot, before(12))).toBeGreaterThan(currentFare(plain, before(12)));
+    expect(hot.pdp_start).toBe(60); // the floor is still underneath it
   });
 });
 
 describe("settledFare — the climb FROZEN at accept (the S48b money bug)", () => {
   it("is the price the Driver accepted, however long ago that was", () => {
-    // The bug: a trip accepted at 60 read 100 (the Ceiling) a week later,
-    // because currentFare kept climbing to `now`. It charged a Business, paid a
-    // Driver and set a cancellation basis 40 too high.
-    const m = mission({
-      ...standardCurve(),
-      status: "completed",
-      created_at: "2026-07-15T10:00:00+02:00",
-      accepted_at: "2026-07-15T10:20:00+02:00",
-    });
-    expect(settledFare(m)).toBe(60);
-    // Same row, read at any point in the future: still 60.
-    expect(settledFare(m)).toBe(60);
-    expect(currentFare(m, at("2026-07-22T10:00:00+02:00"))).toBe(100);
-  });
-
-  it("freezes a SPEED WIN trip at its accept price too", () => {
-    const m = mission({
-      ...speedWinCurve(),
-      status: "completed",
-      created_at: "2026-07-15T10:00:00+02:00",
-      accepted_at: "2026-07-15T10:05:00+02:00",
-    });
-    expect(settledFare(m)).toBe(75);
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString() });
+    const atAccept = currentFare(m, before(100));
+    expect(atAccept).toBeLessThan(100);
+    expect(settledFare(m)).toBe(atAccept);
+    // The live fare would have run all the way to the Ceiling by now. It must not.
+    expect(currentFare(m, before(0))).toBe(100);
   });
 
   it("freezes at accept measured from pooled_at on a re-pooled trip", () => {
-    const m = mission({
-      ...standardCurve(),
-      status: "completed",
-      created_at: "2026-07-15T08:00:00+02:00",
-      pooled_at: "2026-07-15T10:00:00+02:00",
-      accepted_at: "2026-07-15T10:20:00+02:00",
+    const m = trip(14 * DAY, {
+      pooled_at: before(12).toISOString(),
+      accepted_at: before(11).toISOString(),
     });
-    expect(settledFare(m)).toBe(60);
+    expect(settledFare(m)).toBe(currentFare(m, before(11)));
   });
 
-  it("falls back to the live fare while a mission is still in the Pool", () => {
-    // No accepted_at: nothing has been agreed, so the live climb IS the answer.
-    const m = mission({ ...standardCurve(), accepted_at: null });
+  it("freezes a SPEED WIN trip at its accept price too", () => {
+    const m = trip(2 * DAY, { ...speedWinCurve(), accepted_at: before(48).toISOString() });
+    expect(settledFare(m)).toBe(70);
+  });
+
+  it("falls back to the live fare when nobody has taken it yet", () => {
+    const m = trip(2 * DAY, { accepted_at: null });
     expect(settledFare(m)).toBe(currentFare(m));
   });
 
-  it("is never above the Ceiling even if accept is stamped long after posting", () => {
-    const m = mission({
-      ...standardCurve(),
-      accepted_at: "2026-07-20T10:00:00+02:00",
-      created_at: "2026-07-15T10:00:00+02:00",
-    });
-    expect(settledFare(m)).toBe(100);
+  // 2026-08-22: the frozen fare is a COLUMN now, not a re-derivation.
+  it("prefers the stored accepted_fare over recomputing the curve", () => {
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: 73.5 });
+    expect(settledFare(m)).toBe(73.5);
+    expect(settledFare(m)).not.toBe(currentFare(m, before(100)));
+  });
+
+  it("still recomputes when accepted_fare is null — the whole pre-2026-08-22 archive", () => {
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: null });
+    expect(settledFare(m)).toBe(currentFare(m, before(100)));
+  });
+
+  it("reads a stored fare that PostgREST handed back as a string", () => {
+    // numeric(10,2) arrives as a string often enough that this is not theoretical.
+    const m = trip(14 * DAY, { accepted_at: before(100).toISOString(), accepted_fare: "73.50" });
+    expect(settledFare(m)).toBe(73.5);
   });
 });
 
-describe("rounding", () => {
-  it("returns clean cents rather than binary-float dust", () => {
-    // 0.1 + 0.2 arithmetic reaches this function through pdp_step; a fare of
-    // 60.000000000000004 would print, sum and compare wrong.
-    const m = mission({
-      ceiling: 100,
-      pdp_start: 0.1,
-      pdp_step: 0.2,
-      pdp_interval: 10,
-      created_at: "2026-07-15T10:00:00+02:00",
-    });
-    expect(currentFare(m, at("2026-07-15T10:10:00+02:00"))).toBe(0.3);
+describe("the re-pool floor (founder, 2026-08-22)", () => {
+  // The RAISING happens in SQL — the re-pool RPCs write
+  // `pdp_start = greatest(pdp_start, accepted_fare)` — and is verified against the
+  // real database by .local/probe/curve-live.ts. What belongs HERE is the other
+  // half of the contract: that lib/pdp.ts honours a raised floor with no special
+  // case, and re-auctions from it over whatever time is left.
+  it("is satisfied by the curve itself — a later re-pool is never worth less", () => {
+    // [[d80]] said "never re-open below the fare the last Driver agreed to".
+    // Because the curve only rises as the pickup approaches, that is automatic:
+    // whatever a Driver agreed at t1, the price at any later t2 is at least it.
+    const m = trip(14 * DAY);
+    for (const [taken, walked] of [[7 * 24, 48], [200, 100], [48, 12], [12, 6]] as const) {
+      expect(currentFare(m, before(walked))).toBeGreaterThanOrEqual(currentFare(m, before(taken)));
+    }
   });
 
-  it("rounds a half-cent up, consistently", () => {
-    const m = mission({
-      ceiling: 100,
-      pdp_start: 10.005,
-      pdp_step: 0,
-      pdp_interval: 0,
-    });
-    expect(currentFare(m, at("2026-07-15T10:00:00+02:00"))).toBe(10.01);
+  it("honours a floor the re-pool RPC raised, as the backstop for SPEED WIN going off", () => {
+    // The one corner the curve does not cover on its own: a SPEED WIN trip
+    // re-pooled at 24h+ has SPEED WIN switched OFF, so its opening would drop.
+    // greatest(pdp_start, accepted_fare) in SQL raises the stored floor instead.
+    const agreed = 82.4;
+    const m = trip(14 * DAY, { pdp_start: agreed, speed_win: false });
+    expect(openingPrice(m)).toBe(agreed);
+    for (const h of [30, 20, 10, 6]) expect(currentFare(m, before(h))).toBeGreaterThanOrEqual(agreed);
+    expect(currentFare(m, before(5))).toBe(100);
+  });
+
+  it("never returns less than the opening price, whatever the floor was raised to", () => {
+    // The SQL fee-basis band clamps a fee into [pdp_start, ceiling], so a fare
+    // below the opening would make the band start rewriting honest money.
+    for (const floor of [60, 82.4, 99.99, 100]) {
+      const m = trip(14 * DAY, { pdp_start: floor, pooled_at: before(30).toISOString() });
+      for (const h of [30, 20, 10, 6, 5, 1]) {
+        expect(currentFare(m, before(h))).toBeGreaterThanOrEqual(floor);
+        expect(currentFare(m, before(h))).toBeLessThanOrEqual(100);
+      }
+    }
   });
 });
 
 describe("isAtCeiling", () => {
   it("is false below the Ceiling and true once the climb tops out", () => {
-    const m = mission({ ...standardCurve(), created_at: "2026-07-15T10:00:00+02:00" });
-    expect(isAtCeiling(m, at("2026-07-15T11:30:00+02:00"))).toBe(false);
-    expect(isAtCeiling(m, at("2026-07-15T11:40:00+02:00"))).toBe(true);
+    const m = trip(2 * DAY);
+    expect(isAtCeiling(m, before(48))).toBe(false);
+    expect(isAtCeiling(m, before(6))).toBe(false);
+    expect(isAtCeiling(m, before(5))).toBe(true);
+    expect(isAtCeiling(m, before(0))).toBe(true);
+  });
+});
+
+describe("rounding", () => {
+  it("returns clean cents rather than binary-float dust", () => {
+    const m = trip(14 * DAY, standardCurve(87.31, 41.07));
+    for (let i = 0; i <= 500; i++) {
+      const fare = currentFare(m, before(336 - (i / 500) * 331));
+      expect(Math.round(fare * 100) / 100).toBe(fare);
+    }
   });
 
-  it("is true immediately for a mission posted with no climb configured", () => {
-    // A ceiling-priced mission with no curve is already at its maximum.
-    const m = mission({ ceiling: 80, pdp_start: 80, pdp_step: 0, pdp_interval: 0 });
-    expect(isAtCeiling(m, at("2026-07-15T10:00:00+02:00"))).toBe(true);
+  it("never exceeds the Ceiling — the SQL fee-basis band depends on it", () => {
+    const m = trip(14 * DAY, standardCurve(87.31, 41.07));
+    for (let i = 0; i <= 2000; i++) {
+      const fare = currentFare(m, before(340 - (i / 2000) * 345));
+      expect(fare).toBeLessThanOrEqual(87.31);
+      expect(fare).toBeGreaterThanOrEqual(41.07);
+    }
   });
 });

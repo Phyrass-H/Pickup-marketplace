@@ -3374,3 +3374,295 @@ and every one held.
 the review found in them · `6b35d21` the backlog write-ups. All CI-green, all deployed, working tree clean,
 live DB baseline 277 with every fixture reverted. **No migration was written this session** — nothing here
 needed one.
+
+---
+
+## Session 64 — 2026-08-22 · PRICING STEP 5: THE §6 CURVE (branch `main`)
+
+**The last thing that changes what a newly posted trip looks like.** `pdp_start` / `pdp_step` /
+`pdp_interval` — a fixed-size, fixed-interval ladder climbing from 50 % of the Ceiling since D21 — is
+replaced by the curve `docs/06` §6 designed. Money-critical, so it shipped with the money tests
+rewritten, both migration probes updated, `write-test` re-run, and a new live probe.
+
+### What the curve is
+
+`lib/pdp.ts`, rewritten. Given a mission and an instant it returns one number, for ever:
+
+| | old (D21) | §6 |
+|---|---|---|
+| Opens at | 50 % of the Ceiling (70 % SPEED WIN) | **the rate-card floor** |
+| Steps | fixed size, fixed interval | equal movement each time the remaining time **halves** |
+| Anchored to | when it was posted | **the pickup** |
+| Reaches the Ceiling | whenever the steps add up | exactly at **T−5h** |
+| Predictability | a ladder anyone can compute | **jittered, seeded from the mission id** |
+
+The shape is one line: the climb is **linear in `log(time remaining)`**, which *is* "equal movement every
+time the remaining time halves". Progress runs from the trip's remaining time when it entered the Pool
+down to the top lead, and the staircase is that continuous curve sampled at `n + 1` step positions —
+evenly spaced (= log-spaced in time), each interior one slid by ±0.45 of a step by a `mulberry32` stream
+seeded from `xmur3(mission.id)`. **Uneven step sizes fall out of the uneven step times for free — one
+source of randomness, not two**, exactly as §6 asks. `n = clamp(round(gap / 2), 8, 60)`. The endpoints are
+never jittered, so every trip opens exactly on its floor and lands exactly on its Ceiling.
+
+**Both PRNGs are written out in the file rather than imported.** The curve has to be replayable years from
+now to settle a dispute; the generator must be readable next to the thing it seeds, not versioned somewhere
+else.
+
+### The one judgement call, and the founder ruled on it
+
+§6 rule 2 says the Ceiling is reached at T−5h. Rule 3 says a trip posted *inside* 5 hours climbs to the
+midpoint instead. **Between 5h and 10h of lead the two collide** — read rule 2 literally and a trip posted
+6 h out is at its Ceiling almost immediately; smooth it (`top = T − min(5h, lead/2)`) and that same trip is
+only ~26 % up its gap at T−5h, ≈35 € all-in for a job five hours away.
+
+**Founder, 2026-08-22: rule 2 wins wherever they overlap** ([[d78]]). An urgent trip should reach its
+Ceiling fast and fill. `topLeadFor()` is therefore `lead > 5h ? 5h : lead/2` — nothing clever.
+
+### Where the floor is stored — and the defect that decided it
+
+`mission.ceiling` is the Course. The floor has to be the Course too, so `createMission` converts
+`mission_price().floor_price` (which is **all-in**, like the field the Dispatcher types) with the *same*
+snapshot rates as the Ceiling. Mixing the two spaces would have opened every auction 15 % high.
+
+It goes in **`pdp_start`, which keeps its exact meaning** — the price the auction opens at. That was chosen
+over a new column for one reason: **the SQL fee-basis band reads `pdp_start` and now works unchanged and
+better.** `least(coalesce(pdp_start, ceiling * 0.5), ceiling)` used to describe a flat 50 %; it now
+describes a real floor, which is the honest bottom of the legitimate range. The `coalesce` is what keeps
+every pre-curve row reading exactly as it always did.
+
+**⚑ The map found the defect that would have broken it.** The three re-pool RPCs — `driver_cancel_mission`,
+`reclaim_mission`, `respond_to_release` — **overwrite `pdp_start` with `round(ceiling * 0.7)` or
+`round(ceiling * 0.5)`**. Under the old curve that WAS the opening price and rewriting it was the whole
+mechanism. Under the §6 curve it erases the floor the first time a Driver walks, permanently, since nothing
+recomputes it. `docs/migrations/2026-08-22_pdp_curve.sql` re-creates the three functions **verbatim** from
+their live definitions with only those three assignments removed — diffed line by line, 16/10/10 changed
+lines, all of them the pdp block and one comment.
+
+**SPEED WIN's hotter opening is derived, never stored.** `openingPrice()` returns
+`speed_win ? max(floor, ceiling × 0.70) : floor`. That is precisely what lets a re-pool turn SPEED WIN on
+(under 24h) and off (24h+) without ever losing the floor underneath — the RPCs now flip one boolean.
+It also fixes a real edge: a Business may set a Ceiling close enough to the floor that 70 % of it is
+*below* the floor.
+
+**`pdp_step` / `pdp_interval` are dead.** The step count falls out of the gap and the step times out of the
+mission id. Written `null` everywhere rather than left stale, so nothing can read a ladder that no longer
+exists. The columns stay for the archive.
+
+### The compile error that was the point
+
+`PdpInputs` gained `id` and `pickup_at` as **required** fields, and `tsc` immediately failed on
+`app/(app)/rides/actions.ts:15` and `app/(dispatch)/dispatch/actions.ts:12` — both `FARE_COLS` constants
+selected neither. Those five reads produce the `p_fare_snapshot` argument to `driver_cancel_mission`,
+`mark_no_show` and `business_cancel_mission`. **This is the exact bug class `lib/pdp.ts` already documents
+having shipped once** (a narrow select silently fell back to the live fare and recorded a €100 penalty on a
+€70 trip). Making the anchor and the seed non-optional turned it into a compile error instead of a money bug.
+Both constants are now `id, …, ceiling, pdp_start, speed_win, pickup_at, created_at, pooled_at, accepted_at`.
+
+`pickup_at` is safe as an anchor because **nothing moves it after posting**: the info edit whitelists it out
+by name, `respond_to_amendment` rewrites the pickup *address* but not the time, and no SQL path assigns it.
+
+### Tests — 448 → 455
+
+`tests/pdp.test.ts` rewritten against the RULES, not a schedule. Pinning the euro value of step 7 would be
+pinning the jitter. What it pins instead: opens on the floor at every lead time · lands on the Ceiling
+exactly at T−5h and sits there through pickup and past it · climbs to the midpoint when posted inside 5h ·
+**moves by the same amount on every halving** (within a step and a half — the staircase both lags the
+continuous curve and carries the jitter) · monotone across 20 000 samples · step count 8/21/61 for a 6 €,
+40 € and 400 € gap · a month-out and a fortnight-out trip priced identically at every instant (rule 4) ·
+same id → same curve, different id → different schedule, both still hitting both endpoints · SPEED WIN
+opens at 70 % but never below the floor · a null `pdp_start` falls back to half the Ceiling, the same
+number the SQL band coalesces to · an amendment-collapsed curve is flat · re-pool restarts from `pooled_at`.
+
+The other 25 failures were fixtures encoding the old ladder. `standardCurve()` is now a §6 curve
+(100 € Ceiling / 60 € floor) and `completed()` **accepts at the instant it was posted**, so its settled fare
+is the opening price, exactly 60 — deliberately, so that Spend, Earnings and History tests stay free of the
+curve's jitter. Only `minutesToAccept` still passes an explicit later accept, because it is the one test
+actually about fill time.
+
+### Probes
+
+- `.local/probe/write-test.ts` — **170 checks, ALL AGREE.** Its `FARE_COLS` now mirrors the app's.
+- `.local/probe/migrations-2026-08-10.ts` — **55 passed · 3 failed**, and the three are one per re-pool RPC,
+  all the new "pdp_start UNTOUCHED" assertion. `.local/probe/migrations-2026-08-11.ts` — **22 · 1**, same.
+  **These four go green when the migration is applied**; they are red on purpose until then.
+- `.local/probe/curve-live.ts` — NEW. Creates one mission on the live DB the way `createMission` does,
+  reads it back through the app's own `FARE_COLS`, and asserts the endpoints. **8 checks, ALL AGREE**:
+  opens on 26,30 € all-in (the exact quoted floor), the Business sees the floor it was quoted, the Ceiling
+  is reached at T−5h to the second, monotone, frozen at accept. Cleans up after itself.
+- `.local/seed/s64-curve.ts` — NEW, with `--undo`. Three POOLED trips at 14 days / 2 days / 6 hours of
+  lead, priced through the real RPC. The Driver's Pool rendered **27,74 €** for the 31 km Business trip —
+  the driver-net of its floor, matching the seeder to the cent. No console errors.
+
+### Also changed
+
+- `mission-form.tsx` carried a **second copy** of the opening-price formula for the preview card. It now
+  mirrors `openingPrice()` exactly — three places compute it, all in Course space, converted once.
+- The SPEED WIN checkbox said *"start high (70% of ceiling) and climb **fast**"*. It no longer climbs
+  faster — §6 makes it "the same curve with a higher starting point, nothing more", and every trip reaches
+  the Ceiling at T−5h whether it is on or off. Now: *"open at 70% of your Ceiling instead of the floor, so
+  a Driver takes it sooner."*
+- `.local/seed/seed-fleet.mjs` — its private copy of `settledFare` was the old linear climb; ported to the
+  curve. **It still hand-sets ceilings and writes no commission snapshot** — flagged in place, and that is
+  the re-seed job, which the founder sequenced after this one.
+- `.local/seed/s61-priced.ts` and `app/api/seed/route.ts` — opening price and dead columns.
+
+### Not done, on purpose
+
+- **The two riders** (§ R volume ceiling, BACKLOG § V lower-class pricing) and **step 6, the §7 hold**.
+- **The Business-facing copy pass.** §6 prescribes a publishable sentence — *"the price rises in steps
+  until 5 hours before pickup, when it reaches the maximum you set"* — and the form still says only
+  "climbs up to your Ceiling". True, but less than it could say. UI copy needs a preview first (D25).
+- **No accepted-fare column.** `settledFare` still recomputes at `accepted_at`, so shipping the curve
+  reprices historical accepted trips. Founder, 2026-08-22: *"no need to update prices on existing trips"* —
+  it is all test data and the wipe follows. `docs/06` §9 still asks for the frozen fare to be stored, and
+  §7's hold will need it. Parked, not solved.
+- `.earn-probe.mjs` at the repo root is a tracked scratch probe carrying its own copy of the old linear
+  fare. Left alone; it is stale, not load-bearing.
+
+### The order this has to land in
+
+**Migration first, then the code.** The app is correct before and after, but a re-pool run against the old
+RPCs writes `ceiling × 0.5` into what is now the floor column. Nothing is pushed until the migration is in.
+
+---
+
+## Session 64, part B — 2026-08-22 · the frozen fare, and the re-pool floor ([[d80]])
+
+**The founder read the re-pool behaviour off the curve and found the hole in it the same day.** Not a
+regression — the D21 curve did the same thing — but the §6 curve made it visible, because the ≥24h branch
+now opens at a real floor rather than at 50 % of the Ceiling.
+
+**The scenario, on real numbers** (Business 31 km · floor 36,25 → Ceiling 110,00 all-in): a Driver accepts
+at **50,68** and walks at **T−30h**. The trip re-pooled at **36,25**. Under 24h it never bit — SPEED WIN
+comes on and 70 % of the Ceiling lands within 2 € of where the price already was (79,18 → 77,00).
+
+Ruling and reasoning are in [[d80]]. Built as **a raised floor, not a special case**:
+
+    pdp_start = greatest(pdp_start, accepted_fare)   -- then accepted_fare = null
+
+so `openingPrice()` needs no branch and the SQL fee-basis band's bottom rises with it. `greatest` skips
+NULLs, so a trip nobody ever took keeps its original floor. Repeated re-pools can only raise it.
+
+### That forced §9's stored fare, which had never been built
+
+`settledFare` re-derived the curve at `accepted_at` on every read. `docs/06` §9 has asked for the frozen
+figure to be *stored* since it was written. `docs/migrations/2026-08-22_accepted_fare.sql`:
+
+- **`mission.accepted_fare numeric(10,2)`**, nullable, Course space. **Nothing backfilled** (founder:
+  *"no need to update prices on existing trips"*). NULL → every reader recomputes, exactly as before.
+- **`accept_mission(p_mission_id uuid, p_fare numeric default null)`.** Postgres cannot evaluate the curve,
+  so the number is computed in the **accept server action** with `lib/pdp.ts`. That is safe because the
+  Driver's browser sends only a mission id — there is nothing to forge — and it is clamped into
+  `[floor, ceiling]` in SQL regardless, using the fee-basis band's own expression. **The one-argument
+  function is dropped first**, or `accept_mission(uuid)` becomes an ambiguous call. The DEFAULT is what made
+  the migration safe to apply *before* the code deployed: the old call still worked and stored NULL.
+- **`respond_to_amendment` sets `accepted_fare = new_fare`** beside the collapse it already does. Without
+  that line an amended trip keeps billing the PRE-amendment number on the invoice, the cancellation basis
+  and Earnings.
+- The three re-pool RPCs raise the floor and clear the fare. `business_cancel_mission` / `mark_no_show`
+  deliberately KEEP it — the trip was cancelled, not re-pooled, and that number is their fee's basis.
+
+456 lines, of which **28 actually differ** and ~9 of those are a comment: Postgres cannot patch a function
+body, so five whole functions are reproduced. All five were extracted from their live definitions by script
+and diffed back, not retyped.
+
+### The type system caught the read paths again
+
+Adding `accepted_fare` to `settledFare`'s parameter type produced nine compile errors across `rides/actions`,
+`dispatch/actions`, both amend files and two pages — every one a select list or a row shape that would have
+silently read `undefined`. Both `FARE_COLS` gained the column.
+
+### Verification
+
+- **`.local/probe/accepted-fare.ts` — NEW, 18 checks, ALL AGREE.** Drives the whole cycle through the real
+  RPCs as the real Driver: post at T−48h → sit until T−30h so it has really climbed → accept → the fare
+  freezes on the row → `settledFare` reads the column not the curve → the Driver walks → **the floor rises
+  to 44,07 Course (50,68 all-in), the frozen fare is cleared, and the trip re-opens at 50,68, not 36,25** →
+  it still reaches the Ceiling by T−5h → a second re-pool never lowers it → and an accept with **no** fare
+  argument still works and stores NULL, which is what made the migration deployable ahead of the code.
+- `write-test` **170 · ALL AGREE** · `curve-live` **8 · ALL AGREE** · `migrations-2026-08-10` **58 · 0** ·
+  `migrations-2026-08-11` **23 · 0**. All four green with both migrations applied.
+- Suite **460**.
+
+### Still owed after this
+
+`docs/06` §7's hold now has the column it needs to freeze a price against. The Business-facing copy sentence
+and the two riders (§ R, BACKLOG § V) are untouched, and the founder has asked to be reminded of both later.
+
+---
+
+## Session 64, part C — 2026-08-22 · the adversarial review, and the founder's better rule ([[d81]])
+
+**A 47-agent adversarial review of the curve diff** (five lenses, each finding refuted by three independent
+skeptics on different angles, majority-survives). **7 confirmed, 7 refuted.** The confirmed set collapsed to
+four distinct defects — two were duplicates found by different lenses. All four reproduced by hand before
+anything was changed; the refuted seven included two I would otherwise have chased (the "settledFare
+re-prices 171 live missions" claim, and the 5h discontinuity, which is [[d78]] on purpose).
+
+**1 · The floor could be silently replaced by a wrong number.** `createMission` wrote
+`pdp_start = course * 0.5` whenever `quote` was null — and `quote` is null whenever routing fails, not only
+when there is no drop-off. On a **re-saved draft that already carried a real rate-card floor**, one bad
+minute from Mapbox overwrote it permanently, and the §5 floor guard was skipped in the same breath
+(`!asDraft && quote &&`). Fixed with the file's own conditional-spread idiom, the same way `eta` already
+works: absent, not overwritten. **Fixed in code.**
+
+**2 · The fee-basis band lost its teeth on SPEED WIN trips.** Since the curve derives SPEED WIN's 70 %
+opening on read rather than storing it, the SQL band went on clamping to the *stored* floor. On a SPEED WIN
+trip with Ceiling 100 / floor 30, the curve can never produce a fare below 70 — yet a forged basis of 30
+passed. At a 75 % cancellation that is **22,50 € charged instead of 60,00 €**, where the pre-curve code
+would have caught it at 52,50. Fixed by `mission_opening_price(mission)`, an `immutable` SQL mirror of
+`openingPrice()`, called by the band — and **wired into `diff-sql-vs-lib`** (now **693 checks**) so the two
+halves cannot drift silently again. `docs/migrations/2026-08-22_opening_price_band.sql`, **applied**.
+
+**3 · The amendment defect, and the rule the founder gave instead.** See [[d81]]. The review found that an
+amended trip which later re-pools is pinned at one flat price for ever, because `respond_to_amendment`
+collapses the curve to zero width. Offering the founder the choice produced something better than either
+option: **a re-pool should not restart the climb at all.** `lib/pdp.ts` stopped reading `pooled_at`;
+`respond_to_amendment` stops overwriting the Ceiling and the floor.
+`docs/migrations/2026-08-22_amendment_keeps_ceiling.sql` — 17 changed lines, 5 of them real.
+
+**4 · Cosmetic, not fixed.** The starting price previewed in the form can land a cent from the stored one on
+~1 % of distances — the browser computes the rate card in floats, Postgres in `numeric`. The Ceiling has
+carried the same property since S61 and already handles it (`snapped`). Noted, not chased.
+
+**Test surgery.** The re-pool tests were the ones asserting the OLD behaviour, so they were rewritten around
+the new rule: a re-pooled trip is worth the same as one nobody ever took; it goes back out at the deadline
+price, not the price it was taken at; SPEED WIN still lifts the opening without restarting anything. Suite
+**462**.
+
+---
+
+## Session 64, part D — 2026-08-22 · the re-pool stops touching the price ([[d82]], [[d83]])
+
+**Two removals, from two directions, landing on one rule.** `docs/migrations/2026-08-22e_repool_touches_nothing.sql`
+— the three re-pool RPCs each lose 15 lines and gain 4, because with no SPEED WIN flip the
+`if v_hours < 24` split has nothing to branch on and collapses. Full reasoning in [[d82]].
+
+1. **The floor raise, found by a probe.** `.local/probe/accepted-fare.ts` flagged that a re-pooled trip read
+   **52,70 €** where an untouched one read **43,37 €** at the same instant — [[d80]]'s mechanism fighting
+   [[d81]]'s rule. [[d80]]'s intent survives without it: the curve only rises toward the pickup, so a
+   re-pooled trip is already worth at least what the last Driver agreed to.
+2. **The SPEED WIN flip, found by the founder asking whether 24h was the right threshold.** It isn't, and no
+   threshold is — SPEED WIN raises where the curve *opens*, so its lift shrinks from +33 % at T−48h to
+   **+0 % at T−5h**. It did least exactly when it was supposed to help. Measured, tabulated in [[d82]].
+
+⚑ **A naming trap, hit while writing that migration.** Five migrations now share `2026-08-22`, and their
+filenames do **not** sort into apply order. A script that resolved "which file holds the live definition" by
+sorting alphabetically pointed at the wrong version of `driver_cancel_mission` — it is live in
+`_opening_price_band`, not `_pdp_curve`. Caught before it did damage; the fifth file is named **`2026-08-22e_`**
+so it sorts last. **The date-prefix convention needs a real ordinal when a day carries more than one migration.**
+
+**Copy that this made false, and is now fixed:** the reclaim button said *"Reclaim and re-pool as SPEED WIN"*
+(now *"Take it back and re-pool"*, with the block above it explaining the real reason another Driver takes it —
+this close to the pickup the curve has already carried the fare near the maximum); the release dialog said
+*"(as a SPEED WIN if it's within 24h of pickup)"*; and `docs/06` §6's "on re-pool it is automatic" bullet is
+struck through with the measurements.
+
+**[[d83]] — SPEED WIN as an earned badge.** The founder's idea, argued against three ways and right on all
+three: at scale FOMO clears trips early, so crossing 70 % of the Ceiling is rare and means something; §6
+already says SPEED WIN is only a higher starting point on the same curve, so the two cases are identical to
+a Driver; and the Driver needs the cue, not the number. **Designed, not built** — it is UI, so it gets a
+preview first (D25), and it needs a switch because in beta's thin Pool it would be on everything.
+
+Suite **462**. All six probes green: `diff-sql-vs-lib` 693 · `write-test` 170 · `curve-live` 8 ·
+`accepted-fare` 20 · `migrations-2026-08-10` 61/0 · `migrations-2026-08-11` 23/0.

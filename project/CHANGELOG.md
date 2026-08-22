@@ -5,6 +5,67 @@
 
 ---
 
+## 22 August 2026 — the price now moves the way it was designed to
+
+- **Putting a trip back in the Pool now changes nothing about its price except that time has passed.**
+  It used to do three things at once — restart the climb, lift the starting price, and switch SPEED WIN
+  on if the pickup was under 24h away. All three are gone. The trip simply goes back out at today's
+  price and carries on climbing towards your maximum.
+- **We stopped switching SPEED WIN on for you.** It's your box and your money, and it turned out to do
+  least exactly when it was supposed to help: on a 110 € trip it adds 33% two days out, 7% twelve hours
+  out, and nothing at all five hours out — because by then the price has climbed there on its own.
+  SPEED WIN is now only ever what you set. Nothing to approve, no popup, no extra work for you.
+
+- **A dropped trip goes back out at today's price, not the price it was taken at.** Your rule, and it's
+  better than the one I'd built. A trip a Driver took a week out and abandoned two days out now
+  re-enters the Pool at the **two-days-out** price and keeps climbing from there. The price depends on
+  how long is left before the pickup — never on what any Driver did along the way.
+- **Amending a trip no longer quietly lowers your maximum.** If you set a Ceiling of 110 € and then
+  agreed 71,53 € for an added stop, your maximum silently became 71,53 €. It now stays at 110 € — an
+  amendment can only ever raise it, never lower it — and the trip keeps a real price range to auction
+  inside if the Driver later drops it.
+- **Two holes closed that you'd never have seen.** A failed map lookup at the moment you re-posted a
+  saved draft could overwrite that trip's floor with an unrelated number, permanently. And on a SPEED
+  WIN trip the cancellation-fee check was still measuring against the old floor, which would have let a
+  cancellation be charged at 22,50 € where it should have been 60,00 €. Both found by a review that
+  reads the code adversarially and tries to break it.
+
+- **A trip a Driver drops never goes back out cheaper than they agreed to pay for it.** This was the
+  one real hole in the new curve, and you caught it. A Driver took a Cannes run at 50,68 € and walked
+  thirty hours before the pickup; the trip went back into the Pool at **36,25 €** — cheaper than it
+  had been a minute earlier, on a trip that was now *more* urgent, throwing away the one thing we
+  actually knew: that a Driver had said yes at 50,68. It now re-opens at **50,68 €** and climbs from
+  there. Every time it happens again it can only go up, never back down.
+- **The agreed fare is now written down.** Until today the app worked out what a trip had sold for by
+  replaying the price curve backwards every time it needed the number. It's now recorded the moment a
+  Driver accepts, which is what makes the point above possible — and means a past price can be shown
+  rather than re-derived. Trips from before today are untouched and read exactly as they always did.
+
+- **Every trip starts at its floor.** Until today a trip went into the Pool at half the maximum you
+  set — a number that had nothing to do with what the trip actually costs to run. It now opens at the
+  **floor**: the lowest price the trip may legally be offered at, worked out from the rate card. On a
+  22 km Eco run that is 26,30 € rather than half your Ceiling.
+- **The price climbs against the clock, not against the stopwatch.** It used to go up by a fixed
+  amount every ten minutes from the moment you posted it. It now climbs by the same amount **every
+  time the time left before the pickup halves** — two weeks to one week is one rise, one week to
+  3½ days another, ten hours to five hours another. The same rule whether you look a fortnight out or
+  the same morning, and a trip posted two days ahead runs its whole climb over those two days.
+- **It reaches your Ceiling five hours before the pickup**, and sits there until someone takes it or it
+  expires. Post inside five hours and it climbs to the halfway point instead, so even a very late trip
+  gets a real climb *and* time at the top to be taken.
+- **Nobody can time it.** The rises are deliberately unevenly spaced, generated from the trip's own
+  identity — so a Driver can't work out that "if I wait eleven more minutes it goes up again" and hold
+  out. There is only one sensible strategy left: take it when it's worth it to you. It is still exactly
+  reproducible: any past price can be replayed and proved, months later.
+- **A trip a Driver walked away from re-auctions on the time that's left.** Put back in the Pool at
+  T−12h, it runs its whole climb over the remaining seven hours and still tops out five hours before
+  the pickup. Under 24h it comes back with SPEED WIN on, so it opens at 70% of your Ceiling.
+- **SPEED WIN is now honestly described.** The box used to say it "climbs fast". It doesn't — it is the
+  same curve with a higher starting point, and every trip reaches your Ceiling at the same moment
+  whether it's ticked or not. The wording now says what it does.
+
+---
+
 ## 20 August 2026 — the app now says the things it already knew
 
 - **A stop you didn't pick from the list was free.** If you typed a stop and moved on without choosing

@@ -87,8 +87,12 @@ export function AgreedRelease({
             <div style={{ background: "var(--tone-success-bg)", borderRadius: 10, padding: 14, margin: "12px 0" }}>
               <div style={{ color: "var(--tone-success-fg)", fontWeight: 600 }}>No fee for either side</div>
               <div style={{ color: "var(--tone-success-fg)", fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+                {/* ⚑ The 24h SPEED WIN flip is gone (2026-08-22, D82). The trip
+                    re-enters the Pool at its current price — which rises on its
+                    own as the pickup approaches — and SPEED WIN stays whatever
+                    the Business set at booking. */}
                 You won’t be charged and {who} won’t owe the cancellation penalty. The trip goes back to
-                the Pool so another Driver picks it up fast (as a SPEED WIN if it’s within 24h of pickup).
+                the Pool at today’s price, which keeps rising as the pickup gets closer.
               </div>
             </div>
 

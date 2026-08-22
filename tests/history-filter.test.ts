@@ -54,7 +54,7 @@ describe("historyFare — the four endings", () => {
   });
 
   it("shows an unclosed past trip but does not count it — § Q", () => {
-    const m = mission({ status: "on_board", ...standardCurve(), accepted_at: "2026-07-15T10:20:00+02:00" });
+    const m = mission({ status: "on_board", ...standardCurve(), accepted_at: "2026-07-15T10:00:00+02:00" });
     expect(historyFare(m)).toEqual({ fare: 60, counted: false });
   });
 });
